@@ -204,17 +204,14 @@ end CardanoKeri.Duplicity
 
 namespace CardanoKeri.CheckpointConviction.Fixtures
 
-/-- The connected writer has one key, one next-key commitment and no
-witnesses. The finite signatures below are modeled cryptographic reads. -/
+/-- One reachable ordinary writer and a signed sibling for that position.
+The selected predecessor is the previous event in the connected fixture. -/
 def comparison (aid epoch sn : Nat) (agrees : Bool := false) : Comparison :=
-  let tip : Tip := ⟨aid, epoch, sn, ⟨[[aid]], .unweighted 1, [[aid]], .unweighted 1, [], 0⟩⟩
-  let bytes := [aid, epoch, sn, if agrees then 0 else 1]
-  let rival : Rival := {
-    bytes, rotation := sn != 0, aid, sn, revealedKeys := tip.keys.curKeys,
-    threshold := tip.keys.curThreshold, nextKeys := if agrees then tip.keys.nextKeys else [[aid + 1]],
-    nextThreshold := tip.keys.nextThreshold, toad := 0, signatures := [(0, aid :: bytes)], receipts := [] }
-  ⟨tip, rival⟩
-
-def verify : Verify := fun key bytes signature => key ++ bytes == signature
+  let writer := (Duplicity.writerFixture aid sn (if epoch == 0 then .inception else .rotation)).event
+  let previous : Duplicity.Predecessor := ⟨aid, sn - 1, false, [aid], .count 1, []⟩
+  let tip := Tip.mk aid epoch sn ⟨[[aid]], .unweighted 1, [[aid]], .unweighted 1, [], 0⟩
+    (if epoch == 0 then none else some previous) writer
+  let rival := if agrees then writer else { writer with nextKeys := [aid + 1] }
+  ⟨tip, Duplicity.signed rival [aid] []⟩
 
 end CardanoKeri.CheckpointConviction.Fixtures

@@ -23,7 +23,7 @@ theorem reachable_has_system_history {p : Params} {env : SystemEnv} {s : Sys}
     exact ⟨d, _, .step previous next⟩
 
 /-- A conviction of this identifier and key state inside one system edge.
-The observer consumes the live input of this identifier, the local step enters
+The conviction transaction consumes the live input of this identifier, the local step enters
 pending at its key state, and the system consumes its open commitment. -/
 def ConvictionEdge (p : Params) (env : SystemEnv) (aid : AID) (key : KeyState)
     (before after : Sys) : Prop :=
@@ -207,7 +207,7 @@ def RecordedConviction (p : Params) (env : SystemEnv) (edges : List (Sys × Sys)
       (env aid).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
       association.origin.environment.conviction aid = some observed ∧
       association.entry.payload.spend = ⟨observed.output, aid, association.keyState⟩ ∧
-      CheckpointConviction.accepts (env aid).verifyRival observed.comparison.tip observed.comparison.rival = true
+      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true
 
 /-- Given a system history and its matching executed retirement fold, when the
 registry consumes this identifier's request, the exact entry at the spent
@@ -300,7 +300,7 @@ private theorem rotation_writer_authenticated {s : Sys} {env : Env} {aid sn hist
   split at accepted <;> try contradiction
   split at accepted <;> simp_all
   subst history
-  simp_all [EventHistory.authenticated, WritersAuthenticated]
+  simp_all [EventHistory.authenticated, EventHistory.datum_commitments, WritersAuthenticated]
 
 private theorem local_writer_authenticated {s : Sys} {env : Env} {aid action history}
     (prior : WritersAuthenticated s) (stored : (s.localWriter env aid action).join = some history) :
@@ -359,31 +359,35 @@ theorem reachable_writer_authenticated {p : Params} {env : SystemEnv} {s : Sys}
     | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact prior
     | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact prior
 
-/-- Given the authenticated writer installed in a reachable system and a
-consistent reading of the tip and rival, when the spent-tip comparison
-accepts, then KERI duplicity for these two events holds exactly when the
-rival is valid against that writer's actual predecessor. -/
-theorem accepted_rotated_tip_iff_rival_valid {p env s aid previous writer}
+/-- Given a reachable rotated writer and the datum bound to it, when one rival
+is presented, then the conviction comparison accepts exactly KERI duplicity
+at the spent position. The writer's earlier advance establishes its validity. -/
+theorem rotated_tip_accepts_iff_duplicity {p env s aid previous writer}
     (reachable : SysReach p env s) (stored : s.writers aid = some (.rotation previous writer))
-    (reads : ComparisonReads) (rival : CheckpointConviction.Rival)
-    (encode : Duplicity.Content → ForwardFields)
-    (fields : reads.FieldsAgree (.rotation previous writer) rival encode)
-    (accepted : CheckpointConviction.accepts reads.verify (reads.tipOf (.rotation previous writer)) rival = true) :
-    let tip := reads.tipOf (.rotation previous writer)
-    let signed := reads.rivalOf tip rival
-    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ signed = true ↔
-      Duplicity.rotationValid previous.predecessor signed = true := by
-  let history := EventHistory.rotation previous writer
-  let tip := reads.tipOf history
-  let signed := reads.rivalOf tip rival
-  obtain ⟨_, _, sameSn, _, _, _, conflict⟩ := CheckpointConviction.accepted_rival _ _ _ accepted
-  have same : writer.event.sn = signed.event.sn := fields.writerPosition.symm.trans (sameSn.trans fields.rivalPosition.symm)
-  have different : writer.event ≠ signed.event := by
-    intro equality
-    exact conflict (fields.writerFields.trans ((congrArg encode equality).trans fields.rivalFields.symm))
-  change Duplicity.duplicityAt tip.epoch tip.sn _ signed = true ↔ _
-  rw [show tip.epoch = previous.epoch + 1 from fields.epoch, show tip.sn = writer.event.sn from fields.writerPosition]
-  exact rotated_duplicity_iff_rival_valid (reachable_writer_authenticated reachable stored) same different
+    {reads : KeyReads} {tip : CheckpointConviction.Tip}
+    (bound : reads.matches aid (.rotation previous writer) tip = true)
+    (rival : Duplicity.SignedEvent) :
+    CheckpointConviction.accepts tip rival = true ↔
+    Duplicity.duplicityAt tip.epoch tip.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true := by
+  obtain ⟨prior, content, _, named, epoch, sn⟩ := reads.matches_history bound
+  have valid := (stored_rotation_valid (reachable_writer_authenticated reachable stored)).2
+  rw [rotation_replaces_previous] at prior
+  change tip.writer = writer.event at content
+  change tip.epoch = previous.epoch + 1 at epoch
+  change tip.sn = writer.event.sn at sn
+  change tip.aid = writer.event.aid at named
+  rw [CheckpointConviction.accepts_iff, Duplicity.duplicityAt_iff]
+  simp only [prior, Option.some.injEq, exists_eq_left', content, epoch, sn, named, valid,
+    true_and]
+  constructor
+  · rintro ⟨_, _, same, validity, conflict⟩
+    exact ⟨validity, same, conflict⟩
+  · rintro ⟨validity, same, conflict⟩
+    have sameAid (x : Duplicity.SignedEvent) (h : Duplicity.rotationValid previous.predecessor x = true) :
+        x.event.aid = previous.predecessor.aid := by
+      simp only [Duplicity.rotationValid, Bool.and_eq_true, beq_iff_eq] at h
+      exact h.1.1.1.2
+    exact ⟨Nat.succ_ne_zero _, (sameAid writer valid).trans (sameAid rival validity).symm, same, validity, conflict⟩
 
 private def WriterAt (writer : Option EventHistory) (position : KeyState) : Prop :=
   ∃ history, writer = some history ∧ history.epoch = position.epoch ∧
@@ -500,6 +504,79 @@ theorem live_has_authenticated_writer {p env s aid live} (reach : SysReach p env
   obtain ⟨history, stored, epoch, sn⟩ := reachable_live_writers reach aid live present
   exact ⟨history, stored, reachable_writer_authenticated reach stored, epoch, sn⟩
 
+private def DataMatches (s : Sys) : Prop :=
+  ∀ aid, s.writerData aid = (s.writers aid).map EventHistory.datum
+
+private def ExtendsWriter (s : Sys) (aid : AID) (writer : Option EventHistory) : Prop :=
+  ∀ old event, writer = some (.rotation old event) → s.writers aid = some old
+
+private theorem set_data_matches {s : Sys} {aid st w spend}
+    (prior : DataMatches s) (extendsPrior : ExtendsWriter s aid w) :
+    DataMatches (s.set aid st w spend) := by
+  intro a
+  by_cases h : a = aid
+  · subst a
+    simp only [Sys.set, if_true]
+    cases w with
+    | none => exact prior aid
+    | some w =>
+      cases w with
+      | inception => rfl
+      | rotation old event =>
+        simp [updateWriterDatum, prior aid, extendsPrior old event rfl, EventHistory.datum]
+  · simpa [Sys.set, h] using prior a
+
+private theorem registration_extends {env : Env} {aid raw h}
+    (installed : env.initialHistory aid raw = some h) (s : Sys) :
+    ExtendsWriter s aid (some h) := by
+  intro old e rot
+  cases rot
+  unfold Env.initialHistory at installed
+  split at installed <;> try contradiction
+  split at installed <;> try contradiction
+  dsimp only at installed
+  split at installed <;> simp_all
+
+private theorem local_extends (s : Sys) (env : Env) (aid : AID) (action : Action) :
+    ExtendsWriter s aid (s.localWriter env aid action).join := by
+  intro old e found
+  cases action <;> simp [Sys.localWriter] at found
+  case rotate =>
+    unfold Sys.rotationHistory at found
+    split at found <;> try contradiction
+    split at found <;> try contradiction
+    split at found <;> simp_all
+  case freeze sn _ => cases h : s.rotationHistory env aid sn <;> simp [h] at found
+  case convict => split at found <;> contradiction
+
+/-- Given any reachable system, the bounded datum actually carried for an
+identifier agrees with its registration and subsequent writer history. -/
+theorem reachable_writer_datum {p env s} (reach : SysReach p env s) (aid : AID) :
+    s.writerData aid = (s.writers aid).map EventHistory.datum := by
+  suffices all : DataMatches s from all aid
+  induction reach with
+  | init => intro a; rfl
+  | step _ step prior =>
+    cases step with
+    | register event =>
+      obtain ⟨a, _, _, _, _, st, _, _, _, _, _, _, _, _, _, _, facts, rfl⟩ := event
+      exact set_data_matches (st := st) (spend := none) prior (registration_extends facts.2 _)
+    | «local» event =>
+      obtain ⟨a, act, _, _, st, _, _, _, rfl⟩ := event
+      have next := set_data_matches (st := st) (spend := st.producingSpend (env a)) prior
+        (local_extends _ (env a) a act)
+      unfold Sys.retireRevealed
+      cases act.revealed <;> exact next
+    | book event =>
+      obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := event
+      exact prior
+    | complete event =>
+      obtain ⟨_, _, _, _, rfl⟩ := event
+      exact set_data_matches (st := .convicted) (w := none) (spend := none) prior (by intro _ _ h; contradiction)
+    | openCommitment event => obtain ⟨_, _, _, rfl⟩ := event; exact prior
+    | reveal event => obtain ⟨_, _, _, _, _, rfl⟩ := event; exact prior
+    | sweep event => obtain ⟨_, _, _, _, rfl⟩ := event; exact prior
+
 /-- Given a reachable system and the conviction edge for one key state,
 when its live input is spent, then its stored writer authenticates under
 the selected identifier and has the native position named by that edge. -/
@@ -512,40 +589,79 @@ theorem conviction_spends_authenticated_writer {p env before after aid key}
 
 /-- Given a conviction edge with a reachable source, when its comparison is
 read, then the checkpoint's stored authenticated writer agrees with every
-spent key field and the observer accepted the rival at that exact position. -/
+spent key field and the conviction mint accepted the rival at that exact position. -/
 theorem conviction_compares_authenticated_writer {p env before after aid key}
     (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :
     ∃ writer comparison, before.writers aid = some writer ∧ writer.authenticated aid = true ∧
       (env aid).comparison key.epoch key.sn = some comparison ∧
       (env aid).keyReads.matches aid writer comparison.tip = true ∧
       comparison.tip.epoch = key.epoch ∧ comparison.tip.sn = key.sn ∧
-      CheckpointConviction.accepts (env aid).verifyRival comparison.tip comparison.rival = true := by
-  obtain ⟨writer, stored, authenticated, _, _⟩ := conviction_spends_authenticated_writer reach edge
+      CheckpointConviction.accepts comparison.tip comparison.rival = true := by
+  obtain ⟨writer, stored, authenticated, pos, _⟩ := conviction_spends_authenticated_writer reach edge
   obtain ⟨live, now, payee, c, flow, present, rfl, step, ⟨_, matched⟩, _⟩ := edge
   obtain ⟨comparison, selected, epoch, sn, accepted⟩ := conviction_has_spent_tip_comparison _ _ step
   exact ⟨writer, comparison, stored, authenticated, selected,
-    by simpa [Sys.comparisonMatchesWriter, stored, present, selected] using matched, epoch, sn, accepted⟩
+    by simpa [Sys.comparisonMatchesWriter, reachable_writer_datum reach, stored, present, selected, KeyReads.matches, pos] using matched, epoch, sn, accepted⟩
 
-/-- Given a reachable conviction after rotation and consistent decoding of
-the observed comparison, when KERI judges those two events, then duplicity
-holds exactly when the rival passes the same predecessor's rotation rules. -/
-theorem rotated_conviction_iff_rival_valid {p env before after aid key previous writer comparison}
+/-- Given an executed conviction of a rotated identifier in a reachable history,
+then the single rival selected by that spend establishes KERI duplicity at that
+position. The conclusion needs no rival-validity or decoding hypothesis. -/
+theorem rotated_conviction_is_duplicity {p env before after aid key previous writer comparison}
     (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after)
     (stored : before.writers aid = some (.rotation previous writer))
-    (selected : (env aid).comparison key.epoch key.sn = some comparison)
-    (reads : ComparisonReads) (tip : reads.tipOf (.rotation previous writer) = comparison.tip)
-    (encode : Duplicity.Content → ForwardFields)
-    (fields : reads.FieldsAgree (.rotation previous writer) comparison.rival encode) :
-    let rival := reads.rivalOf comparison.tip comparison.rival
-    Duplicity.duplicityAt key.epoch key.sn ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔
-      Duplicity.rotationValid previous.predecessor rival = true := by
-  obtain ⟨_, observed, _, _, found, _, epoch, sn, accepted⟩ := conviction_compares_authenticated_writer reach edge
-  rw [selected] at found
-  cases found
-  let actual := { reads with verify := (env aid).verifyRival }
-  have judged := accepted_rotated_tip_iff_rival_valid reach stored actual comparison.rival encode
-    ⟨fields.epoch, fields.writerPosition, fields.rivalPosition, fields.writerFields, fields.rivalFields⟩
-    (by simpa [actual, tip] using accepted)
-  simpa [actual, tip, epoch, sn] using judged
+    (selected : (env aid).comparison key.epoch key.sn = some comparison) :
+    Duplicity.duplicityAt key.epoch key.sn
+      ⟨previous.epoch + 1, previous.predecessor, writer⟩ comparison.rival = true := by
+  obtain ⟨w, obs, hw, _, hs, bound, epoch, sn, accepted⟩ :=
+    conviction_compares_authenticated_writer reach edge
+  rw [stored] at hw
+  cases hw
+  rw [selected] at hs
+  cases hs
+  rw [← epoch, ← sn]
+  exact (rotated_tip_accepts_iff_duplicity reach stored bound comparison.rival).mp accepted
+
+/-- Given an executed reachable conviction, when its input writer is inspected,
+it cannot be the inception. That datum has no preceding commitments. -/
+theorem inception_conviction_refused {p env before after aid key event witnesses}
+    (reach : SysReach p env before)
+    (stored : before.writers aid = some (.inception event witnesses)) :
+    ¬ ConvictionEdge p env aid key before after := by
+  intro edge
+  obtain ⟨w, obs, hw, _, _, bound, _, _, accepted⟩ :=
+    conviction_compares_authenticated_writer reach edge
+  rw [stored] at hw
+  cases hw
+  have prior := ((env aid).keyReads.matches_history bound).1
+  change obs.tip.previous = none at prior
+  simp [CheckpointConviction.accepts, prior] at accepted
+
+/-- Given only reachability and an executed conviction, its own transaction
+mint, carried predecessor, authenticated writer and single presented rival can
+be recovered. The KERI judgment holds for that rival at the spent position. -/
+theorem conviction_establishes_duplicity {p env before after aid key}
+    (reach : SysReach p env before) (edge : ConvictionEdge p env aid key before after) :
+    ∃ previous writer, ∃ (observed : Registry.Conviction),
+      before.writers aid = some (.rotation previous writer) ∧
+      (env aid).presentedSpend key.epoch key.sn = some observed ∧
+      (env aid).attestationMinted observed = true ∧
+      observed.comparison.tip.previous = some previous.predecessor ∧
+      Duplicity.duplicityAt key.epoch key.sn
+        ⟨previous.epoch + 1, previous.predecessor, writer⟩ observed.comparison.rival = true := by
+  obtain ⟨writer, comparison, stored, _, selected, bound, _, _, _⟩ :=
+    conviction_compares_authenticated_writer reach edge
+  cases writer with
+  | inception event witnesses => exact False.elim (inception_conviction_refused reach stored edge)
+  | rotation previous writer =>
+    have judged := rotated_conviction_is_duplicity reach edge stored selected
+    have prior := ((env aid).keyReads.matches_history bound).1
+    rw [rotation_replaces_previous] at prior
+    cases found : (env aid).convictionSpend key.epoch key.sn with
+    | none => simp [Env.comparison, found] at selected
+    | some observed =>
+      obtain ⟨presented, minted⟩ := Env.convictionSpend_attested found
+      simp only [Env.comparison, found, Option.map_some, Option.some.injEq] at selected
+      subst comparison
+      exact ⟨previous, writer, observed, stored, presented, minted, prior, judged⟩
 
 end CardanoKeri.Checkpoint

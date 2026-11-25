@@ -22,8 +22,8 @@ def convictionFixture (aid epoch sn : Nat) : Conviction :=
 
 def env : Env := {
   inception := fun _ => true
-  conviction := fun aid => some (convictionFixture aid 1 1),
-  verifyRival := CheckpointConviction.Fixtures.verify }
+  presentedConviction := fun aid => some (convictionFixture aid 1 1),
+  attestationMinted := fun _ => true }
 
 structure Reached where
   state : Sys

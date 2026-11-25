@@ -43,8 +43,8 @@ def Shown.json : Shown → Json
 event lookups serve the KERI reader. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
   rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
-  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted⟩,
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1,
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted
     else (CardanoKeri.Duplicity.fixture e sn).2) }

@@ -21,8 +21,8 @@ def env (aid : AID) : Env := {
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
-  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  convictionSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -447,7 +447,7 @@ theorem changed_pending_key_refused :
 /-- Given the same successful conviction source, replay under an environment with
 no conviction authorization actually refuses at the canonical function. -/
 theorem stored_context_conviction_refused :
-    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
+    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with presentedConviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
       .error "keri-conviction-refused" := by rfl
 
 
@@ -462,6 +462,17 @@ theorem rotated_spend_uses_one_rival :
 
 -- Keep the original commitment and two-event reader while removing the
 -- enforcement observer's successful signature read.
-example : stepFn p { env 11 with verifyRival := fun _ _ _ => false } (.convict 7 commitment) 5
+/-- The minted claim must match the exact pending output and rival of the
+spend. A claim for the same identifier and position at the other index fails. -/
+theorem conviction_mint_bound_to_output :
+    let exactClaim : Registry.Conviction :=
+      ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩
+    let other := {exactClaim with output.index := 1}
+    let atUse := fun (claim : Registry.Conviction) =>
+      ({env 11 with attestationMinted := fun observed => decide (observed = claim)} : Env)
+    (atUse exactClaim).acceptsRival 1 1 = true ∧
+      (atUse other).acceptsRival 1 1 = false := by decide
+
+example : stepFn p { env 11 with attestationMinted := fun _ => false } (.convict 7 commitment) 5
     (.present rotatedLive) = none := by decide
 end CardanoKeri.Checkpoint.Examples

@@ -211,7 +211,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Step.convict_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (payee : Addr) (c : Commitment), Step p env (.convict payee c) now (.present l) { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool }, convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔ env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.conviction_has_spent_tip_comparison : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}, Step p env a t (.present l) f (.terminationPending key) → ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧ CardanoKeri.CheckpointConviction.accepts env.verifyRival comparison.tip comparison.rival = true)
+#check (@CardanoKeri.Checkpoint.conviction_has_spent_tip_comparison : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}, Step p env a t (.present l) f (.terminationPending key) → ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧ CardanoKeri.CheckpointConviction.accepts comparison.tip comparison.rival = true)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.old_pair_cannot_convict_new_target : ∀ (epoch sn next : Nat) (context : Duplicity.Context) (rival : Duplicity.SignedEvent) (_old : Duplicity.duplicityAt epoch sn context rival = true) (_later : sn < next), Duplicity.duplicityAt epoch next context rival = false)

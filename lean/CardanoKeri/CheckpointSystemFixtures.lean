@@ -157,7 +157,7 @@ def traces : Except String (List Json) := do
     ("convict", convictedCommand), ("book", f.booking)]
   let restricted ← registrationCommand { context with environment.convictions := [] }
   let row := Registry.Scenarios.convictionFixture 11 2 2
-  let otherRival := {row with comparison.rival.nextKeys := [[888]]}
+  let otherRival := {row with comparison.rival.event.nextKeys := [888]}
   let rivalOrigin ← registrationCommand {context with environment.convictions := [otherRival]}
   let otherOutput := {row with output.index := row.output.index + 1}
   let outputOrigin ← registrationCommand {context with environment.convictions := [otherOutput]}

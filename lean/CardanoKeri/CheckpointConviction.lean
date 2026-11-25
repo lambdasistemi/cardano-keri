@@ -1,4 +1,4 @@
-import Lean
+import CardanoKeri.Duplicity
 
 namespace CardanoKeri.CheckpointDatum
 
@@ -27,120 +27,44 @@ namespace CardanoKeri.CheckpointConviction
 
 open CardanoKeri.CheckpointDatum
 
-/-- The enforcement observer reads these fields from the spent active input.
-The epoch and native sequence together identify the checkpoint's key state. -/
+
+/-- The decoded input of a conviction. The current writer's content is bound
+to its event opening. Only one previous establishment is carried forward. -/
 structure Tip where
   aid : Nat
   epoch : Nat
   sn : Nat
   keys : KeyMaterial
+  previous : Option Duplicity.Predecessor
+  writer : Duplicity.Content
   deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
 
-/-- A rival decoded by the enforcement observer. The byte parser and its field
-bindings are a technical premise. The convictor supplies exactly these event
-bytes and the indexed signatures and receipts over them. -/
-structure Rival where
-  bytes : List Nat
-  rotation : Bool
-  aid : Nat
-  sn : Nat
-  revealedKeys : List (List Nat)
-  threshold : Threshold
-  nextKeys : List (List Nat)
-  nextThreshold : Threshold
-  toad : Int
-  signatures : List (Nat × List Nat)
-  receipts : List (Nat × List Nat)
-  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
+/-- One decoded event with its own event-bound signature and receipt reads. -/
+abbrev Rival := Duplicity.SignedEvent
 
-/-- The checkpoint enforcement observer verifies each indexed signature under
-the key at that position over the bytes of the one decoded rival. -/
-abbrev Verify := List Nat → List Nat → List Nat → Bool
+/-- At a rotated checkpoint the mint judges one rival using the previous
+commitments and the rival's own rules. Difference is over the complete event. -/
+def accepts (tip : Tip) (rival : Rival) : Bool :=
+  match tip.previous with
+  | none => false
+  | some previous =>
+    tip.epoch != 0 && tip.aid == rival.event.aid && tip.sn == rival.event.sn &&
+      Duplicity.rotationValid previous rival && decide (tip.writer ≠ rival.event)
 
-def verifiedPositions (verify : Verify) (keys : List (List Nat)) (bytes : List Nat)
-    (signatures : List (Nat × List Nat)) : List Nat :=
-  (signatures.filterMap fun (i, signature) => do
-    let key ← keys[i]?
-    if verify key bytes signature then some i else none).eraseDups
+/-- Given one decoded spend, it accepts exactly a conflicting, valid rotation
+at this identifier and sequence with a carried predecessor. -/
+theorem accepts_iff (tip : Tip) (rival : Rival) :
+    accepts tip rival = true ↔ ∃ previous, tip.previous = some previous ∧
+      tip.epoch ≠ 0 ∧ tip.aid = rival.event.aid ∧ tip.sn = rival.event.sn ∧
+      Duplicity.rotationValid previous rival = true ∧ tip.writer ≠ rival.event := by
+  cases h : tip.previous <;> simp [accepts, h, and_assoc]
 
-private def clauseSatisfied (positions : List Nat) (offset : Nat) (clause : List Weight) : Bool :=
-  let (num, den) := clause.zipIdx.foldl (fun (n, d) (weight, i) =>
-    if positions.contains (offset + i) then (n * weight.2 + weight.1 * d, d * weight.2)
-    else (n, d)) ((0, 1) : Int × Int)
-  decide (den ≤ num)
-
-private def clausesSatisfied (positions : List Nat) (offset : Nat) : List (List Weight) → Bool
-  | [] => true
-  | clause :: tail => clauseSatisfied positions offset clause &&
-    clausesSatisfied positions (offset + clause.length) tail
-
-def thresholdMet (threshold : Threshold) (positions : List Nat) : Bool :=
-  match threshold with
-  | .unweighted required => decide (required ≤ (positions.length : Int))
-  | .weighted clauses => clausesSatisfied positions 0 clauses
-
-/-- The spent tip supplies the first record and the keys for both checks.
-The four forward fields are the current signing threshold, next keys, next
-threshold and witness threshold. An independent history reader can evaluate
-the two-event KERI definition in `Duplicity`. -/
-def accepts (verify : Verify) (tip : Tip) (rival : Rival) : Bool :=
-  rival.rotation && tip.aid == rival.aid && tip.sn == rival.sn &&
-  decide (tip.keys.curKeys = rival.revealedKeys) &&
-  thresholdMet tip.keys.curThreshold
-    (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) &&
-  decide (tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int)) &&
-  decide ((tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠
-    (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad))
-
-/-- Given a spent tip and a rival, when the enforcement comparison succeeds,
-then the rival is a rotation for the same identifier and native sequence,
-reveals exactly the spent keys, meets both thresholds under the spent tip,
-and disagrees with at least one of its four forward fields. -/
-theorem accepted_rival (verify : Verify) (tip : Tip) (rival : Rival)
-    (accepted : accepts verify tip rival = true) :
-    rival.rotation = true ∧ tip.aid = rival.aid ∧ tip.sn = rival.sn ∧
-    tip.keys.curKeys = rival.revealedKeys ∧
-    thresholdMet tip.keys.curThreshold
-      (verifiedPositions verify tip.keys.curKeys rival.bytes rival.signatures) = true ∧
-    tip.keys.toad ≤ ((verifiedPositions verify tip.keys.witnesses rival.bytes rival.receipts).length : Int) ∧
-    (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad) ≠
-      (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad) := by
-  simpa only [accepts, Bool.and_eq_true, beq_iff_eq, decide_eq_true_eq, and_assoc] using accepted
-
-/-- The convictor presents one rival. The checkpoint observer reads the tip
-from the input and verifies this evidence at the native position being spent. -/
 structure Comparison where
   tip : Tip
   rival : Rival
   deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
 
-def Comparison.acceptsAt (comparison : Comparison) (verify : Verify) (epoch sn : Nat) : Bool :=
-  comparison.tip.epoch == epoch && comparison.tip.sn == sn &&
-    accepts verify comparison.tip comparison.rival
-
-namespace Examples
-
--- An ordinary rotation after inception, with two controllers and one witness.
--- The table records three successful signature checks on one decoded event.
--- It supplies the premise of the comparison at the decoded-data boundary.
-private def tip : Tip :=
-  ⟨11, 1, 1, ⟨[[10], [20]], .weighted [[(1, 2), (1, 2)]],
-    [[30]], .unweighted 1, [[40]], 1⟩⟩
-
-private def rival : Rival :=
-  { bytes := [50], rotation := true, aid := 11, sn := 1, revealedKeys := tip.keys.curKeys,
-    threshold := tip.keys.curThreshold, nextKeys := [[31]], nextThreshold := .unweighted 1,
-    toad := 1, signatures := [(0, [60]), (1, [70])], receipts := [(0, [80])] }
-
-private def verified : Verify := fun key message signature =>
-  message == rival.bytes && [(10, 60), (20, 70), (40, 80)].any fun (k, s) =>
-    key == [k] && signature == [s]
-
-#guard accepts verified tip rival
-#guard !accepts verified tip { rival with nextKeys := tip.keys.nextKeys }
-#guard !accepts verified tip { rival with signatures := [(0, [60]), (0, [60])] }
-#guard !accepts verified tip { rival with receipts := [] }
-
-end Examples
+def Comparison.acceptsAt (comparison : Comparison) (epoch sn : Nat) : Bool :=
+  comparison.tip.epoch == epoch && comparison.tip.sn == sn && accepts comparison.tip comparison.rival
 
 end CardanoKeri.CheckpointConviction

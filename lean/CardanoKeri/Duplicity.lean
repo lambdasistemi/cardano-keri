@@ -14,9 +14,9 @@ link verification are primitive results, bound to the complete event below.
 `extension` represents all remaining event content, including seals. A wire
 decoder must preserve it injectively; no byte/crypto correspondence is proved.
 In the modeled checkpoint conviction spend the convictor supplies the
-authenticated predecessor and recorded first accepted event from public KERI
-history. Its observer checks the event bytes, digest openings, signatures and
-receipts that the primitive results represent. Neither a rival nor its receipts may choose that context.
+rival event and its signatures and receipts. The conviction mint binds the
+writer and preceding commitments to the spent input and checks the event bytes,
+digest openings, signatures and receipts represented by the primitive results. Neither a rival nor its receipts may choose that context.
 -/
 namespace CardanoKeri.Duplicity
 

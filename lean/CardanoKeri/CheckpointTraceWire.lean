@@ -78,8 +78,11 @@ structure EnvTable where
 
 def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env where
   keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
-  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify
-  convictionSpend := fun e sn => if t.duplicityAt.contains (e, sn) then
+  attestationMinted := fun observed =>
+    t.duplicityAt.any fun (epoch, sn) =>
+      decide (observed = ⟨⟨105 + (aid - 11), 0⟩,
+        CardanoKeri.CheckpointConviction.Fixtures.comparison aid epoch sn⟩)
+  presentedSpend := fun e sn => if t.duplicityAt.contains (e, sn) then
     some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩ else none
   rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
   depositAuthorized := fun e => t.depositAuthorized.contains e

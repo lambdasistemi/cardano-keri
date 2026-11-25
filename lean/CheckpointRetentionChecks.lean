@@ -8,8 +8,8 @@ def env : Env := {
   rotationTo := fun e sn sn' => decide ((e = 0 ∧ sn = 0 ∧ sn' = 1) ∨ (e = 1 ∧ sn = 1 ∧ sn' = 2))
   depositAuthorized := fun _ => false
   quorum := fun _ => true
-  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  convictionSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 

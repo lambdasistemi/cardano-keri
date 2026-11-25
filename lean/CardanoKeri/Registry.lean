@@ -20,7 +20,7 @@ structure Params where
   hFund : Mr + tip ≤ Mc
 /-- The economic projection of the checkpoint spend. The ledger identifies
 the pending output by transaction and index. Its datum retains the spent
-position. The enforcement observer reads the input tip and the one rival. -/
+position. The conviction mint checks the one rival against the preceding commitments. -/
 structure Conviction where
   output : Singular.OutRef
   comparison : CheckpointConviction.Comparison
@@ -30,14 +30,19 @@ structure Env where
   -- The registration booker supplies the inception to the application mint.
   inception : Nat → Bool
   -- For the registered identifier, read its conviction transaction and output.
-  -- The checkpoint observer verifies the indexed signatures at that spend.
-  conviction : Nat → Option Conviction
-  verifyRival : CheckpointConviction.Verify
+  -- The convictor mints the attestation in that same spend.
+  presentedConviction : Nat → Option Conviction
+  /-- The convictor minted the conviction attestation for this exact
+  transaction output and its decoded claim. -/
+  attestationMinted : Conviction → Bool
+
+def Env.conviction (env : Env) (aid : Nat) : Option Conviction :=
+  (env.presentedConviction aid).filter env.attestationMinted
 
 def Env.pendingSpend (env : Env) (aid : Nat) : Option Application.PendingSpend := do
   let observed ← env.conviction aid
   let tip := observed.comparison.tip
-  if tip.aid = aid ∧ CheckpointConviction.accepts env.verifyRival tip observed.comparison.rival = true then
+  if tip.aid = aid ∧ CheckpointConviction.accepts tip observed.comparison.rival = true then
     some ⟨observed.output, aid, ⟨tip.epoch, tip.sn⟩⟩
   else none
 
@@ -47,13 +52,13 @@ determine every field of that receipt. -/
 theorem Env.pendingSpend_iff (env : Env) (aid : Nat) (spend : Application.PendingSpend) :
     env.pendingSpend aid = some spend ↔
       ∃ observed, env.conviction aid = some observed ∧ observed.comparison.tip.aid = aid ∧
-        CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true ∧
+        CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true ∧
         spend = ⟨observed.output, aid, ⟨observed.comparison.tip.epoch, observed.comparison.tip.sn⟩⟩ := by
   cases found : env.conviction aid with
   | none => simp [Env.pendingSpend, found]
   | some observed =>
     by_cases accepted : observed.comparison.tip.aid = aid ∧
-      CheckpointConviction.accepts env.verifyRival observed.comparison.tip observed.comparison.rival = true
+      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true
     · simp [Env.pendingSpend, found, accepted.1, accepted.2]
       exact eq_comm
     · simp [Env.pendingSpend, found, accepted]

@@ -15,8 +15,8 @@ def cfg : Singular.Config := {
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
   inception := fun _ => true,
-  conviction := fun aid => some ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison aid 1 1⟩,
-  verifyRival := CheckpointConviction.Fixtures.verify }
+  presentedConviction := fun aid => some ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison aid 1 1⟩,
+  attestationMinted := fun _ => true }
 def liveCarrier : Carrier := {
   aid := 11, token := 0,
   original := ⟨11, .active, 111, some 777⟩, pendingSpend := none, minAda := 4 }

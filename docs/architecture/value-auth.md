@@ -10,9 +10,8 @@ validators do not reintroduce the retired shared-registry model.
 !!! abstract "Where this page stands"
     The resolution rules, the indexer boundary, the authorization modes and
     the rotation race are **shipped on `main` today** and survive the M1
-    return. What changes is the **predicate** an application applies to the
-    checkpoint it resolved: role addresses go, and a bit plus the checkpoint's
-    own value take their place. Both are given below.
+    return. Under the accepted design, the holding check uses the checkpoint
+    credential, the representative asset and the decoded lifecycle state.
 
 ## Resolve current authority
 
@@ -50,32 +49,30 @@ role address.
 
 ### Under the accepted design
 
-The older checkpoint design retains steps 1 to 5. The pending Singular
-integration also changes token and registry authentication as described below.
-Steps 6 and 7 become the consumer predicate, which
-reads only the datum and the checkpoint's value:
+The holding predicate authenticates the network, release and checkpoint
+credential. It requires the output at that credential to hold exactly one
+unit of the representative asset derived for the registry and AID.
 
 ```text
-authorize iff  present
-            ∧ D_reg full ∧ B full          — the bonds are held
-            ∧ ¬frozen                      — the datum’s frozen bit is clear
-            ∧ ¬poisoned                    — the controller has not disowned this epoch
-            ∧ now − born_at ≥ W            — past the juvenility window
-            ∧ the operation's own signature satisfies the current threshold
+eligible holding iff authenticated network, release and checkpoint credential
+                 ∧ output at that credential
+                 ∧ expected representative asset quantity = 1
+                 ∧ datum decodes for the release and names the expected AID
+                 ∧ state is present, unfrozen and unpoisoned
+                 ∧ born_at + W ≤ now
 ```
 
-and, once the validity edge ships, `now ≤ valid_until`. Everything else fails
-closed: absent, frozen (the freeze bond taken), poisoned (locked by the
-owner's own declaration), juvenile (younger than the window `W`), convicted,
-and pending conviction custody. There is no parked state: a checkpoint is
-alive until it is convicted.
+The lifecycle check accepts a present checkpoint when its frozen and poisoned
+bits are clear and its age is at least the juvenility window. The relying application
+checks authorization for its own operation separately.
 
 Three consequences an integrator should plan for:
 
 - **Freeze changes both datum and value.** Only the frozen bit in the datum
   changes to true. The hunter receives `B`, so the output no longer holds
-  that bond. The consumer checks the datum and the value it expects the
-  output to hold.
+  that bond. Changing only the lovelace leaves the holding predicate’s result
+  unchanged. A caller relying on `realizesState` must establish the exact
+  lovelace held for the state, including the registry minimum ADA.
 - **Step 1 becomes a guarantee rather than a hope.** The redesigned registry admits one
   incarnation per AID, ever within that registry, so "exactly one candidate" is enforced on chain
   instead of being a residual the consumer carries.

@@ -12,16 +12,15 @@ future Veridian integration must make visible.
 
 ## The design principle: the owner is dumb on Cardano
 
-The accepted design assumes the identity owner rotates her keys with `kli` and never
-touches Cardano except to put money in. Everything on the Cardano side is done
-by [hunters](super-watcher.md) — anyone paid to land her rotations, or to
-freeze her checkpoint when it cannot pay for one — paid from value she keeps
-in her checkpoint.
+Alice rotates her keys in KERI. On Cardano, the controller books registration
+with the signed inception and its witness receipts. The Singular folder
+processes the booked request. A [hunter](super-watcher.md) can present a
+later witnessed rotation to advance the checkpoint or, when the freeze
+conditions hold, to freeze it.
 
-A user interface that forgets this will be wrong in a specific way: it will
-present Cardano operations as things the owner must perform on a schedule. The
-two things she actually does are **fund** and, if her keys are stolen,
-**poison**.
+The UI should show which keys Alice needs for each action. The keys revealed
+by a rotation authorize its deposit at their threshold. The current key
+quorum can authorize poison.
 
 ## First, know the AID
 
@@ -60,8 +59,8 @@ frozen checkpoint with its old keys and explain where the bond went.
 
 ## Register
 
-A relayer can register Alice's public KERI inception without holding her
-private keys:
+In the deployed V1 registration flow, a relayer can register Alice's public KERI
+inception without holding her private keys:
 
 1. prove the inception/AID BLAKE3 binding;
 2. submit the Register transaction with observer evidence;
@@ -135,10 +134,10 @@ conviction. Parking was removed because it left unsettled who holds the
 deposit while parked and how a sponsor is tracked; it may return only with an
 economic model that settles both.
 
-Before signing a rotation intent the UI must display the exact checkpoint input, the
-AID and sequence, the destination address, the amounts of all three components,
-and the network and policy — because that is precisely the set of facts the
-signed intent binds.
+Before signing a deposit, the UI should show all eight fields in the intent:
+the fixed domain tag, network ID, checkpoint policy, spent output reference,
+AID, new sequence number, new epoch and deposit amount. The deposit restores
+`B` when the checkpoint is frozen and is zero otherwise.
 
 ## Three balances, three explanations
 
@@ -149,10 +148,9 @@ The UI should never present the checkpoint's value as one generic deposit:
 - **The freeze bond `B`** is what a hunter takes when the pool cannot pay. Its
   absence accompanies the frozen bit in the datum. A depositing rotation
   restores the bond and clears the bit.
-- **The conviction bond `D_reg`** is the stake a duplicity proof seizes. It is
-  never a fee. The pool pays rotation premiums; it is not a loss-free reserve.
-  An authorized close returns the remaining bonds and pool to the signed
-  destinations while retaining the output’s token and minimum ADA.
+- **The conviction bond `D_reg`** is the stake a duplicity proof seizes.
+  Conviction pays it to the payee named in the eligible commitment and sends
+  the remaining freeze bond and pool to the checkpoint’s fixed refund address.
 
 All three are deployment parameters, and the numbers are not yet set — they
 wait on the measurements in the [roadmap](../roadmap.md).

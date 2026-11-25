@@ -2991,7 +2991,7 @@
     "index": 5,
     "name": "docs-architecture-system/how-applications-consume-identity-05",
     "pause_ms": 300,
-    "v": "ed842e433167"
+    "v": "5edbd8874867"
    },
    {
     "index": 6,
@@ -3161,7 +3161,7 @@
     "index": 2,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-02",
     "pause_ms": 400,
-    "v": "6964ab557bf2"
+    "v": "69de50ee5618"
    }
   ]
  },
@@ -3625,13 +3625,13 @@
     "index": 1,
     "name": "docs-architecture-value-auth/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "0ec178e0942d"
+    "v": "3d4a8ce884a0"
    },
    {
     "index": 2,
     "name": "docs-architecture-value-auth/under-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "85659eb9bede"
+    "v": "5903414b0b63"
    },
    {
     "index": 3,
@@ -3643,7 +3643,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/under-the-accepted-design-04",
     "pause_ms": 300,
-    "v": "d827c99fb28a"
+    "v": "3608cd448f5c"
    },
    {
     "index": 5,
@@ -3687,7 +3687,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/value-authorization-04",
     "pause_ms": 400,
-    "v": "a83a5c416644"
+    "v": "fb8ce7ca971e"
    }
   ],
   "value-cage-oracle": [
@@ -12255,7 +12255,7 @@
     "index": 2,
     "name": "docs-design-super-watcher/freshness-and-availability-02",
     "pause_ms": 400,
-    "v": "a149811f3e41"
+    "v": "82be79ce2e7b"
    }
   ],
   "operational-loop": [
@@ -12363,7 +12363,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/security-principle-01",
     "pause_ms": 400,
-    "v": "c098dd0983a7"
+    "v": "4957a2f9aa82"
    }
   ],
   "the-cross-plane-problem": [
@@ -13363,7 +13363,7 @@
     "index": 5,
     "name": "docs-design-user-experience/no-way-out-but-conviction-05",
     "pause_ms": 400,
-    "v": "10f8529bb5fa"
+    "v": "a1afb1a019dd"
    }
   ],
   "poison": [
@@ -13403,7 +13403,7 @@
     "index": 1,
     "name": "docs-design-user-experience/register-01",
     "pause_ms": 400,
-    "v": "4101fc06dcf3"
+    "v": "7cb676db603b"
    },
    {
     "index": 2,
@@ -13485,13 +13485,13 @@
     "index": 1,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-01",
     "pause_ms": 400,
-    "v": "698c116ee689"
+    "v": "312eac40a9c2"
    },
    {
     "index": 2,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-02",
     "pause_ms": 400,
-    "v": "7dbdc85013e6"
+    "v": "37cb7441bf65"
    }
   ],
   "three-balances-three-explanations": [
@@ -13523,7 +13523,7 @@
     "index": 4,
     "name": "docs-design-user-experience/three-balances-three-explanations-04",
     "pause_ms": 300,
-    "v": "18599edca3d0"
+    "v": "abb29614d00b"
    },
    {
     "index": 5,

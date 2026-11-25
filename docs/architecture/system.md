@@ -155,10 +155,11 @@ flowchart LR
     P -->|"pool < P"| FRZ
 ```
 
-Two edges move the identity — a rotation and a poison — and four boundary
-transitions cross its edges: register and convict. Nothing has a
-deadline; the freeze has no window to expire, because the owner returns by
-rotating with a deposit whenever she likes.
+Two of the six checkpoint actions cross the boundary of the present state.
+Registration creates a present checkpoint and conviction moves it to pending
+termination. The associated registry fold completes retirement. A freeze
+starts no response clock. A booked registration has a processing deadline,
+and a conviction commitment can be revealed only within its slot window.
 
 ## How applications consume identity
 
@@ -170,9 +171,11 @@ The application must:
 
 1. resolve the candidate checkpoint for the AID;
 2. validate the quantity-one token, script lineage, version, AID and datum;
-3. apply the consumer predicate — today, the bare ACTIVE role address; under
-   the accepted design, both bonds full, not poisoned, and past the juvenility
-   window (the age a checkpoint must reach before a consumer trusts it);
+3. apply the consumer predicate. The shipped version requires the bare ACTIVE
+   role address. The accepted design checks the authenticated context, the
+   output credential, the representative asset quantity of one and the
+   decoded AID and lifecycle. The checkpoint must be present, unfrozen and
+   unpoisoned, and its age must be at least the juvenility window.
 4. verify its operation-specific controller authorization; and
 5. when credentials matter, verify the required ACDC/TEL evidence.
 

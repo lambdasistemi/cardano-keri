@@ -23,11 +23,11 @@
       "pause": 500
     },
     {
-      "text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she keeps in her checkpoint.",
+      "text": "Alice rotates her keys in KERI. On Cardano, the controller books registration with the signed inception and its witness receipts. The Singular folder processes the booked request. A hunter can present a later witnessed rotation to advance the checkpoint or, when the freeze conditions hold, to freeze it.",
       "pause": 400
     },
     {
-      "text": "A user interface that forgets this will be wrong in a specific way: it will present Cardano operations as things the owner must perform on a schedule. The two things she actually does are fund and, if her keys are stolen, poison.",
+      "text": "The UI should show which keys Alice needs for each action. The keys revealed by a rotation authorize its deposit at their threshold. The current key quorum can authorize poison.",
       "pause": 400
     }
   ],
@@ -81,7 +81,7 @@
       "pause": 500
     },
     {
-      "text": "A relayer can register Alice's public KERI inception without holding her private keys:",
+      "text": "In the deployed V1 registration flow, a relayer can register Alice's public KERI inception without holding her private keys:",
       "pause": 400
     },
     {
@@ -171,7 +171,7 @@
       "pause": 400
     },
     {
-      "text": "Before signing a rotation intent the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
+      "text": "Before signing a deposit, the UI should show all eight fields in the intent: the fixed domain tag, network ID, checkpoint policy, spent output reference, AID, new sequence number, new epoch and deposit amount. The deposit restores B when the checkpoint is frozen and is zero otherwise.",
       "pause": 400
     }
   ],
@@ -193,7 +193,7 @@
       "pause": 300
     },
     {
-      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. The pool pays rotation premiums; it is not a loss-free reserve. An authorized close returns the remaining bonds and pool to the signed destinations while retaining the output’s token and minimum ADA.",
+      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. Conviction pays it to the payee named in the eligible commitment and sends the remaining freeze bond and pool to the checkpoint’s fixed refund address.",
       "pause": 300
     },
     {
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "9f79f37c2c0242f36b2069026d6e27be9b7dd88c7bc701566314b8f4177f52e6"
+    "sha256": "2b08f13f91dc369124d2d6a5408c79b75e6984d71047d135aa419841ebc2d23b"
   }
 }

@@ -198,10 +198,10 @@ A hunter improves discovery latency but cannot eliminate KERI witness outages,
 network partitions, Cardano inclusion delay, chain rollbacks, block-level
 censorship, or a colluding witness threshold.
 
-Applications should not silently outsource all freshness policy to one hunter.
-The **juvenility window** `W` exists for that reason: a consumer refuses a
-checkpoint younger than `W` slots after its registration, and `W` is calibrated above measured relayer latency
-rather than guessed. Its value is set from the measurement taken in epic
+A relying application checks a checkpoint’s age against the juvenility window
+`W`. It can use a clean, unfrozen checkpoint only once the current slot
+reaches its birth slot plus `W`. The planned devnet measurement of the time
+from witness receipt to landed rotation will inform the choice of `W` in
 [#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
 
 ## Credential-plane extension
@@ -212,10 +212,8 @@ relay answers which keys currently control the AID; credential monitoring
 answers which issued roles remain valid. Only the first plane is in M1.
 
 ## Security principle
-
-The hunter is safe to make permissionless because it pays to submit public
-proofs whose on-chain result is deterministic, and it is paid from value the
-owner chose to keep there. A hostile hunter can withhold its own service or waste
-fees on invalid transactions. It cannot choose a different valid successor,
-take `D_reg` without a duplicity proof, take `B` while the pool pays, or move
-one lovelace to an address the owner's keys did not authorize.
+For a paid rotation, the submitter names the payee of the premium from the
+pool. A hunter can freeze a clean, unfrozen checkpoint by presenting a later
+witnessed rotation when the pool is below the premium. The freeze pays the
+bond to the address the hunter names. When a rotation carries a deposit, the
+new keys authorize the deposit amount for that checkpoint input.

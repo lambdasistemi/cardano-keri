@@ -80751,237 +80751,322 @@
    ]
   },
   "docs-architecture-system/how-applications-consume-identity-05": {
-   "audio_sha256": "ed842e43316710dcfcd1fac7a0bd5507e33c70978f0bd9ca4bb313fb9e1b4c91",
-   "characters": 219,
-   "cost": 0.00013578,
-   "duration": 14.45,
+   "audio_sha256": "5edbd8874867506149efdf5d1670ba4e1a71b6ac4d1507fb8a607801f35f8f9d",
+   "characters": 350,
+   "cost": 0.0003465,
+   "duration": 24.1,
    "index": 5,
-   "key": "1485065ebc42a6378b34789fb26bef24aa53e54a06182cc446f5e46d0ba6d8fc",
+   "key": "3373c18c0791d8bf41e2de0d5ee95e3000b9a3ad3a4e9e57f692ec37023c2df7",
    "page": "docs/architecture/system.md",
    "pause_ms": 300,
    "section": "how-applications-consume-identity",
-   "sent_text": "apply the consumer predicate — today, the bare ACTIVE role address; under the accepted design, both bonds full, not poisoned, and past the juvenility window (the age a checkpoint must reach before a consumer trusts it);",
-   "text": "apply the consumer predicate — today, the bare ACTIVE role address; under the accepted design, both bonds full, not poisoned, and past the juvenility window (the age a checkpoint must reach before a consumer trusts it);",
+   "sent_text": "apply the consumer predicate. The shipped version requires the bare ACTIVE role address. The accepted design checks the authenticated context, the output credential, the representative asset quantity of one and the decoded AID and lifecycle. The checkpoint must be present, unfrozen and unpoisoned, and its age must be at least the juvenility window.",
+   "text": "apply the consumer predicate. The shipped version requires the bare ACTIVE role address. The accepted design checks the authenticated context, the output credential, the representative asset quantity of one and the decoded AID and lifecycle. The checkpoint must be present, unfrozen and unpoisoned, and its age must be at least the juvenility window.",
    "words": [
     {
-     "end": 0.488,
+     "end": 0.463,
      "start": 0.2,
      "text": "apply"
     },
     {
-     "end": 0.575,
-     "start": 0.488,
+     "end": 0.55,
+     "start": 0.463,
      "text": "the"
     },
     {
-     "end": 1.05,
-     "start": 0.575,
+     "end": 1.025,
+     "start": 0.55,
      "text": "consumer"
     },
     {
-     "end": 1.55,
-     "start": 1.05,
+     "end": 1.925,
+     "start": 1.025,
      "text": "predicate"
     },
     {
-     "end": 1.625,
-     "start": 1.55,
-     "text": "—"
+     "end": 2.125,
+     "start": 1.925,
+     "text": "."
     },
     {
-     "end": 2.075,
-     "start": 1.625,
-     "text": "today"
+     "end": 2.412,
+     "start": 2.3,
+     "text": "The"
     },
     {
-     "end": 2.175,
-     "start": 2.075,
-     "text": ","
+     "end": 2.7,
+     "start": 2.412,
+     "text": "shipped"
     },
     {
-     "end": 2.275,
-     "start": 2.175,
+     "end": 3.125,
+     "start": 2.7,
+     "text": "version"
+    },
+    {
+     "end": 3.662,
+     "start": 3.125,
+     "text": "requires"
+    },
+    {
+     "end": 3.75,
+     "start": 3.662,
      "text": "the"
     },
     {
-     "end": 2.537,
-     "start": 2.275,
+     "end": 4.012,
+     "start": 3.75,
      "text": "bare"
     },
     {
-     "end": 2.925,
-     "start": 2.537,
+     "end": 4.4,
+     "start": 4.012,
      "text": "ACTIVE"
     },
     {
-     "end": 3.225,
-     "start": 2.925,
+     "end": 4.637,
+     "start": 4.4,
      "text": "role"
     },
     {
-     "end": 4.2,
-     "start": 3.225,
+     "end": 5.55,
+     "start": 4.637,
      "text": "address"
     },
     {
-     "end": 4.4,
-     "start": 4.2,
-     "text": ";"
+     "end": 5.75,
+     "start": 5.55,
+     "text": "."
     },
     {
-     "end": 4.738,
-     "start": 4.575,
-     "text": "under"
+     "end": 6.05,
+     "start": 5.925,
+     "text": "The"
     },
     {
-     "end": 4.875,
-     "start": 4.738,
-     "text": "the"
-    },
-    {
-     "end": 5.35,
-     "start": 4.875,
+     "end": 6.55,
+     "start": 6.05,
      "text": "accepted"
     },
     {
-     "end": 5.875,
-     "start": 5.35,
+     "end": 7.062,
+     "start": 6.55,
      "text": "design"
     },
     {
-     "end": 5.95,
-     "start": 5.875,
+     "end": 7.375,
+     "start": 7.062,
+     "text": "checks"
+    },
+    {
+     "end": 7.537,
+     "start": 7.375,
+     "text": "the"
+    },
+    {
+     "end": 8.25,
+     "start": 7.537,
+     "text": "authenticated"
+    },
+    {
+     "end": 8.95,
+     "start": 8.25,
+     "text": "context"
+    },
+    {
+     "end": 9.025,
+     "start": 8.95,
      "text": ","
     },
     {
-     "end": 6.25,
-     "start": 5.95,
-     "text": "both"
+     "end": 9.175,
+     "start": 9.025,
+     "text": "the"
     },
     {
-     "end": 6.6,
-     "start": 6.25,
-     "text": "bonds"
+     "end": 9.6,
+     "start": 9.175,
+     "text": "output"
     },
     {
-     "end": 6.85,
-     "start": 6.6,
-     "text": "full"
+     "end": 10.725,
+     "start": 9.6,
+     "text": "credential"
     },
     {
-     "end": 6.887,
-     "start": 6.85,
+     "end": 10.925,
+     "start": 10.725,
      "text": ","
     },
     {
-     "end": 7.1,
-     "start": 6.887,
-     "text": "not"
+     "end": 11.2,
+     "start": 11.1,
+     "text": "the"
     },
     {
-     "end": 8.1,
-     "start": 7.1,
-     "text": "poisoned"
+     "end": 11.962,
+     "start": 11.2,
+     "text": "representative"
     },
     {
-     "end": 8.3,
-     "start": 8.1,
-     "text": ","
+     "end": 12.4,
+     "start": 11.962,
+     "text": "asset"
     },
     {
-     "end": 8.6,
-     "start": 8.5,
+     "end": 12.925,
+     "start": 12.4,
+     "text": "quantity"
+    },
+    {
+     "end": 13.087,
+     "start": 12.925,
+     "text": "of"
+    },
+    {
+     "end": 13.6,
+     "start": 13.087,
+     "text": "one"
+    },
+    {
+     "end": 13.738,
+     "start": 13.6,
      "text": "and"
     },
     {
-     "end": 8.938,
-     "start": 8.6,
-     "text": "past"
-    },
-    {
-     "end": 9.038,
-     "start": 8.938,
+     "end": 13.825,
+     "start": 13.738,
      "text": "the"
     },
     {
-     "end": 9.762,
-     "start": 9.038,
-     "text": "juvenility"
+     "end": 14.363,
+     "start": 13.825,
+     "text": "decoded"
     },
     {
-     "end": 10.363,
-     "start": 9.762,
-     "text": "window"
+     "end": 15.15,
+     "start": 14.363,
+     "text": "AID"
     },
     {
-     "end": 10.425,
-     "start": 10.363,
-     "text": "("
+     "end": 15.275,
+     "start": 15.15,
+     "text": "and"
     },
     {
-     "end": 10.562,
-     "start": 10.425,
-     "text": "the"
+     "end": 16.475,
+     "start": 15.275,
+     "text": "lifecycle"
     },
     {
-     "end": 10.9,
-     "start": 10.562,
-     "text": "age"
+     "end": 16.675,
+     "start": 16.475,
+     "text": "."
     },
     {
-     "end": 11.012,
-     "start": 10.9,
-     "text": "a"
+     "end": 16.987,
+     "start": 16.875,
+     "text": "The"
     },
     {
-     "end": 11.6,
-     "start": 11.012,
+     "end": 17.5,
+     "start": 16.987,
      "text": "checkpoint"
     },
     {
-     "end": 11.875,
-     "start": 11.6,
+     "end": 17.75,
+     "start": 17.5,
      "text": "must"
     },
     {
-     "end": 12.175,
-     "start": 11.875,
-     "text": "reach"
+     "end": 17.913,
+     "start": 17.75,
+     "text": "be"
     },
     {
-     "end": 12.512,
-     "start": 12.175,
-     "text": "before"
+     "end": 18.4,
+     "start": 17.913,
+     "text": "present"
     },
     {
-     "end": 12.575,
-     "start": 12.512,
-     "text": "a"
+     "end": 18.475,
+     "start": 18.4,
+     "text": ","
     },
     {
-     "end": 13.125,
-     "start": 12.575,
-     "text": "consumer"
+     "end": 19.362,
+     "start": 18.475,
+     "text": "unfrozen"
     },
     {
-     "end": 13.5,
-     "start": 13.125,
-     "text": "trusts"
+     "end": 19.513,
+     "start": 19.362,
+     "text": "and"
     },
     {
-     "end": 14.2,
-     "start": 13.5,
-     "text": "it"
+     "end": 20.4,
+     "start": 19.513,
+     "text": "unpoisoned"
     },
     {
-     "end": 14.4,
-     "start": 14.2,
-     "text": ")"
+     "end": 20.475,
+     "start": 20.4,
+     "text": ","
     },
     {
-     "end": 14.45,
-     "start": 14.4,
-     "text": ";"
+     "end": 20.587,
+     "start": 20.475,
+     "text": "and"
+    },
+    {
+     "end": 20.763,
+     "start": 20.587,
+     "text": "its"
+    },
+    {
+     "end": 21.175,
+     "start": 20.763,
+     "text": "age"
+    },
+    {
+     "end": 21.425,
+     "start": 21.175,
+     "text": "must"
+    },
+    {
+     "end": 21.575,
+     "start": 21.425,
+     "text": "be"
+    },
+    {
+     "end": 21.7,
+     "start": 21.575,
+     "text": "at"
+    },
+    {
+     "end": 22.0,
+     "start": 21.7,
+     "text": "least"
+    },
+    {
+     "end": 22.112,
+     "start": 22.0,
+     "text": "the"
+    },
+    {
+     "end": 22.775,
+     "start": 22.112,
+     "text": "juvenility"
+    },
+    {
+     "end": 23.85,
+     "start": 22.775,
+     "text": "window"
+    },
+    {
+     "end": 24.1,
+     "start": 23.85,
+     "text": "."
     }
    ]
   },
@@ -83966,266 +84051,326 @@
    ]
   },
   "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-02": {
-   "audio_sha256": "6964ab557bf2f02668d2376e98f3ed3196d30513e507d9e455b7eb6ce1606e9c",
-   "characters": 257,
-   "cost": 0.00025443,
-   "duration": 17.875,
+   "audio_sha256": "69de50ee56189bdb4f59185949e62fbba9510abdea22de957f3ebfa852b62872",
+   "characters": 372,
+   "cost": 0.00036828,
+   "duration": 24.675,
    "index": 2,
-   "key": "2e97c3cc9ae805e2a18eea4fd5176b57978dc3a11629d4e7732946681354ce2c",
+   "key": "d626ca87a57968805228ebdcac01badf36feefefa64ed140295ec25cb0c8e371",
    "page": "docs/architecture/system.md",
    "pause_ms": 400,
    "section": "the-same-plane-under-the-accepted-design-designed",
-   "sent_text": "Two edges move the identity — a rotation and a poison — and four boundary transitions cross its edges: register and convict. Nothing has a deadline; the freeze has no window to expire, because the owner returns by rotating with a deposit whenever she likes.",
-   "text": "Two edges move the identity — a rotation and a poison — and four boundary transitions cross its edges: register and convict. Nothing has a deadline; the freeze has no window to expire, because the owner returns by rotating with a deposit whenever she likes.",
+   "sent_text": "Two of the six checkpoint actions cross the boundary of the present state. Registration creates a present checkpoint and conviction moves it to pending termination. The associated registry fold completes retirement. A freeze starts no response clock. A booked registration has a processing deadline, and a conviction commitment can be revealed only within its slot window.",
+   "text": "Two of the six checkpoint actions cross the boundary of the present state. Registration creates a present checkpoint and conviction moves it to pending termination. The associated registry fold completes retirement. A freeze starts no response clock. A booked registration has a processing deadline, and a conviction commitment can be revealed only within its slot window.",
    "words": [
     {
-     "end": 0.463,
-     "start": 0.225,
+     "end": 0.425,
+     "start": 0.2,
      "text": "Two"
     },
     {
-     "end": 0.863,
-     "start": 0.463,
-     "text": "edges"
+     "end": 0.512,
+     "start": 0.425,
+     "text": "of"
     },
     {
-     "end": 1.163,
-     "start": 0.863,
-     "text": "move"
-    },
-    {
-     "end": 1.312,
-     "start": 1.163,
+     "end": 0.637,
+     "start": 0.512,
      "text": "the"
     },
     {
-     "end": 2.062,
-     "start": 1.312,
-     "text": "identity"
+     "end": 0.962,
+     "start": 0.637,
+     "text": "six"
     },
     {
-     "end": 2.15,
-     "start": 2.062,
-     "text": "—"
+     "end": 1.45,
+     "start": 0.962,
+     "text": "checkpoint"
     },
     {
-     "end": 2.25,
-     "start": 2.15,
-     "text": "a"
+     "end": 2.013,
+     "start": 1.45,
+     "text": "actions"
     },
     {
-     "end": 2.925,
-     "start": 2.25,
-     "text": "rotation"
-    },
-    {
-     "end": 3.037,
-     "start": 2.925,
-     "text": "and"
-    },
-    {
-     "end": 3.112,
-     "start": 3.037,
-     "text": "a"
-    },
-    {
-     "end": 3.8,
-     "start": 3.112,
-     "text": "poison"
-    },
-    {
-     "end": 3.875,
-     "start": 3.8,
-     "text": "—"
-    },
-    {
-     "end": 4.05,
-     "start": 3.875,
-     "text": "and"
-    },
-    {
-     "end": 4.35,
-     "start": 4.05,
-     "text": "four"
-    },
-    {
-     "end": 4.8,
-     "start": 4.35,
-     "text": "boundary"
-    },
-    {
-     "end": 5.575,
-     "start": 4.8,
-     "text": "transitions"
-    },
-    {
-     "end": 5.875,
-     "start": 5.575,
+     "end": 2.325,
+     "start": 2.013,
      "text": "cross"
     },
     {
-     "end": 6.05,
-     "start": 5.875,
-     "text": "its"
+     "end": 2.425,
+     "start": 2.325,
+     "text": "the"
     },
     {
-     "end": 7.075,
-     "start": 6.05,
-     "text": "edges"
+     "end": 2.95,
+     "start": 2.425,
+     "text": "boundary"
     },
     {
-     "end": 7.275,
-     "start": 7.075,
-     "text": ":"
+     "end": 3.037,
+     "start": 2.95,
+     "text": "of"
     },
     {
-     "end": 7.95,
-     "start": 7.475,
-     "text": "register"
+     "end": 3.125,
+     "start": 3.037,
+     "text": "the"
     },
     {
-     "end": 8.075,
-     "start": 7.95,
-     "text": "and"
+     "end": 3.5,
+     "start": 3.125,
+     "text": "present"
     },
     {
-     "end": 8.625,
-     "start": 8.075,
-     "text": "convict"
+     "end": 4.375,
+     "start": 3.5,
+     "text": "state"
     },
     {
-     "end": 8.712,
-     "start": 8.625,
+     "end": 4.575,
+     "start": 4.375,
      "text": "."
     },
     {
-     "end": 9.125,
-     "start": 8.712,
-     "text": "Nothing"
+     "end": 5.637,
+     "start": 4.775,
+     "text": "Registration"
     },
     {
-     "end": 9.288,
-     "start": 9.125,
-     "text": "has"
+     "end": 6.062,
+     "start": 5.637,
+     "text": "creates"
     },
     {
-     "end": 9.35,
-     "start": 9.288,
+     "end": 6.125,
+     "start": 6.062,
      "text": "a"
     },
     {
-     "end": 10.375,
-     "start": 9.35,
-     "text": "deadline"
+     "end": 6.512,
+     "start": 6.125,
+     "text": "present"
     },
     {
-     "end": 10.575,
-     "start": 10.375,
-     "text": ";"
+     "end": 7.275,
+     "start": 6.512,
+     "text": "checkpoint"
     },
     {
-     "end": 10.887,
-     "start": 10.775,
-     "text": "the"
+     "end": 7.425,
+     "start": 7.275,
+     "text": "and"
     },
     {
-     "end": 11.3,
-     "start": 10.887,
-     "text": "freeze"
+     "end": 8.038,
+     "start": 7.425,
+     "text": "conviction"
     },
     {
-     "end": 11.512,
-     "start": 11.3,
-     "text": "has"
+     "end": 8.4,
+     "start": 8.038,
+     "text": "moves"
     },
     {
-     "end": 11.788,
-     "start": 11.512,
-     "text": "no"
+     "end": 8.55,
+     "start": 8.4,
+     "text": "it"
     },
     {
-     "end": 12.15,
-     "start": 11.788,
-     "text": "window"
-    },
-    {
-     "end": 12.3,
-     "start": 12.15,
+     "end": 8.675,
+     "start": 8.55,
      "text": "to"
     },
     {
-     "end": 12.975,
-     "start": 12.3,
-     "text": "expire"
+     "end": 9.075,
+     "start": 8.675,
+     "text": "pending"
     },
     {
-     "end": 13.05,
-     "start": 12.975,
-     "text": ","
+     "end": 10.4,
+     "start": 9.075,
+     "text": "termination"
     },
     {
-     "end": 13.363,
-     "start": 13.05,
-     "text": "because"
+     "end": 10.6,
+     "start": 10.4,
+     "text": "."
     },
     {
-     "end": 13.512,
-     "start": 13.363,
-     "text": "the"
+     "end": 10.9,
+     "start": 10.775,
+     "text": "The"
+    },
+    {
+     "end": 11.625,
+     "start": 10.9,
+     "text": "associated"
+    },
+    {
+     "end": 12.175,
+     "start": 11.625,
+     "text": "registry"
+    },
+    {
+     "end": 12.6,
+     "start": 12.175,
+     "text": "fold"
+    },
+    {
+     "end": 13.1,
+     "start": 12.6,
+     "text": "completes"
     },
     {
      "end": 13.875,
-     "start": 13.512,
-     "text": "owner"
+     "start": 13.1,
+     "text": "retirement"
     },
     {
-     "end": 14.45,
+     "end": 13.988,
      "start": 13.875,
-     "text": "returns"
+     "text": "."
     },
     {
-     "end": 14.663,
-     "start": 14.45,
-     "text": "by"
+     "end": 14.113,
+     "start": 13.988,
+     "text": "A"
     },
     {
-     "end": 15.225,
-     "start": 14.663,
-     "text": "rotating"
+     "end": 14.475,
+     "start": 14.113,
+     "text": "freeze"
     },
     {
-     "end": 15.363,
-     "start": 15.225,
-     "text": "with"
+     "end": 14.863,
+     "start": 14.475,
+     "text": "starts"
     },
     {
-     "end": 15.425,
-     "start": 15.363,
+     "end": 15.125,
+     "start": 14.863,
+     "text": "no"
+    },
+    {
+     "end": 15.625,
+     "start": 15.125,
+     "text": "response"
+    },
+    {
+     "end": 16.575,
+     "start": 15.625,
+     "text": "clock"
+    },
+    {
+     "end": 16.8,
+     "start": 16.575,
+     "text": "."
+    },
+    {
+     "end": 17.087,
+     "start": 17.0,
+     "text": "A"
+    },
+    {
+     "end": 17.375,
+     "start": 17.087,
+     "text": "booked"
+    },
+    {
+     "end": 18.225,
+     "start": 17.375,
+     "text": "registration"
+    },
+    {
+     "end": 18.413,
+     "start": 18.225,
+     "text": "has"
+    },
+    {
+     "end": 18.513,
+     "start": 18.413,
      "text": "a"
     },
     {
-     "end": 16.05,
-     "start": 15.425,
-     "text": "deposit"
+     "end": 19.175,
+     "start": 18.513,
+     "text": "processing"
     },
     {
-     "end": 16.475,
-     "start": 16.05,
-     "text": "whenever"
+     "end": 19.8,
+     "start": 19.175,
+     "text": "deadline"
     },
     {
-     "end": 16.625,
-     "start": 16.475,
-     "text": "she"
+     "end": 19.875,
+     "start": 19.8,
+     "text": ","
     },
     {
-     "end": 17.675,
-     "start": 16.625,
-     "text": "likes"
+     "end": 19.987,
+     "start": 19.875,
+     "text": "and"
     },
     {
-     "end": 17.875,
-     "start": 17.675,
+     "end": 20.05,
+     "start": 19.987,
+     "text": "a"
+    },
+    {
+     "end": 20.625,
+     "start": 20.05,
+     "text": "conviction"
+    },
+    {
+     "end": 21.15,
+     "start": 20.625,
+     "text": "commitment"
+    },
+    {
+     "end": 21.3,
+     "start": 21.15,
+     "text": "can"
+    },
+    {
+     "end": 21.45,
+     "start": 21.3,
+     "text": "be"
+    },
+    {
+     "end": 22.05,
+     "start": 21.45,
+     "text": "revealed"
+    },
+    {
+     "end": 22.45,
+     "start": 22.05,
+     "text": "only"
+    },
+    {
+     "end": 22.775,
+     "start": 22.45,
+     "text": "within"
+    },
+    {
+     "end": 22.962,
+     "start": 22.775,
+     "text": "its"
+    },
+    {
+     "end": 23.325,
+     "start": 22.962,
+     "text": "slot"
+    },
+    {
+     "end": 24.4,
+     "start": 23.325,
+     "text": "window"
+    },
+    {
+     "end": 24.675,
+     "start": 24.4,
      "text": "."
     }
    ]
@@ -92731,586 +92876,386 @@
    ]
   },
   "docs-architecture-value-auth/under-the-accepted-design-01": {
-   "audio_sha256": "0ec178e0942dd2361bb855f038ec3597323a8f4cf04b355dc97b1045b095b011",
-   "characters": 249,
-   "cost": 0.00024650999999999997,
-   "duration": 17.5,
+   "audio_sha256": "3d4a8ce884a09e73cacf8b2110262b0f316c56ba11f8a5797631a06a4bad7474",
+   "characters": 212,
+   "cost": 0.00020988,
+   "duration": 14.325,
    "index": 1,
-   "key": "64310872f5d09d011f9998763bca0508e7e13e76ed7af1d26ec83a0263f9e550",
+   "key": "4b8f3d10da33f416d23fe23bba09b3d168fd3bdc2a0ad5cf05d99f85f1be6ef0",
    "page": "docs/architecture/value-auth.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design",
-   "sent_text": "The older checkpoint design retains steps 1 to 5. The pending Singular integration also changes token and registry authentication as described below. Steps 6 and 7 become the consumer predicate, which reads only the datum and the checkpoint's value:",
-   "text": "The older checkpoint design retains steps 1 to 5. The pending Singular integration also changes token and registry authentication as described below. Steps 6 and 7 become the consumer predicate, which reads only the datum and the checkpoint's value:",
+   "sent_text": "The holding predicate authenticates the network, release and checkpoint credential. It requires the output at that credential to hold exactly one unit of the representative asset derived for the registry and AID.",
+   "text": "The holding predicate authenticates the network, release and checkpoint credential. It requires the output at that credential to hold exactly one unit of the representative asset derived for the registry and AID.",
    "words": [
     {
-     "end": 0.3,
+     "end": 0.25,
      "start": 0.175,
      "text": "The"
     },
     {
      "end": 0.625,
-     "start": 0.3,
-     "text": "older"
+     "start": 0.25,
+     "text": "holding"
     },
     {
-     "end": 1.038,
+     "end": 1.112,
      "start": 0.625,
-     "text": "checkpoint"
-    },
-    {
-     "end": 1.475,
-     "start": 1.038,
-     "text": "design"
-    },
-    {
-     "end": 1.925,
-     "start": 1.475,
-     "text": "retains"
-    },
-    {
-     "end": 2.275,
-     "start": 1.925,
-     "text": "steps"
-    },
-    {
-     "end": 2.425,
-     "start": 2.275,
-     "text": "1"
-    },
-    {
-     "end": 2.55,
-     "start": 2.425,
-     "text": "to"
-    },
-    {
-     "end": 3.4,
-     "start": 2.55,
-     "text": "5"
-    },
-    {
-     "end": 3.6,
-     "start": 3.4,
-     "text": "."
-    },
-    {
-     "end": 3.912,
-     "start": 3.8,
-     "text": "The"
-    },
-    {
-     "end": 4.375,
-     "start": 3.912,
-     "text": "pending"
-    },
-    {
-     "end": 4.925,
-     "start": 4.375,
-     "text": "Singular"
-    },
-    {
-     "end": 5.713,
-     "start": 4.925,
-     "text": "integration"
-    },
-    {
-     "end": 6.113,
-     "start": 5.713,
-     "text": "also"
-    },
-    {
-     "end": 6.613,
-     "start": 6.113,
-     "text": "changes"
-    },
-    {
-     "end": 7.15,
-     "start": 6.613,
-     "text": "token"
-    },
-    {
-     "end": 7.275,
-     "start": 7.15,
-     "text": "and"
-    },
-    {
-     "end": 7.775,
-     "start": 7.275,
-     "text": "registry"
-    },
-    {
-     "end": 8.725,
-     "start": 7.775,
-     "text": "authentication"
-    },
-    {
-     "end": 8.925,
-     "start": 8.725,
-     "text": "as"
-    },
-    {
-     "end": 9.525,
-     "start": 8.925,
-     "text": "described"
-    },
-    {
-     "end": 10.6,
-     "start": 9.525,
-     "text": "below"
-    },
-    {
-     "end": 10.85,
-     "start": 10.6,
-     "text": "."
-    },
-    {
-     "end": 11.337,
-     "start": 11.05,
-     "text": "Steps"
-    },
-    {
-     "end": 11.613,
-     "start": 11.337,
-     "text": "6"
-    },
-    {
-     "end": 11.738,
-     "start": 11.613,
-     "text": "and"
-    },
-    {
-     "end": 12.175,
-     "start": 11.738,
-     "text": "7"
-    },
-    {
-     "end": 12.538,
-     "start": 12.175,
-     "text": "become"
-    },
-    {
-     "end": 12.625,
-     "start": 12.538,
-     "text": "the"
-    },
-    {
-     "end": 13.175,
-     "start": 12.625,
-     "text": "consumer"
-    },
-    {
-     "end": 13.75,
-     "start": 13.175,
      "text": "predicate"
     },
     {
-     "end": 13.825,
-     "start": 13.75,
+     "end": 1.85,
+     "start": 1.112,
+     "text": "authenticates"
+    },
+    {
+     "end": 1.975,
+     "start": 1.85,
+     "text": "the"
+    },
+    {
+     "end": 2.5,
+     "start": 1.975,
+     "text": "network"
+    },
+    {
+     "end": 2.6,
+     "start": 2.5,
      "text": ","
     },
     {
-     "end": 14.062,
-     "start": 13.825,
-     "text": "which"
+     "end": 3.138,
+     "start": 2.6,
+     "text": "release"
     },
     {
-     "end": 14.438,
-     "start": 14.062,
-     "text": "reads"
-    },
-    {
-     "end": 14.8,
-     "start": 14.438,
-     "text": "only"
-    },
-    {
-     "end": 14.938,
-     "start": 14.8,
-     "text": "the"
-    },
-    {
-     "end": 15.462,
-     "start": 14.938,
-     "text": "datum"
-    },
-    {
-     "end": 15.587,
-     "start": 15.462,
+     "end": 3.287,
+     "start": 3.138,
      "text": "and"
     },
     {
-     "end": 15.688,
-     "start": 15.587,
+     "end": 3.75,
+     "start": 3.287,
+     "text": "checkpoint"
+    },
+    {
+     "end": 4.9,
+     "start": 3.75,
+     "text": "credential"
+    },
+    {
+     "end": 5.1,
+     "start": 4.9,
+     "text": "."
+    },
+    {
+     "end": 5.425,
+     "start": 5.3,
+     "text": "It"
+    },
+    {
+     "end": 6.05,
+     "start": 5.425,
+     "text": "requires"
+    },
+    {
+     "end": 6.213,
+     "start": 6.05,
      "text": "the"
     },
     {
-     "end": 16.25,
-     "start": 15.688,
-     "text": "checkpoint's"
+     "end": 6.7,
+     "start": 6.213,
+     "text": "output"
     },
     {
-     "end": 17.225,
-     "start": 16.25,
-     "text": "value"
+     "end": 6.825,
+     "start": 6.7,
+     "text": "at"
     },
     {
-     "end": 17.5,
-     "start": 17.225,
-     "text": ":"
+     "end": 7.075,
+     "start": 6.825,
+     "text": "that"
+    },
+    {
+     "end": 7.688,
+     "start": 7.075,
+     "text": "credential"
+    },
+    {
+     "end": 7.825,
+     "start": 7.688,
+     "text": "to"
+    },
+    {
+     "end": 8.125,
+     "start": 7.825,
+     "text": "hold"
+    },
+    {
+     "end": 8.762,
+     "start": 8.125,
+     "text": "exactly"
+    },
+    {
+     "end": 9.062,
+     "start": 8.762,
+     "text": "one"
+    },
+    {
+     "end": 9.45,
+     "start": 9.062,
+     "text": "unit"
+    },
+    {
+     "end": 9.538,
+     "start": 9.45,
+     "text": "of"
+    },
+    {
+     "end": 9.65,
+     "start": 9.538,
+     "text": "the"
+    },
+    {
+     "end": 10.413,
+     "start": 9.65,
+     "text": "representative"
+    },
+    {
+     "end": 10.9,
+     "start": 10.413,
+     "text": "asset"
+    },
+    {
+     "end": 11.475,
+     "start": 10.9,
+     "text": "derived"
+    },
+    {
+     "end": 11.6,
+     "start": 11.475,
+     "text": "for"
+    },
+    {
+     "end": 11.725,
+     "start": 11.6,
+     "text": "the"
+    },
+    {
+     "end": 12.475,
+     "start": 11.725,
+     "text": "registry"
+    },
+    {
+     "end": 12.688,
+     "start": 12.475,
+     "text": "and"
+    },
+    {
+     "end": 14.075,
+     "start": 12.688,
+     "text": "AID"
+    },
+    {
+     "end": 14.325,
+     "start": 14.075,
+     "text": "."
     }
    ]
   },
   "docs-architecture-value-auth/under-the-accepted-design-02": {
-   "audio_sha256": "85659eb9bede32b70217688f0fc465da4389e18fad5c7c6fb8ecbe6dc064ccb7",
-   "characters": 325,
-   "cost": 0.00032174999999999993,
-   "duration": 22.8,
+   "audio_sha256": "5903414b0b6351de79efb52cda3b9ea80cb95cbef55cf49bfc78dce65b217846",
+   "characters": 218,
+   "cost": 0.00021581999999999998,
+   "duration": 14.075,
    "index": 2,
-   "key": "0fcb77c8c0a4a03f03940004e6beae255ddb8bc106ce1161ae82e978003a257b",
+   "key": "a4192df1fb17b3ad9220359cf508c6e26983adde1670e8de278b25d4688e736c",
    "page": "docs/architecture/value-auth.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design",
-   "sent_text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, and pending conviction custody. There is no parked state: a checkpoint is alive until it is convicted.",
-   "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, and pending conviction custody. There is no parked state: a checkpoint is alive until it is convicted.",
+   "sent_text": "The lifecycle check accepts a present checkpoint when its frozen and poisoned bits are clear and its age is at least the juvenility window. The relying application checks authorization for its own operation separately.",
+   "text": "The lifecycle check accepts a present checkpoint when its frozen and poisoned bits are clear and its age is at least the juvenility window. The relying application checks authorization for its own operation separately.",
    "words": [
     {
      "end": 0.3,
      "start": 0.2,
-     "text": "and"
+     "text": "The"
     },
     {
-     "end": 0.35,
+     "end": 0.962,
      "start": 0.3,
-     "text": ","
+     "text": "lifecycle"
     },
     {
-     "end": 0.6,
-     "start": 0.35,
-     "text": "once"
+     "end": 1.275,
+     "start": 0.962,
+     "text": "check"
     },
     {
-     "end": 0.7,
-     "start": 0.6,
-     "text": "the"
+     "end": 1.688,
+     "start": 1.275,
+     "text": "accepts"
     },
     {
-     "end": 1.15,
-     "start": 0.7,
-     "text": "validity"
-    },
-    {
-     "end": 1.388,
-     "start": 1.15,
-     "text": "edge"
-    },
-    {
-     "end": 1.825,
-     "start": 1.388,
-     "text": "ships"
-    },
-    {
-     "end": 1.9,
-     "start": 1.825,
-     "text": ","
-    },
-    {
-     "end": 2.088,
-     "start": 1.9,
-     "text": "now"
-    },
-    {
-     "end": 3.025,
-     "start": 2.088,
-     "text": "≤"
-    },
-    {
-     "end": 4.325,
-     "start": 3.025,
-     "text": "valid_until"
-    },
-    {
-     "end": 4.525,
-     "start": 4.325,
-     "text": "."
-    },
-    {
-     "end": 5.037,
-     "start": 4.7,
-     "text": "Everything"
-    },
-    {
-     "end": 5.225,
-     "start": 5.037,
-     "text": "else"
-    },
-    {
-     "end": 5.525,
-     "start": 5.225,
-     "text": "fails"
-    },
-    {
-     "end": 6.35,
-     "start": 5.525,
-     "text": "closed"
-    },
-    {
-     "end": 6.55,
-     "start": 6.35,
-     "text": ":"
-    },
-    {
-     "end": 7.125,
-     "start": 6.75,
-     "text": "absent"
-    },
-    {
-     "end": 7.175,
-     "start": 7.125,
-     "text": ","
-    },
-    {
-     "end": 7.562,
-     "start": 7.175,
-     "text": "frozen"
-    },
-    {
-     "end": 7.6,
-     "start": 7.562,
-     "text": "("
-    },
-    {
-     "end": 7.675,
-     "start": 7.6,
-     "text": "the"
-    },
-    {
-     "end": 7.95,
-     "start": 7.675,
-     "text": "freeze"
-    },
-    {
-     "end": 8.225,
-     "start": 7.95,
-     "text": "bond"
-    },
-    {
-     "end": 9.125,
-     "start": 8.225,
-     "text": "taken"
-    },
-    {
-     "end": 9.35,
-     "start": 9.125,
-     "text": ")"
-    },
-    {
-     "end": 9.425,
-     "start": 9.35,
-     "text": ","
-    },
-    {
-     "end": 10.05,
-     "start": 9.6,
-     "text": "poisoned"
-    },
-    {
-     "end": 10.1,
-     "start": 10.05,
-     "text": "("
-    },
-    {
-     "end": 10.375,
-     "start": 10.1,
-     "text": "locked"
-    },
-    {
-     "end": 10.512,
-     "start": 10.375,
-     "text": "by"
-    },
-    {
-     "end": 10.625,
-     "start": 10.512,
-     "text": "the"
-    },
-    {
-     "end": 10.975,
-     "start": 10.625,
-     "text": "owner's"
-    },
-    {
-     "end": 11.15,
-     "start": 10.975,
-     "text": "own"
-    },
-    {
-     "end": 12.375,
-     "start": 11.15,
-     "text": "declaration"
-    },
-    {
-     "end": 12.55,
-     "start": 12.375,
-     "text": ")"
-    },
-    {
-     "end": 12.6,
-     "start": 12.55,
-     "text": ","
-    },
-    {
-     "end": 13.375,
-     "start": 12.825,
-     "text": "juvenile"
-    },
-    {
-     "end": 13.45,
-     "start": 13.375,
-     "text": "("
-    },
-    {
-     "end": 13.825,
-     "start": 13.45,
-     "text": "younger"
-    },
-    {
-     "end": 13.962,
-     "start": 13.825,
-     "text": "than"
-    },
-    {
-     "end": 14.05,
-     "start": 13.962,
-     "text": "the"
-    },
-    {
-     "end": 14.45,
-     "start": 14.05,
-     "text": "window"
-    },
-    {
-     "end": 15.025,
-     "start": 14.45,
-     "text": "W"
-    },
-    {
-     "end": 15.125,
-     "start": 15.025,
-     "text": ")"
-    },
-    {
-     "end": 15.2,
-     "start": 15.125,
-     "text": ","
-    },
-    {
-     "end": 15.825,
-     "start": 15.2,
-     "text": "convicted"
-    },
-    {
-     "end": 15.9,
-     "start": 15.825,
-     "text": ","
-    },
-    {
-     "end": 16.038,
-     "start": 15.9,
-     "text": "and"
-    },
-    {
-     "end": 16.45,
-     "start": 16.038,
-     "text": "pending"
-    },
-    {
-     "end": 16.95,
-     "start": 16.45,
-     "text": "conviction"
-    },
-    {
-     "end": 18.025,
-     "start": 16.95,
-     "text": "custody"
-    },
-    {
-     "end": 18.225,
-     "start": 18.025,
-     "text": "."
-    },
-    {
-     "end": 18.525,
-     "start": 18.4,
-     "text": "There"
-    },
-    {
-     "end": 18.675,
-     "start": 18.525,
-     "text": "is"
-    },
-    {
-     "end": 18.85,
-     "start": 18.675,
-     "text": "no"
-    },
-    {
-     "end": 19.175,
-     "start": 18.85,
-     "text": "parked"
-    },
-    {
-     "end": 19.625,
-     "start": 19.175,
-     "text": "state"
-    },
-    {
-     "end": 19.712,
-     "start": 19.625,
-     "text": ":"
-    },
-    {
-     "end": 19.837,
-     "start": 19.712,
+     "end": 1.788,
+     "start": 1.688,
      "text": "a"
     },
     {
-     "end": 20.35,
-     "start": 19.837,
+     "end": 2.188,
+     "start": 1.788,
+     "text": "present"
+    },
+    {
+     "end": 2.775,
+     "start": 2.188,
      "text": "checkpoint"
     },
     {
-     "end": 20.475,
-     "start": 20.35,
+     "end": 2.912,
+     "start": 2.775,
+     "text": "when"
+    },
+    {
+     "end": 3.125,
+     "start": 2.912,
+     "text": "its"
+    },
+    {
+     "end": 3.7,
+     "start": 3.125,
+     "text": "frozen"
+    },
+    {
+     "end": 3.838,
+     "start": 3.7,
+     "text": "and"
+    },
+    {
+     "end": 4.3,
+     "start": 3.838,
+     "text": "poisoned"
+    },
+    {
+     "end": 4.575,
+     "start": 4.3,
+     "text": "bits"
+    },
+    {
+     "end": 4.713,
+     "start": 4.575,
+     "text": "are"
+    },
+    {
+     "end": 5.312,
+     "start": 4.713,
+     "text": "clear"
+    },
+    {
+     "end": 5.438,
+     "start": 5.312,
+     "text": "and"
+    },
+    {
+     "end": 5.613,
+     "start": 5.438,
+     "text": "its"
+    },
+    {
+     "end": 6.062,
+     "start": 5.613,
+     "text": "age"
+    },
+    {
+     "end": 6.225,
+     "start": 6.062,
      "text": "is"
     },
     {
-     "end": 20.938,
-     "start": 20.475,
-     "text": "alive"
+     "end": 6.375,
+     "start": 6.225,
+     "text": "at"
     },
     {
-     "end": 21.212,
-     "start": 20.938,
-     "text": "until"
+     "end": 6.7,
+     "start": 6.375,
+     "text": "least"
     },
     {
-     "end": 21.3,
-     "start": 21.212,
-     "text": "it"
+     "end": 6.812,
+     "start": 6.7,
+     "text": "the"
     },
     {
-     "end": 21.45,
-     "start": 21.3,
-     "text": "is"
+     "end": 7.475,
+     "start": 6.812,
+     "text": "juvenility"
     },
     {
-     "end": 22.575,
-     "start": 21.45,
-     "text": "convicted"
+     "end": 8.575,
+     "start": 7.475,
+     "text": "window"
     },
     {
-     "end": 22.8,
-     "start": 22.575,
+     "end": 8.85,
+     "start": 8.575,
+     "text": "."
+    },
+    {
+     "end": 9.1,
+     "start": 9.025,
+     "text": "The"
+    },
+    {
+     "end": 9.575,
+     "start": 9.1,
+     "text": "relying"
+    },
+    {
+     "end": 10.288,
+     "start": 9.575,
+     "text": "application"
+    },
+    {
+     "end": 10.637,
+     "start": 10.288,
+     "text": "checks"
+    },
+    {
+     "end": 11.512,
+     "start": 10.637,
+     "text": "authorization"
+    },
+    {
+     "end": 11.688,
+     "start": 11.512,
+     "text": "for"
+    },
+    {
+     "end": 11.863,
+     "start": 11.688,
+     "text": "its"
+    },
+    {
+     "end": 12.125,
+     "start": 11.863,
+     "text": "own"
+    },
+    {
+     "end": 12.775,
+     "start": 12.125,
+     "text": "operation"
+    },
+    {
+     "end": 13.85,
+     "start": 12.775,
+     "text": "separately"
+    },
+    {
+     "end": 14.075,
+     "start": 13.85,
      "text": "."
     }
    ]
@@ -93371,17 +93316,17 @@
    ]
   },
   "docs-architecture-value-auth/under-the-accepted-design-04": {
-   "audio_sha256": "d827c99fb28a4f99c0a03065e0f5305ad813f7141054ca85f64f55365cba088a",
-   "characters": 225,
-   "cost": 0.00022275,
-   "duration": 15.575,
+   "audio_sha256": "3608cd448f5ccf94cd79317ecee03eae85f1966863f3b6e3d566a71c06e29617",
+   "characters": 350,
+   "cost": 0.0003465,
+   "duration": 24.275,
    "index": 4,
-   "key": "992ffb8eedfa0e8a22f05b20150594edf3d0d7c924f70bca5681dc83c308db14",
+   "key": "57eb4d69db2bca3ed8c845e64d31176f767c28c4b89971b50f3296abbb715075",
    "page": "docs/architecture/value-auth.md",
    "pause_ms": 300,
    "section": "under-the-accepted-design",
-   "sent_text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. The hunter receives B, so the output no longer holds that bond. The consumer checks the datum and the value it expects the output to hold.",
-   "text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. The hunter receives B, so the output no longer holds that bond. The consumer checks the datum and the value it expects the output to hold.",
+   "sent_text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. The hunter receives B, so the output no longer holds that bond. Changing only the lovelace leaves the holding predicate’s result unchanged. A caller relying on realizesState must establish the exact lovelace held for the state, including the registry minimum ADA.",
+   "text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. The hunter receives B, so the output no longer holds that bond. Changing only the lovelace leaves the holding predicate’s result unchanged. A caller relying on realizesState must establish the exact lovelace held for the state, including the registry minimum ADA.",
    "words": [
     {
      "end": 0.45,
@@ -93544,78 +93489,163 @@
      "text": "."
     },
     {
-     "end": 10.975,
-     "start": 10.9,
-     "text": "The"
+     "end": 11.337,
+     "start": 10.925,
+     "text": "Changing"
     },
     {
-     "end": 11.538,
-     "start": 10.975,
-     "text": "consumer"
+     "end": 11.65,
+     "start": 11.337,
+     "text": "only"
     },
     {
-     "end": 11.85,
-     "start": 11.538,
-     "text": "checks"
-    },
-    {
-     "end": 11.975,
-     "start": 11.85,
+     "end": 11.775,
+     "start": 11.65,
      "text": "the"
     },
     {
-     "end": 12.575,
-     "start": 11.975,
-     "text": "datum"
+     "end": 12.337,
+     "start": 11.775,
+     "text": "lovelace"
     },
     {
-     "end": 12.712,
-     "start": 12.575,
-     "text": "and"
+     "end": 12.7,
+     "start": 12.337,
+     "text": "leaves"
     },
     {
      "end": 12.8,
-     "start": 12.712,
+     "start": 12.7,
      "text": "the"
     },
     {
-     "end": 13.2,
+     "end": 13.15,
      "start": 12.8,
-     "text": "value"
+     "text": "holding"
     },
     {
-     "end": 13.288,
-     "start": 13.2,
-     "text": "it"
+     "end": 13.7,
+     "start": 13.15,
+     "text": "predicate’s"
     },
     {
-     "end": 13.762,
-     "start": 13.288,
-     "text": "expects"
+     "end": 14.137,
+     "start": 13.7,
+     "text": "result"
     },
     {
-     "end": 13.9,
-     "start": 13.762,
+     "end": 15.4,
+     "start": 14.137,
+     "text": "unchanged"
+    },
+    {
+     "end": 15.6,
+     "start": 15.4,
+     "text": "."
+    },
+    {
+     "end": 15.913,
+     "start": 15.825,
+     "text": "A"
+    },
+    {
+     "end": 16.325,
+     "start": 15.913,
+     "text": "caller"
+    },
+    {
+     "end": 16.825,
+     "start": 16.325,
+     "text": "relying"
+    },
+    {
+     "end": 17.025,
+     "start": 16.825,
+     "text": "on"
+    },
+    {
+     "end": 18.038,
+     "start": 17.025,
+     "text": "realizesState"
+    },
+    {
+     "end": 18.288,
+     "start": 18.038,
+     "text": "must"
+    },
+    {
+     "end": 18.975,
+     "start": 18.288,
+     "text": "establish"
+    },
+    {
+     "end": 19.125,
+     "start": 18.975,
      "text": "the"
     },
     {
-     "end": 14.3,
-     "start": 13.9,
-     "text": "output"
+     "end": 19.638,
+     "start": 19.125,
+     "text": "exact"
     },
     {
-     "end": 14.425,
-     "start": 14.3,
-     "text": "to"
+     "end": 20.125,
+     "start": 19.638,
+     "text": "lovelace"
     },
     {
-     "end": 15.35,
-     "start": 14.425,
-     "text": "hold"
+     "end": 20.4,
+     "start": 20.125,
+     "text": "held"
     },
     {
-     "end": 15.575,
-     "start": 15.35,
+     "end": 20.513,
+     "start": 20.4,
+     "text": "for"
+    },
+    {
+     "end": 20.638,
+     "start": 20.513,
+     "text": "the"
+    },
+    {
+     "end": 21.225,
+     "start": 20.638,
+     "text": "state"
+    },
+    {
+     "end": 21.325,
+     "start": 21.225,
+     "text": ","
+    },
+    {
+     "end": 21.875,
+     "start": 21.325,
+     "text": "including"
+    },
+    {
+     "end": 22.0,
+     "start": 21.875,
+     "text": "the"
+    },
+    {
+     "end": 22.538,
+     "start": 22.0,
+     "text": "registry"
+    },
+    {
+     "end": 22.95,
+     "start": 22.538,
+     "text": "minimum"
+    },
+    {
+     "end": 23.975,
+     "start": 22.95,
+     "text": "ADA"
+    },
+    {
+     "end": 24.275,
+     "start": 23.975,
      "text": "."
     }
    ]
@@ -94526,17 +94556,17 @@
    ]
   },
   "docs-architecture-value-auth/value-authorization-04": {
-   "audio_sha256": "a83a5c41664435e56218bbf377027fa7b7fa0eb8e813c96b8c07381f6d5cb3b3",
-   "characters": 327,
-   "cost": 0.00020274,
-   "duration": 21.85,
+   "audio_sha256": "fb8ce7ca971e805e53d1e52b9325def5712e6967c67e1a240e4f3cac053f8008",
+   "characters": 277,
+   "cost": 0.00027423,
+   "duration": 18.7,
    "index": 4,
-   "key": "3eefa97ef69b0ae67e2bea434a87c2c78f3d627b60920c1edc4a9bd37e9450cf",
+   "key": "ded0a7ae5d7c6a56aaba766543e3885f6db79214e3261475db1e96d549a78ddd",
    "page": "docs/architecture/value-auth.md",
    "pause_ms": 400,
    "section": "value-authorization",
-   "sent_text": "The resolution rules, the indexer boundary, the authorization modes and the rotation race are shipped on main today and survive the M1 return. What changes is the predicate an application applies to the checkpoint it resolved: role addresses go, and a bit plus the checkpoint's own value take their place. Both are given below.",
-   "text": "The resolution rules, the indexer boundary, the authorization modes and the rotation race are shipped on main today and survive the M1 return. What changes is the predicate an application applies to the checkpoint it resolved: role addresses go, and a bit plus the checkpoint's own value take their place. Both are given below.",
+   "sent_text": "The resolution rules, the indexer boundary, the authorization modes and the rotation race are shipped on main today and survive the M1 return. Under the accepted design, the holding check uses the checkpoint credential, the representative asset and the decoded lifecycle state.",
+   "text": "The resolution rules, the indexer boundary, the authorization modes and the rotation race are shipped on main today and survive the M1 return. Under the accepted design, the holding check uses the checkpoint credential, the representative asset and the decoded lifecycle state.",
    "words": [
     {
      "end": 0.3,
@@ -94671,176 +94701,111 @@
     {
      "end": 10.188,
      "start": 9.975,
-     "text": "What"
+     "text": "Under"
     },
     {
-     "end": 10.788,
+     "end": 10.325,
      "start": 10.188,
-     "text": "changes"
-    },
-    {
-     "end": 10.95,
-     "start": 10.788,
-     "text": "is"
-    },
-    {
-     "end": 11.062,
-     "start": 10.95,
      "text": "the"
     },
     {
-     "end": 11.575,
-     "start": 11.062,
-     "text": "predicate"
+     "end": 10.825,
+     "start": 10.325,
+     "text": "accepted"
     },
     {
-     "end": 11.675,
-     "start": 11.575,
-     "text": "an"
+     "end": 11.425,
+     "start": 10.825,
+     "text": "design"
     },
     {
-     "end": 12.488,
-     "start": 11.675,
-     "text": "application"
-    },
-    {
-     "end": 13.025,
-     "start": 12.488,
-     "text": "applies"
-    },
-    {
-     "end": 13.113,
-     "start": 13.025,
-     "text": "to"
-    },
-    {
-     "end": 13.238,
-     "start": 13.113,
-     "text": "the"
-    },
-    {
-     "end": 13.738,
-     "start": 13.238,
-     "text": "checkpoint"
-    },
-    {
-     "end": 13.825,
-     "start": 13.738,
-     "text": "it"
-    },
-    {
-     "end": 14.925,
-     "start": 13.825,
-     "text": "resolved"
-    },
-    {
-     "end": 15.15,
-     "start": 14.925,
-     "text": ":"
-    },
-    {
-     "end": 15.625,
-     "start": 15.35,
-     "text": "role"
-    },
-    {
-     "end": 16.15,
-     "start": 15.625,
-     "text": "addresses"
-    },
-    {
-     "end": 16.525,
-     "start": 16.15,
-     "text": "go"
-    },
-    {
-     "end": 16.6,
-     "start": 16.525,
+     "end": 11.5,
+     "start": 11.425,
      "text": ","
     },
     {
-     "end": 16.712,
-     "start": 16.6,
-     "text": "and"
-    },
-    {
-     "end": 16.775,
-     "start": 16.712,
-     "text": "a"
-    },
-    {
-     "end": 17.0,
-     "start": 16.775,
-     "text": "bit"
-    },
-    {
-     "end": 17.275,
-     "start": 17.0,
-     "text": "plus"
-    },
-    {
-     "end": 17.388,
-     "start": 17.275,
+     "end": 11.6,
+     "start": 11.5,
      "text": "the"
     },
     {
-     "end": 17.9,
-     "start": 17.388,
-     "text": "checkpoint's"
+     "end": 11.988,
+     "start": 11.6,
+     "text": "holding"
     },
     {
-     "end": 18.1,
-     "start": 17.9,
-     "text": "own"
+     "end": 12.312,
+     "start": 11.988,
+     "text": "check"
+    },
+    {
+     "end": 12.725,
+     "start": 12.312,
+     "text": "uses"
+    },
+    {
+     "end": 12.863,
+     "start": 12.725,
+     "text": "the"
+    },
+    {
+     "end": 13.325,
+     "start": 12.863,
+     "text": "checkpoint"
+    },
+    {
+     "end": 14.45,
+     "start": 13.325,
+     "text": "credential"
+    },
+    {
+     "end": 14.65,
+     "start": 14.45,
+     "text": ","
+    },
+    {
+     "end": 14.925,
+     "start": 14.825,
+     "text": "the"
+    },
+    {
+     "end": 15.712,
+     "start": 14.925,
+     "text": "representative"
+    },
+    {
+     "end": 16.288,
+     "start": 15.712,
+     "text": "asset"
+    },
+    {
+     "end": 16.413,
+     "start": 16.288,
+     "text": "and"
+    },
+    {
+     "end": 16.5,
+     "start": 16.413,
+     "text": "the"
+    },
+    {
+     "end": 17.05,
+     "start": 16.5,
+     "text": "decoded"
+    },
+    {
+     "end": 17.65,
+     "start": 17.05,
+     "text": "lifecycle"
     },
     {
      "end": 18.5,
-     "start": 18.1,
-     "text": "value"
+     "start": 17.65,
+     "text": "state"
     },
     {
-     "end": 18.75,
+     "end": 18.7,
      "start": 18.5,
-     "text": "take"
-    },
-    {
-     "end": 18.95,
-     "start": 18.75,
-     "text": "their"
-    },
-    {
-     "end": 19.9,
-     "start": 18.95,
-     "text": "place"
-    },
-    {
-     "end": 20.1,
-     "start": 19.9,
-     "text": "."
-    },
-    {
-     "end": 20.513,
-     "start": 20.275,
-     "text": "Both"
-    },
-    {
-     "end": 20.6,
-     "start": 20.513,
-     "text": "are"
-    },
-    {
-     "end": 20.875,
-     "start": 20.6,
-     "text": "given"
-    },
-    {
-     "end": 21.625,
-     "start": 20.875,
-     "text": "below"
-    },
-    {
-     "end": 21.85,
-     "start": 21.625,
      "text": "."
     }
    ]
@@ -357486,306 +357451,281 @@
    ]
   },
   "docs-design-super-watcher/freshness-and-availability-02": {
-   "audio_sha256": "a149811f3e41b37e3c67e9be1680933d5a84257b6a6bee7ced05d00060c45b03",
-   "characters": 333,
-   "cost": 0.00032966999999999995,
-   "duration": 25.075,
+   "audio_sha256": "82be79ce2e7b0a9c5085c0861b0a92a40ad629536bfb25087a49184f84c44f2e",
+   "characters": 298,
+   "cost": 0.00029501999999999995,
+   "duration": 21.875,
    "index": 2,
-   "key": "c716c29f0dbc782cb5634ac5fcda74a7e250da6febb32956b0bb4488c6f9d150",
+   "key": "6e8e21e16e9dbfb2d4066f0da232070cf9a850b6304e2e929d766938cf97a012",
    "page": "docs/design/super-watcher.md",
    "pause_ms": 400,
    "section": "freshness-and-availability",
-   "sent_text": "Applications should not silently outsource all freshness policy to one hunter. The juvenility window W exists for that reason: a consumer refuses a checkpoint younger than W slots after its registration, and W is calibrated above measured relayer latency rather than guessed. Its value is set from the measurement taken in epic #325.",
-   "text": "Applications should not silently outsource all freshness policy to one hunter. The juvenility window W exists for that reason: a consumer refuses a checkpoint younger than W slots after its registration, and W is calibrated above measured relayer latency rather than guessed. Its value is set from the measurement taken in epic #325.",
+   "sent_text": "A relying application checks a checkpoint’s age against the juvenility window W. It can use a clean, unfrozen checkpoint only once the current slot reaches its birth slot plus W. The planned devnet measurement of the time from witness receipt to landed rotation will inform the choice of W in #325.",
+   "text": "A relying application checks a checkpoint’s age against the juvenility window W. It can use a clean, unfrozen checkpoint only once the current slot reaches its birth slot plus W. The planned devnet measurement of the time from witness receipt to landed rotation will inform the choice of W in #325.",
    "words": [
     {
-     "end": 1.0,
+     "end": 0.275,
      "start": 0.2,
-     "text": "Applications"
+     "text": "A"
     },
     {
-     "end": 1.15,
-     "start": 1.0,
-     "text": "should"
+     "end": 0.75,
+     "start": 0.275,
+     "text": "relying"
     },
     {
-     "end": 1.413,
-     "start": 1.15,
-     "text": "not"
+     "end": 1.538,
+     "start": 0.75,
+     "text": "application"
     },
     {
-     "end": 1.925,
-     "start": 1.413,
-     "text": "silently"
+     "end": 1.85,
+     "start": 1.538,
+     "text": "checks"
     },
     {
-     "end": 2.487,
-     "start": 1.925,
-     "text": "outsource"
-    },
-    {
-     "end": 2.763,
-     "start": 2.487,
-     "text": "all"
-    },
-    {
-     "end": 3.225,
-     "start": 2.763,
-     "text": "freshness"
-    },
-    {
-     "end": 3.787,
-     "start": 3.225,
-     "text": "policy"
-    },
-    {
-     "end": 3.925,
-     "start": 3.787,
-     "text": "to"
-    },
-    {
-     "end": 4.175,
-     "start": 3.925,
-     "text": "one"
-    },
-    {
-     "end": 5.075,
-     "start": 4.175,
-     "text": "hunter"
-    },
-    {
-     "end": 5.3,
-     "start": 5.075,
-     "text": "."
-    },
-    {
-     "end": 5.55,
-     "start": 5.475,
-     "text": "The"
-    },
-    {
-     "end": 6.2,
-     "start": 5.55,
-     "text": "juvenility"
-    },
-    {
-     "end": 6.637,
-     "start": 6.2,
-     "text": "window"
-    },
-    {
-     "end": 7.1,
-     "start": 6.637,
-     "text": "W"
-    },
-    {
-     "end": 7.575,
-     "start": 7.1,
-     "text": "exists"
-    },
-    {
-     "end": 7.688,
-     "start": 7.575,
-     "text": "for"
-    },
-    {
-     "end": 7.925,
-     "start": 7.688,
-     "text": "that"
-    },
-    {
-     "end": 8.825,
-     "start": 7.925,
-     "text": "reason"
-    },
-    {
-     "end": 9.025,
-     "start": 8.825,
-     "text": ":"
-    },
-    {
-     "end": 9.3,
-     "start": 9.225,
+     "end": 1.962,
+     "start": 1.85,
      "text": "a"
     },
     {
-     "end": 9.9,
-     "start": 9.3,
-     "text": "consumer"
+     "end": 2.537,
+     "start": 1.962,
+     "text": "checkpoint’s"
     },
     {
-     "end": 10.525,
-     "start": 9.9,
-     "text": "refuses"
+     "end": 2.987,
+     "start": 2.537,
+     "text": "age"
     },
     {
-     "end": 10.637,
-     "start": 10.525,
-     "text": "a"
+     "end": 3.362,
+     "start": 2.987,
+     "text": "against"
     },
     {
-     "end": 11.175,
-     "start": 10.637,
-     "text": "checkpoint"
-    },
-    {
-     "end": 11.688,
-     "start": 11.175,
-     "text": "younger"
-    },
-    {
-     "end": 11.913,
-     "start": 11.688,
-     "text": "than"
-    },
-    {
-     "end": 12.387,
-     "start": 11.913,
-     "text": "W"
-    },
-    {
-     "end": 12.863,
-     "start": 12.387,
-     "text": "slots"
-    },
-    {
-     "end": 13.188,
-     "start": 12.863,
-     "text": "after"
-    },
-    {
-     "end": 13.325,
-     "start": 13.188,
-     "text": "its"
-    },
-    {
-     "end": 14.65,
-     "start": 13.325,
-     "text": "registration"
-    },
-    {
-     "end": 14.85,
-     "start": 14.65,
-     "text": ","
-    },
-    {
-     "end": 15.175,
-     "start": 15.05,
-     "text": "and"
-    },
-    {
-     "end": 15.65,
-     "start": 15.175,
-     "text": "W"
-    },
-    {
-     "end": 15.812,
-     "start": 15.65,
-     "text": "is"
-    },
-    {
-     "end": 16.5,
-     "start": 15.812,
-     "text": "calibrated"
-    },
-    {
-     "end": 16.812,
-     "start": 16.5,
-     "text": "above"
-    },
-    {
-     "end": 17.225,
-     "start": 16.812,
-     "text": "measured"
-    },
-    {
-     "end": 17.65,
-     "start": 17.225,
-     "text": "relayer"
-    },
-    {
-     "end": 18.35,
-     "start": 17.65,
-     "text": "latency"
-    },
-    {
-     "end": 18.7,
-     "start": 18.35,
-     "text": "rather"
-    },
-    {
-     "end": 18.875,
-     "start": 18.7,
-     "text": "than"
-    },
-    {
-     "end": 19.8,
-     "start": 18.875,
-     "text": "guessed"
-    },
-    {
-     "end": 20.0,
-     "start": 19.8,
-     "text": "."
-    },
-    {
-     "end": 20.4,
-     "start": 20.175,
-     "text": "Its"
-    },
-    {
-     "end": 20.862,
-     "start": 20.4,
-     "text": "value"
-    },
-    {
-     "end": 21.038,
-     "start": 20.862,
-     "text": "is"
-    },
-    {
-     "end": 21.3,
-     "start": 21.038,
-     "text": "set"
-    },
-    {
-     "end": 21.438,
-     "start": 21.3,
-     "text": "from"
-    },
-    {
-     "end": 21.525,
-     "start": 21.438,
+     "end": 3.463,
+     "start": 3.362,
      "text": "the"
     },
     {
-     "end": 22.013,
-     "start": 21.525,
+     "end": 4.162,
+     "start": 3.463,
+     "text": "juvenility"
+    },
+    {
+     "end": 4.588,
+     "start": 4.162,
+     "text": "window"
+    },
+    {
+     "end": 5.575,
+     "start": 4.588,
+     "text": "W."
+    },
+    {
+     "end": 5.863,
+     "start": 5.75,
+     "text": "It"
+    },
+    {
+     "end": 5.975,
+     "start": 5.863,
+     "text": "can"
+    },
+    {
+     "end": 6.225,
+     "start": 5.975,
+     "text": "use"
+    },
+    {
+     "end": 6.35,
+     "start": 6.225,
+     "text": "a"
+    },
+    {
+     "end": 6.85,
+     "start": 6.35,
+     "text": "clean"
+    },
+    {
+     "end": 6.95,
+     "start": 6.85,
+     "text": ","
+    },
+    {
+     "end": 7.688,
+     "start": 6.95,
+     "text": "unfrozen"
+    },
+    {
+     "end": 8.375,
+     "start": 7.688,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.725,
+     "start": 8.375,
+     "text": "only"
+    },
+    {
+     "end": 8.988,
+     "start": 8.725,
+     "text": "once"
+    },
+    {
+     "end": 9.075,
+     "start": 8.988,
+     "text": "the"
+    },
+    {
+     "end": 9.438,
+     "start": 9.075,
+     "text": "current"
+    },
+    {
+     "end": 9.85,
+     "start": 9.438,
+     "text": "slot"
+    },
+    {
+     "end": 10.225,
+     "start": 9.85,
+     "text": "reaches"
+    },
+    {
+     "end": 10.438,
+     "start": 10.225,
+     "text": "its"
+    },
+    {
+     "end": 10.725,
+     "start": 10.438,
+     "text": "birth"
+    },
+    {
+     "end": 11.087,
+     "start": 10.725,
+     "text": "slot"
+    },
+    {
+     "end": 11.413,
+     "start": 11.087,
+     "text": "plus"
+    },
+    {
+     "end": 12.5,
+     "start": 11.413,
+     "text": "W."
+    },
+    {
+     "end": 12.812,
+     "start": 12.7,
+     "text": "The"
+    },
+    {
+     "end": 13.312,
+     "start": 12.812,
+     "text": "planned"
+    },
+    {
+     "end": 13.75,
+     "start": 13.312,
+     "text": "devnet"
+    },
+    {
+     "end": 14.3,
+     "start": 13.75,
      "text": "measurement"
     },
     {
-     "end": 22.45,
-     "start": 22.013,
-     "text": "taken"
+     "end": 14.387,
+     "start": 14.3,
+     "text": "of"
     },
     {
-     "end": 22.663,
-     "start": 22.45,
+     "end": 14.488,
+     "start": 14.387,
+     "text": "the"
+    },
+    {
+     "end": 14.875,
+     "start": 14.488,
+     "text": "time"
+    },
+    {
+     "end": 15.087,
+     "start": 14.875,
+     "text": "from"
+    },
+    {
+     "end": 15.475,
+     "start": 15.087,
+     "text": "witness"
+    },
+    {
+     "end": 16.013,
+     "start": 15.475,
+     "text": "receipt"
+    },
+    {
+     "end": 16.163,
+     "start": 16.013,
+     "text": "to"
+    },
+    {
+     "end": 16.625,
+     "start": 16.163,
+     "text": "landed"
+    },
+    {
+     "end": 17.513,
+     "start": 16.625,
+     "text": "rotation"
+    },
+    {
+     "end": 17.7,
+     "start": 17.513,
+     "text": "will"
+    },
+    {
+     "end": 18.225,
+     "start": 17.7,
+     "text": "inform"
+    },
+    {
+     "end": 18.362,
+     "start": 18.225,
+     "text": "the"
+    },
+    {
+     "end": 18.725,
+     "start": 18.362,
+     "text": "choice"
+    },
+    {
+     "end": 18.888,
+     "start": 18.725,
+     "text": "of"
+    },
+    {
+     "end": 19.438,
+     "start": 18.888,
+     "text": "W"
+    },
+    {
+     "end": 19.612,
+     "start": 19.438,
      "text": "in"
     },
     {
-     "end": 23.038,
-     "start": 22.663,
-     "text": "epic"
-    },
-    {
-     "end": 24.85,
-     "start": 23.038,
+     "end": 21.625,
+     "start": 19.612,
      "text": "325"
     },
     {
-     "end": 25.075,
-     "start": 24.85,
+     "end": 21.875,
+     "start": 21.625,
      "text": "."
     }
    ]
@@ -359071,436 +359011,371 @@
    ]
   },
   "docs-design-super-watcher/security-principle-01": {
-   "audio_sha256": "c098dd0983a771f339736187be068f5c484d3148ab8fa3e4a1eba7e81330ea4a",
-   "characters": 446,
-   "cost": 0.00044154,
-   "duration": 29.25,
+   "audio_sha256": "4957a2f9aa8261078290a27201780799388e4f313536f94f51eb1e63c8f02e18",
+   "characters": 368,
+   "cost": 0.00036432,
+   "duration": 23.65,
    "index": 1,
-   "key": "ad508bdd90e2a291ed0ffade594d75d5debad6e4c2e48c90010701dfb8929ead",
+   "key": "4846d76fee6f8e697bd525cecd5d8e614534913cbe05c80b764238a31b2c5a93",
    "page": "docs/design/super-watcher.md",
    "pause_ms": 400,
    "section": "security-principle",
-   "sent_text": "The hunter is safe to make permissionless because it pays to submit public proofs whose on-chain result is deterministic, and it is paid from value the owner chose to keep there. A hostile hunter can withhold its own service or waste fees on invalid transactions. It cannot choose a different valid successor, take D_reg without a duplicity proof, take B while the pool pays, or move one lovelace to an address the owner's keys did not authorize.",
-   "text": "The hunter is safe to make permissionless because it pays to submit public proofs whose on-chain result is deterministic, and it is paid from value the owner chose to keep there. A hostile hunter can withhold its own service or waste fees on invalid transactions. It cannot choose a different valid successor, take D_reg without a duplicity proof, take B while the pool pays, or move one lovelace to an address the owner's keys did not authorize.",
+   "sent_text": "For a paid rotation, the submitter names the payee of the premium from the pool. A hunter can freeze a clean, unfrozen checkpoint by presenting a later witnessed rotation when the pool is below the premium. The freeze pays the bond to the address the hunter names. When a rotation carries a deposit, the new keys authorize the deposit amount for that checkpoint input.",
+   "text": "For a paid rotation, the submitter names the payee of the premium from the pool. A hunter can freeze a clean, unfrozen checkpoint by presenting a later witnessed rotation when the pool is below the premium. The freeze pays the bond to the address the hunter names. When a rotation carries a deposit, the new keys authorize the deposit amount for that checkpoint input.",
    "words": [
     {
-     "end": 0.3,
-     "start": 0.225,
-     "text": "The"
+     "end": 0.287,
+     "start": 0.175,
+     "text": "For"
     },
     {
-     "end": 0.738,
-     "start": 0.3,
-     "text": "hunter"
+     "end": 0.35,
+     "start": 0.287,
+     "text": "a"
     },
     {
-     "end": 0.913,
-     "start": 0.738,
-     "text": "is"
-    },
-    {
-     "end": 1.225,
-     "start": 0.913,
-     "text": "safe"
-    },
-    {
-     "end": 1.35,
-     "start": 1.225,
-     "text": "to"
-    },
-    {
-     "end": 1.575,
-     "start": 1.35,
-     "text": "make"
-    },
-    {
-     "end": 2.35,
-     "start": 1.575,
-     "text": "permissionless"
-    },
-    {
-     "end": 2.675,
-     "start": 2.35,
-     "text": "because"
-    },
-    {
-     "end": 2.812,
-     "start": 2.675,
-     "text": "it"
-    },
-    {
-     "end": 3.175,
-     "start": 2.812,
-     "text": "pays"
-    },
-    {
-     "end": 3.3,
-     "start": 3.175,
-     "text": "to"
-    },
-    {
-     "end": 3.713,
-     "start": 3.3,
-     "text": "submit"
-    },
-    {
-     "end": 4.137,
-     "start": 3.713,
-     "text": "public"
-    },
-    {
-     "end": 4.6,
-     "start": 4.137,
-     "text": "proofs"
-    },
-    {
-     "end": 4.9,
-     "start": 4.6,
-     "text": "whose"
-    },
-    {
-     "end": 5.575,
-     "start": 4.9,
-     "text": "on-chain"
-    },
-    {
-     "end": 6.113,
-     "start": 5.575,
-     "text": "result"
-    },
-    {
-     "end": 6.275,
-     "start": 6.113,
-     "text": "is"
-    },
-    {
-     "end": 7.4,
-     "start": 6.275,
-     "text": "deterministic"
-    },
-    {
-     "end": 7.5,
-     "start": 7.4,
-     "text": ","
-    },
-    {
-     "end": 7.613,
-     "start": 7.5,
-     "text": "and"
-    },
-    {
-     "end": 7.7,
-     "start": 7.613,
-     "text": "it"
-    },
-    {
-     "end": 7.863,
-     "start": 7.7,
-     "text": "is"
-    },
-    {
-     "end": 8.225,
-     "start": 7.863,
+     "end": 0.675,
+     "start": 0.35,
      "text": "paid"
     },
     {
-     "end": 8.425,
-     "start": 8.225,
+     "end": 1.4,
+     "start": 0.675,
+     "text": "rotation"
+    },
+    {
+     "end": 1.475,
+     "start": 1.4,
+     "text": ","
+    },
+    {
+     "end": 1.612,
+     "start": 1.475,
+     "text": "the"
+    },
+    {
+     "end": 2.175,
+     "start": 1.612,
+     "text": "submitter"
+    },
+    {
+     "end": 2.438,
+     "start": 2.175,
+     "text": "names"
+    },
+    {
+     "end": 2.537,
+     "start": 2.438,
+     "text": "the"
+    },
+    {
+     "end": 3.0,
+     "start": 2.537,
+     "text": "payee"
+    },
+    {
+     "end": 3.088,
+     "start": 3.0,
+     "text": "of"
+    },
+    {
+     "end": 3.175,
+     "start": 3.088,
+     "text": "the"
+    },
+    {
+     "end": 3.675,
+     "start": 3.175,
+     "text": "premium"
+    },
+    {
+     "end": 3.838,
+     "start": 3.675,
      "text": "from"
     },
     {
-     "end": 8.875,
-     "start": 8.425,
-     "text": "value"
-    },
-    {
-     "end": 9.038,
-     "start": 8.875,
+     "end": 3.925,
+     "start": 3.838,
      "text": "the"
     },
     {
-     "end": 9.413,
-     "start": 9.038,
-     "text": "owner"
-    },
-    {
-     "end": 9.8,
-     "start": 9.413,
-     "text": "chose"
-    },
-    {
-     "end": 9.925,
-     "start": 9.8,
-     "text": "to"
-    },
-    {
-     "end": 10.2,
-     "start": 9.925,
-     "text": "keep"
-    },
-    {
-     "end": 11.25,
-     "start": 10.2,
-     "text": "there"
-    },
-    {
-     "end": 11.5,
-     "start": 11.25,
-     "text": "."
-    },
-    {
-     "end": 11.775,
-     "start": 11.7,
-     "text": "A"
-    },
-    {
-     "end": 12.225,
-     "start": 11.775,
-     "text": "hostile"
-    },
-    {
-     "end": 12.6,
-     "start": 12.225,
-     "text": "hunter"
-    },
-    {
-     "end": 12.775,
-     "start": 12.6,
-     "text": "can"
-    },
-    {
-     "end": 13.238,
-     "start": 12.775,
-     "text": "withhold"
-    },
-    {
-     "end": 13.413,
-     "start": 13.238,
-     "text": "its"
-    },
-    {
-     "end": 13.688,
-     "start": 13.413,
-     "text": "own"
-    },
-    {
-     "end": 14.212,
-     "start": 13.688,
-     "text": "service"
-    },
-    {
-     "end": 14.387,
-     "start": 14.212,
-     "text": "or"
-    },
-    {
-     "end": 14.762,
-     "start": 14.387,
-     "text": "waste"
-    },
-    {
-     "end": 15.225,
-     "start": 14.762,
-     "text": "fees"
-    },
-    {
-     "end": 15.375,
-     "start": 15.225,
-     "text": "on"
-    },
-    {
-     "end": 15.85,
-     "start": 15.375,
-     "text": "invalid"
-    },
-    {
-     "end": 17.225,
-     "start": 15.85,
-     "text": "transactions"
-    },
-    {
-     "end": 17.425,
-     "start": 17.225,
-     "text": "."
-    },
-    {
-     "end": 17.725,
-     "start": 17.6,
-     "text": "It"
-    },
-    {
-     "end": 18.112,
-     "start": 17.725,
-     "text": "cannot"
-    },
-    {
-     "end": 18.413,
-     "start": 18.112,
-     "text": "choose"
-    },
-    {
-     "end": 18.5,
-     "start": 18.413,
-     "text": "a"
-    },
-    {
-     "end": 18.8,
-     "start": 18.5,
-     "text": "different"
-    },
-    {
-     "end": 19.175,
-     "start": 18.8,
-     "text": "valid"
-    },
-    {
-     "end": 19.875,
-     "start": 19.175,
-     "text": "successor"
-    },
-    {
-     "end": 19.975,
-     "start": 19.875,
-     "text": ","
-    },
-    {
-     "end": 20.237,
-     "start": 19.975,
-     "text": "take"
-    },
-    {
-     "end": 20.8,
-     "start": 20.237,
-     "text": "D_reg"
-    },
-    {
-     "end": 21.112,
-     "start": 20.8,
-     "text": "without"
-    },
-    {
-     "end": 21.175,
-     "start": 21.112,
-     "text": "a"
-    },
-    {
-     "end": 21.725,
-     "start": 21.175,
-     "text": "duplicity"
-    },
-    {
-     "end": 22.7,
-     "start": 21.725,
-     "text": "proof"
-    },
-    {
-     "end": 22.9,
-     "start": 22.7,
-     "text": ","
-    },
-    {
-     "end": 23.275,
-     "start": 23.075,
-     "text": "take"
-    },
-    {
-     "end": 23.413,
-     "start": 23.275,
-     "text": "B"
-    },
-    {
-     "end": 23.538,
-     "start": 23.413,
-     "text": "while"
-    },
-    {
-     "end": 23.625,
-     "start": 23.538,
-     "text": "the"
-    },
-    {
-     "end": 23.875,
-     "start": 23.625,
+     "end": 4.8,
+     "start": 3.925,
      "text": "pool"
     },
     {
-     "end": 24.675,
-     "start": 23.875,
-     "text": "pays"
+     "end": 5.0,
+     "start": 4.8,
+     "text": "."
     },
     {
-     "end": 24.875,
-     "start": 24.675,
+     "end": 5.3,
+     "start": 5.225,
+     "text": "A"
+    },
+    {
+     "end": 5.7,
+     "start": 5.3,
+     "text": "hunter"
+    },
+    {
+     "end": 5.912,
+     "start": 5.7,
+     "text": "can"
+    },
+    {
+     "end": 6.25,
+     "start": 5.912,
+     "text": "freeze"
+    },
+    {
+     "end": 6.375,
+     "start": 6.25,
+     "text": "a"
+    },
+    {
+     "end": 6.925,
+     "start": 6.375,
+     "text": "clean"
+    },
+    {
+     "end": 7.025,
+     "start": 6.925,
      "text": ","
     },
     {
-     "end": 25.175,
-     "start": 25.075,
-     "text": "or"
+     "end": 7.787,
+     "start": 7.025,
+     "text": "unfrozen"
     },
     {
-     "end": 25.4,
-     "start": 25.175,
-     "text": "move"
+     "end": 8.375,
+     "start": 7.787,
+     "text": "checkpoint"
     },
     {
-     "end": 25.625,
-     "start": 25.4,
-     "text": "one"
+     "end": 8.55,
+     "start": 8.375,
+     "text": "by"
     },
     {
-     "end": 26.075,
-     "start": 25.625,
-     "text": "lovelace"
+     "end": 9.075,
+     "start": 8.55,
+     "text": "presenting"
     },
     {
-     "end": 26.163,
-     "start": 26.075,
-     "text": "to"
+     "end": 9.188,
+     "start": 9.075,
+     "text": "a"
     },
     {
-     "end": 26.25,
-     "start": 26.163,
-     "text": "an"
+     "end": 9.613,
+     "start": 9.188,
+     "text": "later"
     },
     {
-     "end": 26.725,
-     "start": 26.25,
-     "text": "address"
+     "end": 10.075,
+     "start": 9.613,
+     "text": "witnessed"
     },
     {
-     "end": 26.875,
-     "start": 26.725,
+     "end": 10.775,
+     "start": 10.075,
+     "text": "rotation"
+    },
+    {
+     "end": 10.913,
+     "start": 10.775,
+     "text": "when"
+    },
+    {
+     "end": 11.012,
+     "start": 10.913,
      "text": "the"
     },
     {
-     "end": 27.25,
-     "start": 26.875,
-     "text": "owner's"
+     "end": 11.4,
+     "start": 11.012,
+     "text": "pool"
     },
     {
-     "end": 27.575,
-     "start": 27.25,
+     "end": 11.55,
+     "start": 11.4,
+     "text": "is"
+    },
+    {
+     "end": 11.9,
+     "start": 11.55,
+     "text": "below"
+    },
+    {
+     "end": 12.0,
+     "start": 11.9,
+     "text": "the"
+    },
+    {
+     "end": 13.2,
+     "start": 12.0,
+     "text": "premium"
+    },
+    {
+     "end": 13.4,
+     "start": 13.2,
+     "text": "."
+    },
+    {
+     "end": 13.688,
+     "start": 13.575,
+     "text": "The"
+    },
+    {
+     "end": 14.05,
+     "start": 13.688,
+     "text": "freeze"
+    },
+    {
+     "end": 14.337,
+     "start": 14.05,
+     "text": "pays"
+    },
+    {
+     "end": 14.425,
+     "start": 14.337,
+     "text": "the"
+    },
+    {
+     "end": 14.725,
+     "start": 14.425,
+     "text": "bond"
+    },
+    {
+     "end": 14.812,
+     "start": 14.725,
+     "text": "to"
+    },
+    {
+     "end": 14.925,
+     "start": 14.812,
+     "text": "the"
+    },
+    {
+     "end": 15.275,
+     "start": 14.925,
+     "text": "address"
+    },
+    {
+     "end": 15.375,
+     "start": 15.275,
+     "text": "the"
+    },
+    {
+     "end": 15.725,
+     "start": 15.375,
+     "text": "hunter"
+    },
+    {
+     "end": 16.6,
+     "start": 15.725,
+     "text": "names"
+    },
+    {
+     "end": 16.8,
+     "start": 16.6,
+     "text": "."
+    },
+    {
+     "end": 17.112,
+     "start": 17.0,
+     "text": "When"
+    },
+    {
+     "end": 17.175,
+     "start": 17.112,
+     "text": "a"
+    },
+    {
+     "end": 17.825,
+     "start": 17.175,
+     "text": "rotation"
+    },
+    {
+     "end": 18.212,
+     "start": 17.825,
+     "text": "carries"
+    },
+    {
+     "end": 18.275,
+     "start": 18.212,
+     "text": "a"
+    },
+    {
+     "end": 19.0,
+     "start": 18.275,
+     "text": "deposit"
+    },
+    {
+     "end": 19.1,
+     "start": 19.0,
+     "text": ","
+    },
+    {
+     "end": 19.237,
+     "start": 19.1,
+     "text": "the"
+    },
+    {
+     "end": 19.438,
+     "start": 19.237,
+     "text": "new"
+    },
+    {
+     "end": 19.837,
+     "start": 19.438,
      "text": "keys"
     },
     {
-     "end": 27.712,
-     "start": 27.575,
-     "text": "did"
-    },
-    {
-     "end": 27.925,
-     "start": 27.712,
-     "text": "not"
-    },
-    {
-     "end": 29.05,
-     "start": 27.925,
+     "end": 20.425,
+     "start": 19.837,
      "text": "authorize"
     },
     {
-     "end": 29.25,
-     "start": 29.05,
+     "end": 20.525,
+     "start": 20.425,
+     "text": "the"
+    },
+    {
+     "end": 21.05,
+     "start": 20.525,
+     "text": "deposit"
+    },
+    {
+     "end": 21.45,
+     "start": 21.05,
+     "text": "amount"
+    },
+    {
+     "end": 21.575,
+     "start": 21.45,
+     "text": "for"
+    },
+    {
+     "end": 21.862,
+     "start": 21.575,
+     "text": "that"
+    },
+    {
+     "end": 22.375,
+     "start": 21.862,
+     "text": "checkpoint"
+    },
+    {
+     "end": 23.425,
+     "start": 22.375,
+     "text": "input"
+    },
+    {
+     "end": 23.65,
+     "start": 23.425,
      "text": "."
     }
    ]
@@ -386176,261 +386051,301 @@
    ]
   },
   "docs-design-user-experience/no-way-out-but-conviction-05": {
-   "audio_sha256": "10f8529bb5fa450f715ecb6935de229b77a67bc810071800f9938ccfda9437f4",
-   "characters": 261,
-   "cost": 0.00025839,
-   "duration": 16.425,
+   "audio_sha256": "a1afb1a019dd225de916304710ff685b3c200bac389e58a1f4d2fc65237e42f3",
+   "characters": 285,
+   "cost": 0.00028214999999999995,
+   "duration": 19.825,
    "index": 5,
-   "key": "4d47ca387ca487ddc10eb815d62c0acc92020e3fec1c87132317104ea72dda84",
+   "key": "0f2b74360ea6d7224d3d4d22601bbfdfd42d66a3bbb2b1062f6f0f8acc5cef43",
    "page": "docs/design/user-experience.md",
    "pause_ms": 400,
    "section": "no-way-out-but-conviction",
-   "sent_text": "Before signing a rotation intent the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
-   "text": "Before signing a rotation intent the UI must display the exact checkpoint input, the AID and sequence, the destination address, the amounts of all three components, and the network and policy — because that is precisely the set of facts the signed intent binds.",
+   "sent_text": "Before signing a deposit, the UI should show all eight fields in the intent: the fixed domain tag, network ID, checkpoint policy, spent output reference, AID, new sequence number, new epoch and deposit amount. The deposit restores B when the checkpoint is frozen and is zero otherwise.",
+   "text": "Before signing a deposit, the UI should show all eight fields in the intent: the fixed domain tag, network ID, checkpoint policy, spent output reference, AID, new sequence number, new epoch and deposit amount. The deposit restores B when the checkpoint is frozen and is zero otherwise.",
    "words": [
     {
-     "end": 0.562,
-     "start": 0.225,
+     "end": 0.5,
+     "start": 0.175,
      "text": "Before"
     },
     {
-     "end": 0.925,
-     "start": 0.562,
+     "end": 0.837,
+     "start": 0.5,
      "text": "signing"
     },
     {
-     "end": 1.0,
-     "start": 0.925,
+     "end": 0.887,
+     "start": 0.837,
      "text": "a"
     },
     {
-     "end": 1.575,
-     "start": 1.0,
-     "text": "rotation"
+     "end": 1.55,
+     "start": 0.887,
+     "text": "deposit"
     },
     {
-     "end": 2.025,
-     "start": 1.575,
-     "text": "intent"
+     "end": 1.625,
+     "start": 1.55,
+     "text": ","
     },
     {
-     "end": 2.162,
-     "start": 2.025,
+     "end": 1.763,
+     "start": 1.625,
      "text": "the"
     },
     {
-     "end": 2.65,
-     "start": 2.162,
+     "end": 2.2,
+     "start": 1.763,
      "text": "UI"
     },
     {
-     "end": 2.9,
-     "start": 2.65,
-     "text": "must"
+     "end": 2.412,
+     "start": 2.2,
+     "text": "should"
     },
     {
-     "end": 3.375,
-     "start": 2.9,
-     "text": "display"
+     "end": 2.688,
+     "start": 2.412,
+     "text": "show"
     },
     {
-     "end": 3.525,
-     "start": 3.375,
-     "text": "the"
-    },
-    {
-     "end": 4.037,
-     "start": 3.525,
-     "text": "exact"
-    },
-    {
-     "end": 4.55,
-     "start": 4.037,
-     "text": "checkpoint"
-    },
-    {
-     "end": 5.125,
-     "start": 4.55,
-     "text": "input"
-    },
-    {
-     "end": 5.2,
-     "start": 5.125,
-     "text": ","
-    },
-    {
-     "end": 5.387,
-     "start": 5.2,
-     "text": "the"
-    },
-    {
-     "end": 6.238,
-     "start": 5.387,
-     "text": "AID"
-    },
-    {
-     "end": 6.412,
-     "start": 6.238,
-     "text": "and"
-    },
-    {
-     "end": 6.95,
-     "start": 6.412,
-     "text": "sequence"
-    },
-    {
-     "end": 7.0,
-     "start": 6.95,
-     "text": ","
-    },
-    {
-     "end": 7.125,
-     "start": 7.0,
-     "text": "the"
-    },
-    {
-     "end": 7.775,
-     "start": 7.125,
-     "text": "destination"
-    },
-    {
-     "end": 8.3,
-     "start": 7.775,
-     "text": "address"
-    },
-    {
-     "end": 8.35,
-     "start": 8.3,
-     "text": ","
-    },
-    {
-     "end": 8.5,
-     "start": 8.35,
-     "text": "the"
-    },
-    {
-     "end": 8.863,
-     "start": 8.5,
-     "text": "amounts"
-    },
-    {
-     "end": 8.95,
-     "start": 8.863,
-     "text": "of"
-    },
-    {
-     "end": 9.212,
-     "start": 8.95,
+     "end": 2.95,
+     "start": 2.688,
      "text": "all"
     },
     {
-     "end": 9.45,
-     "start": 9.212,
-     "text": "three"
+     "end": 3.188,
+     "start": 2.95,
+     "text": "eight"
     },
     {
-     "end": 10.1,
-     "start": 9.45,
-     "text": "components"
+     "end": 3.562,
+     "start": 3.188,
+     "text": "fields"
     },
     {
-     "end": 10.15,
-     "start": 10.1,
-     "text": ","
+     "end": 3.638,
+     "start": 3.562,
+     "text": "in"
     },
     {
-     "end": 10.262,
-     "start": 10.15,
-     "text": "and"
-    },
-    {
-     "end": 10.35,
-     "start": 10.262,
+     "end": 3.75,
+     "start": 3.638,
      "text": "the"
     },
     {
-     "end": 10.762,
-     "start": 10.35,
-     "text": "network"
-    },
-    {
-     "end": 10.887,
-     "start": 10.762,
-     "text": "and"
-    },
-    {
-     "end": 11.688,
-     "start": 10.887,
-     "text": "policy"
-    },
-    {
-     "end": 11.775,
-     "start": 11.688,
-     "text": "—"
-    },
-    {
-     "end": 12.075,
-     "start": 11.775,
-     "text": "because"
-    },
-    {
-     "end": 12.3,
-     "start": 12.075,
-     "text": "that"
-    },
-    {
-     "end": 12.45,
-     "start": 12.3,
-     "text": "is"
-    },
-    {
-     "end": 13.075,
-     "start": 12.45,
-     "text": "precisely"
-    },
-    {
-     "end": 13.212,
-     "start": 13.075,
-     "text": "the"
-    },
-    {
-     "end": 13.413,
-     "start": 13.212,
-     "text": "set"
-    },
-    {
-     "end": 13.538,
-     "start": 13.413,
-     "text": "of"
-    },
-    {
-     "end": 14.0,
-     "start": 13.538,
-     "text": "facts"
-    },
-    {
-     "end": 14.137,
-     "start": 14.0,
-     "text": "the"
-    },
-    {
-     "end": 14.55,
-     "start": 14.137,
-     "text": "signed"
-    },
-    {
-     "end": 14.95,
-     "start": 14.55,
+     "end": 4.75,
+     "start": 3.75,
      "text": "intent"
     },
     {
-     "end": 16.175,
-     "start": 14.95,
-     "text": "binds"
+     "end": 4.95,
+     "start": 4.75,
+     "text": ":"
     },
     {
-     "end": 16.425,
-     "start": 16.175,
+     "end": 5.238,
+     "start": 5.125,
+     "text": "the"
+    },
+    {
+     "end": 5.55,
+     "start": 5.238,
+     "text": "fixed"
+    },
+    {
+     "end": 5.988,
+     "start": 5.55,
+     "text": "domain"
+    },
+    {
+     "end": 6.375,
+     "start": 5.988,
+     "text": "tag"
+    },
+    {
+     "end": 6.425,
+     "start": 6.375,
+     "text": ","
+    },
+    {
+     "end": 6.825,
+     "start": 6.425,
+     "text": "network"
+    },
+    {
+     "end": 7.375,
+     "start": 6.825,
+     "text": "ID"
+    },
+    {
+     "end": 7.488,
+     "start": 7.375,
+     "text": ","
+    },
+    {
+     "end": 7.95,
+     "start": 7.488,
+     "text": "checkpoint"
+    },
+    {
+     "end": 8.425,
+     "start": 7.95,
+     "text": "policy"
+    },
+    {
+     "end": 8.475,
+     "start": 8.425,
+     "text": ","
+    },
+    {
+     "end": 8.725,
+     "start": 8.475,
+     "text": "spent"
+    },
+    {
+     "end": 9.125,
+     "start": 8.725,
+     "text": "output"
+    },
+    {
+     "end": 9.6,
+     "start": 9.125,
+     "text": "reference"
+    },
+    {
+     "end": 9.688,
+     "start": 9.6,
+     "text": ","
+    },
+    {
+     "end": 11.0,
+     "start": 9.688,
+     "text": "AID"
+    },
+    {
+     "end": 11.25,
+     "start": 11.0,
+     "text": ","
+    },
+    {
+     "end": 11.625,
+     "start": 11.45,
+     "text": "new"
+    },
+    {
+     "end": 12.075,
+     "start": 11.625,
+     "text": "sequence"
+    },
+    {
+     "end": 12.45,
+     "start": 12.075,
+     "text": "number"
+    },
+    {
+     "end": 12.525,
+     "start": 12.45,
+     "text": ","
+    },
+    {
+     "end": 12.725,
+     "start": 12.525,
+     "text": "new"
+    },
+    {
+     "end": 13.062,
+     "start": 12.725,
+     "text": "epoch"
+    },
+    {
+     "end": 13.163,
+     "start": 13.062,
+     "text": "and"
+    },
+    {
+     "end": 13.65,
+     "start": 13.163,
+     "text": "deposit"
+    },
+    {
+     "end": 14.5,
+     "start": 13.65,
+     "text": "amount"
+    },
+    {
+     "end": 14.7,
+     "start": 14.5,
+     "text": "."
+    },
+    {
+     "end": 14.95,
+     "start": 14.875,
+     "text": "The"
+    },
+    {
+     "end": 15.45,
+     "start": 14.95,
+     "text": "deposit"
+    },
+    {
+     "end": 15.988,
+     "start": 15.45,
+     "text": "restores"
+    },
+    {
+     "end": 16.275,
+     "start": 15.988,
+     "text": "B"
+    },
+    {
+     "end": 16.413,
+     "start": 16.275,
+     "text": "when"
+    },
+    {
+     "end": 16.513,
+     "start": 16.413,
+     "text": "the"
+    },
+    {
+     "end": 16.987,
+     "start": 16.513,
+     "text": "checkpoint"
+    },
+    {
+     "end": 17.138,
+     "start": 16.987,
+     "text": "is"
+    },
+    {
+     "end": 17.825,
+     "start": 17.138,
+     "text": "frozen"
+    },
+    {
+     "end": 17.975,
+     "start": 17.825,
+     "text": "and"
+    },
+    {
+     "end": 18.138,
+     "start": 17.975,
+     "text": "is"
+    },
+    {
+     "end": 18.475,
+     "start": 18.138,
+     "text": "zero"
+    },
+    {
+     "end": 19.625,
+     "start": 18.475,
+     "text": "otherwise"
+    },
+    {
+     "end": 19.825,
+     "start": 19.625,
      "text": "."
     }
    ]
@@ -387336,86 +387251,121 @@
    ]
   },
   "docs-design-user-experience/register-01": {
-   "audio_sha256": "4101fc06dcf3cd741b000fbbb03547fe2d9bf86b68aba1d432e76d9a273eea7f",
-   "characters": 97,
-   "cost": 6.0140000000000004e-05,
-   "duration": 6.0,
+   "audio_sha256": "7cb676db603b4fcdce917c3ccdc0b321a987c3c1c7705c0d5b42a04d326707e3",
+   "characters": 135,
+   "cost": 0.00013365,
+   "duration": 8.775,
    "index": 1,
-   "key": "47bbc3fd66c9eacf29be6374829ae56367ac3a0e26faf05f501e3cbb7c7480b9",
+   "key": "576991b04f29f20cd987958ef6cba6add8fb625d2ec45059513064c1576a8ead",
    "page": "docs/design/user-experience.md",
    "pause_ms": 400,
    "section": "register",
-   "sent_text": "A relayer can register Alice's public [KERI](/kˈɛɹi/) inception without holding her private keys:",
-   "text": "A relayer can register Alice's public KERI inception without holding her private keys:",
+   "sent_text": "In the deployed V1 registration flow, a relayer can register Alice's public [KERI](/kˈɛɹi/) inception without holding her private keys:",
+   "text": "In the deployed V1 registration flow, a relayer can register Alice's public KERI inception without holding her private keys:",
    "words": [
     {
-     "end": 0.275,
-     "start": 0.2,
-     "text": "A"
+     "end": 0.338,
+     "start": 0.25,
+     "text": "In"
     },
     {
-     "end": 0.825,
-     "start": 0.275,
+     "end": 0.425,
+     "start": 0.338,
+     "text": "the"
+    },
+    {
+     "end": 0.938,
+     "start": 0.425,
+     "text": "deployed"
+    },
+    {
+     "end": 1.525,
+     "start": 0.938,
+     "text": "V1"
+    },
+    {
+     "end": 2.312,
+     "start": 1.525,
+     "text": "registration"
+    },
+    {
+     "end": 2.775,
+     "start": 2.312,
+     "text": "flow"
+    },
+    {
+     "end": 2.888,
+     "start": 2.775,
+     "text": ","
+    },
+    {
+     "end": 3.0,
+     "start": 2.888,
+     "text": "a"
+    },
+    {
+     "end": 3.5,
+     "start": 3.0,
      "text": "relayer"
     },
     {
-     "end": 1.025,
-     "start": 0.825,
+     "end": 3.713,
+     "start": 3.5,
      "text": "can"
     },
     {
-     "end": 1.538,
-     "start": 1.025,
+     "end": 4.238,
+     "start": 3.713,
      "text": "register"
     },
     {
-     "end": 2.062,
-     "start": 1.538,
+     "end": 4.787,
+     "start": 4.238,
      "text": "Alice's"
     },
     {
-     "end": 2.475,
-     "start": 2.062,
+     "end": 5.213,
+     "start": 4.787,
      "text": "public"
     },
     {
-     "end": 2.8,
-     "start": 2.475,
+     "end": 5.55,
+     "start": 5.213,
      "text": "KERI"
     },
     {
-     "end": 3.463,
-     "start": 2.8,
+     "end": 6.2,
+     "start": 5.55,
      "text": "inception"
     },
     {
-     "end": 3.85,
-     "start": 3.463,
+     "end": 6.55,
+     "start": 6.2,
      "text": "without"
     },
     {
-     "end": 4.188,
-     "start": 3.85,
+     "end": 6.887,
+     "start": 6.55,
      "text": "holding"
     },
     {
-     "end": 4.325,
-     "start": 4.188,
+     "end": 7.025,
+     "start": 6.887,
      "text": "her"
     },
     {
-     "end": 4.738,
-     "start": 4.325,
+     "end": 7.438,
+     "start": 7.025,
      "text": "private"
     },
     {
-     "end": 5.8,
-     "start": 4.738,
+     "end": 8.575,
+     "start": 7.438,
      "text": "keys"
     },
     {
-     "end": 6.0,
-     "start": 5.8,
+     "end": 8.775,
+     "start": 8.575,
      "text": ":"
     }
    ]
@@ -389201,566 +389151,471 @@
    ]
   },
   "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-01": {
-   "audio_sha256": "698c116ee689e88de50ed391b83b43a4a266148c7be96ea2ce39895feec88ab8",
-   "characters": 311,
-   "cost": 0.00030788999999999995,
-   "duration": 20.975,
+   "audio_sha256": "312eac40a9c2600220de742096f7ce61d4dc3783ff922f14ec7c6bcfd4f86838",
+   "characters": 315,
+   "cost": 0.00031184999999999996,
+   "duration": 19.95,
    "index": 1,
-   "key": "524aba04ddb06686e347b093820e563cf0e991059db84c8ec1503a9d991cda47",
+   "key": "c84c8e2d28e862e02c6d1aac9f14c0e99e4554dcf49e31d5a5f3f2b5a627d178",
    "page": "docs/design/user-experience.md",
    "pause_ms": 400,
    "section": "the-design-principle-the-owner-is-dumb-on-cardano",
-   "sent_text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she keeps in her checkpoint.",
-   "text": "The accepted design assumes the identity owner rotates her keys with kli and never touches Cardano except to put money in. Everything on the Cardano side is done by hunters — anyone paid to land her rotations, or to freeze her checkpoint when it cannot pay for one — paid from value she keeps in her checkpoint.",
+   "sent_text": "Alice rotates her keys in [KERI](/kˈɛɹi/). On Cardano, the controller books registration with the signed inception and its witness receipts. The Singular folder processes the booked request. A hunter can present a later witnessed rotation to advance the checkpoint or, when the freeze conditions hold, to freeze it.",
+   "text": "Alice rotates her keys in KERI. On Cardano, the controller books registration with the signed inception and its witness receipts. The Singular folder processes the booked request. A hunter can present a later witnessed rotation to advance the checkpoint or, when the freeze conditions hold, to freeze it.",
    "words": [
     {
-     "end": 0.325,
+     "end": 0.475,
      "start": 0.2,
-     "text": "The"
+     "text": "Alice"
     },
     {
-     "end": 0.825,
-     "start": 0.325,
-     "text": "accepted"
-    },
-    {
-     "end": 1.35,
-     "start": 0.825,
-     "text": "design"
-    },
-    {
-     "end": 1.875,
-     "start": 1.35,
-     "text": "assumes"
-    },
-    {
-     "end": 2.037,
-     "start": 1.875,
-     "text": "the"
-    },
-    {
-     "end": 2.662,
-     "start": 2.037,
-     "text": "identity"
-    },
-    {
-     "end": 3.013,
-     "start": 2.662,
-     "text": "owner"
-    },
-    {
-     "end": 3.487,
-     "start": 3.013,
+     "end": 0.837,
+     "start": 0.475,
      "text": "rotates"
     },
     {
-     "end": 3.638,
-     "start": 3.487,
+     "end": 0.95,
+     "start": 0.837,
      "text": "her"
     },
     {
-     "end": 4.05,
-     "start": 3.638,
+     "end": 1.212,
+     "start": 0.95,
      "text": "keys"
     },
     {
-     "end": 4.238,
-     "start": 4.05,
-     "text": "with"
-    },
-    {
-     "end": 4.825,
-     "start": 4.238,
-     "text": "kli"
-    },
-    {
-     "end": 4.988,
-     "start": 4.825,
-     "text": "and"
-    },
-    {
-     "end": 5.338,
-     "start": 4.988,
-     "text": "never"
-    },
-    {
-     "end": 5.775,
-     "start": 5.338,
-     "text": "touches"
-    },
-    {
-     "end": 6.438,
-     "start": 5.775,
-     "text": "Cardano"
-    },
-    {
-     "end": 6.825,
-     "start": 6.438,
-     "text": "except"
-    },
-    {
-     "end": 6.925,
-     "start": 6.825,
-     "text": "to"
-    },
-    {
-     "end": 7.15,
-     "start": 6.925,
-     "text": "put"
-    },
-    {
-     "end": 7.45,
-     "start": 7.15,
-     "text": "money"
-    },
-    {
-     "end": 8.375,
-     "start": 7.45,
+     "end": 1.35,
+     "start": 1.212,
      "text": "in"
     },
     {
-     "end": 8.625,
-     "start": 8.375,
+     "end": 2.175,
+     "start": 1.35,
+     "text": "KERI"
+    },
+    {
+     "end": 2.375,
+     "start": 2.175,
      "text": "."
     },
     {
-     "end": 9.35,
-     "start": 8.825,
-     "text": "Everything"
+     "end": 2.725,
+     "start": 2.575,
+     "text": "On"
     },
     {
-     "end": 9.488,
-     "start": 9.35,
-     "text": "on"
-    },
-    {
-     "end": 9.575,
-     "start": 9.488,
-     "text": "the"
-    },
-    {
-     "end": 10.163,
-     "start": 9.575,
+     "end": 3.45,
+     "start": 2.725,
      "text": "Cardano"
     },
     {
-     "end": 10.575,
-     "start": 10.163,
-     "text": "side"
-    },
-    {
-     "end": 10.725,
-     "start": 10.575,
-     "text": "is"
-    },
-    {
-     "end": 10.975,
-     "start": 10.725,
-     "text": "done"
-    },
-    {
-     "end": 11.15,
-     "start": 10.975,
-     "text": "by"
-    },
-    {
-     "end": 11.863,
-     "start": 11.15,
-     "text": "hunters"
-    },
-    {
-     "end": 11.95,
-     "start": 11.863,
-     "text": "—"
-    },
-    {
-     "end": 12.425,
-     "start": 11.95,
-     "text": "anyone"
-    },
-    {
-     "end": 12.7,
-     "start": 12.425,
-     "text": "paid"
-    },
-    {
-     "end": 12.825,
-     "start": 12.7,
-     "text": "to"
-    },
-    {
-     "end": 13.113,
-     "start": 12.825,
-     "text": "land"
-    },
-    {
-     "end": 13.225,
-     "start": 13.113,
-     "text": "her"
-    },
-    {
-     "end": 14.625,
-     "start": 13.225,
-     "text": "rotations"
-    },
-    {
-     "end": 14.85,
-     "start": 14.625,
+     "end": 3.525,
+     "start": 3.45,
      "text": ","
     },
     {
-     "end": 15.2,
-     "start": 15.05,
-     "text": "or"
+     "end": 3.625,
+     "start": 3.525,
+     "text": "the"
     },
     {
-     "end": 15.337,
-     "start": 15.2,
+     "end": 4.225,
+     "start": 3.625,
+     "text": "controller"
+    },
+    {
+     "end": 4.5,
+     "start": 4.225,
+     "text": "books"
+    },
+    {
+     "end": 5.35,
+     "start": 4.5,
+     "text": "registration"
+    },
+    {
+     "end": 5.488,
+     "start": 5.35,
+     "text": "with"
+    },
+    {
+     "end": 5.613,
+     "start": 5.488,
+     "text": "the"
+    },
+    {
+     "end": 5.988,
+     "start": 5.613,
+     "text": "signed"
+    },
+    {
+     "end": 6.637,
+     "start": 5.988,
+     "text": "inception"
+    },
+    {
+     "end": 6.762,
+     "start": 6.637,
+     "text": "and"
+    },
+    {
+     "end": 6.95,
+     "start": 6.762,
+     "text": "its"
+    },
+    {
+     "end": 7.325,
+     "start": 6.95,
+     "text": "witness"
+    },
+    {
+     "end": 8.45,
+     "start": 7.325,
+     "text": "receipts"
+    },
+    {
+     "end": 8.65,
+     "start": 8.45,
+     "text": "."
+    },
+    {
+     "end": 8.938,
+     "start": 8.825,
+     "text": "The"
+    },
+    {
+     "end": 9.375,
+     "start": 8.938,
+     "text": "Singular"
+    },
+    {
+     "end": 9.775,
+     "start": 9.375,
+     "text": "folder"
+    },
+    {
+     "end": 10.413,
+     "start": 9.775,
+     "text": "processes"
+    },
+    {
+     "end": 10.5,
+     "start": 10.413,
+     "text": "the"
+    },
+    {
+     "end": 10.738,
+     "start": 10.5,
+     "text": "booked"
+    },
+    {
+     "end": 11.675,
+     "start": 10.738,
+     "text": "request"
+    },
+    {
+     "end": 11.875,
+     "start": 11.675,
+     "text": "."
+    },
+    {
+     "end": 12.175,
+     "start": 12.1,
+     "text": "A"
+    },
+    {
+     "end": 12.575,
+     "start": 12.175,
+     "text": "hunter"
+    },
+    {
+     "end": 12.725,
+     "start": 12.575,
+     "text": "can"
+    },
+    {
+     "end": 13.2,
+     "start": 12.725,
+     "text": "present"
+    },
+    {
+     "end": 13.325,
+     "start": 13.2,
+     "text": "a"
+    },
+    {
+     "end": 13.788,
+     "start": 13.325,
+     "text": "later"
+    },
+    {
+     "end": 14.25,
+     "start": 13.788,
+     "text": "witnessed"
+    },
+    {
+     "end": 14.925,
+     "start": 14.25,
+     "text": "rotation"
+    },
+    {
+     "end": 15.075,
+     "start": 14.925,
      "text": "to"
     },
     {
-     "end": 15.613,
-     "start": 15.337,
-     "text": "freeze"
+     "end": 15.55,
+     "start": 15.075,
+     "text": "advance"
     },
     {
-     "end": 15.762,
-     "start": 15.613,
-     "text": "her"
+     "end": 15.663,
+     "start": 15.55,
+     "text": "the"
     },
     {
-     "end": 16.35,
-     "start": 15.762,
+     "end": 16.462,
+     "start": 15.663,
      "text": "checkpoint"
     },
     {
-     "end": 16.487,
-     "start": 16.35,
+     "end": 16.775,
+     "start": 16.462,
+     "text": "or"
+    },
+    {
+     "end": 16.85,
+     "start": 16.775,
+     "text": ","
+    },
+    {
+     "end": 16.987,
+     "start": 16.85,
      "text": "when"
     },
     {
-     "end": 16.575,
-     "start": 16.487,
-     "text": "it"
-    },
-    {
-     "end": 16.962,
-     "start": 16.575,
-     "text": "cannot"
-    },
-    {
-     "end": 17.25,
-     "start": 16.962,
-     "text": "pay"
+     "end": 17.087,
+     "start": 16.987,
+     "text": "the"
     },
     {
      "end": 17.425,
-     "start": 17.25,
-     "text": "for"
+     "start": 17.087,
+     "text": "freeze"
     },
     {
-     "end": 17.8,
+     "end": 18.0,
      "start": 17.425,
-     "text": "one"
+     "text": "conditions"
     },
     {
-     "end": 17.875,
-     "start": 17.8,
-     "text": "—"
+     "end": 18.375,
+     "start": 18.0,
+     "text": "hold"
     },
     {
-     "end": 18.2,
-     "start": 17.875,
-     "text": "paid"
+     "end": 18.425,
+     "start": 18.375,
+     "text": ","
     },
     {
-     "end": 18.4,
-     "start": 18.2,
-     "text": "from"
+     "end": 18.562,
+     "start": 18.425,
+     "text": "to"
     },
     {
-     "end": 18.862,
-     "start": 18.4,
-     "text": "value"
+     "end": 18.913,
+     "start": 18.562,
+     "text": "freeze"
     },
     {
-     "end": 19.038,
-     "start": 18.862,
-     "text": "she"
+     "end": 19.725,
+     "start": 18.913,
+     "text": "it"
     },
     {
-     "end": 19.375,
-     "start": 19.038,
-     "text": "keeps"
-    },
-    {
-     "end": 19.462,
-     "start": 19.375,
-     "text": "in"
-    },
-    {
-     "end": 19.612,
-     "start": 19.462,
-     "text": "her"
-    },
-    {
-     "end": 20.775,
-     "start": 19.612,
-     "text": "checkpoint"
-    },
-    {
-     "end": 20.975,
-     "start": 20.775,
+     "end": 19.95,
+     "start": 19.725,
      "text": "."
     }
    ]
   },
   "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-02": {
-   "audio_sha256": "7dbdc85013e635dae80f3e7a6ec94603c1c0dc63fac82460602a2ed6b43e108b",
-   "characters": 229,
-   "cost": 0.00014198,
-   "duration": 14.725,
+   "audio_sha256": "37cb7441bf65a59fdedd9d8263ad621bb81b48230080e589864a93b425c5631b",
+   "characters": 177,
+   "cost": 0.00017523000000000001,
+   "duration": 11.65,
    "index": 2,
-   "key": "a3af50f4579e830b70a3acdf759a3d1bd9a6a7e8aaaf507c1d9a113d461c62b8",
+   "key": "61f1bb0c03c31b408cc772f76dcc1260f63264483b8f1afbe1739b571157a00a",
    "page": "docs/design/user-experience.md",
    "pause_ms": 400,
    "section": "the-design-principle-the-owner-is-dumb-on-cardano",
-   "sent_text": "A user interface that forgets this will be wrong in a specific way: it will present Cardano operations as things the owner must perform on a schedule. The two things she actually does are fund and, if her keys are stolen, poison.",
-   "text": "A user interface that forgets this will be wrong in a specific way: it will present Cardano operations as things the owner must perform on a schedule. The two things she actually does are fund and, if her keys are stolen, poison.",
+   "sent_text": "The UI should show which keys Alice needs for each action. The keys revealed by a rotation authorize its deposit at their threshold. The current key quorum can authorize poison.",
+   "text": "The UI should show which keys Alice needs for each action. The keys revealed by a rotation authorize its deposit at their threshold. The current key quorum can authorize poison.",
    "words": [
     {
-     "end": 0.287,
-     "start": 0.2,
-     "text": "A"
-    },
-    {
-     "end": 0.637,
-     "start": 0.287,
-     "text": "user"
-    },
-    {
-     "end": 1.175,
-     "start": 0.637,
-     "text": "interface"
-    },
-    {
-     "end": 1.325,
-     "start": 1.175,
-     "text": "that"
-    },
-    {
-     "end": 1.75,
-     "start": 1.325,
-     "text": "forgets"
-    },
-    {
-     "end": 2.075,
-     "start": 1.75,
-     "text": "this"
-    },
-    {
-     "end": 2.2,
-     "start": 2.075,
-     "text": "will"
-    },
-    {
-     "end": 2.362,
-     "start": 2.2,
-     "text": "be"
-    },
-    {
-     "end": 2.725,
-     "start": 2.362,
-     "text": "wrong"
-    },
-    {
-     "end": 2.812,
-     "start": 2.725,
-     "text": "in"
-    },
-    {
-     "end": 2.875,
-     "start": 2.812,
-     "text": "a"
-    },
-    {
-     "end": 3.4,
-     "start": 2.875,
-     "text": "specific"
-    },
-    {
-     "end": 4.225,
-     "start": 3.4,
-     "text": "way"
-    },
-    {
-     "end": 4.425,
-     "start": 4.225,
-     "text": ":"
-    },
-    {
-     "end": 4.713,
-     "start": 4.625,
-     "text": "it"
-    },
-    {
-     "end": 4.825,
-     "start": 4.713,
-     "text": "will"
-    },
-    {
-     "end": 5.225,
-     "start": 4.825,
-     "text": "present"
-    },
-    {
-     "end": 5.7,
-     "start": 5.225,
-     "text": "Cardano"
-    },
-    {
-     "end": 6.6,
-     "start": 5.7,
-     "text": "operations"
-    },
-    {
-     "end": 6.775,
-     "start": 6.6,
-     "text": "as"
-    },
-    {
-     "end": 7.062,
-     "start": 6.775,
-     "text": "things"
-    },
-    {
-     "end": 7.213,
-     "start": 7.062,
-     "text": "the"
-    },
-    {
-     "end": 7.575,
-     "start": 7.213,
-     "text": "owner"
-    },
-    {
-     "end": 7.825,
-     "start": 7.575,
-     "text": "must"
-    },
-    {
-     "end": 8.337,
-     "start": 7.825,
-     "text": "perform"
-    },
-    {
-     "end": 8.462,
-     "start": 8.337,
-     "text": "on"
-    },
-    {
-     "end": 8.525,
-     "start": 8.462,
-     "text": "a"
-    },
-    {
-     "end": 9.55,
-     "start": 8.525,
-     "text": "schedule"
-    },
-    {
-     "end": 9.75,
-     "start": 9.55,
-     "text": "."
-    },
-    {
-     "end": 10.0,
-     "start": 9.925,
+     "end": 0.25,
+     "start": 0.175,
      "text": "The"
     },
     {
-     "end": 10.2,
-     "start": 10.0,
-     "text": "two"
+     "end": 0.55,
+     "start": 0.25,
+     "text": "UI"
     },
     {
-     "end": 10.45,
-     "start": 10.2,
-     "text": "things"
+     "end": 0.738,
+     "start": 0.55,
+     "text": "should"
     },
     {
-     "end": 10.6,
-     "start": 10.45,
-     "text": "she"
+     "end": 1.025,
+     "start": 0.738,
+     "text": "show"
     },
     {
-     "end": 11.025,
-     "start": 10.6,
-     "text": "actually"
+     "end": 1.225,
+     "start": 1.025,
+     "text": "which"
     },
     {
-     "end": 11.35,
-     "start": 11.025,
-     "text": "does"
-    },
-    {
-     "end": 11.512,
-     "start": 11.35,
-     "text": "are"
-    },
-    {
-     "end": 12.012,
-     "start": 11.512,
-     "text": "fund"
-    },
-    {
-     "end": 12.25,
-     "start": 12.012,
-     "text": "and"
-    },
-    {
-     "end": 12.3,
-     "start": 12.25,
-     "text": ","
-    },
-    {
-     "end": 12.413,
-     "start": 12.3,
-     "text": "if"
-    },
-    {
-     "end": 12.562,
-     "start": 12.413,
-     "text": "her"
-    },
-    {
-     "end": 12.887,
-     "start": 12.562,
+     "end": 1.513,
+     "start": 1.225,
      "text": "keys"
     },
     {
-     "end": 13.0,
-     "start": 12.887,
-     "text": "are"
+     "end": 1.85,
+     "start": 1.513,
+     "text": "Alice"
     },
     {
-     "end": 13.45,
-     "start": 13.0,
-     "text": "stolen"
+     "end": 2.2,
+     "start": 1.85,
+     "text": "needs"
     },
     {
-     "end": 13.5,
-     "start": 13.45,
-     "text": ","
+     "end": 2.325,
+     "start": 2.2,
+     "text": "for"
     },
     {
-     "end": 14.525,
-     "start": 13.5,
+     "end": 2.55,
+     "start": 2.325,
+     "text": "each"
+    },
+    {
+     "end": 3.475,
+     "start": 2.55,
+     "text": "action"
+    },
+    {
+     "end": 3.675,
+     "start": 3.475,
+     "text": "."
+    },
+    {
+     "end": 3.963,
+     "start": 3.85,
+     "text": "The"
+    },
+    {
+     "end": 4.325,
+     "start": 3.963,
+     "text": "keys"
+    },
+    {
+     "end": 4.8,
+     "start": 4.325,
+     "text": "revealed"
+    },
+    {
+     "end": 4.975,
+     "start": 4.8,
+     "text": "by"
+    },
+    {
+     "end": 5.05,
+     "start": 4.975,
+     "text": "a"
+    },
+    {
+     "end": 5.825,
+     "start": 5.05,
+     "text": "rotation"
+    },
+    {
+     "end": 6.425,
+     "start": 5.825,
+     "text": "authorize"
+    },
+    {
+     "end": 6.6,
+     "start": 6.425,
+     "text": "its"
+    },
+    {
+     "end": 7.175,
+     "start": 6.6,
+     "text": "deposit"
+    },
+    {
+     "end": 7.262,
+     "start": 7.175,
+     "text": "at"
+    },
+    {
+     "end": 7.438,
+     "start": 7.262,
+     "text": "their"
+    },
+    {
+     "end": 8.6,
+     "start": 7.438,
+     "text": "threshold"
+    },
+    {
+     "end": 8.8,
+     "start": 8.6,
+     "text": "."
+    },
+    {
+     "end": 9.05,
+     "start": 8.975,
+     "text": "The"
+    },
+    {
+     "end": 9.325,
+     "start": 9.05,
+     "text": "current"
+    },
+    {
+     "end": 9.525,
+     "start": 9.325,
+     "text": "key"
+    },
+    {
+     "end": 9.875,
+     "start": 9.525,
+     "text": "quorum"
+    },
+    {
+     "end": 10.025,
+     "start": 9.875,
+     "text": "can"
+    },
+    {
+     "end": 10.5,
+     "start": 10.025,
+     "text": "authorize"
+    },
+    {
+     "end": 11.45,
+     "start": 10.5,
      "text": "poison"
     },
     {
-     "end": 14.725,
-     "start": 14.525,
+     "end": 11.65,
+     "start": 11.45,
      "text": "."
     }
    ]
@@ -390266,17 +390121,17 @@
    ]
   },
   "docs-design-user-experience/three-balances-three-explanations-04": {
-   "audio_sha256": "18599edca3d01bf15f5cad5bfcb3e44550a666480ffc4d91a3d6bdbd39b47cc9",
-   "characters": 283,
-   "cost": 0.00028016999999999994,
-   "duration": 19.0,
+   "audio_sha256": "abb29614d00b0f019fbc5b970481ef3323cdeb536a49e67b2214e8708e9f3f05",
+   "characters": 216,
+   "cost": 0.00021384,
+   "duration": 14.1,
    "index": 4,
-   "key": "4aee10489879e242acefa0dbffcfba137bae2ef4e9253e766e9c2cffbfa188d5",
+   "key": "2623f592fb02c82faf1af6d8c139b5f4ff8174afde7d82b45bf2675241519c15",
    "page": "docs/design/user-experience.md",
    "pause_ms": 300,
    "section": "three-balances-three-explanations",
-   "sent_text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. The pool pays rotation premiums; it is not a loss-free reserve. An authorized close returns the remaining bonds and pool to the signed destinations while retaining the output’s token and minimum ADA.",
-   "text": "The conviction bond D_reg is the stake a duplicity proof seizes. It is never a fee. The pool pays rotation premiums; it is not a loss-free reserve. An authorized close returns the remaining bonds and pool to the signed destinations while retaining the output’s token and minimum ADA.",
+   "sent_text": "The conviction bond D_reg is the stake a duplicity proof seizes. Conviction pays it to the payee named in the eligible commitment and sends the remaining freeze bond and pool to the checkpoint’s fixed refund address.",
+   "text": "The conviction bond D_reg is the stake a duplicity proof seizes. Conviction pays it to the payee named in the eligible commitment and sends the remaining freeze bond and pool to the checkpoint’s fixed refund address.",
    "words": [
     {
      "end": 0.25,
@@ -390339,208 +390194,133 @@
      "text": "."
     },
     {
-     "end": 4.75,
-     "start": 4.625,
-     "text": "It"
+     "end": 5.287,
+     "start": 4.675,
+     "text": "Conviction"
     },
     {
-     "end": 4.912,
-     "start": 4.75,
-     "text": "is"
-    },
-    {
-     "end": 5.225,
-     "start": 4.912,
-     "text": "never"
-    },
-    {
-     "end": 5.35,
-     "start": 5.225,
-     "text": "a"
-    },
-    {
-     "end": 5.725,
-     "start": 5.35,
-     "text": "fee"
-    },
-    {
-     "end": 5.8,
-     "start": 5.725,
-     "text": "."
-    },
-    {
-     "end": 5.9,
-     "start": 5.8,
-     "text": "The"
-    },
-    {
-     "end": 6.225,
-     "start": 5.9,
-     "text": "pool"
-    },
-    {
-     "end": 6.55,
-     "start": 6.225,
+     "end": 5.625,
+     "start": 5.287,
      "text": "pays"
     },
     {
-     "end": 7.125,
-     "start": 6.55,
-     "text": "rotation"
-    },
-    {
-     "end": 7.75,
-     "start": 7.125,
-     "text": "premiums"
-    },
-    {
-     "end": 7.825,
-     "start": 7.75,
-     "text": ";"
-    },
-    {
-     "end": 7.95,
-     "start": 7.825,
+     "end": 5.75,
+     "start": 5.625,
      "text": "it"
     },
     {
-     "end": 8.1,
-     "start": 7.95,
-     "text": "is"
-    },
-    {
-     "end": 8.312,
-     "start": 8.1,
-     "text": "not"
-    },
-    {
-     "end": 8.4,
-     "start": 8.312,
-     "text": "a"
-    },
-    {
-     "end": 8.95,
-     "start": 8.4,
-     "text": "loss-free"
-    },
-    {
-     "end": 10.025,
-     "start": 8.95,
-     "text": "reserve"
-    },
-    {
-     "end": 10.25,
-     "start": 10.025,
-     "text": "."
-    },
-    {
-     "end": 10.613,
-     "start": 10.475,
-     "text": "An"
-    },
-    {
-     "end": 11.262,
-     "start": 10.613,
-     "text": "authorized"
-    },
-    {
-     "end": 11.65,
-     "start": 11.262,
-     "text": "close"
-    },
-    {
-     "end": 12.2,
-     "start": 11.65,
-     "text": "returns"
-    },
-    {
-     "end": 12.3,
-     "start": 12.2,
-     "text": "the"
-    },
-    {
-     "end": 12.8,
-     "start": 12.3,
-     "text": "remaining"
-    },
-    {
-     "end": 13.3,
-     "start": 12.8,
-     "text": "bonds"
-    },
-    {
-     "end": 13.438,
-     "start": 13.3,
-     "text": "and"
-    },
-    {
-     "end": 13.825,
-     "start": 13.438,
-     "text": "pool"
-    },
-    {
-     "end": 13.925,
-     "start": 13.825,
+     "end": 5.875,
+     "start": 5.75,
      "text": "to"
     },
     {
-     "end": 14.062,
-     "start": 13.925,
+     "end": 5.988,
+     "start": 5.875,
      "text": "the"
     },
     {
-     "end": 14.425,
-     "start": 14.062,
-     "text": "signed"
+     "end": 6.512,
+     "start": 5.988,
+     "text": "payee"
     },
     {
-     "end": 15.25,
-     "start": 14.425,
-     "text": "destinations"
+     "end": 6.95,
+     "start": 6.512,
+     "text": "named"
     },
     {
-     "end": 15.475,
-     "start": 15.25,
-     "text": "while"
+     "end": 7.062,
+     "start": 6.95,
+     "text": "in"
     },
     {
-     "end": 15.988,
-     "start": 15.475,
-     "text": "retaining"
-    },
-    {
-     "end": 16.1,
-     "start": 15.988,
+     "end": 7.188,
+     "start": 7.062,
      "text": "the"
     },
     {
-     "end": 16.638,
-     "start": 16.1,
-     "text": "output’s"
+     "end": 7.7,
+     "start": 7.188,
+     "text": "eligible"
     },
     {
-     "end": 17.163,
-     "start": 16.638,
-     "text": "token"
+     "end": 8.363,
+     "start": 7.7,
+     "text": "commitment"
     },
     {
-     "end": 17.3,
-     "start": 17.163,
+     "end": 8.538,
+     "start": 8.363,
      "text": "and"
     },
     {
-     "end": 17.7,
-     "start": 17.3,
-     "text": "minimum"
+     "end": 8.925,
+     "start": 8.538,
+     "text": "sends"
     },
     {
-     "end": 18.7,
-     "start": 17.7,
-     "text": "ADA"
+     "end": 9.025,
+     "start": 8.925,
+     "text": "the"
     },
     {
-     "end": 19.0,
-     "start": 18.7,
+     "end": 9.538,
+     "start": 9.025,
+     "text": "remaining"
+    },
+    {
+     "end": 9.913,
+     "start": 9.538,
+     "text": "freeze"
+    },
+    {
+     "end": 10.413,
+     "start": 9.913,
+     "text": "bond"
+    },
+    {
+     "end": 10.562,
+     "start": 10.413,
+     "text": "and"
+    },
+    {
+     "end": 10.95,
+     "start": 10.562,
+     "text": "pool"
+    },
+    {
+     "end": 11.075,
+     "start": 10.95,
+     "text": "to"
+    },
+    {
+     "end": 11.212,
+     "start": 11.075,
+     "text": "the"
+    },
+    {
+     "end": 11.875,
+     "start": 11.212,
+     "text": "checkpoint’s"
+    },
+    {
+     "end": 12.238,
+     "start": 11.875,
+     "text": "fixed"
+    },
+    {
+     "end": 12.7,
+     "start": 12.238,
+     "text": "refund"
+    },
+    {
+     "end": 13.875,
+     "start": 12.7,
+     "text": "address"
+    },
+    {
+     "end": 14.1,
+     "start": 13.875,
      "text": "."
     }
    ]

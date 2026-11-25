@@ -61,7 +61,7 @@
       "pause": 400
     },
     {
-      "text": "Appliers race on one shared object; the loser wastes work, never safety. A request nobody applies within its window is retractable with a refund. Close, reopen and conviction travel the same way as leaf updates. Rotations, poisons, freezes and top-ups never touch the registry.",
+      "text": "Appliers race on one shared object; the loser wastes work, never safety. Until its deadline a request can only be applied; after it, anyone may return it to its refund address, less the tip the returner keeps. Conviction travels the same way as a leaf update. Rotations, poisons, freezes and top-ups never touch the registry.",
       "pause": 400
     }
   ],
@@ -89,11 +89,11 @@
       "pause": 500
     },
     {
-      "text": "The enforcement observer goes. observer_advance verifies one thing — a later witnessed rotation with its receipts — and the register validator dispatches the effect, which is where advance and freeze part company:",
+      "text": "The hunter presents a later witnessed rotation. The transaction mints the attestation for the spent checkpoint and the requested action. A rotation lands the new keys. A freeze keeps the old keys and pays the hunter the bond.",
       "pause": 400
     },
     {
-      "text": "Two edges move the identity — a rotation and a poison — and four boundary transitions cross its edges: register, close, reopen and convict. Nothing has a deadline; the freeze has no window to expire, because the owner returns by rotating with a deposit whenever she likes.",
+      "text": "Two edges move the identity — a rotation and a poison — and four boundary transitions cross its edges: register and convict. Nothing has a deadline; the freeze has no window to expire, because the owner returns by rotating with a deposit whenever she likes.",
       "pause": 400
     }
   ],
@@ -177,6 +177,6 @@
   ],
   "_source": {
     "file": "system.md",
-    "sha256": "a9265678c2ddc8ecd28c0620188ff56c26bfca2f59c052f591c7ee6fc5342d26"
+    "sha256": "88aa66ad9c916620e74821a3289df9ff393959b2afcf5f63c61844592b85bed5"
   }
 }

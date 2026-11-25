@@ -85,7 +85,7 @@
       "pause": 400
     },
     {
-      "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, parked (an output retains its token, minimum ADA and last key state), and pending conviction custody.",
+      "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, and pending conviction custody. There is no parked state: a checkpoint is alive until it is convicted.",
       "pause": 400
     },
     {
@@ -93,7 +93,7 @@
       "pause": 400
     },
     {
-      "text": "Frozen is not a flag. A frozen checkpoint is missing B. An application that looks for a status field will find none, and must compare against the deployment's D_reg and B.",
+      "text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. The hunter receives B, so the output no longer holds that bond. The consumer checks the datum and the value it expects the output to hold.",
       "pause": 300
     },
     {
@@ -101,7 +101,7 @@
       "pause": 300
     },
     {
-      "text": "Conviction becomes terminal, and a parked identity can come back. The chain follows KERI: no key event un-duplicates an identifier, so Convicted has no exit, while a parked identity reopens on a witnessed rotation later than the parked key state. An application must not cache \"absent forever\" for a parked AID, and must not expect a convicted one to return.",
+      "text": "Conviction is the only end, and it is terminal. The chain follows KERI: no key event un-duplicates an identifier, so Convicted has no exit. There is no owner exit either, so a registered AID is alive until it is convicted. An application must not expect a convicted one to return.",
       "pause": 300
     }
   ],
@@ -119,11 +119,11 @@
       "pause": 400
     },
     {
-      "text": "A future consumer queries that exact asset under S, requires quantity one, authenticates the canonical registry and checks the holding's KERI datum and eligibility. A token in a parked output or pending termination is not an eligible checkpoint. A missing token alone does not distinguish terminal from never registered; that requires registry history or a proof against the on-chain root. Provider failure must be reported as unavailable.",
+      "text": "A future consumer queries that exact asset under S, requires quantity one, authenticates the canonical registry and checks the holding's KERI datum and eligibility. A token in pending termination custody is not an eligible checkpoint. A missing token alone does not distinguish terminal from never registered; that requires registry history or a proof against the on-chain root. Provider failure must be reported as unavailable.",
       "pause": 400
     },
     {
-      "text": "Cardano KERI's model at 7cb4e716107d8ca7cc53dcdb0cd26549315ee256 still has the earlier registry and dependency binding. The parked-state and consumer changes remain pending under the Lean correspondence register, parking and consumer predicate work. In particular, the earlier parked description on this page is not the upstream target: parking must retain the token and key state in a KERI output, while the registry remains active. No model or runtime behavior is changed by this documentation. See the complete mapping for the remaining stories and evidence.",
+      "text": "Cardano KERI's model at 7cb4e716107d8ca7cc53dcdb0cd26549315ee256 still has the earlier registry and dependency binding. The consumer changes remain pending under the Lean correspondence register and the consumer predicate work. Parking, described by earlier revisions of this page, is removed: there is no owner exit (#493). No model or runtime behavior is changed by this documentation. See the complete mapping for the remaining stories and evidence.",
       "pause": 400
     }
   ],
@@ -385,6 +385,6 @@
   ],
   "_source": {
     "file": "value-auth.md",
-    "sha256": "03e6b5638b6a8993766e2905c489e23919388cb2fe1a7c6eb84a98bc5063b8f5"
+    "sha256": "443b0551d528b0975953515bed885cb70440e58dc9103ff16eff5d8ee7940ea2"
   }
 }

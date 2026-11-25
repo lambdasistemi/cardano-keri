@@ -57,7 +57,8 @@ reads only the datum and the checkpoint's value:
 
 ```text
 authorize iff  present
-            ∧ D_reg full ∧ B full          — bonded: not frozen
+            ∧ D_reg full ∧ B full          — the bonds are held
+            ∧ ¬frozen                      — the datum’s frozen bit is clear
             ∧ ¬poisoned                    — the controller has not disowned this epoch
             ∧ now − born_at ≥ W            — past the juvenility window
             ∧ the operation's own signature satisfies the current threshold
@@ -71,9 +72,10 @@ alive until it is convicted.
 
 Three consequences an integrator should plan for:
 
-- **Frozen is not a flag.** A frozen checkpoint is missing `B`. An
-  application that looks for a status field will find none, and must
-  compare against the deployment's `D_reg` and `B`.
+- **Freeze changes both datum and value.** Only the frozen bit in the datum
+  changes to true. The hunter receives `B`, so the output no longer holds
+  that bond. The consumer checks the datum and the value it expects the
+  output to hold.
 - **Step 1 becomes a guarantee rather than a hope.** The redesigned registry admits one
   incarnation per AID, ever within that registry, so "exactly one candidate" is enforced on chain
   instead of being a residual the consumer carries.

@@ -3101,7 +3101,7 @@
     "index": 2,
     "name": "docs-architecture-system/registration-through-the-registry-designed-02",
     "pause_ms": 400,
-    "v": "8696bb14c1b0"
+    "v": "a6e2004c8553"
    }
   ],
   "system-architecture": [
@@ -3155,13 +3155,13 @@
     "index": 1,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-01",
     "pause_ms": 400,
-    "v": "2f3e6a78eb89"
+    "v": "da304df0b184"
    },
    {
     "index": 2,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-02",
     "pause_ms": 400,
-    "v": "09ac0025cb90"
+    "v": "6964ab557bf2"
    }
   ]
  },
@@ -3479,13 +3479,13 @@
     "index": 3,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-03",
     "pause_ms": 400,
-    "v": "2309a880ee4d"
+    "v": "9befa488ffee"
    },
    {
     "index": 4,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-04",
     "pause_ms": 400,
-    "v": "aac2847ee57d"
+    "v": "46e15c542985"
    }
   ],
   "refusal-behavior": [
@@ -3631,7 +3631,7 @@
     "index": 2,
     "name": "docs-architecture-value-auth/under-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "e58c533ae472"
+    "v": "85659eb9bede"
    },
    {
     "index": 3,
@@ -3643,7 +3643,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/under-the-accepted-design-04",
     "pause_ms": 300,
-    "v": "6f6bedd46b3b"
+    "v": "d827c99fb28a"
    },
    {
     "index": 5,
@@ -3655,7 +3655,7 @@
     "index": 6,
     "name": "docs-architecture-value-auth/under-the-accepted-design-06",
     "pause_ms": 300,
-    "v": "f6b5b5deab18"
+    "v": "15dd08c46aa2"
    }
   ],
   "value-authorization": [
@@ -12255,7 +12255,7 @@
     "index": 2,
     "name": "docs-design-super-watcher/freshness-and-availability-02",
     "pause_ms": 400,
-    "v": "a570f4bd70ff"
+    "v": "a149811f3e41"
    }
   ],
   "operational-loop": [
@@ -12363,7 +12363,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/security-principle-01",
     "pause_ms": 400,
-    "v": "96727f193f5e"
+    "v": "c098dd0983a7"
    }
   ],
   "the-cross-plane-problem": [
@@ -12441,7 +12441,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-01",
     "pause_ms": 400,
-    "v": "0ec0342dbc2e"
+    "v": "033ebc53bb63"
    },
    {
     "index": 2,
@@ -12459,7 +12459,7 @@
     "index": 4,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-04",
     "pause_ms": 300,
-    "v": "3b3c6d6d9939"
+    "v": "f716860decfa"
    },
    {
     "index": 5,
@@ -12545,7 +12545,7 @@
     "index": 10,
     "name": "docs-design-super-watcher/what-a-hunter-is-not-10",
     "pause_ms": 400,
-    "v": "75b9d181b639"
+    "v": "eb99d9b374b1"
    }
   ],
   "what-a-hunter-may-do-today": [
@@ -13311,7 +13311,7 @@
     "index": 7,
     "name": "docs-design-user-experience/find-the-checkpoint-07",
     "pause_ms": 400,
-    "v": "7628e34bf098"
+    "v": "606eb3d1b727"
    }
   ],
   "first-know-the-aid": [
@@ -13328,42 +13328,42 @@
     "v": "139aa571006f"
    }
   ],
-  "leaving-and-coming-back": [
+  "no-way-out-but-conviction": [
    {
     "index": 0,
-    "name": "docs-design-user-experience/leaving-and-coming-back-00",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-00",
     "pause_ms": 500,
-    "v": "3b490fd0a4ba"
+    "v": "798884a29c9f"
    },
    {
     "index": 1,
-    "name": "docs-design-user-experience/leaving-and-coming-back-01",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-01",
     "pause_ms": 400,
-    "v": "954550f900bb"
+    "v": "ac729c67501a"
    },
    {
     "index": 2,
-    "name": "docs-design-user-experience/leaving-and-coming-back-02",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-02",
     "pause_ms": 300,
-    "v": "184b51e9bd3a"
+    "v": "d81097b417f6"
    },
    {
     "index": 3,
-    "name": "docs-design-user-experience/leaving-and-coming-back-03",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-03",
     "pause_ms": 300,
-    "v": "a3495fe3f77b"
+    "v": "dde9ebc31542"
    },
    {
     "index": 4,
-    "name": "docs-design-user-experience/leaving-and-coming-back-04",
-    "pause_ms": 300,
-    "v": "920dbbb1ed02"
+    "name": "docs-design-user-experience/no-way-out-but-conviction-04",
+    "pause_ms": 400,
+    "v": "004d0e82dded"
    },
    {
     "index": 5,
-    "name": "docs-design-user-experience/leaving-and-coming-back-05",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-05",
     "pause_ms": 400,
-    "v": "578790aef5b4"
+    "v": "10f8529bb5fa"
    }
   ],
   "poison": [
@@ -13433,7 +13433,7 @@
     "index": 6,
     "name": "docs-design-user-experience/register-06",
     "pause_ms": 400,
-    "v": "1e78de981b18"
+    "v": "48415e620df9"
    },
    {
     "index": 7,
@@ -13471,7 +13471,7 @@
     "index": 4,
     "name": "docs-design-user-experience/rotate-04",
     "pause_ms": 400,
-    "v": "40fc5a06e46a"
+    "v": "237ef72b4dda"
    }
   ],
   "the-design-principle-the-owner-is-dumb-on-cardano": [
@@ -13485,7 +13485,7 @@
     "index": 1,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-01",
     "pause_ms": 400,
-    "v": "c33cf9497acc"
+    "v": "698c116ee689"
    },
    {
     "index": 2,
@@ -13517,13 +13517,13 @@
     "index": 3,
     "name": "docs-design-user-experience/three-balances-three-explanations-03",
     "pause_ms": 300,
-    "v": "12acc486e242"
+    "v": "2e95197796d0"
    },
    {
     "index": 4,
     "name": "docs-design-user-experience/three-balances-three-explanations-04",
     "pause_ms": 300,
-    "v": "6160dbfe6659"
+    "v": "18599edca3d0"
    },
    {
     "index": 5,

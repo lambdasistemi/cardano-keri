@@ -87,7 +87,7 @@
       "pause": 300
     },
     {
-      "text": "if it does not, it takes B and freezes the checkpoint on its old keys — the same evidence, applied to nothing. The datum is unchanged, B leaves, and the checkpoint is unconsumable until the owner rotates with a deposit that restores it.",
+      "text": "if the pool is short, the hunter can freeze the checkpoint on its old keys. The freeze sets only the frozen bit in the datum and pays B to the hunter. The checkpoint stays frozen until a depositing rotation restores the bond.",
       "pause": 300
     },
     {
@@ -317,6 +317,6 @@
   ],
   "_source": {
     "file": "super-watcher.md",
-    "sha256": "fd646faa10a210b1f65aa931d52ddfd40d26b495d8f6b995fee50e288da5dbdc"
+    "sha256": "9eb91de275d10e615e6a9f25d823f16f912d678032e619dd621a6eab2e1b06cc"
   }
 }

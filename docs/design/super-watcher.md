@@ -78,10 +78,10 @@ can ever reach a hunter:
 Cardano:
 
 - if the pool covers the premium, it lands the rotation and takes `P`;
-- if it does not, it takes `B` and **freezes** the checkpoint on its old keys —
-  the same evidence, applied to nothing. The datum is unchanged, `B` leaves,
-  and the checkpoint is unconsumable until the owner rotates with a deposit
-  that restores it.
+- if the pool is short, the hunter can **freeze** the checkpoint on its old
+  keys. The freeze sets only the frozen bit in the datum and pays `B` to
+  the hunter. The checkpoint stays frozen until a depositing rotation
+  restores the bond.
 
 The freeze is therefore not a punishment for lag. It is what makes a
 non-paying owner come back, and it is bounded by two things the owner

@@ -54,9 +54,9 @@ a checkpoint or an old key:
 | Multiple candidates | Ambiguous registration; fail closed | shipped — the registry removes it |
 | Stale outref | The checkpoint changed; refresh and rebuild | shipped |
 
-"Fail closed" should be visible. Note that **frozen** is not a flag: it is
-what the checkpoint's value shows (`B` absent). A UI should read it from
-the bonds rather than looking for a status field that does not exist.
+"Fail closed" should be visible. A freeze sets only the datum’s frozen
+bit and pays the freeze bond `B` to the hunter. The UI can show the
+frozen checkpoint with its old keys and explain where the bond went.
 
 ## Register
 
@@ -147,7 +147,8 @@ The UI should never present the checkpoint's value as one generic deposit:
 - **The pool** is a wage fund. It pays the premium `P` to whoever lands a
   rotation. Anyone may top it up, and its depletion is what invites a freeze.
 - **The freeze bond `B`** is what a hunter takes when the pool cannot pay. Its
-  absence *is* the frozen state, and only a depositing rotation restores it.
+  absence accompanies the frozen bit in the datum. A depositing rotation
+  restores the bond and clears the bit.
 - **The conviction bond `D_reg`** is the stake a duplicity proof seizes. It is
   never a fee. The pool pays rotation premiums; it is not a loss-free reserve.
   An authorized close returns the remaining bonds and pool to the signed

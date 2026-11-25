@@ -47,7 +47,7 @@ epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
 | Advance | Applies one genuine witnessed rotation | The same, plus a bond option and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it. The refund address is never changed |
 | Close | Current controllers burn the token and take the refund | **Gone.** There is no owner exit: a checkpoint is alive until it is convicted |
-| Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
+| Freeze | Moves a lagging checkpoint to ARMED for the response window | When the pool is short, the hunter receives `B`. The datum sets only its frozen bit to true and keeps the old keys. |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
 | Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
 | Poison | — | New: the current quorum declares the epoch compromised |

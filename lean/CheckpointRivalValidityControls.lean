@@ -11,15 +11,38 @@ open Duplicity CheckpointConviction Examples
 
 def inceptionEvent : SignedEvent :=
   let e := { baseContext.accepted.event with
-    aid := 11, sn := 0, kind := .inception,
+    aid := 11, sn := 0, kind := .inception, priorDigest := 0,
     nextKeys := [1, 2], nextThreshold := .count 1 }
   signed e [1] [10]
+
+private def opensInception (event : Content) : Bool :=
+  inceptionWrites 11 (signed event [1] [10]) [10]
+
+#guard opensInception inceptionEvent.event
+#guard !opensInception { inceptionEvent.event with priorDigest := 7 }
+#guard !opensInception { inceptionEvent.event with cuts := [20] }
+#guard !opensInception { inceptionEvent.event with adds := [21] }
 
 def first := signed {baseContext.accepted.event with aid := 11} [1] [10]
 def second : SignedEvent :=
   let e := {first.event with sn := 2, keys := [4], nextKeys := [5], cuts := [10], adds := [12]}
   signed e [4] [12]
 def bookingOrigin := {origin with inception := EventHistory.inception inceptionEvent [10]}
+private def acceptsNext (threshold : Threshold) (atInception : Bool) : Bool :=
+  if atInception then opensInception { inceptionEvent.event with nextThreshold := threshold }
+  else rotationValid bookingOrigin.inception.predecessor
+    (signed { first.event with nextThreshold := threshold } [1] [10])
+
+private def nextDenominatorCases (atInception : Bool) : Bool :=
+  acceptsNext (.weighted [[.key ⟨2, 4⟩, .key ⟨1, 2⟩]]) atInception &&
+  acceptsNext (.weighted [[.key ⟨1, 4294967297⟩, .key ⟨4294967296, 4294967297⟩]]) atInception &&
+  !acceptsNext (.weighted [[.key ⟨1, 0⟩]]) atInception &&
+  !acceptsNext (.weighted [[.group ⟨1, 0⟩ [⟨1, 1⟩]]]) atInception &&
+  !acceptsNext (.weighted [[.group ⟨1, 1⟩ [⟨1, 0⟩]]]) atInception
+
+#guard nextDenominatorCases true
+#guard nextDenominatorCases false
+
 def setup : SystemEnv := fun aid => {env aid with
   inceptionWriter := fun _ _ => some (inceptionEvent, [10])
   rotationWriter := fun _ _ _ sn => some (if sn = 1 then first else second)}

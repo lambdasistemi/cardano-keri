@@ -42,9 +42,12 @@ def Weight.width : Weight → Nat
   | .key _ => 1
   | .group _ ws => ws.length
 
-def Weight.wellFormed : Weight → Bool
+def Weight.positiveDenominators : Weight → Bool
   | .key w => w.denominator > 0
-  | .group w ws => w.denominator > 0 && !ws.isEmpty && ws.all (·.denominator > 0)
+  | .group w ws => w.denominator > 0 && ws.all (·.denominator > 0)
+
+def Weight.wellFormed (weight : Weight) : Bool :=
+  weight.positiveDenominators && weight.width > 0
 
 def weightedSum (weights : List Fraction) (signed : List Bool) : Fraction :=
   (weights.zip signed).foldl (fun total (w, yes) =>
@@ -71,6 +74,12 @@ inductive Threshold where
   | count (required : Nat)
   | weighted (clauses : List (List Weight))
   deriving Repr, DecidableEq, BEq, Lean.ToJson, Lean.FromJson
+
+/-- The declared next rule is stored before its keys sign. A rational in
+either threshold still requires a nonzero denominator (KERI 1.1, line 1419). -/
+def Threshold.positiveDenominators : Threshold → Bool
+  | .count _ => true
+  | .weighted cs => cs.all fun clause => clause.all Weight.positiveDenominators
 
 /-- Each key contributes once, in that list's order; clauses are conjunctive. -/
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
@@ -155,7 +164,8 @@ def receiptsValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
   signed.event.witnessThreshold <= (witnesses.filter receipts.contains).length
 
 def rotationValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
-  !prior.delegated && decide (signed.event.kind = .rotation) && signed.structureVerified &&
+  !prior.delegated && decide (signed.event.kind = .rotation) &&
+  (signed.structureVerified && signed.event.nextThreshold.positiveDenominators) &&
   signed.event.aid == prior.aid && prior.sn < signed.event.sn &&
   signingValid prior signed && receiptsValid prior signed
 

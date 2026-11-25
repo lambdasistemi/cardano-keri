@@ -36,15 +36,45 @@ def EventHistory.predecessor : EventHistory → Predecessor
 its fields to the initial datum, verifies its controller signatures and checks
 its receipts (checkpoint/observer.ak 65–111, registration.ak 310–352 and
 363–410). This check is on decoded evidence under the signature and structure
-interpretation, for an inception of the selected identifier. -/
+interpretation, for an inception of the selected identifier. KERI 1.1
+`spec/spec-body.md` at fbdd4a61, line 556, excludes the rotation fields
+`p`, `br` and `ba` from an inception. In this decoded content their absence
+is represented by zero for the prior digest and empty lists for both deltas.
+The wire reader must check field absence in the signed body. -/
 def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : Bool :=
   let e := event.event
   let receipts := verifiedSigners e event.receipts
-  e.aid == aid && e.sn == 0 && e.kind == .inception && event.structureVerified &&
+  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty
+  e.aid == aid && e.sn == 0 && e.kind == .inception &&
+    (event.structureVerified && inceptionFields && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&
     e.threshold.satisfied e.keys (verifiedSigners e event.signatures) &&
     (if e.witnessThreshold == 0 then event.receipts.isEmpty
      else decide (e.witnessThreshold ≤ (witnesses.filter receipts.contains).length))
+
+/-- Given a signed event and initial witnesses, when registration accepts its
+inception opening, the decoded writer has no prior digest or witness deltas. -/
+theorem inception_has_no_rotation_fields {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.priorDigest = 0 ∧ event.event.cuts = [] ∧ event.event.adds = [] := by
+  simp [inceptionWrites, Bool.and_eq_true] at accepted
+  grind
+
+/-- Given a signed inception, when registration opens its writer, each
+denominator in the next threshold it stores is positive. -/
+theorem inception_next_denominators_positive {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.nextThreshold.positiveDenominators = true := by
+  simp only [inceptionWrites, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.1.2.2
+
+/-- Given a signed rotation, when it passes against its predecessor, each
+denominator in the next threshold it declares is positive. -/
+theorem rotation_next_denominators_positive {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    signed.event.nextThreshold.positiveDenominators = true := by
+  simp only [rotationValid, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.2.2
 
 /-- The controller's registration starts the history. A relay of a rotation
 supplies the successor event over the stored predecessor. The advance checks

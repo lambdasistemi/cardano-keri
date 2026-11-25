@@ -100,6 +100,16 @@ example : Attestation.InvokesMintPolicies regObs.assets := by
       (fun e => e.1 == asset)).map Prod.snd).sum = 0
     simp [app, evidence]))
 
+-- The helper checks the caller's request. The booking action selects the
+-- indexed output and therefore refuses when the same mint goes to change.
+private def changeOnly := {regObs with outputs := [
+  {cash 100 0 42 17 with assets := [(approval, 1)]},
+  {cash 100 1 42 1 with assets := [(bookingAttestation, 1)]}]}
+#guard bookRegistration i aenv rp p release changeOnly request
+#guard changeOnly.outputs[0]? != some request
+#guard !action i aenv rp p release changeOnly (.bookRegistration 0)
+#guard !accepted i aenv rp p release changeOnly
+
 private def foldObs : FoldObservation :=
   let ins := [request, genesisState]
   let outs := [registry1.state, carrier, cash 102 2 6 1]

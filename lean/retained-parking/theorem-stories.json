@@ -4,13 +4,13 @@
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
     "lean/CardanoKeri/Application.lean": "b06c63ba8d5c09e5a30156b73ca1820471138970932b96a5011495634e3d986a",
-    "lean/CardanoKeri/ApplicationCustodyExample.lean": "1de8fc23d564f9796fc83e9f0a4d3aac81fdb932924150bd7926195c290f9133",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "8c2919a00e8ad85f4c3283033771e12d7039c1b4e92f517de05fbfef167dfb5c",
     "lean/CardanoKeri/ApplicationCustodyHistory.lean": "e76a75285f359a8b35b6468bae0e07a8442ac867aae59ff9641ed37ca5dac380",
     "lean/CardanoKeri/ApplicationGoals.lean": "e023d6ea3cb05ca1ee25b711d2ea610f59aa2483fd62cae0f4fc31fbcd159770",
     "lean/CardanoKeri/ApplicationVectors.lean": "4089287ec8b6c87b73a0406db8ccc6eec8f6f9509e10c17fd61b1b0b5d1143e6",
     "lean/CardanoKeri/Attestation.lean": "1433e93bd2f2cdf7517b2fb72379bc4d30004e5a5173da34384642ceb46485db",
     "lean/CardanoKeri/AttestationFixtures.lean": "e0b60e59b19892ea2dff87d8f8f502e9b203ae217db197f980d6fe89db07f3fc",
-    "lean/CardanoKeri/AttestationGoals.lean": "d064d0d97e78b0e37ff9af6ce2ba2e42c4de33a6c8e906cbb5dfa834be8870d6",
+    "lean/CardanoKeri/AttestationGoals.lean": "e3fb6f8dcf1655ac431a6e70b04203205c4439defe2b768e7fda0e29232a986e",
     "lean/CardanoKeri/Checkpoint.lean": "77d38feeddf952bd92c192d874ea0a0f9b25415485b862eeedf36ff58c650800",
     "lean/CardanoKeri/CheckpointCertificate.lean": "53a621dcd5fba06eb35b9d134127d90091defc8bfbea522081fc14e3cfcafbca",
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "0da669a0a3a72f10d56c3ffb0b31f4ef015d0c3c66cb25f3c7edd265c9fe9da0",
@@ -73,7 +73,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.genesisLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 145,
+      "line": 155,
       "statement": "private theorem genesisLedger : ValidLedger initWorld genesisWorld openObs",
       "statementSha256": "ab27eb99468e62c0c7787662117ec91c6622b08ae5c05b1cf2c006ca71b74c65",
       "sourceStory": "Given the seed and its value, when genesis creates the state and configuration, then the ledger accounts for both outputs.",
@@ -87,7 +87,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.regLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 148,
+      "line": 158,
       "statement": "private theorem regLedger : ValidLedger genesisWorld requestWorld regObs",
       "statementSha256": "02ad70fe3d107888be2565a2b772695c2d54697e27299b33f92f4595a4875014",
       "sourceStory": "Given the funded controller, when registration is booked, then its input value and minted approval reach the request.",
@@ -101,7 +101,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.neutral",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 169,
+      "line": 179,
       "statement": "private theorem neutral {before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain) :\n    Reach after",
       "statementSha256": "28432e15eb664e6f05090fc21bc83b6208e8af30bca209db02b6ed5c1e7941df",
       "sourceStory": "Given a reachable public world, when a valid ledger step preserves the registry state and mints no state-policy asset, then the successor is reachable.",
@@ -115,7 +115,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.publicHistory",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 178,
+      "line": 188,
       "statement": "private theorem publicHistory : Reach convictionWorld",
       "statementSha256": "c0724c16c9cd594ff6c9804302bae09ff63535fa55da86955c0ca44723f9d448",
       "sourceStory": "Given the funded initial world, when genesis, booking, fold and checkpoint spends run, then the pre-booking world is reachable under the public registry model.",
@@ -129,7 +129,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.history",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 192,
+      "line": 202,
       "statement": "private theorem history : HistoryPremises i.hash i.code commit release convictionWorld registry1 11",
       "statementSha256": "9e4428817c336354733dee4393192fe93794e52ceac74a2f1955b0da074be27e",
       "sourceStory": "Given that execution and its finite naming table, when identifier 11 is queried, then the registry has the required history and unambiguous names.",
@@ -143,7 +143,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.namedApproval",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 204,
+      "line": 214,
       "statement": "private theorem namedApproval (preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target)) : preimage = target",
       "statementSha256": "5318287fdaa2084a568c4b9db87308914a562db0486be9a1284f606d38beb76e",
       "sourceStory": "Given the example naming table, when a preimage has the name of the termination approval, then it is the exact termination preimage.",
@@ -157,7 +157,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.registeredPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 218,
+      "line": 228,
       "statement": "private theorem registeredPath : CarrierHistory p env i active 11 startEdges registered foldWorld carrier",
       "statementSha256": "b73e83db3a97df3119675c71f339ae39019cd4cc3fd9b8c896ef2a166f75d960",
       "sourceStory": "Given the accepted registration, when its fold delivers the new holding, then the carrier history starts at that indexed output.",
@@ -171,7 +171,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotatedPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 227,
+      "line": 237,
       "statement": "private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced",
       "statementSha256": "77b6437fcc6b04083a63dbcd5591577323b6136f292045e2453dc2bce34e8d06",
       "sourceStory": "Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history.",
@@ -185,7 +185,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.pendingPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 234,
+      "line": 244,
       "statement": "private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted",
       "statementSha256": "94023c8baf493ae62db1c617ecb3b9c50dc2776b538ba27b0c4f02bea60868a7",
       "sourceStory": "Given the rotated holding, when the commitment opens and its conviction spends the holding, then the carrier history ends at the pending output.",
@@ -199,7 +199,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_termination_booking",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 244,
+      "line": 254,
       "statement": "theorem witnessed_termination_booking :\n    namedInput bookObs convicted.reference = some convicted ∧\n    checkpointDatum i convicted = some ⟨11, .terminationPending rotatedLive.hash⟩ ∧\n    (committed, pending, convicted) ∈ convictionEdges ∧\n    ConvictionEdge p env 11 rotatedLive.hash committed pending",
       "statementSha256": "e7cf776cc12120d979644101c0cd4033d4b07f3c0217f7349419299043cc3d2c",
       "sourceStory": "Given the public genesis, registration, rotation, commitment and conviction\nabove, when the application mints the termination approval, then it spends\nthe output created by that conviction at the rotated position.",
@@ -213,7 +213,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.economic_booking_reads_rotated_position",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 278,
+      "line": 288,
       "statement": "theorem economic_booking_reads_rotated_position :\n    Registry.bookTermination rp registryPending 11 7 bookingTx.fee termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked) ∧\n    bookingTx.bookingSpend i release rp rid termination convicted.reference = some nativeReceipt ∧\n    ∃ request before after, bookingTx.creates request ∧ request.reference = termination.request.reference ∧\n      namedInput bookObs nativeReceipt.reference = some convicted ∧\n      nativeReceipt.reference = convicted.reference ∧ nativeReceipt.aid = termination.request.key ∧\n      checkpointDatum i convicted = some ⟨nativeReceipt.aid, .terminationPending nativeReceipt.position⟩ ∧\n      (before, after, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after ∧\n      ∃ writer, before.writers nativeReceipt.aid = some writer ∧ writer.authenticated nativeReceipt.aid = true ∧\n        writer.epoch = nativeReceipt.position.epoch ∧ writer.writer.event.sn = nativeReceipt.position.sn",
       "statementSha256": "fc1c6494f151b5587ab1b4c4f66f47a6a1bb60aa787cb1a1c19dac3207630e0a",
       "sourceStory": "Given the registered carrier has rotated and entered pending termination,\nwhen the booker pays the fee and places the economic request, then the\napplication receipt reads the rotated position from the spent output. Both\nthe economic booking and the mint succeed for this request reference.",
@@ -227,7 +227,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.economic_entry_for_rotated_checkpoint",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 308,
+      "line": 318,
       "statement": "theorem economic_entry_for_rotated_checkpoint :\n    bookingTx.economicBooking i release rp rid termination convicted.reference = some termination ∧\n    ∃ entry source target, Registry.pendingAt registryBooked termination.request.reference = some entry ∧\n      entry.booking = termination.toTerminationBooking ∧ entry.payload.spend.reference = convicted.reference ∧\n      entry.payload.spend.aid = 11 ∧\n      checkpointDatum i convicted = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target",
       "statementSha256": "decd1ec96669e2612cc5345ec84dc72c5721cb55cf507e1dce49c30aa9a10d9b",
       "sourceStory": "Given the public registration, rotation and conviction, when the observed\nmint books the economic request, its stored receipt is for the pending output\nat 105#0 and the authenticated writer at epoch one and sequence one.",
@@ -241,7 +241,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotated_booking_compares_its_writer",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 324,
+      "line": 334,
       "statement": "theorem rotated_booking_compares_its_writer :\n    ∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true",
       "statementSha256": "6ebb75d36574d78155e62fd294d1d8c688a003d2524b2cd85a54df6339e5d620",
       "sourceStory": "Given the public history ending at the rotated checkpoint, when its\nconviction spends that state, then its accepted comparison uses the\nauthenticated writer and native position of the produced pending carrier.",
@@ -255,7 +255,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_shared_conviction",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 336,
+      "line": 346,
       "statement": "theorem witnessed_shared_conviction :\n    ∃ observed before after, (before, after, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env 11 association.keyState before after ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧ observed.output = convicted.reference ∧\n      association.entry.payload.spend = ⟨convicted.reference, 11, association.keyState⟩ ∧\n      Registry.ConvictionOrigin association.origin.parameters association.origin.environment\n        association.origin.configuration 11 association.entry.payload.token\n        (some association.entry.payload.spend) association.entry.payload.original",
       "statementSha256": "d8e0ff1e1da890f98643107068ef8bf278285abcf2024cf2cabd711867221581",
       "sourceStory": "Given the public carrier after rotation, when the termination request is\nbooked, the economic and checkpoint histories identify the same comparison\nand the same indexed pending output created by the earlier conviction.",
@@ -269,7 +269,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_terminal_fold",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 350,
+      "line": 360,
       "statement": "theorem witnessed_terminal_fold :\n    Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true",
       "statementSha256": "7fbe2fa4a159ec11ff3904a59f425f16003d1a6abc72f48be1d0138855e35ba8",
       "sourceStory": "Given the registered, rotated and convicted AID 11, when the fold consumes\nrequest 200#0, it records the terminal leaf and the consumed entry traces\nto the accepted comparison which produced pending output 105#0.",
@@ -283,7 +283,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotated_journey_establishes_duplicity",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 382,
+      "line": 392,
       "statement": "theorem rotated_journey_establishes_duplicity :\n    ∃ previous writer, ∃ (observed : Registry.Conviction),\n      committed.writers 11 = some (.rotation previous writer) ∧\n      (env 11).presentedSpend 1 1 = some observed ∧ (env 11).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt 1 1 ⟨previous.epoch + 1, previous.predecessor, writer⟩\n        observed.comparison.rival = true",
       "statementSha256": "c150092581b44aec5a1438ffefa0807c9479cb5b4a168b60e4e46c5332b7d59a",
       "sourceStory": "Registration, advance and commitment opening reach the checkpoint consumed\nby transaction 105. The mint field records both conviction attestations and the submitter receives them in change.",
@@ -1921,21 +1921,21 @@
     {
       "declaration": "CardanoKeri.Application.Custody.two_checkpoint_spends_need_two_attestations",
       "path": "lean/CardanoKeri/AttestationGoals.lean",
-      "line": 72,
-      "statement": "theorem two_checkpoint_spends_need_two_attestations {o : Observation} (a b : AdvanceAt o)\n    {ka kb na nb} (ha : advanceUse a.action = some (ka, na))\n    (hb : advanceUse b.action = some (kb, nb)) (refs : a.old.reference ≠ b.old.reference)\n    (policy : a.env.advanceReads.policy = b.env.advanceReads.policy)\n    (names : Attestation.FaithfulNames b.env.advanceReads.policy\n      (.spend ka a.old.credential a.old.reference) (.spend kb b.old.credential b.old.reference)) :\n    let x := a.env.advanceReads.policy.asset (.spend ka a.old.credential a.old.reference)\n    let y := b.env.advanceReads.policy.asset (.spend kb b.old.credential b.old.reference)\n    Assets.mintQty o.assets x = 1 ∧ Assets.mintQty o.assets y = 1 ∧ x ≠ y",
-      "statementSha256": "9989257d631f0c9aaca2e32d2257f5d7f047dfb2f223ada97abb36a58347ea0d",
-      "sourceStory": "Given two checkpoints spending distinct references in one transaction under\nthe same advance policy, when both spends are accepted, then the observed mint\ncontains the two distinct assets, one unit each.",
+      "line": 82,
+      "statement": "theorem two_checkpoint_spends_need_two_attestations {i : Interpretation} {o : Observation}\n    (a b : CheckpointSpendAt i o)\n    {ka kb na nb} (ha : advanceUse a.action = some (ka, na))\n    (hb : advanceUse b.action = some (kb, nb)) (refs : a.old.reference ≠ b.old.reference)\n    (policy : a.env.advanceReads.policy = b.env.advanceReads.policy)\n    (names : Attestation.FaithfulNames b.env.advanceReads.policy\n      (.spend ka a.old.credential a.old.reference) (.spend kb b.old.credential b.old.reference)) :\n    let x := a.env.advanceReads.policy.asset (.spend ka a.old.credential a.old.reference)\n    let y := b.env.advanceReads.policy.asset (.spend kb b.old.credential b.old.reference)\n    Assets.mintQty o.assets x = 1 ∧ Assets.mintQty o.assets y = 1 ∧ x ≠ y",
+      "statementSha256": "554d3bafdf14a7db667603aca4642354aa59490b5ff5e26b5a1da1c382bfeb63",
+      "sourceStory": "Given two checkpoints spending distinct references in one transaction under\nthe same advance policy, with each local state read from its own input datum\nand value, when both spends are accepted, then the observed mint\ncontains the two distinct assets, one unit each.",
       "story": {
-        "given": "{o : Observation} (a b : AdvanceAt o)\n    {ka kb na nb} (ha : advanceUse a.action = some (ka, na))\n    (hb : advanceUse b.action = some (kb, nb)) (refs : a.old.reference ≠ b.old.reference)\n    (policy : a.env.advanceReads.policy = b.env.advanceReads.policy)\n    (names : Attestation.FaithfulNames b.env.advanceReads.policy\n      (.spend ka a.old.credential a.old.reference) (.spend kb b.old.credential b.old.reference))",
+        "given": "{i : Interpretation} {o : Observation}\n    (a b : CheckpointSpendAt i o)\n    {ka kb na nb} (ha : advanceUse a.action = some (ka, na))\n    (hb : advanceUse b.action = some (kb, nb)) (refs : a.old.reference ≠ b.old.reference)\n    (policy : a.env.advanceReads.policy = b.env.advanceReads.policy)\n    (names : Attestation.FaithfulNames b.env.advanceReads.policy\n      (.spend ka a.old.credential a.old.reference) (.spend kb b.old.credential b.old.reference))",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
         "then": "let x := a.env.advanceReads.policy.asset (.spend ka a.old.credential a.old.reference)\n    let y := b.env.advanceReads.policy.asset (.spend kb b.old.credential b.old.reference)\n    Assets.mintQty o.assets x = 1 ∧ Assets.mintQty o.assets y = 1 ∧ x ≠ y"
       },
-      "storySha256": "69ad04446c3c6ddcb344a6b4bb43db555496eaab365afc086357f9aa7fbe53f1"
+      "storySha256": "0a0d63a2d95c8efc0aaa0597429f0bd172985e1300ea370364902804d0fa4770"
     },
     {
       "declaration": "CardanoKeri.Application.Custody.held_without_fresh_mint_refused",
       "path": "lean/CardanoKeri/AttestationGoals.lean",
-      "line": 91,
+      "line": 102,
       "statement": "theorem held_without_fresh_mint_refused (o : Observation) (policy : Attestation.Policy)\n    (claim : Attestation.Claim)\n    (_held : ∃ out ∈ o.inputs ++ o.outputs, quantity out (policy.asset claim) > 0)\n    (absent : Assets.mintQty o.assets (policy.asset claim) = 0) :\n    policy.minted o.assets claim = false",
       "statementSha256": "22b56b6f5eab612030f00eede0e2b7954250a7b5a425967a6d9d3a489426e7ea",
       "sourceStory": "Given an attestation already held in a consumed input or present in an\noutput, when the transaction's mint field has zero net units of its asset,\nthen the relying script's mint check refuses that claim.",
@@ -1949,7 +1949,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.top_up_independent_of_evidence",
       "path": "lean/CardanoKeri/AttestationGoals.lean",
-      "line": 100,
+      "line": 111,
       "statement": "theorem top_up_independent_of_evidence (p : Checkpoint.Params) (a b : Checkpoint.Env)\n    (amount now : Nat) (s : State) :\n    stepFn p a (.topUp amount) now s = stepFn p b (.topUp amount) now s",
       "statementSha256": "a206b311dcc68cf1fc9c41728b36d45718297e611641c3e60b912b69615ae40f",
       "sourceStory": "Given the same checkpoint, amount and time, when a top-up is submitted,\nthen every choice of evidence reads gives the same refusal or successor.",
@@ -1963,7 +1963,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.pending_release_with_unrelated_burns",
       "path": "lean/CardanoKeri/AttestationGoals.lean",
-      "line": 107,
+      "line": 118,
       "statement": "theorem pending_release_with_unrelated_burns (i : Interpretation) (release : PublishedRelease)\n    (registry : Singular.TokenId) (input : ObservedOutput) (o : Observation)\n    (burns : List (Singular.TokenId × Int))\n    (unrelated : ∀ entry ∈ burns, entry.2 < 0 ∧ entry.1.policy ≠ release.applicationPolicy) :\n    pendingReleased i release registry input {o with assets.mint := o.assets.mint ++ burns} =\n      pendingReleased i release registry input o",
       "statementSha256": "f824c15f8c0f4a20ba434ea5bf14b73cca26c77411eaa7c56603858577bfca00",
       "sourceStory": "Given a pending checkpoint, when unrelated tokens are burned alongside its\nrelease, then its verdict still depends on its own termination approval.",
@@ -1977,7 +1977,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.cleanup_preserves_untouched_checkpoints",
       "path": "lean/CardanoKeri/AttestationGoals.lean",
-      "line": 130,
+      "line": 141,
       "statement": "theorem cleanup_preserves_untouched_checkpoints {before after : CandidateWorld} (tx : Transaction before after)\n    (policy : Attestation.Policy) (emptyName script : Nat) (verified : Assets.TxView → Attestation.Claim → Bool)\n    (burn : ∀ entry ∈ tx.observation.assets.mint, entry.1.policy = policy.id → entry.2 < 0)\n    (noInput : ∀ o ∈ before.unspent, o.credential = script → o.reference ∉ tx.observation.assets.spent)\n    (noOutput : ∀ o ∈ tx.observation.outputs, o.credential ≠ script) :\n    policy.authorizes tx.observation.assets emptyName verified [] = true ∧\n    ∀ o : ObservedOutput, o.credential = script → (o ∈ after.unspent ↔ o ∈ before.unspent)",
       "statementSha256": "c530292cb5271c9dc9c7313dfbe611a8dd6a1d3b94f85bc13bbd7e544e88836b",
       "sourceStory": "Given a cleanup transaction spending the submitter's change, with only\nnegative mint entries for the attestation policy and no checkpoint input or\noutput, when its ledger step settles, then every checkpoint holding is preserved\nand the burn policy succeeds with an empty evidence list.",

@@ -66,10 +66,21 @@ theorem depositing_rotation_needs_advance_and_intent {o : Observation} (use : Ad
   rw [deposit] at step
   exact T6_deposit_requires_new_keys _ _ step
 
+/-- A named checkpoint input supplies its identifier and state facts in its
+datum, its premium pool in its lovelace, and its active token in its assets. -/
+structure CheckpointSpendAt (i : Interpretation) (o : Observation) extends AdvanceAt o where
+  registry : Singular.TokenId
+  registryParams : Registry.Params
+  aid : AID
+  carries : Carries i (activeAsset i.hash i.code registry (i.keyOf aid)) aid old (.present live)
+  value : old.lovelace = (State.present live).heldValue params registryParams
+
 /-- Given two checkpoints spending distinct references in one transaction under
-the same advance policy, when both spends are accepted, then the observed mint
+the same advance policy, with each local state read from its own input datum
+and value, when both spends are accepted, then the observed mint
 contains the two distinct assets, one unit each. -/
-theorem two_checkpoint_spends_need_two_attestations {o : Observation} (a b : AdvanceAt o)
+theorem two_checkpoint_spends_need_two_attestations {i : Interpretation} {o : Observation}
+    (a b : CheckpointSpendAt i o)
     {ka kb na nb} (ha : advanceUse a.action = some (ka, na))
     (hb : advanceUse b.action = some (kb, nb)) (refs : a.old.reference ≠ b.old.reference)
     (policy : a.env.advanceReads.policy = b.env.advanceReads.policy)
@@ -78,7 +89,7 @@ theorem two_checkpoint_spends_need_two_attestations {o : Observation} (a b : Adv
     let x := a.env.advanceReads.policy.asset (.spend ka a.old.credential a.old.reference)
     let y := b.env.advanceReads.policy.asset (.spend kb b.old.credential b.old.reference)
     Assets.mintQty o.assets x = 1 ∧ Assets.mintQty o.assets y = 1 ∧ x ≠ y := by
-  refine ⟨advance_minted_at_use a ha, advance_minted_at_use b hb, ?_⟩
+  refine ⟨advance_minted_at_use a.toAdvanceAt ha, advance_minted_at_use b.toAdvanceAt hb, ?_⟩
   dsimp only
   rw [policy]
   intro same

@@ -5,7 +5,7 @@
 Module      : Cardano.KERI.Deployment.RegistryCommand
 Description : @ckeri registry deploy@: create a fresh registry
 
-The command reads chain state only through the node: the wallet's outputs, the
+The command reads chain state only through the one provider the settings choose, a node socket or Koios: the wallet's outputs, the
 protocol parameters, the outputs a transaction created. It opens no follower
 store and reads no manifest of the first deployment. Every term of the registry
 is an input; none is a constant of the command.
@@ -21,15 +21,17 @@ module Cardano.KERI.Deployment.RegistryCommand (
     registryTermsOf,
     runRegistryDeploy,
     runRegistryDeployWith,
+    runRegistryDeployOver,
+    renderFailureFor,
     renderStep,
     renderFailure,
 ) where
 
 import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference (..))
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
-import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), KeySource, NodeAccess (..), RegistryOpener, withNodeRuntime)
+import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
-import Cardano.KERI.Deployment.RegistryBookingCommand (openKey)
+import Cardano.KERI.Deployment.RegistryBookingCommand (openKey, openRegistryKoios)
 import Cardano.KERI.Deployment.RegistryDeploy (
     DeployError (..),
     DeployFailure (..),
@@ -42,6 +44,8 @@ import Cardano.KERI.Deployment.RegistryDeploy (
  )
 import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), checkFilesWritable, writeDeploymentFiles)
 import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, signingKeyFileSetting, vaultSetting)
+import Cardano.KERI.Deployment.RegistryProvider (Counterpart (..), Openers (..), ProviderChoice (..), counterpartOf, evidence, forCounterpart, nodeOnly, providerChoiceParser, reasonText, renderProviderRefusal, resolveProvider, transliterateReports, withProvider)
+import Cardano.KERI.Deployment.RegistryWindow (installNodeWindow)
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..), loadBlueprint)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.Ledger.BaseTypes (TxIx (..))
@@ -59,7 +63,7 @@ import System.IO (hFlush, hPutStrLn, stderr, stdout)
 data RegistryDeploySettings = RegistryDeploySettings
     { rdNetworkMagic :: !Int
     , rdBlueprint :: !FilePath
-    , rdNodeSocket :: !FilePath
+    , rdProvider :: !ProviderChoice
     , rdFundingAddress :: !Text
     , rdSigningKeyFile :: !(Maybe FilePath)
     , rdVault :: !(Maybe FilePath)
@@ -110,8 +114,7 @@ registryDeploySettingsParser = do
         intSetting "network-magic" "CKERI_NETWORK_MAGIC" "network-magic" "Cardano testnet network magic" (Just 1)
     rdBlueprint <-
         stringSetting "blueprint" "CKERI_BLUEPRINT" "blueprint" "Immutable Aiken plutus.json" Nothing
-    rdNodeSocket <-
-        stringSetting "node-socket" "CKERI_NODE_SOCKET" "node-socket" "Cardano node socket" Nothing
+    rdProvider <- providerChoiceParser
     rdFundingAddress <-
         T.pack
             <$> stringSetting
@@ -128,7 +131,7 @@ registryDeploySettingsParser = do
             "timeout-seconds"
             "CKERI_TIMEOUT_SECONDS"
             "timeout-seconds"
-            "Settlement timeout per transaction"
+            "Settlement timeout per transaction on the node (on Koios a transaction is waited for until two minutes after its validity end)"
             (Just 600)
     rdReferenceLovelace <-
         Opt.optional $
@@ -224,14 +227,21 @@ integerSetting optionName environmentName configName description defaultValue =
 -- ---------------------------------------------------------------------
 
 runRegistryDeploy :: RegistryDeploySettings -> IO ()
-runRegistryDeploy = runRegistryDeployWith openNode
+runRegistryDeploy = runRegistryDeployOver Openers{openersNode = openNode, openersKoios = openRegistryKoios}
 
 {- | Deploy a registry through the node the opener reaches, write the two files
 and print what landed.
 -}
 runRegistryDeployWith :: RegistryOpener -> RegistryDeploySettings -> IO ()
-runRegistryDeployWith open settings = do
+runRegistryDeployWith = runRegistryDeployOver . nodeOnly
+
+-- | The same over the openers of both providers: the one the settings choose is the one used.
+runRegistryDeployOver :: Openers -> RegistryDeploySettings -> IO ()
+runRegistryDeployOver openers settings = do
+    transliterateReports
     hPutStrLn stderr "ckeri: not for mainnet"
+    provider <- either (die' . renderProviderRefusal) pure (resolveProvider (rdProvider settings))
+    let counterpart = counterpartOf provider
     key <- openKey "deploy" (rdNetworkMagic settings) (rdSigningKeyFile settings) (rdVault settings) (rdPassphraseFd settings)
     when (rdTimeoutSeconds settings <= 0) $
         die' "timeout-seconds must be positive"
@@ -241,7 +251,7 @@ runRegistryDeployWith open settings = do
             (rdReleaseIdentityOut settings)
             (rdReferenceRecordOut settings)
     either (die' . renderFilesError) pure writable
-    open (nodeAccessOf settings key) $ \(runtime, payer) -> do
+    withProvider openers provider (chosenNetworkTime (rdProvider settings)) (rdNetworkMagic settings) (rdFundingAddress settings) key (rdTimeoutSeconds settings) $ \(runtime, payer) -> do
         let request =
                 DeployRequest
                     { requestTerms = registryTermsOf settings
@@ -252,7 +262,7 @@ runRegistryDeployWith open settings = do
         outcome <- deployRegistry runtime printLanded request
         case outcome of
             Left failure -> do
-                forM_ (renderFailure failure) (hPutStrLn stderr)
+                forM_ (renderFailureFor counterpart failure) (hPutStrLn stderr)
                 exitFailure
             Right deployed -> do
                 written <-
@@ -285,6 +295,8 @@ runRegistryDeployWith open settings = do
                 <> show (landedLocked landed)
                 <> " collateral="
                 <> show (landedCollateral landed)
+                <> " valid-until-slot="
+                <> maybe "none" show (landedValidUntil landed)
             )
         hFlush stdout
 
@@ -308,25 +320,41 @@ and why, and what did not land. Nothing is retried and a transaction that may
 still land is said to be uncertain.
 -}
 renderFailure :: DeployFailure -> [String]
-renderFailure failure =
-    ["ckeri: registry deployment stopped: " <> renderCause (failureCause failure)]
-        <> [ "landed: " <> renderStep step <> " " <> T.unpack (renderTransactionId txId)
-           | Landed{landedStep = step, landedTransaction = txId} <- failureLanded failure
-           ]
-        <> maybe [] (\step -> ["stopped at: " <> renderStep step]) (failureStoppedAt failure)
-        <> ["skipped: " <> renderStep step | step <- failureSkipped failure]
-        <> [ "not landed: " <> renderStep step
-           | step <- failureNotLanded failure
-           ]
-        <> [ "uncertain: " <> T.unpack (renderTransactionId txId) <> " may still land; it was not resubmitted"
-           | NotObserved txId _ <- [failureCause failure]
-           ]
+renderFailure = renderFailureFor TheNode
+
+-- | The same, as it reads for the other end of the chain: on Koios the handoff may have sent the same signed bytes again, so only a new transaction is said not to have been made.
+renderFailureFor :: Counterpart -> DeployFailure -> [String]
+renderFailureFor counterpart failure =
+    map (forCounterpart counterpart) $
+        ["ckeri: registry deployment stopped: " <> renderCause (failureCause failure)]
+            <> [ "landed: " <> renderStep step <> " " <> T.unpack (renderTransactionId txId)
+               | Landed{landedStep = step, landedTransaction = txId} <- failureLanded failure
+               ]
+            <> maybe [] (\step -> ["stopped at: " <> renderStep step]) (failureStoppedAt failure)
+            <> ["skipped: " <> renderStep step | step <- failureSkipped failure]
+            <> [ "not landed: " <> renderStep step
+               | step <- failureNotLanded failure
+               ]
+            <> [ renderStep step <> " " <> T.unpack (renderTransactionId txId) <> " was refused by the node: " <> evidence (reasonText reason) <> "; it is not on chain"
+               | SubmissionRefused txId reason <- [failureCause failure]
+               , Just step <- [failureStoppedAt failure]
+               ]
+            <> [ "uncertain: " <> T.unpack (renderTransactionId txId) <> " may still land; " <> unsent
+               | NotObserved txId _ <- [failureCause failure]
+               ]
+            <> [ "unconfirmed: " <> T.unpack (renderTransactionId txId) <> " was not seen before its deadline and may still be included; look it up by its identifier before anything is built again; " <> unsent
+               | Unconfirmed txId _ <- [failureCause failure]
+               ]
+  where
+    unsent = case counterpart of
+        TheNode -> "it was not resubmitted"
+        TheProvider -> "no other transaction was built or signed"
 
 renderCause :: DeployError -> String
 renderCause = \case
     TermsRefused refusals -> "terms-refused: " <> unwords (map renderRefusal refusals)
     NetworkDisagrees discriminator -> "network-disagrees: the terms name network " <> show discriminator
-    ScriptsRefused message -> "scripts-refused: " <> message
+    ScriptsRefused message -> "scripts-refused: " <> evidence message
     NoSeedOutput -> "no-seed-output: the wallet holds no output of lovelace alone to create the registry from"
     SeedSpent (OutputReference transaction index) ->
         "seed-spent: the registry's seed "
@@ -338,15 +366,18 @@ renderCause = \case
         "funds-below-requirement: the publications need at least " <> show needed <> " lovelace of outputs that carry no script or datum, the wallet holds " <> show held
     ReferenceVanished (TxIn txId (TxIx index)) ->
         "reference-vanished: " <> T.unpack (renderTransactionId txId) <> "#" <> show index
-    BuildRefused refusal -> "build-refused: " <> show refusal
-    EvaluationFailed message -> "evaluation-failed: " <> message
-    PurposesDiffer message -> "purposes-differ: " <> message
-    BudgetExceeded message -> "budget-exceeded: " <> message
-    SigningRefused message -> "signing-refused: " <> message
-    SubmissionRefused reason -> "submission-refused: " <> B8.unpack reason
+    BuildRefused refusal -> "build-refused: " <> evidence (show refusal)
+    EvaluationFailed message -> "evaluation-failed: " <> evidence message
+    PurposesDiffer message -> "purposes-differ: " <> evidence message
+    BudgetExceeded message -> "budget-exceeded: " <> evidence message
+    SigningRefused message -> "signing-refused: " <> evidence message
+    SubmissionRefused _ reason -> "submission-refused: " <> evidence (reasonText reason)
     NotObserved txId message ->
-        "not-observed: " <> T.unpack (renderTransactionId txId) <> " " <> message
-    NodeFailed message -> "node-failed: " <> message
+        "not-observed: " <> T.unpack (renderTransactionId txId) <> " " <> evidence message
+    Unconfirmed txId message ->
+        "unconfirmed: " <> T.unpack (renderTransactionId txId) <> " " <> evidence message
+    NodeFailed message -> "node-failed: " <> evidence message
+    NoWindow -> "no-usable-window: no validity interval at the tip is usable; the transaction was not built or handed over"
 
 renderRefusal :: TermRefusal -> String
 renderRefusal = \case
@@ -369,18 +400,7 @@ renderFilesError = \case
 -- The node
 -- ---------------------------------------------------------------------
 
--- | How the settings reach the node.
-nodeAccessOf :: RegistryDeploySettings -> KeySource -> NodeAccess
-nodeAccessOf settings key =
-    NodeAccess
-        { naNetworkMagic = rdNetworkMagic settings
-        , naNodeSocket = rdNodeSocket settings
-        , naFundingAddress = rdFundingAddress settings
-        , naSigningKey = key
-        , naTimeoutSeconds = rdTimeoutSeconds settings
-        }
-
 openNode :: RegistryOpener
 openNode access use = do
     payer <- either die' pure (decodePaymentAddress (naFundingAddress access))
-    withNodeRuntime Linked access (\(runtime, _) -> use (runtime, payer))
+    withNodeRuntime Linked access (\(runtime, _) -> use (installNodeWindow (naNetworkMagic access) (naNetworkTime access) runtime, payer))

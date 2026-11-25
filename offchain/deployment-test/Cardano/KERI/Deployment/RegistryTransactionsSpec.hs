@@ -462,17 +462,18 @@ spec = do
                 seedOutput = (registrySeedIn, mkBasicTxOut refund (inject (ada 200)))
                 known0 = payerFunds owner <> payerFunds folder <> [seedOutput] <> observerReferences
             template <-
-                built (publishTemplate pricedParameters owner (ada 10) (scriptsTemplate scripts))
+                built (publishTemplate Nothing pricedParameters owner (ada 10) (scriptsTemplate scripts))
             let owner1 = afterTx owner template
             applicationTx <-
-                built (publishReferenceScript pricedParameters owner1 (ada 10) applicationScript)
+                built (publishReferenceScript Nothing pricedParameters owner1 (ada 10) applicationScript)
             let owner2 = afterTx owner1 applicationTx
             stateTx <-
-                built (publishReferenceScript pricedParameters owner2 (ada 10) stateScript)
+                built (publishReferenceScript Nothing pricedParameters owner2 (ada 10) stateScript)
             let owner3 = afterTx owner2 stateTx
             (genesis, genesisPurposes) <-
                 built
                     ( createConfiguration
+                        Nothing
                         pricedParameters
                         registry
                         [outputAt template 0, outputAt applicationTx 0, outputAt stateTx 0]
@@ -713,7 +714,7 @@ spec = do
             paysItsWay (payerFunds payer) tx `shouldBe` True
             -- a publication takes none of them either
             published <-
-                built (publishReferenceScript pricedParameters payer (Coin 40_000_000) script)
+                built (publishReferenceScript Nothing pricedParameters payer (Coin 40_000_000) script)
             Set.intersection carried (published ^. bodyTxL . inputsTxBodyL) `shouldBe` Set.empty
         it "carry their native assets into the change" $ do
             let payer =
@@ -829,6 +830,7 @@ spec = do
                     ( wallet
                     , seedOutput
                     , createConfiguration
+                        Nothing
                         pricedParameters
                         registry
                         []

@@ -1,0 +1,68 @@
+{
+    "answer": {
+        "body": "[]",
+        "headers": [
+            [
+                "date",
+                "Tue, 24 Nov 2026 13:48:39 GMT"
+            ],
+            [
+                "content-range",
+                "*/*"
+            ],
+            [
+                "content-type",
+                "application/json; charset=utf-8"
+            ],
+            [
+                "transfer-encoding",
+                "chunked"
+            ],
+            [
+                "content-encoding",
+                "gzip"
+            ],
+            [
+                "access-control-allow-origin",
+                "*"
+            ],
+            [
+                "vary",
+                "Origin"
+            ],
+            [
+                "access-control-allow-headers",
+                "Content-Type, Accept, Authorization"
+            ],
+            [
+                "access-control-allow-methods",
+                "GET, HEAD, OPTIONS, POST, PATCH"
+            ],
+            [
+                "access-control-max-age",
+                "600"
+            ],
+            [
+                "x-frame-options",
+                "DENY"
+            ]
+        ],
+        "status": 200
+    },
+    "recorded_at": "2026-11-24T13:48:39.854864057Z",
+    "request": {
+        "body": {
+            "json": {
+                "_stake_addresses": [
+                    "stake_test17zhg8dr4e9jyhty4edq5g434505n2zkxufw0gtt3y7spx6gv687ly"
+                ]
+            }
+        },
+        "call": "account_info",
+        "method": "POST",
+        "path": "/account_info",
+        "query": []
+    },
+    "schema_revision": "v1.4.2",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+}

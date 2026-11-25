@@ -86,7 +86,7 @@ import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
 import Cardano.KERI.Deployment.Registry (deriveRegistryScripts, registryInitialFloor)
-import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), feeOf, txInOfReference, whileConnected)
+import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), ValidityEnd (..), feeOf, txInOfReference, whileConnected)
 import Cardano.KERI.Deployment.RegistryDeploy (DeployRequest (..), Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (
     Chain (..),
@@ -258,6 +258,7 @@ runtimeOfUnder faults world readRef =
                     , obsHorizonSlot = SlotNo (fromInteger (tip + ahead))
                     }
         , rtNowMs = clockNow world
+        , rtValidityEnd = pure EndNotSet
         }
 
 transactionsOf :: Faults -> World -> TransactionRuntime IO

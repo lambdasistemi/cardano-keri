@@ -312,7 +312,7 @@ reportSpec = describe "the report of a handoff" $ do
 
     it "gives the provider's refusal text with the attempts" $
         renderHandoff (Handoff (idOf firstTx) 1 (Refused "BadInputsUTxO"))
-            `shouldBe` "refused by the provider after 1 attempt: BadInputsUTxO"
+            `shouldBe` "refused by the provider after 1 attempt: transaction " <> txId <> ": BadInputsUTxO"
 
     it "says that no answer may or may not mean the transaction is lost" $
         renderHandoff (Handoff (idOf firstTx) 5 NoAnswer)
@@ -539,7 +539,7 @@ laterAnswerSpec = describe "the report after an attempt that got no answer" $ do
         txId = txIdHex (idOf firstTx)
     it "keeps the uncertainty beside a refusal" $
         renderHandoff (Handoff (idOf firstTx) 3 (Refused "BadInputsUTxO"))
-            `shouldBe` "refused by the provider after 3 attempts: BadInputsUTxO" <> uncertain
+            `shouldBe` "refused by the provider after 3 attempts: transaction " <> txId <> ": BadInputsUTxO" <> uncertain
 
     it "keeps the uncertainty beside a refusal of the request by another status" $
         renderHandoff

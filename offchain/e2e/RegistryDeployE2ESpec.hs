@@ -22,8 +22,7 @@ import CheckpointTxBuilder (
     FoldKey (..),
     registryBookingJourney,
     registryDeployJourney,
-    stagedBareDevnet,
-    stagedBareDevnetWithin,
+    stagedBareDevnetStarted,
  )
 
 spec :: Spec
@@ -31,16 +30,16 @@ spec = do
     describe "#351 ckeri registry deploy creates a registry the library books and folds into" $
         it
             "deploys from an empty directory with two files, books with the payer's wallet, folds with another wallet and delivers the checkpoint"
-            (stagedBareDevnet HostedTiming (registryDeployJourney HostedTiming))
+            (stagedBareDevnetStarted 300 (registryDeployJourney HostedTiming . Just))
     describe "#351 ckeri registry register and fold, then return a request after its deadline, through the installed command" $
         it
             "deploys, books the same identity twice with one wallet, folds the first with another and delivers the checkpoint, refuses the second on the registry's own snapshot and a stale snapshot refused as stale, refuses a third registration, refuses a return before the deadline, refuses a booking below the floor at the node's evaluation and accepts it at the floor, and after the deadline a third wallet returns the second booking: the refund address receives all but the tip and the returner keeps it"
-            (stagedBareDevnetWithin 1_200 (registryBookingJourney FoldWithKeyFile))
+            (stagedBareDevnetStarted 1_200 (registryBookingJourney FoldWithKeyFile))
     describe "#553 ckeri registry fold signed with a wallet vault, through the installed command" $
         it
             "runs the registry journey with the folds signed from a vault made by the code of singular, the passphrase on descriptor 0, and refuses a vault the passphrase does not open with nothing spent"
-            (stagedBareDevnetWithin 1_200 (registryBookingJourney FoldWithVault))
+            (stagedBareDevnetStarted 1_200 (registryBookingJourney FoldWithVault))
     describe "#351 measurement: the registry deploy journey at preprod's timing" $
         it
             "records the submit and settle times of the booking, the hash-proof premint and the fold"
-            (stagedBareDevnet PreprodTiming (registryDeployJourney PreprodTiming))
+            (stagedBareDevnetStarted 1_800 (registryDeployJourney PreprodTiming . Just))

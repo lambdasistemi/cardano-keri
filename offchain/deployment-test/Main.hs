@@ -9,6 +9,7 @@ import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as Endpoin
 import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
 import Cardano.KERI.Deployment.KELSpec qualified as KELSpec
 import Cardano.KERI.Deployment.KoiosReadsSpec qualified as KoiosReadsSpec
+import Cardano.KERI.Deployment.KoiosRegistryRuntimeSpec qualified as KoiosRegistryRuntimeSpec
 import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementSpec
 import Cardano.KERI.Deployment.KoiosSubmissionSpec qualified as KoiosSubmissionSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
@@ -20,6 +21,10 @@ import Cardano.KERI.Deployment.RegistryDeploySpec qualified as RegistryDeploySpe
 import Cardano.KERI.Deployment.RegistryFilesSpec qualified as RegistryFilesSpec
 import Cardano.KERI.Deployment.RegistryFoldHandoffSpec qualified as RegistryFoldHandoffSpec
 import Cardano.KERI.Deployment.RegistryFoldSpec qualified as RegistryFoldSpec
+import Cardano.KERI.Deployment.RegistryKoiosCommandSpec qualified as RegistryKoiosCommandSpec
+import Cardano.KERI.Deployment.RegistryKoiosRecordedSpec qualified as RegistryKoiosRecordedSpec
+import Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec qualified as RegistryKoiosValidityEndSpec
+import Cardano.KERI.Deployment.RegistryProviderSpec qualified as RegistryProviderSpec
 import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
 import Cardano.KERI.Deployment.RegistryRequestSpec qualified as RegistryRequestSpec
 import Cardano.KERI.Deployment.RegistryReturnCommandSpec qualified as RegistryReturnCommandSpec
@@ -79,6 +84,7 @@ suite = hspec $ do
     TopUpTransactionSpec.spec
     KELSpec.spec
     KoiosReadsSpec.spec
+    KoiosRegistryRuntimeSpec.spec
     KoiosSettlementSpec.spec
     KoiosSubmissionSpec.spec
     ManifestSpec.spec
@@ -86,6 +92,10 @@ suite = hspec $ do
     RegistrationSpec.spec
     RegistryScriptsSpec.spec
     RegistryFilesSpec.spec
+    RegistryProviderSpec.spec
+    RegistryKoiosCommandSpec.spec
+    RegistryKoiosRecordedSpec.spec
+    RegistryKoiosValidityEndSpec.spec
     RegistryDeploySpec.spec
     RegistrySnapshotSpec.spec
     RegistryRequestSpec.spec

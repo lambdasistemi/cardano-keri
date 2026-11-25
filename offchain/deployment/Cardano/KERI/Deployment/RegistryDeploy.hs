@@ -64,6 +64,8 @@ import Cardano.KERI.Deployment.Registry (
  )
 import Cardano.KERI.Deployment.RegistryChain (
     RegistryRuntime (..),
+    TransactionUnconfirmed (..),
+    ValidityEnd (..),
     addUnits,
     withMargin,
     withinUnits,
@@ -80,6 +82,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     RegistryTransactionError (..),
     applicationPolicyId,
     createConfiguration,
+    endOnly,
     isFundable,
     outputReferenceOf,
     publishReferenceScript,
@@ -100,6 +103,7 @@ import Cardano.KERI.Deployment.TransactionRuntime (
     transactionId,
  )
 import Cardano.Ledger.Address (AccountAddress (..), AccountId (..), Addr)
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
@@ -112,6 +116,7 @@ import Cardano.Ledger.Api.Tx.Body (
     feeTxBodyL,
     mkBasicTxBody,
     outputsTxBodyL,
+    vldtTxBodyL,
  )
 import Cardano.Ledger.Api.Tx.Out (
     TxOut,
@@ -126,7 +131,7 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (..),
-    StrictMaybe (SJust),
+    StrictMaybe (SJust, SNothing),
     TxIx (..),
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -148,7 +153,7 @@ import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), unTxId)
 import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Node.Client.Provider (EvaluateTxResult)
+import Cardano.Node.Client.Provider (EvaluateTxResult, SlotNo (..))
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Cardano.Tx.Balance (
     BalanceResult (..),
@@ -156,7 +161,7 @@ import Cardano.Tx.Balance (
     balanceTxWith,
     computeScriptIntegrity,
  )
-import Control.Exception (Exception, SomeException, throwIO, try)
+import Control.Exception (Exception, SomeException, fromException, throwIO, try)
 import Control.Monad (unless, when)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short qualified as SBS
@@ -210,6 +215,8 @@ data Landed = Landed
     -- ^ the lovelace it leaves held in outputs and deposits: every output but the change, and the deposits it pays
     , landedCollateral :: !Integer
     -- ^ the lovelace of the outputs the transaction names as collateral: posted, and taken only if a script fails
+    , landedValidUntil :: !(Maybe Integer)
+    -- ^ the exclusive upper slot of the validity of the transaction that landed, as its signed body carries it
     }
     deriving stock (Eq, Show)
 
@@ -240,11 +247,15 @@ data DeployError
     | -- | the node or the key refused the signature
       SigningRefused !String
     | -- | the node refused the transaction
-      SubmissionRefused !ByteString
+      SubmissionRefused !TxId !ByteString
     | -- | the transaction was handed to the node and not seen settled: it may still land
       NotObserved !TxId !String
+    | -- | the transaction was handed over and not seen before its deadline: it may still be included
+      Unconfirmed !TxId !String
     | -- | the node could not be read
       NodeFailed !String
+    | -- | the interval from the tip is too short for a finite validity end: the step was not built or handed over
+      NoWindow
     deriving stock (Eq, Show)
 
 -- | A deployment that did not complete: what landed, where it stopped and what did not land.
@@ -411,6 +422,14 @@ deployRegistry runtime onLanded request = do
     network = rtNetwork runtime
     payerAddress' = requestPayer request
 
+    -- the upper slot of the transaction a step builds, read once at the start of the step: the discovery and the final
+    -- builds of a step share it, and a step that has none usable is not built
+    endOf step =
+        onNode (Just step) (rtValidityEnd runtime) >>= \case
+            EndNotSet -> pure Nothing
+            EndAt slot -> pure (Just slot)
+            NoUsableWindow -> stop (Just step) NoWindow
+
     stop :: Maybe Step -> DeployError -> IO a
     stop step cause = throwIO (Stop (step, cause))
 
@@ -423,6 +442,12 @@ deployRegistry runtime onLanded request = do
         wallet <- onNode step (rtUtxosAt runtime payerAddress')
         pure [output | output@(ref, out) <- wallet, ref /= seedIn, isFundable out]
 
+    -- what is not seen is unconfirmed when the observation says it was not seen before its deadline, and uncertain
+    -- otherwise: either way nothing is known of whether it is on the chain
+    unobserved txId failure = case fromException failure of
+        Just (TransactionUnconfirmed _ _) -> Unconfirmed txId (show failure)
+        Nothing -> NotObserved txId (show failure)
+
     -- sign, submit and observe one transaction, then report it
     settle landedRef step known tx = do
         signedResult <- onNode (Just step) (trSign transactions tx)
@@ -431,30 +456,32 @@ deployRegistry runtime onLanded request = do
         submitted <- try @SomeException (trSubmit transactions signed)
         case submitted of
             Left failure -> stop (Just step) (NotObserved txId (show failure))
-            Right (Rejected reason) -> stop (Just step) (SubmissionRefused reason)
+            Right (Rejected reason) -> stop (Just step) (SubmissionRefused txId reason)
             Right (Submitted _) -> pure ()
         observed <- try @SomeException (trObserve transactions txId)
-        either (stop (Just step) . NotObserved txId . show) pure observed
-        let landed = Landed step txId (feeOf signed) (lockedBy signed) (collateralOf known signed)
+        either (stop (Just step) . unobserved txId) pure observed
+        let landed = Landed step txId (feeOf signed) (lockedBy signed) (collateralOf known signed) (validUntilOf signed)
         modifyIORef' landedRef (landed :)
         onLanded landed
         pure signed
 
     -- a transaction without scripts: built once, from the wallet as it stands
     publication landedRef seedIn step build = do
+        end <- endOf step
         params <- onNode (Just step) (trQueryProtocolParams transactions)
         wallet <- spendable (Just step) seedIn
         tx <-
             either
                 (stop (Just step) . BuildRefused)
                 pure
-                (build params (Payer payerAddress' wallet))
+                (build params (Payer payerAddress' wallet) end)
         signed <- settle landedRef step Map.empty tx
         pure (TxIn (transactionId signed) (TxIx 0))
 
     publishScript landedRef seedIn lovelace step script =
-        publication landedRef seedIn step $ \params payer ->
+        publication landedRef seedIn step $ \params payer end ->
             publishReferenceScript
+                end
                 params
                 payer
                 ( Coin
@@ -467,10 +494,11 @@ deployRegistry runtime onLanded request = do
 
     -- a transaction with script purposes: measured, then built under the measured budgets
     budgeted landedRef seedIn step build = do
+        end <- endOf step
         params <- onNode (Just step) (trQueryProtocolParams transactions)
         wallet <- spendable (Just step) seedIn
         let built budgets =
-                either (stop (Just step) . BuildRefused) pure (build params wallet budgets)
+                either (stop (Just step) . BuildRefused) pure (build params wallet budgets end)
         (discovery, expected) <- built Map.empty
         signedDiscovery <-
             onNode (Just step) (trSign transactions discovery)
@@ -530,8 +558,9 @@ deployRegistry runtime onLanded request = do
         when (held < needed) $
             stop Nothing (FundsBelowRequirement needed held)
         templateIn <-
-            publication landedRef seedIn PublishTemplate $ \params payer ->
+            publication landedRef seedIn PublishTemplate $ \params payer end ->
                 publishTemplate
+                    end
                     params
                     payer
                     ( Coin
@@ -559,8 +588,9 @@ deployRegistry runtime onLanded request = do
             if alreadyRegistered
                 then pure Nothing
                 else fmap Just $
-                    budgeted landedRef seedIn RegisterObserverCredential $ \params funds budgets ->
+                    budgeted landedRef seedIn RegisterObserverCredential $ \params funds budgets end ->
                         registerObserverCredential
+                            end
                             params
                             (Payer payerAddress' funds)
                             (observerLifecycle observers)
@@ -586,8 +616,9 @@ deployRegistry runtime onLanded request = do
                 )
                 [templateIn, applicationIn, stateIn]
         genesisTx <-
-            budgeted landedRef seedIn CreateRegistry $ \params funds budgets ->
+            budgeted landedRef seedIn CreateRegistry $ \params funds budgets end ->
                 createConfiguration
+                    end
                     params
                     deployment
                     references
@@ -708,12 +739,14 @@ payer's largest output without assets funds it and a smaller one is the
 collateral.
 -}
 registerObserverCredential ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
     PParams ConwayEra ->
     Payer ->
     ScriptArtifact ->
     Budgets ->
     Either RegistryTransactionError BuiltTransaction
-registerObserverCredential params payer observer budgets =
+registerObserverCredential end params payer observer budgets =
     case (spendable, collaterals) of
         (spend : _, collateral : _) -> attempt spend collateral
         _ -> Left (NotEnoughFunds "the payer holds no two outputs without assets")
@@ -743,6 +776,7 @@ registerObserverCredential params payer observer budgets =
                     ( mkBasicTxBody
                         & certsTxBodyL .~ StrictSeq.singleton certificate
                         & collateralInputsTxBodyL .~ Set.singleton (fst collateral)
+                        & vldtTxBodyL .~ endOnly end
                         & scriptIntegrityHashTxBodyL
                             .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
                     )
@@ -780,6 +814,12 @@ collateralOf known tx =
         | ref <- toList (tx ^. bodyTxL . collateralInputsTxBodyL)
         , Just out <- [Map.lookup ref known]
         ]
+
+-- | The exclusive upper slot a transaction is valid until, if its body has one.
+validUntilOf :: ConwayTx -> Maybe Integer
+validUntilOf tx = case invalidHereafter (tx ^. bodyTxL . vldtTxBodyL) of
+    SJust (SlotNo slot) -> Just (toInteger slot)
+    SNothing -> Nothing
 
 feeOf :: ConwayTx -> Integer
 feeOf tx = let Coin fee = tx ^. bodyTxL . feeTxBodyL in fee

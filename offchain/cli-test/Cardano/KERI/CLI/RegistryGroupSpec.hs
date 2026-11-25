@@ -15,6 +15,7 @@ module Cardano.KERI.CLI.RegistryGroupSpec (spec) where
 
 import Cardano.KERI.CLI (Instructions (..))
 import Cardano.KERI.Deployment.RegistryCommand (RegistryDeploySettings (..))
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Data.Char (toUpper)
 import Data.List (isInfixOf)
 import Data.List.NonEmpty (NonEmpty)
@@ -56,7 +57,7 @@ expectedSettings =
     RegistryDeploySettings
         { rdNetworkMagic = 42
         , rdBlueprint = "plutus.json"
-        , rdNodeSocket = "node.socket"
+        , rdProvider = ProviderChoice (Just "node.socket") Nothing Nothing Nothing
         , rdFundingAddress = "addr_test1qexample"
         , rdSigningKeyFile = Just "payment.skey"
         , rdVault = Nothing
@@ -101,6 +102,52 @@ spec = describe "#351 ckeri registry deploy: the command surface" $ do
             Right (RegistryDeploy settings) -> settings `shouldBe` expectedSettings
             Right _ -> expectationFailure "the arguments were taken for another command"
             Left errors -> expectationFailure ("not parsed: " <> show errors)
+    it "takes the provider from options or environment: a node socket, or a Koios URL with an optional token file, as given and not yet checked" $ do
+        let others = [o | o@(name, _) <- deployOptions, name /= "--node-socket"]
+            koios = [("--koios-url", "https://koios.example/api/v1"), ("--koios-token-file", "koios.token")]
+            url = Just "https://koios.example/api/v1"
+        mapM_
+            ( \(label, options, expected) -> do
+                result <- parseWith [] (["registry", "deploy"] <> argumentsOf options)
+                case result of
+                    Right (RegistryDeploy settings) -> (label, rdProvider settings) `shouldBe` (label, expected)
+                    other -> expectationFailure (label <> ": not parsed: " <> showResult other)
+            )
+            [ ("only a Koios URL", others <> take 1 koios, ProviderChoice Nothing url Nothing Nothing)
+            , ("a Koios URL and a token file", others <> koios, ProviderChoice Nothing url (Just "koios.token") Nothing)
+            , ("both a node socket and a Koios URL", deployOptions <> take 1 koios, ProviderChoice (Just "node.socket") url Nothing Nothing)
+            , ("neither", others, ProviderChoice Nothing Nothing Nothing Nothing)
+            ]
+        fromEnvironment <-
+            parseWith
+                [("CKERI_KOIOS_URL", "https://koios.example/api/v1"), ("CKERI_KOIOS_TOKEN_FILE", "koios.token")]
+                (["registry", "deploy"] <> argumentsOf others)
+        case fromEnvironment of
+            Right (RegistryDeploy settings) -> rdProvider settings `shouldBe` ProviderChoice Nothing url (Just "koios.token") Nothing
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    describe "the directory of the network time" $ do
+        let arguments extra = ["registry", "deploy"] <> argumentsOf deployOptions <> extra
+            timeOf environment extra = do
+                parsed <- parseWith environment (arguments extra)
+                pure $ case parsed of
+                    Right (RegistryDeploy settings) -> Right (chosenNetworkTime (rdProvider settings))
+                    Right _ -> Left "the arguments were taken for another command"
+                    Left errors -> Left (show errors)
+        it "is none when neither the option nor the variable names one" $
+            timeOf [] [] >>= (`shouldBe` Right Nothing)
+        it "is the directory the option names, spaced or joined to it" $ do
+            timeOf [] ["--network-time", "time-dir"] >>= (`shouldBe` Right (Just "time-dir"))
+            timeOf [] ["--network-time=time-dir"] >>= (`shouldBe` Right (Just "time-dir"))
+        it "is the directory SINGULAR_NETWORK_TIME names, as public Singular reads it, when no option is given" $
+            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] [] >>= (`shouldBe` Right (Just "variable-dir"))
+        it "is the option's directory when the variable names another: the option first" $
+            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] ["--network-time", "option-dir"] >>= (`shouldBe` Right (Just "option-dir"))
+        it "is refused when the option is given an empty value, even beside a variable that names a directory" $ do
+            refused <- timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] ["--network-time", ""]
+            refused `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
+        it "is refused when the variable is empty and no option is given" $ do
+            refused <- timeOf [("SINGULAR_NETWORK_TIME", "")] []
+            refused `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
     it "takes the terms from the environment and the rest from options" $ do
         let environment =
                 [ ("CKERI_REGISTRATION_COST", "1000001")
@@ -132,7 +179,7 @@ spec = describe "#351 ckeri registry deploy: the command surface" $ do
                     Right _ -> expectationFailure (term <> " was left out and the command was parsed")
             )
             termOptions
-    it "offers no option that means a store, a manifest or a provider" $
+    it "offers no option that means a store, a manifest or a token by value" $
         mapM_
             ( \(name, value) -> do
                 unrecognisedArgs (["registry", "deploy"] <> argumentsOf deployOptions <> [name, value])

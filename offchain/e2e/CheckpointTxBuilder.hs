@@ -31,6 +31,7 @@ module CheckpointTxBuilder (
     DeployTiming (..),
     stagedBareDevnet,
     stagedBareDevnetWithin,
+    stagedBareDevnetStarted,
     registryDeployJourney,
     FoldKey (..),
     registryBookingJourney,
@@ -179,6 +180,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
 import Cardano.KERI.AID.Consumer qualified as Consumer
 import Cardano.KERI.AID.E2E.Datum (extractDatum, mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
+import Cardano.KERI.AID.E2E.EvaluationParity (evaluationsOf, writeDevnetTimeSource)
 import Cardano.KERI.AID.E2E.FoldGuard (
     BookingRefusal (..),
     FoldRefusal (..),
@@ -239,6 +241,7 @@ import Cardano.Ledger.Alonzo.PParams (ppCostModelsL, ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..), costModelsValid, getCostModelParams)
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Api.PParams (ppProtocolVersionL)
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (mkBasicTx, txIdTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
@@ -268,10 +271,11 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (Testnet),
+    ProtVer (..),
     StrictMaybe (SJust),
     TxIx (..),
  )
-import Cardano.Ledger.Binary (serialize)
+import Cardano.Ledger.Binary (getVersion, serialize)
 import Cardano.Ledger.Coin (Coin (..), unCoin)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
@@ -334,6 +338,7 @@ import Cardano.Tx.Balance (
     computeScriptIntegrity,
  )
 import Codec.Binary.Bech32 qualified as Bech32
+import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Exception (finally, throwIO, try)
@@ -347,9 +352,10 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
+import Data.Char (isDigit)
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.List (elemIndex, find, isInfixOf, isPrefixOf, sort, sortOn)
+import Data.List (elemIndex, find, isInfixOf, isPrefixOf, sort, sortOn, stripPrefix)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust, isNothing, listToMaybe)
 import Data.Ord (Down (..))
@@ -368,7 +374,7 @@ import PlutusCore.Data qualified as PLC
 import Singular.CLI.Passphrase (mkPassphrase)
 import Singular.CLI.Vault (VaultRefusal (..), createVaultFile, renderVaultRefusal, sealVault, vaultWorkFactor)
 import System.Directory qualified as Dir
-import System.Environment (lookupEnv)
+import System.Environment (getEnvironment, lookupEnv)
 import System.Exit (ExitCode (..))
 import System.FilePath (takeDirectory, (</>))
 import System.IO (
@@ -931,7 +937,7 @@ deployReferenceScript env label script = do
         withinSecs 30 (label <> ": query parameters") $
             queryProtocolParams (envProvider env)
     payer <- payerOf env (ownerParty env)
-    tx <- unwrapBuild (Tx.publishReferenceScript params payer (Coin 100_000_000) script)
+    tx <- unwrapBuild (Tx.publishReferenceScript Nothing params payer (Coin 100_000_000) script)
     txId <- submitSettling env label tx
     pollOutput
         (envProvider env)
@@ -4827,7 +4833,7 @@ publishTemplate env = do
         withinSecs 30 (label <> ": query parameters") $
             queryProtocolParams (envProvider env)
     payer <- payerOf env (ownerParty env)
-    tx <- unwrapBuild (Tx.publishTemplate params payer (Coin 100_000_000) template)
+    tx <- unwrapBuild (Tx.publishTemplate Nothing params payer (Coin 100_000_000) template)
     txId <- submitSettling env label tx
     pollOutput (envProvider env) txId [0] ((== mkInlineDatum (B template)) . (^. datumTxOutL))
         >>= requireJust (label <> ": the template did not settle")
@@ -4866,6 +4872,7 @@ genesisRegistry env = do
                     queryProtocolParams (envProvider env)
             unwrapBuild
                 ( Tx.createConfiguration
+                    Nothing
                     params
                     (deploymentOf env)
                     [templateOut, applicationRef, stateRef]
@@ -6293,13 +6300,17 @@ stagedBareDevnet timing = stagedBareDevnetWithin (if timing == PreprodTiming the
 return waiting for the deadline of a request included.
 -}
 stagedBareDevnetWithin :: Int -> (FilePath -> LSQChannel -> LTxSChannel -> IO a) -> IO a
-stagedBareDevnetWithin seconds action = do
+stagedBareDevnetWithin seconds action = stagedBareDevnetStarted seconds (const action)
+
+-- | The same, for a journey that also wants the instant the node started, in POSIX milliseconds.
+stagedBareDevnetStarted :: Int -> (Integer -> FilePath -> LSQChannel -> LTxSChannel -> IO a) -> IO a
+stagedBareDevnetStarted seconds action = do
     hSetBuffering stdout LineBuffering
     hSetBuffering stderr LineBuffering
     gDir <- genesisDir
     withinSecs seconds "deployment withDevnet+socket" $
         withCardanoNode gDir $
-            \sock _startMs -> do
+            \sock startMs -> do
                 lsq <- newLSQChannel 16
                 ltxs <- newLTxSChannel 16
                 client <- async $ runNodeClient devnetMagic sock lsq ltxs
@@ -6309,7 +6320,7 @@ stagedBareDevnetWithin seconds action = do
                         assertPV11Enacted provider
                         assertLivePv11Boundary provider
                         prepareWallet provider (mkN2CSubmitter ltxs) genesisAddr
-                        action sock lsq ltxs
+                        action startMs sock lsq ltxs
                     )
                     `finally` cancel client
 
@@ -6372,8 +6383,8 @@ nowMs = (\t -> floor (t * 1_000)) <$> getPOSIXTime
 read only the two files it wrote: the registry it created is booked into by the
 library's builders with one wallet and folded by another, and the checkpoint is delivered.
 -}
-registryDeployJourney :: DeployTiming -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
-registryDeployJourney timing socket lsq ltxs = do
+registryDeployJourney :: DeployTiming -> Maybe Integer -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
+registryDeployJourney timing startedAt socket lsq ltxs = do
     blueprintPath <- resolveBlueprintPath
     let provider = mkN2CProvider lsq
         terms = deployJourneyTerms timing
@@ -6421,10 +6432,15 @@ registryDeployJourney timing socket lsq ltxs = do
                 <> term "--premium" (termsPremium (registryCheckpointTerms terms))
                 <> term "--minimum-ada" (registryMinimumAda terms)
                 <> term "--termination-carrier" (registryTerminationCarrier terms)
+    -- the network time of the devnet, as public Singular reads it from the directory its option names: the node path
+    -- converts the instant an hour after the tip to a slot through it. The variable names a directory that is not
+    -- there, so that only the option, which comes before the variable, can make the command work.
+    timeDirectory <- traverse (journeyTimeSource scratch provider) startedAt
+    inherited <- getEnvironment
     let runCkeri dir =
             withinSecs (timeoutSeconds * 10) "ckeri registry deploy" $
                 Proc.readCreateProcessWithExitCode
-                    (Proc.proc "ckeri" args){Proc.cwd = Just dir}
+                    (Proc.proc "ckeri" (args <> maybe [] (\d -> ["--network-time", d]) timeDirectory)){Proc.cwd = Just dir, Proc.env = Just (maybe id (const (("SINGULAR_NETWORK_TIME", "/nonexistent/network-time") :)) timeDirectory inherited)}
                     ""
     deployStarted <- nowMs
     (code, out, err) <- runCkeri workDir
@@ -6433,6 +6449,11 @@ registryDeployJourney timing socket lsq ltxs = do
     dbg ("ckeri registry deploy stderr:\n" <> err)
     unless (code == ExitSuccess) $
         fail ("ckeri registry deploy failed: " <> show code)
+    -- every transaction the command made carries a finite end, as the command reports it from the signed bodies
+    forM_ timeDirectory $ \_ -> do
+        let ends = [takeWhile (/= ' ') rest | line <- lines out, Just rest <- [afterMarker " valid-until-slot=" line]]
+        unless (length ends == 8 && all (\e -> not (null e) && all isDigit e) ends) $
+            fail ("the first deployment's report names no finite end for each of its eight transactions: " <> show ends)
     listing <- sort <$> Dir.listDirectory workDir
     decoysAfter <- directoryTree (workDir </> "deploy")
     unless (decoysAfter == decoysBefore) $
@@ -6534,6 +6555,17 @@ registryDeployJourney timing socket lsq ltxs = do
     bookValidity <- tipValidityWith slots env "booking"
     let bookRecord = registrationRecord env fixture bookValidity
         approval' = Tx.approval bookRecord
+    -- the same transaction, evaluated by the node and by the local evaluation the Koios commands use: the
+    -- units are the same for every purpose (the hosted timing only: the genesis is the devnet's own)
+    forM_ startedAt $ \startMs -> when (timing == HostedTiming) $ do
+        (discovery, expected) <- bookingTx env bookRecord bookValidity 0 Map.empty
+        gDir <- genesisDir
+        (nodeSays, localSays) <- evaluationsOf provider gDir startMs (addKeyWitness (partyKey (ownerParty env)) discovery)
+        nodeUnits <- requireExactAllRight "evaluation parity: node" expected nodeSays
+        localUnits <- requireExactAllRight "evaluation parity: local" expected localSays
+        unless (nodeUnits == localUnits) $
+            fail ("evaluation parity: the node gives " <> show nodeUnits <> " and the local evaluation " <> show localUnits)
+        dbg ("evaluation parity: " <> show (Map.size nodeUnits) <> " purposes, the same units from both: " <> show nodeUnits)
     bookStarted <- nowMs
     bookId <-
         submitTwoPassBy (ownerParty env) env "registration booking" (bookingTx env bookRecord bookValidity 0)
@@ -6675,8 +6707,8 @@ here by the code of the @singular@ command line, its passphrase given to the ins
 data FoldKey = FoldWithKeyFile | FoldWithVault
     deriving stock (Eq, Show)
 
-registryBookingJourney :: FoldKey -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
-registryBookingJourney foldKey socket lsq ltxs = do
+registryBookingJourney :: FoldKey -> Integer -> FilePath -> LSQChannel -> LTxSChannel -> IO ()
+registryBookingJourney foldKey startMs socket lsq ltxs = do
     blueprintPath <- resolveBlueprintPath
     exportPath <- getDataFileName "deployment-test/fixtures/kli-export-single.cesr"
     exportBytes <- BS.readFile exportPath
@@ -6698,6 +6730,8 @@ registryBookingJourney foldKey socket lsq ltxs = do
         afterFirst = scratch </> "after-first-fold.json"
     Dir.createDirectory workDir
     writeFile payerKeyFile (signingKeyEnvelope genesisSignKey)
+    timeDirectory <- journeyTimeSource scratch provider startMs
+    inherited <- getEnvironment
     -- the vault variant seals the folder's key from memory: no plaintext file of it is ever written
     when (foldKey == FoldWithKeyFile) $ writeFile folderKeyFile (signingKeyEnvelope folderKey)
     -- the check that no output holds a passphrase is shown to see one
@@ -6758,7 +6792,7 @@ registryBookingJourney foldKey socket lsq ltxs = do
         runCkeri label args =
             withinSecs (timeoutSeconds * 10) label $ do
                 result@(code, out, err) <-
-                    Proc.readCreateProcessWithExitCode (Proc.proc "ckeri" args){Proc.cwd = Just workDir} (if "--passphrase-fd" `elem` args then folderPassphrase <> "\n" else "")
+                    Proc.readCreateProcessWithExitCode (Proc.proc "ckeri" args){Proc.cwd = Just workDir, Proc.env = Just (("SINGULAR_NETWORK_TIME", timeDirectory) : inherited)} (if "--passphrase-fd" `elem` args then folderPassphrase <> "\n" else "")
                 dbg (label <> " exit " <> show code <> "\nstdout:\n" <> out <> "\nstderr:\n" <> err)
                 when (printsAPassphrase (out <> err)) $ fail (label <> ": the output of the command holds a passphrase")
                 pure result
@@ -6928,3 +6962,23 @@ sealFolderVault path passphrase = do
 requestText :: TxIn -> String
 requestText (TxIn (TxId safeHash) (TxIx index)) =
     B8.unpack (convertToBase Base16 (hashToBytes (extractHash safeHash))) <> "#" <> show index
+
+-- | What follows the first place a line holds the marker, if it holds it.
+afterMarker :: String -> String -> Maybe String
+afterMarker marker = go
+  where
+    go [] = Nothing
+    go line@(_ : more) = stripPrefix marker line <|> go more
+
+{- | The network time of the devnet, as public Singular reads it from the directory its variable names: the files,
+built from the genesis the node runs on and the instant it started, in a directory of the scratch. The node path of
+@ckeri registry deploy@ converts the instant an hour after the tip to a slot through it.
+-}
+journeyTimeSource :: FilePath -> Provider IO -> Integer -> IO FilePath
+journeyTimeSource scratch provider startMs = do
+    let directory = scratch </> "network-time"
+    Dir.createDirectory directory
+    gDir <- genesisDir
+    parameters <- queryProtocolParams provider
+    writeDevnetTimeSource gDir startMs (getVersion (pvMajor (parameters ^. ppProtocolVersionL))) directory
+    pure directory

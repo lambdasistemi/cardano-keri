@@ -34,7 +34,7 @@ import Cardano.KERI.Deployment.LiveRuntime (
     withUnlinkedLiveContext,
     withUnlinkedLiveContextEnvelope,
  )
-import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), whileConnected)
+import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), ValidityEnd (..), whileConnected)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Network (Testnet), TxIx (..))
@@ -77,6 +77,7 @@ data NodeAccess = NodeAccess
     , naFundingAddress :: !Text
     , naSigningKey :: !KeySource
     , naTimeoutSeconds :: !Int
+    , naNetworkTime :: !(Maybe FilePath)
     }
     deriving stock (Show, Eq)
 
@@ -130,6 +131,7 @@ withNodeRuntime connection access use = case naSigningKey access of
                 , rtTransactions = transactions{trObserve = awaitFirstOutput provider (naTimeoutSeconds access)}
                 , rtObserve = observeNode provider
                 , rtNowMs = clockMs
+                , rtValidityEnd = pure EndNotSet
                 }
 
 -- | A transaction has settled when the node reports its first output unspent.

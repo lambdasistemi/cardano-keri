@@ -229,16 +229,20 @@ library deployment-koios
     , cardano-ledger-core
     , cardano-node-clients
     , containers
+    , contra-tracer
     , microlens
     , singular-registry
     , singular-registry:koios-http
     , singular-registry:local-services
     , text
+    , time
 
   exposed-modules:
+    Cardano.KERI.Deployment.KoiosRegistryRuntime
     Cardano.KERI.Deployment.KoiosRuntime
     Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.KoiosSubmission
+    Cardano.KERI.Deployment.RegistryWindow
 
 library indexer
   import:           warnings
@@ -367,23 +371,25 @@ library registry-commands
   default-language: GHC2021
   hs-source-dirs:   registry-commands
   build-depends:
-    , base                     >=4.18 && <5
+    , base                           >=4.18 && <5
     , bech32
-    , bytestring               >=0.11 && <0.13
+    , bytestring                     >=0.11 && <0.13
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-keri:deployment-koios
     , cardano-keri:key-source
     , cardano-ledger-core
     , cardano-node-clients
     , directory
-    , memory                   >=0.18 && <0.19
-    , opt-env-conf             >=0.13 && <0.16
+    , memory                         >=0.18 && <0.19
+    , opt-env-conf                   >=0.13 && <0.16
     , text
 
   exposed-modules:
     Cardano.KERI.Deployment.RegistryBookingCommand
     Cardano.KERI.Deployment.RegistryCommand
+    Cardano.KERI.Deployment.RegistryProvider
 
 -- The wallet-vault key source of the registry commands. It alone holds the
 -- dependency on Singular's command-line library: it exports the key-opening
@@ -521,6 +527,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.FreezePackageSpec
     Cardano.KERI.Deployment.KELSpec
     Cardano.KERI.Deployment.KoiosReadsSpec
+    Cardano.KERI.Deployment.KoiosRegistryRuntimeSpec
     Cardano.KERI.Deployment.KoiosSettlementSpec
     Cardano.KERI.Deployment.KoiosStandIn
     Cardano.KERI.Deployment.KoiosSubmissionSpec
@@ -536,6 +543,10 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.RegistryFoldHandoffSpec
     Cardano.KERI.Deployment.RegistryFoldSpec
+    Cardano.KERI.Deployment.RegistryKoiosCommandSpec
+    Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
+    Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
+    Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRequestSpec
     Cardano.KERI.Deployment.RegistryReturnCommandSpec
@@ -546,6 +557,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryTransactionsSpec
     Cardano.KERI.Deployment.RegistryVaultSpec
     Cardano.KERI.Deployment.ScriptAritySpec
+    Cardano.KERI.Deployment.TestNetworkTime
     Cardano.KERI.Deployment.TopUpPackageSpec
     Cardano.KERI.Deployment.TopUpTransactionSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
@@ -575,6 +587,7 @@ test-suite deployment-tests
     , cardano-ledger-mary
     , cardano-node-clients
     , cardano-slotting
+    , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , case-insensitive
     , containers
@@ -589,9 +602,11 @@ test-suite deployment-tests
     , memory                            >=0.18   && <0.19
     , microlens
     , network
+    , ouroboros-consensus
     , ouroboros-network:protocols
     , plutus-core
     , plutus-ledger-api
+    , serialise
     , singular-registry
     , singular-registry:koios-http
     , singular-registry:local-services
@@ -1289,6 +1304,7 @@ test-suite e2e-tests
     CageTxBuilder
     Cardano.KERI.AID.E2E.AssetName
     Cardano.KERI.AID.E2E.DevnetTerms
+    Cardano.KERI.AID.E2E.EvaluationParity
     Cardano.KERI.AID.E2E.Rejection
     Cardano.KERI.AID.E2E.Script
     Cardano.KERI.AID.E2E.Wire
@@ -1309,6 +1325,7 @@ test-suite e2e-tests
     , cardano-crypto-class
     , cardano-keri
     , cardano-keri:deployment
+    , cardano-keri:deployment-koios
     , cardano-keri:indexer
     , cardano-ledger-allegra
     , cardano-ledger-alonzo
@@ -1320,9 +1337,11 @@ test-suite e2e-tests
     , cardano-node-clients
     , cardano-node-clients:devnet
     , cardano-node-clients:utxo-indexer-lib
+    , cardano-slotting
     , cardano-strict-containers
     , cardano-tx-tools:tx-build
     , containers
+    , crypton
     , directory
     , filepath
     , hspec                                  >=2.11 && <2.12
@@ -1333,6 +1352,8 @@ test-suite e2e-tests
     , plutus-core
     , plutus-tx
     , process
+    , serialise
+    , singular-registry:local-services
     , singular-registry:registry-cli
     , text
     , time

@@ -52,6 +52,15 @@ opening distinguishes the two byte strings. Verified signatures and receipts
 must refer to the actual signed body of the event being graded. Lean checks decoded transitions under these premises. Production authentication
 of the complete writer opening at registration and advance remains open.
 
+Ordinary inception has no signed prior link, cuts or adds. The controller's
+booking decoder must detect even an empty forbidden field before projecting it
+to the empty decoded value. For registration, advance and rival grading,
+keripy’s event profile requires positive denominators and individual weights
+at most one in both threshold fields. This ceiling extends to group outer and
+member weights and is stricter than KERI 1.1 line 1419. Preserve signed
+fraction spellings. The model checks the decoded bounds. Production raw event
+parsing and complete wire equivalence with keripy remain separate obligations.
+
 The decoded conviction tip uses the complete KERI threshold type for the
 current keys and next commitments, including nested weighted groups. It can
 present every writer with symbolic key identities. For concrete bytes the

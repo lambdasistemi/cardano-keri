@@ -55,7 +55,8 @@ delegated identities and interaction conflicts are refused by this profile.
 | Choice | Rejected alternative and reason |
 |---|---|
 | Grade each branch with its own threshold and derived witnesses | Reusing the tip's keys, threshold or witnesses rejects valid partial and augmented rotations and can accept inadequately signed rivals. |
-| Require complete content inequality | Comparing only projected fields misses conflicts that differ in seals; accepting identical content invents duplicity. |
+| Compare the writer’s and rival’s authenticated own event digests | A valid rival with a distinct digest at the same position establishes a conflict. Equal decoded weights can come from different signed bodies. A replay has the same digest. The guarantee requires faithful openings on both sides. The mechanism which installs the writer digest on chain remains open. |
+| Apply the keripy event admission profile | Ordinary inception omits the prior link and witness deltas. A fraction in a current or next rule has a positive denominator and an individual weight at most one, including group outer and member weights. The individual ceiling follows keripy 1.3.5 and is stricter than the pinned KERI 1.1 clause. Preserve the signed spelling and exact integers. |
 | Authenticate the common prior-next context | Allowing a rival to choose its own predecessor or witness context would make the proof self-authorizing. |
 
 The executable definitions are `Duplicity.duplicityAt` and the computed

@@ -54,6 +54,10 @@ the evidence comparison. The convictor must also reveal the matching open
 commitment and mint one enforcement token and one entitlement token for this spend. The Singular folder
 processes the resulting request.
 
+| Evidence at the conviction spend | Guarantee |
+| --- | --- |
+| Authenticated openings of the live writer and the valid rival | Their own event digests identify their signed bodies. A different digest at the same position passes the conflict test. The controller’s booking or the submitter’s advance must establish the installed writer identity. The convictor supplies the rival’s evidence. The on-chain writer-digest mechanism remains open. |
+
 ## The machine (`Registry.lean`)
 
 `Sys` contains the generation, imported configuration and trie, carriers,

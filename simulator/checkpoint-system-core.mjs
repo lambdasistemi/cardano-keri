@@ -120,7 +120,8 @@ function validateWriterTable(table) {
   }
   function content(e) {
     fields(e, ['aid','sn','kind','priorDigest','keys','threshold','nextKeys','nextThreshold',
-      'cuts','adds','witnessThreshold','extension'], 'event');
+      'cuts','adds','witnessThreshold','extension','eventDigest'], 'event');
+    if (typeof e.eventDigest !== 'string') invalid();
     if (!['inception','rotation','interaction','delegatedInception','delegatedRotation'].includes(e.kind)) invalid();
     for (const k of ['aid','sn','priorDigest','witnessThreshold']) integer(e[k]);
     for (const k of ['keys','nextKeys','cuts','adds','extension']) list(e[k], integer);
@@ -164,6 +165,8 @@ function inceptionWriter(writers, aid, datum) {
   const e = signed.event;
   const receipts = C.verifiedSigners(e, signed.receipts);
   require(E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
+    e.priorDigest === 0 && e.cuts.length === 0 && e.adds.length === 0 &&
+    C.admittedWeights(e.threshold) && C.admittedWeights(e.nextThreshold) &&
     e.keys.length > 0 && new Set(e.keys).size === e.keys.length &&
     new Set(witnesses).size === witnesses.length &&
     C.thresholdSatisfied(e.threshold, e.keys, C.verifiedSigners(e, signed.signatures)) &&

@@ -226,11 +226,11 @@ party who can prove a later witnessed rotation can simply **land** it, which
 costs the owner nothing and leaves the checkpoint fresh, so paying for the
 freeze instead would pay for the harmful move.
 
-Instead a hunter freezes only when the owner's **pool is short**: it presents
-exactly the advance evidence, takes `B`, and leaves the datum untouched — the
-old keys stay. Frozen is the absence of `B`, a value-level fact, not a role or
-a flag. There is no deadline, no claim, no thaw window: the owner comes back by
-a rotation with `deposit`, which restores both bonds.
+Instead a hunter freezes only when the owner's **pool is short**: the hunter
+presents a later witnessed rotation with a freeze attestation for the spent
+checkpoint. The hunter receives `B`. The datum changes only its frozen bit
+to true, so the old keys stay. A depositing rotation clears the bit and
+restores the freeze bond.
 
 There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and
 no timeout.

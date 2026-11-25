@@ -62321,17 +62321,17 @@
    ]
   },
   "docs-architecture-identity-ops/under-the-accepted-design_3-02": {
-   "audio_sha256": "95a810d04bb675d3ae8a963cd4842d3ef007d178ec088f6aa6cce1d375bf57c7",
-   "characters": 358,
-   "cost": 0.00022196,
-   "duration": 24.6,
+   "audio_sha256": "499ecf8b1729abc553128b7816a1ba3e7e929762161e55ac795e08806e486c25",
+   "characters": 319,
+   "cost": 0.00031581,
+   "duration": 20.725,
    "index": 2,
-   "key": "4aa87cf1fc3afc5550452615ba7fc25cfde78bac2f82c8970da12d53d3fec2c7",
+   "key": "0da6eee53fa0c25b0ef6340b873cc4c04f48aecd1ca817f24e898d6c6e1cce14",
    "page": "docs/architecture/identity-ops.md",
    "pause_ms": 400,
    "section": "under-the-accepted-design_3",
-   "sent_text": "Instead a hunter freezes only when the owner's pool is short: it presents exactly the advance evidence, takes B, and leaves the datum untouched — the old keys stay. Frozen is the absence of B, a value-level fact, not a role or a flag. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores both bonds.",
-   "text": "Instead a hunter freezes only when the owner's pool is short: it presents exactly the advance evidence, takes B, and leaves the datum untouched — the old keys stay. Frozen is the absence of B, a value-level fact, not a role or a flag. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores both bonds.",
+   "sent_text": "Instead a hunter freezes only when the owner's pool is short: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint. The hunter receives B. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores the freeze bond.",
+   "text": "Instead a hunter freezes only when the owner's pool is short: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint. The hunter receives B. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores the freeze bond.",
    "words": [
     {
      "end": 0.562,
@@ -62394,333 +62394,243 @@
      "text": ":"
     },
     {
-     "end": 4.2,
+     "end": 4.175,
      "start": 4.1,
-     "text": "it"
+     "text": "the"
     },
     {
-     "end": 4.6,
-     "start": 4.2,
+     "end": 4.55,
+     "start": 4.175,
+     "text": "hunter"
+    },
+    {
+     "end": 5.025,
+     "start": 4.55,
      "text": "presents"
     },
     {
-     "end": 5.2,
-     "start": 4.6,
-     "text": "exactly"
-    },
-    {
-     "end": 5.35,
-     "start": 5.2,
-     "text": "the"
-    },
-    {
-     "end": 5.8,
-     "start": 5.35,
-     "text": "advance"
-    },
-    {
-     "end": 6.275,
-     "start": 5.8,
-     "text": "evidence"
-    },
-    {
-     "end": 6.325,
-     "start": 6.275,
-     "text": ","
-    },
-    {
-     "end": 6.65,
-     "start": 6.325,
-     "text": "takes"
-    },
-    {
-     "end": 6.975,
-     "start": 6.65,
-     "text": "B"
-    },
-    {
-     "end": 7.05,
-     "start": 6.975,
-     "text": ","
-    },
-    {
-     "end": 7.175,
-     "start": 7.05,
-     "text": "and"
-    },
-    {
-     "end": 7.5,
-     "start": 7.175,
-     "text": "leaves"
-    },
-    {
-     "end": 7.625,
-     "start": 7.5,
-     "text": "the"
-    },
-    {
-     "end": 8.0,
-     "start": 7.625,
-     "text": "datum"
-    },
-    {
-     "end": 8.75,
-     "start": 8.0,
-     "text": "untouched"
-    },
-    {
-     "end": 8.812,
-     "start": 8.75,
-     "text": "—"
-    },
-    {
-     "end": 8.95,
-     "start": 8.812,
-     "text": "the"
-    },
-    {
-     "end": 9.2,
-     "start": 8.95,
-     "text": "old"
-    },
-    {
-     "end": 9.475,
-     "start": 9.2,
-     "text": "keys"
-    },
-    {
-     "end": 10.5,
-     "start": 9.475,
-     "text": "stay"
-    },
-    {
-     "end": 10.725,
-     "start": 10.5,
-     "text": "."
-    },
-    {
-     "end": 11.375,
-     "start": 10.925,
-     "text": "Frozen"
-    },
-    {
-     "end": 11.488,
-     "start": 11.375,
-     "text": "is"
-    },
-    {
-     "end": 11.625,
-     "start": 11.488,
-     "text": "the"
-    },
-    {
-     "end": 12.087,
-     "start": 11.625,
-     "text": "absence"
-    },
-    {
-     "end": 12.212,
-     "start": 12.087,
-     "text": "of"
-    },
-    {
-     "end": 12.6,
-     "start": 12.212,
-     "text": "B"
-    },
-    {
-     "end": 12.7,
-     "start": 12.6,
-     "text": ","
-    },
-    {
-     "end": 12.8,
-     "start": 12.7,
+     "end": 5.137,
+     "start": 5.025,
      "text": "a"
     },
     {
-     "end": 13.462,
-     "start": 12.8,
-     "text": "value-level"
+     "end": 5.562,
+     "start": 5.137,
+     "text": "later"
     },
     {
-     "end": 13.875,
-     "start": 13.462,
-     "text": "fact"
+     "end": 6.0,
+     "start": 5.562,
+     "text": "witnessed"
     },
     {
-     "end": 13.925,
-     "start": 13.875,
-     "text": ","
-    },
-    {
-     "end": 14.137,
-     "start": 13.925,
-     "text": "not"
-    },
-    {
-     "end": 14.238,
-     "start": 14.137,
-     "text": "a"
-    },
-    {
-     "end": 14.625,
-     "start": 14.238,
-     "text": "role"
-    },
-    {
-     "end": 14.738,
-     "start": 14.625,
-     "text": "or"
-    },
-    {
-     "end": 14.837,
-     "start": 14.738,
-     "text": "a"
-    },
-    {
-     "end": 15.75,
-     "start": 14.837,
-     "text": "flag"
-    },
-    {
-     "end": 15.975,
-     "start": 15.75,
-     "text": "."
-    },
-    {
-     "end": 16.325,
-     "start": 16.175,
-     "text": "There"
-    },
-    {
-     "end": 16.475,
-     "start": 16.325,
-     "text": "is"
-    },
-    {
-     "end": 16.737,
-     "start": 16.475,
-     "text": "no"
-    },
-    {
-     "end": 17.275,
-     "start": 16.737,
-     "text": "deadline"
-    },
-    {
-     "end": 17.325,
-     "start": 17.275,
-     "text": ","
-    },
-    {
-     "end": 17.562,
-     "start": 17.325,
-     "text": "no"
-    },
-    {
-     "end": 18.075,
-     "start": 17.562,
-     "text": "claim"
-    },
-    {
-     "end": 18.15,
-     "start": 18.075,
-     "text": ","
-    },
-    {
-     "end": 18.425,
-     "start": 18.15,
-     "text": "no"
-    },
-    {
-     "end": 18.712,
-     "start": 18.425,
-     "text": "thaw"
-    },
-    {
-     "end": 19.275,
-     "start": 18.712,
-     "text": "window"
-    },
-    {
-     "end": 19.375,
-     "start": 19.275,
-     "text": ":"
-    },
-    {
-     "end": 19.538,
-     "start": 19.375,
-     "text": "the"
-    },
-    {
-     "end": 19.875,
-     "start": 19.538,
-     "text": "owner"
-    },
-    {
-     "end": 20.175,
-     "start": 19.875,
-     "text": "comes"
-    },
-    {
-     "end": 20.475,
-     "start": 20.175,
-     "text": "back"
-    },
-    {
-     "end": 20.65,
-     "start": 20.475,
-     "text": "by"
-    },
-    {
-     "end": 20.725,
-     "start": 20.65,
-     "text": "a"
-    },
-    {
-     "end": 21.375,
-     "start": 20.725,
+     "end": 6.725,
+     "start": 6.0,
      "text": "rotation"
     },
     {
-     "end": 21.55,
-     "start": 21.375,
+     "end": 6.863,
+     "start": 6.725,
      "text": "with"
     },
     {
-     "end": 22.125,
-     "start": 21.55,
-     "text": "deposit"
+     "end": 6.975,
+     "start": 6.863,
+     "text": "a"
     },
     {
-     "end": 22.163,
-     "start": 22.125,
+     "end": 7.325,
+     "start": 6.975,
+     "text": "freeze"
+    },
+    {
+     "end": 8.15,
+     "start": 7.325,
+     "text": "attestation"
+    },
+    {
+     "end": 8.262,
+     "start": 8.15,
+     "text": "for"
+    },
+    {
+     "end": 8.35,
+     "start": 8.262,
+     "text": "the"
+    },
+    {
+     "end": 8.688,
+     "start": 8.35,
+     "text": "spent"
+    },
+    {
+     "end": 9.85,
+     "start": 8.688,
+     "text": "checkpoint"
+    },
+    {
+     "end": 10.05,
+     "start": 9.85,
+     "text": "."
+    },
+    {
+     "end": 10.325,
+     "start": 10.25,
+     "text": "The"
+    },
+    {
+     "end": 10.675,
+     "start": 10.325,
+     "text": "hunter"
+    },
+    {
+     "end": 11.188,
+     "start": 10.675,
+     "text": "receives"
+    },
+    {
+     "end": 11.425,
+     "start": 11.188,
+     "text": "B."
+    },
+    {
+     "end": 11.55,
+     "start": 11.425,
+     "text": "The"
+    },
+    {
+     "end": 11.962,
+     "start": 11.55,
+     "text": "datum"
+    },
+    {
+     "end": 12.438,
+     "start": 11.962,
+     "text": "changes"
+    },
+    {
+     "end": 12.75,
+     "start": 12.438,
+     "text": "only"
+    },
+    {
+     "end": 12.962,
+     "start": 12.75,
+     "text": "its"
+    },
+    {
+     "end": 13.425,
+     "start": 12.962,
+     "text": "frozen"
+    },
+    {
+     "end": 13.625,
+     "start": 13.425,
+     "text": "bit"
+    },
+    {
+     "end": 13.762,
+     "start": 13.625,
+     "text": "to"
+    },
+    {
+     "end": 14.225,
+     "start": 13.762,
+     "text": "true"
+    },
+    {
+     "end": 14.35,
+     "start": 14.225,
      "text": ","
     },
     {
-     "end": 22.35,
-     "start": 22.163,
-     "text": "which"
+     "end": 14.512,
+     "start": 14.35,
+     "text": "so"
     },
     {
-     "end": 22.875,
-     "start": 22.35,
+     "end": 14.65,
+     "start": 14.512,
+     "text": "the"
+    },
+    {
+     "end": 14.9,
+     "start": 14.65,
+     "text": "old"
+    },
+    {
+     "end": 15.175,
+     "start": 14.9,
+     "text": "keys"
+    },
+    {
+     "end": 16.175,
+     "start": 15.175,
+     "text": "stay"
+    },
+    {
+     "end": 16.4,
+     "start": 16.175,
+     "text": "."
+    },
+    {
+     "end": 16.65,
+     "start": 16.6,
+     "text": "A"
+    },
+    {
+     "end": 17.225,
+     "start": 16.65,
+     "text": "depositing"
+    },
+    {
+     "end": 17.812,
+     "start": 17.225,
+     "text": "rotation"
+    },
+    {
+     "end": 18.163,
+     "start": 17.812,
+     "text": "clears"
+    },
+    {
+     "end": 18.25,
+     "start": 18.163,
+     "text": "the"
+    },
+    {
+     "end": 18.638,
+     "start": 18.25,
+     "text": "bit"
+    },
+    {
+     "end": 18.763,
+     "start": 18.638,
+     "text": "and"
+    },
+    {
+     "end": 19.212,
+     "start": 18.763,
      "text": "restores"
     },
     {
-     "end": 23.163,
-     "start": 22.875,
-     "text": "both"
+     "end": 19.3,
+     "start": 19.212,
+     "text": "the"
     },
     {
-     "end": 24.375,
-     "start": 23.163,
-     "text": "bonds"
+     "end": 19.625,
+     "start": 19.3,
+     "text": "freeze"
     },
     {
-     "end": 24.6,
-     "start": 24.375,
+     "end": 20.525,
+     "start": 19.625,
+     "text": "bond"
+    },
+    {
+     "end": 20.725,
+     "start": 20.525,
      "text": "."
     }
    ]

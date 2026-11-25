@@ -305,7 +305,7 @@
       "pause": 400
     },
     {
-      "text": "Instead a hunter freezes only when the owner's pool is short: it presents exactly the advance evidence, takes B, and leaves the datum untouched — the old keys stay. Frozen is the absence of B, a value-level fact, not a role or a flag. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores both bonds.",
+      "text": "Instead a hunter freezes only when the owner's pool is short: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint. The hunter receives B. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores the freeze bond.",
       "pause": 400
     },
     {
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "7a9b866b4ac287dae902bbf08a0bdf4e7650b0871065d06e8bcf7768c1526b6b"
+    "sha256": "c20eeb2c86f834cbcc48c976462eef076a8d26c73fe64093fa816e83b55dbb51"
   }
 }

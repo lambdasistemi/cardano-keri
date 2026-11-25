@@ -311,9 +311,9 @@ function observedSpend(env, aid, epoch, sn) {
   const row = checkpointEvidence.convictionFixture(aid, epoch, sn);
   return checkpointAttestation.convictionAttested(env.mintTransactions?.convictions ?? [], row.output) ? row : null;
 }
-function commitmentFor(l, payee, openedAt) {
-  const {rival} = checkpointEvidence.convictionFixture(0, l.epoch, l.sn).comparison;
-  return { aid: 0, deployment: 0, keyState: { epoch: l.epoch, sn: l.sn }, evidence: rival, payee, openedAt,
+function commitmentFor(l, payee, openedAt, aid = 0) {
+  const {rival} = checkpointEvidence.convictionFixture(aid, l.epoch, l.sn).comparison;
+  return { aid, deployment: 0, keyState: { epoch: l.epoch, sn: l.sn }, evidence: rival, payee, openedAt,
     eligibleAfter: openedAt + 1, expiresAt: openedAt + 18, marker: 1 };
 }
 function entitles(env, c, l, payee, now, aid = 0) {
@@ -333,15 +333,18 @@ const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);
 function envAdd(env, row, aid = 0) {
   const [kind] = Object.keys(row); const args = row[kind];
   if (!EV_KINDS.includes(kind) || !Array.isArray(args) || args.length !== EV_ARITY[kind] || !args.every(entryOk)) throw new Error('bad evidence row ' + JSON.stringify(row));
-  if (envHas(env, kind, args)) return env;
+  const present = envHas(env, kind, args);
+  if (present && kind !== 'duplicityAt') return env;
   const mints = env.mintTransactions ?? {advances: [], convictions: []};
   let mintTransactions = mints;
   if (kind === 'rotationTo') mintTransactions = {...mints, advances: [...mints.advances, ...checkpointAttestation.sampleAdvances(args)]};
-  if (kind === 'duplicityAt' && !mints.convictions.length) {
+  if (kind === 'duplicityAt') {
     const {output} = checkpointEvidence.convictionFixture(aid, ...args);
-    mintTransactions = {...mints, convictions: [checkpointAttestation.sampleConviction(output, aid)]};
+    if (!mints.convictions.some(row => canon(row.output) === canon(output)))
+      mintTransactions = {...mints, convictions: [...mints.convictions, checkpointAttestation.sampleConviction(output, aid)]};
+    else if (present) return env;
   }
-  return { ...env, mintTransactions, [kind]: [...env[kind], args] };
+  return { ...env, mintTransactions, [kind]: present ? env[kind] : [...env[kind], args] };
 }
 function envRemove(env, row) {
   const [kind] = Object.keys(row); const args = row[kind];
@@ -543,7 +546,7 @@ const consumableEver = (p, s) => { const l = liveOf(s); return !!l && !l.frozen 
 // ---- replay ----------------------------------------------------------------
 // replay(params, env, t0, state, [[slot, action], …]) mirrors the Lean: refuses a
 // decreasing slot or a refused step; returns the final state on success
-function replay(p, env, t0, state, list) {
+function replay(p, env, t0, state, list, aid = 0) {
   // the boundary first, even for an empty list: params, origin slot, the complete
   // origin state, the complete evidence table (at: null = before any step)
   const refuse = (at, reason, field) => (field ? { ok: false, at, reason, field } : { ok: false, at, reason });
@@ -559,7 +562,7 @@ function replay(p, env, t0, state, list) {
     const [t2, a] = e;
     if (!isNat(t2)) return refuse(i, 'invalid-nat', 'slot');
     if (!(t <= t2)) return refuse(i, 'slot-regression');
-    const r = step(p, env, a, t2, s);
+    const r = step(p, env, a, t2, s, aid);
     if (!r.ok) return refuse(i, r.reason, r.field);
     t = t2; s = r.state;
   }
@@ -589,7 +592,7 @@ const poisonSinceLastRotation = list => poisonAfter(false, list);
 // `corpus` is the embedded Lean corpus the T7 checker consults; without it T7
 // is never exhibited.
 function newSession(params, opts) {
-  const aid = (opts && opts.aid) || 1;
+  const aid = opts?.aid ?? 1;
   return { params, env: emptyEnv(), envAll: emptyEnv(), now: 0, state: 'absent', aid, others: {},
     leaves: {}, history: [], origin: 'absent', originSlot: 0, records: [], corpus: (opts && opts.corpus) || null };
 }
@@ -603,7 +606,7 @@ function seedOther(s, aid, state) {
   return { ...s, others: { ...s.others, [aid]: state }, leaves: { ...s.leaves, [aid]: leafOf(state) } };
 }
 const withParams = (s, params) => ({ ...s, params });
-const addEvidence = (s, row) => ({ ...s, env: envAdd(s.env, row), envAll: envAdd(s.envAll, row) });
+const addEvidence = (s, row, aid = s.aid) => ({ ...s, env: envAdd(s.env, row, aid), envAll: envAdd(s.envAll, row, aid) });
 const removeEvidence = (s, row) => ({ ...s, env: envRemove(s.env, row) });
 // a seeded state starts a new origin for the fold theorems; the leaf follows it
 function seed(s, state) {
@@ -626,7 +629,7 @@ function attempt(s, action, slot, aid) {
   if (!isNat(slot)) res = { ok: false, reason: 'invalid-nat', field: 'slot' };
   else if (slot < s.now) res = { ok: false, reason: 'slot-regression' };
   else {
-    res = step(s.params, s.env, action, slot, pre);
+    res = step(s.params, s.env, action, slot, pre, aid);
   }
   record.ok = res.ok;
   if (res.ok) { record.flow = res.flow; record.state = res.state; }
@@ -782,7 +785,7 @@ const THEOREMS = [
 // A step is identified by (params, slot, input state, action) and the values
 // of the evidence predicates stepFn consults for it; two Env tables that agree
 // on those are the same oracle for that step.
-function evidenceBits(env, state, action) {
+function evidenceBits(env, state, action, aid = 0, now = 0) {
   const k = actionKind(action); const d = (action && typeof action === 'object' && action[k] && typeof action[k] === 'object') ? action[k] : {};
   const l = liveOf(state);
   if (!l) return [];
@@ -791,11 +794,11 @@ function evidenceBits(env, state, action) {
     case 'rotate': return [envRotationTo(env, l.epoch, l.sn, d["sn'"]), bondOpOk(env, e1, d.op)];
     case 'freeze': return [envRotationTo(env, l.epoch, l.sn, d["sn'"], 'freeze')];
     case 'poison': return [envQuorum(env, l.epoch)];
-    case 'convict': return [envAcceptsRival(env, l.epoch, l.sn)];
+    case 'convict': return [envAcceptsRival(env, l.epoch, l.sn, aid), entitles(env, d.commitment, l, d.payee, now, aid)];
   }
   return [];
 }
-const cellKey = (params, now, input, action, env) => canon([{ D: params.D, B: params.B, P: params.P }, now, input, action, evidenceBits(env, input, action)]);
+const cellKey = (params, now, input, action, env, aid = 0) => canon([{ D: params.D, B: params.B, P: params.P }, now, input, action, evidenceBits(env, input, action, aid, now)]);
 const corpusIndexes = new WeakMap();
 function corpusIndex(corpus) {
   if (!corpus || typeof corpus !== 'object') return null;
@@ -811,9 +814,9 @@ function corpusIndex(corpus) {
   corpusIndexes.set(corpus, idx);
   return idx;
 }
-function leanCell(corpus, params, now, input, action, env) {
+function leanCell(corpus, params, now, input, action, env, aid = 0) {
   const idx = corpusIndex(corpus); if (!idx) return undefined;
-  return idx.get(cellKey(params, now, input, action, env));
+  return idx.get(cellKey(params, now, input, action, env, aid));
 }
 
 // theoremReport(before, after, record) → one row per Lean declaration of
@@ -823,7 +826,7 @@ function leanCell(corpus, params, now, input, action, env) {
 // names the declaration the row instantiates. The page's lamps are the
 // fourteen groups of THEOREMS, folded over the rows by lampsOf.
 function theoremReport(before, after, rec) {
-  const p = before.params, env = before.env;
+  const p = before.params, env = before.env, aid = rec.aid;
   const pre = rec.pre, post = rec.state, ok = rec.ok, kind = rec.kind, actor = rec.actor;
   const lp = liveOf(pre), lq = liveOf(post);
   const preK = stateKind(pre), postK = stateKind(post);
@@ -892,21 +895,21 @@ function theoremReport(before, after, rec) {
   row('T5_keep_needs_no_intent', rot && op === 'keep' && rotEv, () => [[ok, 'a keep was refused although the rotation is witnessed: ' + rec.reason]]);
   row('T5_poison_enabled', kind === 'poison' && stepped && !!lp && envQuorum(env, lp.epoch) && !lp.poisoned, () => [[ok, 'the quorum signed on a clean state but the poison was refused: ' + rec.reason]]);
   row('T5_freeze_enabled', kind === 'freeze' && rotEv && lp.pool < p.P && !lp.frozen && !lp.poisoned, () => [[ok, 'the freeze’s evidence held but it was refused: ' + rec.reason]]);
-  row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envAcceptsRival(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot), () => [[ok, 'an accepted rival comparison and an entitling commitment were presented but the conviction was refused: ' + rec.reason]]);
-  row('convict_requires_entitlement', ok && kind === 'convict', () => [[!!lp && entitles(env, d.commitment, lp, d.payee, rec.slot), 'a conviction landed without a commitment entitling its payee at this slot']]);
+  row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envAcceptsRival(env, lp.epoch, lp.sn, aid) && entitles(env, d.commitment, lp, d.payee, rec.slot, aid), () => [[ok, 'an accepted rival comparison and an entitling commitment were presented but the conviction was refused: ' + rec.reason]]);
+  row('convict_requires_entitlement', ok && kind === 'convict', () => [[!!lp && entitles(env, d.commitment, lp, d.payee, rec.slot, aid), 'a conviction landed without a commitment entitling its payee at this slot']]);
   // ---- a commitment follows the key state. The commitment sampled is one a hunter opened over the key state
   // before this step, read in its first eligible slot, with and without a proof of duplicity at that key state.
-  const heldOpen = () => commitmentFor(lp, 3, rec.slot), ripe = () => rec.slot + 1;
-  const convictWith = (e, l) => step(p, e, { convict: { payee: 3, commitment: heldOpen() } }, ripe(), present(l)).ok;
-  const keptBy = () => [env, envAdd(env, { duplicityAt: [lp.epoch, lp.sn] })].flatMap(e => [
-    [entitles(e, heldOpen(), lq, 3, ripe()) === entitles(e, heldOpen(), lp, 3, ripe()), 'the step changed whom an open commitment entitles'],
+  const heldOpen = () => commitmentFor(lp, 3, rec.slot, aid), ripe = () => rec.slot + 1;
+  const convictWith = (e, l) => step(p, e, { convict: { payee: 3, commitment: heldOpen() } }, ripe(), present(l), aid).ok;
+  const keptBy = () => [env, envAdd(env, { duplicityAt: [lp.epoch, lp.sn] }, aid)].flatMap(e => [
+    [entitles(e, heldOpen(), lq, 3, ripe(), aid) === entitles(e, heldOpen(), lp, 3, ripe(), aid), 'the step changed whom an open commitment entitles'],
     [convictWith(e, lq) === convictWith(e, lp), 'the step changed whether a conviction on an open commitment is accepted']]);
   row('commitment_survives_topUp', ok && pp && kind === 'topUp', keptBy);
   row('commitment_survives_freeze', ok && pp && kind === 'freeze', keptBy);
   row('commitment_survives_poison', ok && pp && kind === 'poison', keptBy);
   row('rotation_voids_commitment', ok && pp && rot, () => {
-    const e = envAdd(envAdd(env, { duplicityAt: [lp.epoch, lp.sn] }), { duplicityAt: [lq.epoch, lq.sn] });
-    return [[!entitles(e, heldOpen(), lq, 3, ripe()), 'a commitment over the key state before the rotation still entitles'],
+    const e = envAdd(envAdd(env, { duplicityAt: [lp.epoch, lp.sn] }, aid), { duplicityAt: [lq.epoch, lq.sn] }, aid);
+    return [[!entitles(e, heldOpen(), lq, 3, ripe(), aid), 'a commitment over the key state before the rotation still entitles'],
       [!convictWith(e, lq), 'a conviction on a commitment over the key state before the rotation was accepted']];
   });
   // ---- T6: value, the fixed refund address, and the deposit signature
@@ -933,7 +936,7 @@ function theoremReport(before, after, rec) {
   const noDeposit = boundaryOk && e1 !== null && !envDepositAuthorized(env, e1);
   row('T6_relayer_cannot_park_age_or_close', ok && actor === 'nextKeys' && noDeposit, () => [[rot && op === 'keep', 'with no signed deposit at the new epoch, something other than a keep landed']]);
   // ---- T7: parity with the Lean — the cell in the embedded corpus, and the fold
-  const cell = stepped ? leanCell(before.corpus, p, rec.slot, pre, a, env) : undefined;
+  const cell = stepped ? leanCell(before.corpus, p, rec.slot, pre, a, env, aid) : undefined;
   row('T7_step_iff_stepFn', cell !== undefined, () => [
     [(cell.result === null) === !ok, 'Lean ' + (cell.result === null ? 'refuses' : 'applies') + ' this step (' + cell.where + '), the core ' + (ok ? 'applied' : 'refused: ' + rec.reason)],
     [!ok || cell.result === null || eq(f, cell.result.flow), 'flow differs from Lean (' + cell.where + ')'],
@@ -941,22 +944,22 @@ function theoremReport(before, after, rec) {
   out.T7_step_iff_stepFn.cell = cell !== undefined ? cell.where : null;
   if (cell === undefined && rec.stepped) out.T7_step_iff_stepFn.notes = ['the Lean was not asked about this exact step: T7 not shown'];
   row('T7_trace_iff_replay', ok && mine && cell !== undefined, () => [
-    [(() => { const rp = replay(p, after.envAll, after.originSlot, after.origin, after.history); return rp.ok && eq(rp.state, post); })(), 'replay of the accepted actions does not reproduce the state']]);
+    [(() => { const rp = replay(p, after.envAll, after.originSlot, after.origin, after.history, aid); return rp.ok && eq(rp.state, post); })(), 'replay of the accepted actions does not reproduce the state']]);
   // ---- T8: one incarnation per AID — the registry leaf over its three states
   const leafPre = leafOfAid(before, rec.aid), leafPost = leafOfAid(after, rec.aid);
   row('T8_absent_only_registers', stepped && preK === 'absent', () => [[ok === (kind === 'register' && p.P <= d.pool0), 'from absent, something other than a registration of at least one premium happened, or such a registration was refused']]);
-  const enabledFrom = st => { const k = stateKind(st); if (k === 'absent') return step(p, env, { register: { refund: 0, pool0: p.P } }, rec.slot, st).ok; if (k === 'present') return step(p, env, { topUp: { x: p.P } }, rec.slot, st).ok; return false; };
+  const enabledFrom = st => { const k = stateKind(st); if (k === 'absent') return step(p, env, { register: { refund: 0, pool0: p.P } }, rec.slot, st, aid).ok; if (k === 'present') return step(p, env, { topUp: { x: p.P } }, rec.slot, st, aid).ok; return false; };
   row('local_progress_unless_pending_or_retired', ok && mine && postK !== 'convicted' && postK !== 'terminationPending' && !(lq && lq.toppedUp), () => [[enabledFrom(post), 'no step is enabled from a state that is neither pending nor convicted nor topped up']]);
   row('T8_freeze_and_convict_actors_are_proof', boundaryOk && (kind === 'freeze' || kind === 'convict'), () => [[actorOf(a) === 'proof', 'a proof-bearing action is not classed as one']]);
   // ---- T9: juvenility is consumer policy; the consumer's program is its predicate
   row('consumableStateB_iff', stepped, () => [[consumable(p, rec.slot, post).ok === consumableB(p, rec.slot, post), 'the consumer’s Bool mirror disagrees with the conjuncts']]);
-  const r0 = rec.stepped ? step(p, env, a, rec.slot, pre) : null;
+  const r0 = rec.stepped ? step(p, env, a, rec.slot, pre, aid) : null;
   let untouched = true, rT = null, differing = [];
   if (rec.stepped) {
     const trap = new Proxy(p, { get(t, k) { if (k === 'W' && !validatingParams) throw new Error('W read'); return t[k]; } });
-    try { rT = step(trap, env, a, rec.slot, pre); } catch (e) { untouched = false; }
+    try { rT = step(trap, env, a, rec.slot, pre, aid); } catch (e) { untouched = false; }
     const samples = [0, 1, 2, 3, 5, 7, 11, 1000, 31536000, MAX_NAT, p.W + 1, p.W > 0 ? p.W - 1 : 4, (rec.slot * 7919 + 13) % 100000];
-    differing = samples.filter(w => !eq(r0, step({ ...p, W: w }, env, a, rec.slot, pre)));
+    differing = samples.filter(w => !eq(r0, step({ ...p, W: w }, env, a, rec.slot, pre, aid)));
   }
   row('T9_juvenility_is_consumer_only', rec.stepped, () => [[untouched && eq(r0, rT), 'the transition read W'], [!differing.length, 'the step differs under W = ' + differing.slice(0, 3).join(', ')]]);
   // ---- T10: a frozen checkpoint is inert to everyone but the next keys; a convicted one holds no bonds or pool
@@ -975,7 +978,7 @@ function theoremReport(before, after, rec) {
   const acceptedAt = (table, slot, action, live) => {
     const reveal = action?.convict;
     return !!reveal && !!live && eq(hashOfLive(live), pending) &&
-      envAcceptsRival(table, live.epoch, live.sn) && entitles(table, reveal.commitment, live, reveal.payee, slot);
+      envAcceptsRival(table, live.epoch, live.sn, aid) && entitles(table, reveal.commitment, live, reveal.payee, slot, aid);
   };
   row('pending_only_by_conviction', ok && !!pending, () => [
     [acceptedAt(env, rec.slot, a, lp), 'pending custody has no accepted conviction of its spent key state']]);
@@ -985,7 +988,7 @@ function theoremReport(before, after, rec) {
     if (!mine || !boundaryOk || !pending) return null;
     let state = origin, lastSlot = before.originSlot, revealed = false;
     for (const [slot, action] of before.history) {
-      const result = step(p, before.envAll, action, slot, state);
+      const result = step(p, before.envAll, action, slot, state, aid);
       if (!result.ok || slot < lastSlot) return null;
       revealed ||= acceptedAt(before.envAll, slot, action, liveOf(state));
       state = result.state;
@@ -993,7 +996,7 @@ function theoremReport(before, after, rec) {
     }
     if (!eq(state, pre) || (ok && rec.slot < lastSlot)) return null;
     if (!ok) return {revealed, endsHere: eq(pre, post)};
-    const result = step(p, before.envAll, a, rec.slot, state);
+    const result = step(p, before.envAll, a, rec.slot, state, aid);
     return {revealed: revealed || acceptedAt(before.envAll, rec.slot, a, lp),
       endsHere: result.ok && eq(result.state, post)};
   }
@@ -1011,7 +1014,7 @@ function theoremReport(before, after, rec) {
   const wasConvicted = mine && (stateKind(origin) === 'convicted' || before.records.some(r => r.ok && r.aid === rec.aid && stateKind(r.state) === 'convicted'));
   row('trace_from_convicted', wasConvicted, () => [[stateKind(post) === 'convicted' && eq(post, pre), 'a play that reached Convicted moved on']]);
   row('T12_convict_exact', kind === 'convict' && stepped && preK === 'present', () => [
-    [ok === (envAcceptsRival(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot)), 'conviction accepted without a proof against the checkpoint’s key state or without a commitment entitling its payee, or refused with both'],
+    [ok === (envAcceptsRival(env, lp.epoch, lp.sn, aid) && entitles(env, d.commitment, lp, d.payee, rec.slot, aid)), 'conviction accepted without a proof against the checkpoint’s key state or without a commitment entitling its payee, or refused with both'],
     [!ok || (postK === 'terminationPending' && eq(post.terminationPending.h, hashOfLive(lp))), 'a conviction did not reach Convicted'],
     [!ok || eq(f, flow({ refund: payment(lp.refundTo, 0, bHeldOf(p, lp), lp.pool), convictor: payment(d.payee, p.D, 0, 0) })), 'the conviction flow is not exactly D to the convictor and the rest to the refund address']]);
   // ---- T14: the pool
@@ -1133,7 +1136,7 @@ function checkScenario(sc, label, corpus) {
     return timeline;
   };
   // the trunk, then every fork from the trunk session it departs from
-  const origin = newSession(sc.params, { corpus: corpus || null });
+  const origin = newSession(sc.params, { aid: 0, corpus: corpus || null });
   const timeline = branch(origin, sc.steps || [], i => label + ' step ' + i);
   const forks = [];
   (sc.forks || []).forEach((fk, k) => {
@@ -1187,7 +1190,8 @@ function checkCorpus(corpus) {
     badSlot(where, st.now); badState(where + ' input', st.input); badEnv(where + ' env', st.env); badAction(where + ' action', st.action); badResult(where + ' result', st.result);
   }
   if (reasons.length) return { applied, refused, cons, theoremChecks, storyCells: 0, reasons };
-  const envOf = env => { let s = newSession(p, { corpus }); for (const k of EV_KINDS) for (const row of env[k] || []) s = addEvidence(s, { [k]: row }); return s; };
+  // The local Lean driver records EnvTable.read for identifier zero.
+  const envOf = env => ({...newSession(p, {aid: 0, corpus}), env, envAll: env});
   const compare = (where, env, now, input, action, want) => {
     const got = step(p, env, action, now, input);
     if (want === null) { if (got.ok) reasons.push(where + ': Lean refused, the core applied'); else refused++; return null; }

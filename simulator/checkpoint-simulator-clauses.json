@@ -208,9 +208,9 @@
       "note": "the freeze also needs the bond present (hb : l.frozen = false; refusal freeze-bond-missing), which the story states only as its 'after'."
     },
     {
-      "id": "3.and-leaves-the-datum-untouched",
+      "id": "3.and-sets-only-the-frozen-bit",
       "story": 3,
-      "clause": "and leaves the datum untouched",
+      "clause": "and sets only the frozen bit in the datum",
       "class": "guard",
       "kind": "post-state",
       "decl": "Step.freeze",
@@ -881,7 +881,7 @@
     {
       "id": "freeze-takes-B",
       "story": 3,
-      "clause": "a freeze pays B to the hunter and leaves the datum",
+      "clause": "a freeze pays B to the hunter and sets the frozen bit",
       "match": {
         "ok": true,
         "kind": "freeze"

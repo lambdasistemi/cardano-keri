@@ -123,9 +123,9 @@ stale key state and Alice comes back to pay.*
   new rotation with its receipts — but as a freeze, naming himself.
 - **The chain checks**: a freeze attestation for this checkpoint input and script; that the pool is below `P`; that the checkpoint is not poisoned
   (already unconsumable, nothing to freeze). Then it pays `B` to Hal and
-  leaves the datum untouched.
-- **After**: the old keys still shown, `B` missing — that is what frozen
-  means; unconsumable.
+  sets only the frozen bit in the datum.
+- **After**: the old keys still shown, the frozen bit set and `B` paid out.
+  The checkpoint is unconsumable.
 - **Alice sees** her identity refused by the treasury, and learns why.
 - **Open**: none. The freeze is not a fee on the conviction bond; that bond
   is never touched.

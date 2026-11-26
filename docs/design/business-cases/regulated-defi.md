@@ -1,16 +1,16 @@
 # Case A — Regulated DeFi Gate
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.
 
 
 Gate protocol entry and actions on a valid Legal Entity vLEI. This deepens
@@ -22,11 +22,11 @@ corrects it on one load-bearing point (the batcher model, §2).
     trader's **current authority** — the detached-signature check "against the L1 registry
     reference input" (§2), the mermaid "AID Active?" step, and the "`cur_pubkey` from L1" of
     the per-action check (§3) — the live surface is the acting AID's **own sovereign, per-AID,
-    quantity-one uniquely-tokenized checkpoint UTxO**: asset id `(checkpoint_policy_id,
-    aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum`, read as
+    quantity-one uniquely-tokenized checkpoint UTxO**: the registry's representative asset for the AID (in version 1, asset id `(checkpoint_policy_id,
+    aid_asset_name)`), current weighted keys/threshold in the inline `CheckpointDatum`, read as
     a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
     asset_name)` lookup** (candidate outref for liveness only, re-validated against the
-    ledger). A `delta = 0` rotation (`seq + 1`) **consumes** that checkpoint UTxO, so a
+    ledger). A `delta = 0` rotation (a later sequence number) **consumes** that checkpoint UTxO, so a
     detached order signed under the prior sequence is **stale** and cannot merely be re-pointed
     at the fresh checkpoint: the trader MUST **re-sign** the order under the current weighted
     keys + current sequence (value-bearing order flow carries the explicit **Execute /
@@ -121,7 +121,7 @@ sequenceDiagram
     B->>O: collect many orders
     B->>P: batch tx (signed by batcher)
     P->>R: admission plane: trie_key admitted? TELs unrevoked? (historical)
-    P->>C: current authority: witnesses meet current weighted threshold in the AID's live checkpoint? (#92)
+    P->>C: current authority: witnesses meet current weighted threshold in the AID's eligible checkpoint holding? (#92)
     P->>P: verify detached witness set in each order datum
     P-->>B: batch executes — every order identity-checked
 ```
@@ -157,8 +157,8 @@ On top of L1–L4:
   `trie_key → AdmissionLeaf { aid, credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after }`
   (three or four SAIDs, depending on the role-credential issuance path — see
   the [factored core](index.md)); the leaf carries the verified stable qualified
-  `aid`, bound at admission, so the sovereign checkpoint asset
-  `(checkpoint_policy_id, aid_asset_name)` is derived from it (historical
+  `aid`, bound at admission, so the sovereign checkpoint's representative asset
+  (in version 1 `(checkpoint_policy_id, aid_asset_name)`) is derived from it (historical
   `trie_key` alone cannot select the current checkpoint).
   The admission transaction carries the raw ACDCs + proofs; the L3 verifier
   runs the full chain on-chain; permissionless.
@@ -167,8 +167,8 @@ On top of L1–L4:
   plane) + the acting AID's **sovereign per-AID checkpoint** as a CIP-31
   reference input — current weighted keys/threshold in the inline
   `CheckpointDatum`, discovered by a generic exact-asset `(policy_id,
-  asset_name)` lookup, with exactly one current checkpoint in the **ACTIVE**
-  role — + verification that the order's **detached witness set meets that
+  asset_name)` lookup, with exactly one current eligible checkpoint (in version 1, in the **ACTIVE**
+  role) — + verification that the order's **detached witness set meets that
   checkpoint's current weighted threshold** +
   TEL non-revocation proofs (reference input) + `tx validity range ⊂
   not_after`. A `delta = 0` rotation consumes the checkpoint, staling any order

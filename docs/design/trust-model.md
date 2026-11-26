@@ -8,8 +8,7 @@ signed **KEL** (Key Event Log). The chain does not discover KEL events by
 itself. It verifies the event evidence supplied in a transaction.
 
 !!! abstract "Where this page stands"
-    Two sections describe **what ships on `main` today**: what the current
-    validators guarantee, and the residuals that follow from it. The rest
+    Two sections describe the **earlier deployed design** (version 1, published on preprod on 2026-07-28; its validators are no longer in the source tree): what its validators guarantee, and the residuals that follow from it. The rest
     describes the **accepted design** — the Lean machine of
     `lean/CardanoKeri/Checkpoint.lean` — and each such section says so. For
     settled transaction IDs and dates, see the
@@ -41,7 +40,7 @@ Two consequences that shape the whole trust boundary:
   inventing a recovery event KERI lacks would be the chain originating identity
   state.
 
-## What the current validators guarantee — shipped today
+## What the earlier deployed validators guarantee
 
 ### Inception bytes bind to the AID
 
@@ -95,7 +94,7 @@ it is an accepted, stated limit.
 
 ### Close cannot redirect the refund
 
-Close requires the current controller threshold today. Its signed evidence
+In the earlier deployed design, Close required the current controller threshold. Its signed evidence
 binds the network, checkpoint policy, exact input reference, AID, sequence, and
 refund address. The transaction burns the checkpoint token and refunds the
 complete checkpoint value only to that address.
@@ -107,7 +106,7 @@ complete checkpoint value only to that address.
     Cardano presence. See
     [Compromise of the current keys](key-compromise.md).
 
-## Residuals of what ships today
+## Residuals of the earlier deployed design
 
 ### Duplicate live registration
 
@@ -130,11 +129,9 @@ or replace the committed successor.
 
 It does not stop them from using the identity **now**. Until a rotation
 settles, the stolen keys are the current authority, and no validator can tell
-them from the owner. Worse, on `main` today `Close` is a current-controller
-operation, so a thief can burn the checkpoint and send the escrow to an address
-the signed message names.
+them from the owner. Worse, in the earlier deployed design `Close` was a current-controller operation, so a thief could burn the checkpoint and send the escrow to an address the signed message names.
 
-The accepted design closes both halves of that, and
+The accepted design has no close, and its current key quorum can poison the checkpoint so that consumers refuse it until a rotation clears it; that does not prevent a use of the stolen keys that lands before the poison.
 [Compromise of the current keys](key-compromise.md) works the case through in
 full.
 
@@ -151,7 +148,7 @@ Cardano cannot react to a KERI event nobody has submitted. Between KERI
 publication and a settled advance, an application may still see the old
 checkpoint. High-value applications must state how they monitor KERI and how
 fresh a checkpoint must be. The accepted design turns that from advice into two
-mechanisms: the pool of advance funds that pays a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the
+mechanisms: the pool of advance funds that pays the payee a hunter names (a hunter being anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the
 juvenility window (the age a checkpoint must reach before a consumer trusts it)
 `W` that a consumer enforces.
 
@@ -167,19 +164,18 @@ gap; it is not assumed away.
 
 ## What the accepted design guarantees
 
-Each item below is a theorem in `lean/CardanoKeri/Checkpoint.lean`, playable in
-the checkpoint simulator, and unbuilt on chain.
+Each item below is a theorem of the Lean machine defined in `lean/CardanoKeri/Checkpoint.lean` and proved in `CheckpointGoals.lean` and `CheckpointCommitmentGoals.lean`, and is playable in the checkpoint simulator. The source tree implements part of it (there is no poison spend); this page makes no claim about what is deployed.
 
 | Guarantee | Why it holds |
 |---|---|
 | The keys move only by a rotation; the poison (the owner's own lock on the checkpoint) never moves them | a poison touches the poison bit and nothing else |
 | The poison is epoch-local | any witnessed rotation clears it, and only a poison sets it |
 | Poisoned checkpoints cannot authorize a consumer | the consumer rejects poison; a rotation clears it |
-| No present state is absorbing | the next-key holder can always rotate, with any bond option |
+| A present state whose top-up mark is clear has a step | a top-up of at least `P` is enabled while the mark is clear; a rotation needs accepted rotation evidence, and a deposit also needs the new keys' signature on its intent |
 | One incarnation per AID in the chosen registry | registration requires an unknown key; a retired key cannot register again |
 | Only conviction is terminal | there is no owner exit: no close, no parking, no revival |
 | `D_reg` is never a fee source | it leaves only at a conviction |
-| The pool never gates a transition | an unpaid rotation is still a valid rotation |
+| The pool never gates a rotation | an unpaid rotation is still a valid rotation; a pool below `P` is what allows a freeze, together with accepted evidence of a later rotation and a checkpoint that is neither frozen nor poisoned; a rotation pays `P` to the payee the submitter names only when the pool covers it; a top-up must add at least `P` whatever the pool holds; and the application's initial state needs a pool of at least `P` while the registry's own floor is `Mc + D` |
 | A relayer cannot unfreeze the owner | a `deposit` is signed by the new epoch's keys |
 | The refund address belongs to whoever paid the registration, for the checkpoint's whole life | it is set at registration and no step changes it |
 | A conviction pays only the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | see [Who a conviction pays](#who-a-conviction-pays) |
@@ -245,23 +241,22 @@ so an application requiring public KERI acceptance can reject such identities
 by policy.
 
 A colluding quorum at or above `toad` can do one thing worse than lying about
-liveness: it can receipt two rotations at one sequence. That is exactly the
-duplicity a conviction proves, and it is why the conviction's exposure is
+liveness: it can receipt two rotations at one sequence. That is part of the
+duplicity a conviction proves, which also needs both rotations valid against the same previous commitments, one native sequence and different content, and it is why the conviction's exposure is
 bounded by `D_reg` and by the witness set the controller chose.
 
 ### Relayers and hunters
 
 Relayers and hunters are untrusted submitters. They may censor their own
 service, delay submission, or pay fees strategically. They cannot fabricate
-valid signatures, receipts, preimages, or conflicts, and they cannot choose a
-different valid successor. See [the hunter](super-watcher.md).
+valid signatures, receipts, preimages, or conflicts, and they cannot install a key state other than the one their evidence establishes. See [the hunter](super-watcher.md).
 
 Permissionless submission gives other parties the ability to relay the same
 public truth. It does not guarantee inclusion against block-level censorship.
 
 Permissionlessness has one price, and it is stated rather than hidden: because
 the chain cannot tell the controller from a relayer, the **first** registration
-of an AID, or a resurrection using a public rotation whose keys have leaked,
+of an AID
 can be made by a stale-key holder who advances only to their own epoch. The
 window is bounded by juvenility and closed by any advance to the tip. The
 attacker's bonds stay the attacker's: the refund address is fixed at
@@ -269,7 +264,7 @@ registration. Removing the residual would mean removing the relayer.
 
 ### Who a conviction pays
 
-As Cora, a hunter who has found two receipted rotations at one sequence, I
+As Cora, a convictor who has found two receipted rotations at one sequence, I
 want the conviction deposit `D_reg` paid to me and not to whoever copies my
 evidence, so that looking for duplicity is worth doing.
 
@@ -387,9 +382,7 @@ guarantees only that it is no later than that upper bound. The model keeps one
 piece of evidence per key state, chosen by its environment, so a commitment
 over any other evidence entitles nothing in it.
 
-The validators on `main` still bind a commitment to the checkpoint output and
-do not compare its deployment with the one that settles. They follow this
-model in a later change; until then a top-up voids a commitment on chain.
+The validators on `main` bind a commitment to the identifier, the deployment and the key state, as this model does; a top-up or a freeze keeps it entitled, and a rotation voids it.
 
 The theorems are in `lean/CardanoKeri/CheckpointCommitmentGoals.lean` and the
 accepted and refused cases in `lean/checkpoint-commitment-vectors.json`. The
@@ -434,7 +427,7 @@ events.
 
 ## Threat summary
 
-The **Result** column marks whether the response ships today or is designed.
+The **State** column marks whether the response is that of the earlier deployed design (*shipped*) or of the accepted design (*designed*).
 
 | Attempt | Response | State |
 |---|---|---|
@@ -444,17 +437,17 @@ The **Result** column marks whether the response ships today or is designed.
 | Anchor a forged credential in an interaction (`ixn`) event | Not projected: establishment events only. The harm is off-chain | shipped |
 | Roll the checkpoint back to an earlier sequence | Reject: the sequence is strictly increasing | shipped |
 | Authorize a value operation with stolen current keys | **No rejection is available** — those keys are the current authority | shipped |
-| Close the checkpoint with stolen current keys | **No rejection is available today** — close is a current-controller operation | shipped |
-| Same, under the accepted design | Reject: close is a rotation and needs the next keys | designed |
+| Close the checkpoint with stolen current keys | **No rejection was available** — close was a current-controller operation | shipped (earlier deployed design) |
+| Close the checkpoint under the accepted design | No close exists: the model has no owner exit, so there is nothing to authorize | designed |
 | Register a second checkpoint for one AID | **No rejection is available today** | shipped |
 | Same, under the accepted design | Reject: the registry insert needs an absence proof | designed |
 | A relayer unfreezes the owner using her public rotation | Reject: the deposit is unsigned by the new keys | designed |
 | Anyone, the controllers included, moves the refund address after registration | Reject: no step changes the refund address | designed |
 | One stolen member key of a multisig poisons the identity | Reject: the poison is evaluated at the current threshold | designed |
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
-| Take `D_reg` without a duplicity proof | Reject: `D_reg` is never a fee source | designed |
+| Take `D_reg` without an accepted conviction | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
-| Convict without two witnessed rotations at one sequence | Reject: the proof needs the tip's own keys and `toad` receipts on both | designed |
+| Convict without two witnessed rotations at one sequence | Reject: both rotations must be valid against the same previous commitments, with their own thresholds and the receipts of their own derived witnesses, at one sequence and with different content; and the commitment must be open, eligible, name this payee, identifier and deployment | designed |
 | Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
 | Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |

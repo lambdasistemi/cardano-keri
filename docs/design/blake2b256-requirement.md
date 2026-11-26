@@ -29,7 +29,7 @@ Example:
 
 ```
 raw bytes (32):  f4a778e87cb3d6e9c9ab6e6b59a2b0e1e7c8d2f1a3b5c7d9e0f1a2b3c4d5e6f7
-F-prefix qb64:   F9Kd46Hy026-mm5rm5orzh7x4tLxowtc2exeD7Gim3M
+F-prefix qb64:   FPSneOh8s9bpyatua1misOHnyNLxo7XH2eDxorPE1eb3
 ```
 
 The KERI inception event's `n` (next-key digest) field carries this CESR-qualified value. Cardano stores only the raw 32 bytes after decoding.

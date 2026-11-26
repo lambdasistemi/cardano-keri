@@ -100,8 +100,7 @@ does not say: “This AID has never been registered.”** Multiple attestations
 of the same inception are allowed. The registry supplies uniqueness when it
 admits registration and creates the checkpoint.
 
-This is the proposed evidence boundary for the current design; it is not yet implemented or
-represented as a separate action in the simulators. The
+This is an earlier stand-alone proposal for the evidence boundary. It is not the constitution's requirement (the controller's booking mint validates the inception) and not the behaviour of the model at this revision (the fold checks it); issue #559 records that conflict and its model-first repair. The proposal is not implemented or represented as a separate action in the simulators. The
 [architecture diagram](overview.md#proposed-m1-registration-flow) shows the
 attestation, request, atomic fold and consumer boundaries together.
 
@@ -172,9 +171,7 @@ block come from the same file. `expect` fields describe results checked by the
 documentation build; they do not grant permission to an action.
 
 The checkpoint examples use model units: `D = 1000` is the conviction bond
-(stake against duplicity), `B = 5` the freeze bond (what a hunter takes when the
-pool cannot pay for a rotation), `P = 2` the premium (the fee the pool pays
-whoever lands a rotation) and `W = 10` the juvenility window (the age a
+(stake against duplicity), `B = 5` the freeze bond (what a freeze pays to the payee it names, once rotation evidence exists and the pool holds less than the premium), `P = 2` the premium (what a rotation pays from the pool to the payee the submitter names, when the pool holds at least that much) and `W = 10` the juvenility window (the age a
 checkpoint must reach before a consumer trusts it) in slots. Addresses `1` and `2` stand for Alice and Hal. These
 small integers are simulator values, not real addresses or deployment settings.
 
@@ -285,8 +282,7 @@ cannot turn it into a second registered identity.
 
 **Guarantee and conditions:** processing a registration requires an absent AID
 leaf. With Alice already registered, a duplicate request cannot create another
-checkpoint. Until the request's deadline nobody may spend it; after the deadline
-anyone may return it to its refund address.
+checkpoint. A return whose validity interval starts before the request's deadline is refused, so until then a fold is the only way to spend the request, and the fold of this duplicate is refused because the key is already active (`key-exists`); a fold's whole validity interval must end at or before the deadline and a return's whole validity interval must start at or after it, so from the deadline anyone may return the request to its refund address.
 
 [Open the registry simulator](../simulator/registry/index.html) ·
 [Open duplicate.dsl](scenarios/duplicate.dsl)

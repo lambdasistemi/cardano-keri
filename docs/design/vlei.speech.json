@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "What was deployed, and the accepted design",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses; the use cases below that cite it say so locally.",
       "pause": 400
     }
   ],
@@ -103,7 +103,7 @@
       "pause": 400
     },
     {
-      "text": "Once registered, the legal entity's qualified KERI AID — and the checkpoint asset name derived from it — is the stable handle across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by (checkpoint_policy_id, aid_asset_name) as a CIP-31 reference input and reads the current weighted keys/threshold from its CheckpointDatumV1. It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.",
+      "text": "Once registered, the legal entity's qualified KERI AID — and the checkpoint's representative asset derived from it (in version 1 the asset name derived from the AID) — is the stable handle across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by the registry's representative asset for the AID (in version 1 by (checkpoint_policy_id, aid_asset_name)) as a CIP-31 reference input and reads the current weighted keys/threshold from the datum (CheckpointDatumV1 in version 1). It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.",
       "pause": 400
     },
     {
@@ -123,7 +123,7 @@
       "pause": 500
     },
     {
-      "text": "A DeFi protocol or securities issuance platform can gate entry to a value cage (an MPFS store: a Merkle Patricia Forestry map behind one validator) by checking the entity's AID against a registry of vLEI-verified entities. The cage resolves the entity's current authority from its quantity-one per-AID checkpoint via a CIP-31 reference input keyed by (checkpoint_policy_id, aid_asset_name); the credential-admission allowlist is a separate historical cache, never the current-authority lookup. The vLEI credential chain verification and admission are off-chain steps; once an entity's AID is admitted, the cage enforces its current checkpoint key-state on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and admitted to the cage's authorization set can interact.",
+      "text": "A DeFi protocol or securities issuance platform can gate entry to a value cage (an MPFS store: a Merkle Patricia Forestry map behind one validator) by checking the entity's AID against a registry of vLEI-verified entities. The cage resolves the entity's current authority from its quantity-one per-AID checkpoint via a CIP-31 reference input keyed by the registry's representative asset for the AID (in version 1 (checkpoint_policy_id, aid_asset_name)); the credential-admission allowlist is a separate historical cache, never the current-authority lookup. The vLEI credential chain verification and admission are off-chain steps; once an entity's AID is admitted, the cage enforces its current checkpoint key-state on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and admitted to the cage's authorization set can interact.",
       "pause": 400
     },
     {
@@ -141,11 +141,11 @@
       "pause": 500
     },
     {
-      "text": "An entity's complete Cardano key history — inception, every rotation, and every poison declaration — is immutably recorded on-chain in slot order. No operator, including GLEIF or the QVI, can alter or suppress this record. A regulator or auditor can verify the entity's key custody chain from inception to the present without asking the entity or any intermediary.",
+      "text": "The transactions that create and spend an entity's checkpoint — its registration and each accepted rotation, poison, freeze, top-up and conviction — are recorded on chain in slot order; a KERI rotation reaches Cardano only when a transaction presenting it is accepted, and the checkpoint itself holds only the current key state. No operator, including GLEIF or the QVI, can alter an accepted transaction. An auditor reconstructs the entity's custody chain from the transactions it observes; completeness of that observation is the reader's premise (the model's reader answers from the history and holder observations it is given; it answers terminal or never registered from a complete history even when no holder is observed), not a property of the ledger alone.",
       "pause": 400
     },
     {
-      "text": "This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized projection of current authority that a hunter — anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one — relays and evidences — not a second, independently sovereign identity history. For a witnessed AID, a private Cardano-first branch is rejected because every advance needs threshold receipts; the checkpoint can still lag, and witnessless/colluding-witness cases are explicitly weaker. A hunter relays valid anchoring transitions and submits fully receipted duplicity evidence rather than choosing between unsupported rival records.",
+      "text": "This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized projection of current authority that a hunter — anyone who lands a rotation or freezes a checkpoint that cannot pay for one, the premium or the freeze bond going to the payee the submission names — relays and evidences — not a second, independently sovereign identity history. For a witnessed AID, a private Cardano-first branch is rejected because every advance needs threshold receipts; the checkpoint can still lag, and witnessless/colluding-witness cases are explicitly weaker. A hunter relays valid anchoring transitions ; a convictor, who has opened a commitment beforehand, submits fully receipted duplicity evidence rather than choosing between unsupported rival records.",
       "pause": 400
     }
   ],
@@ -159,7 +159,7 @@
       "pause": 400
     },
     {
-      "text": "Entities can rotate their signing keys (for security) without losing their governance position — the AID (and its checkpoint asset name) is stable, while the checkpoint it locates advances to the new keys. A poison declaration by the entity's own current keys, or a proven duplicity, makes the checkpoint unconsumable — so governance rights lapse automatically until the entity rotates, without requiring a council vote.",
+      "text": "Entities can rotate their signing keys (for security) without losing their governance position — the AID (and its checkpoint asset name) is stable, while the checkpoint it locates advances to the new keys. An accepted poison makes the checkpoint unconsumable until a rotation clears it, and an accepted conviction makes it a pending termination that the matching fold then retires for good; a consumer that checks eligibility refuses the checkpoint in both cases. What that means for governance rights is the consuming protocol's own policy, not the checkpoint's.",
       "pause": 400
     }
   ],
@@ -173,7 +173,7 @@
       "pause": 400
     },
     {
-      "text": "A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written under the issuer AID's current checkpoint authority; (c) the checkpoint asset resolves to the issuer's KERI AID (aid_asset_name = deriveAidAssetName(cesr_aid)). All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.",
+      "text": "A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written under the issuer AID's current checkpoint authority; (c) the checkpoint asset resolves to the issuer's KERI AID (in version 1 aid_asset_name = deriveAidAssetName(cesr_aid); in the accepted design the registry's representative asset for that AID). All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.",
       "pause": 400
     },
     {
@@ -197,6 +197,6 @@
   ],
   "_source": {
     "file": "vlei.md",
-    "sha256": "253af14fe63be53059c710f9e910b80cdcc1bdefd404c38fd9f2ed7a3a660265"
+    "sha256": "21c80c64b3e5aa86858bb99e9e94fb3d192296324a9b0657ff9e4bd68ec33574"
   }
 }

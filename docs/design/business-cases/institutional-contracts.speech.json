@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "What was deployed, and the accepted design",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.",
       "pause": 400
     },
     {
@@ -25,7 +25,7 @@
       "pause": 400
     },
     {
-      "text": "Current authority (who is signing now). The validator reads the acting officer/ service AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO — asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input, discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger) — and verifies a witness set meeting THAT acting AID's current weighted threshold over the fully bound transition + current sequence. It does not verify the officer's signature against the counterparty LE AID's checkpoint.",
+      "text": "Current authority (who is signing now). The validator reads the acting officer/ service AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO — the registry's representative asset for the AID (in version 1, asset id (checkpoint_policy_id, aid_asset_name)), fixed by the consumer together with the network, release and checkpoint credential, current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input, discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger), which must be an eligible holding (present, unfrozen, unpoisoned, at least W old) — and verifies a witness set meeting THAT acting AID's current weighted threshold over the fully bound transition + current sequence. It does not verify the officer's signature against the counterparty LE AID's checkpoint.",
       "pause": 300
     },
     {
@@ -37,7 +37,7 @@
       "pause": 400
     },
     {
-      "text": "Same-officer AID key rotation — the acting AID's keys change; its checkpoint asset identity is unchanged. A delta = 0 rotation (seq + 1) consumes the checkpoint, so a pre-signed authorization is stale and must be re-signed by the same acting AID's current weighted keys over the current sequence (Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup) — no counterparty swap.",
+      "text": "Same-officer AID key rotation — the acting AID's keys change; its checkpoint asset identity is unchanged. A delta = 0 rotation (a later sequence number) consumes the checkpoint, so a pre-signed authorization is stale and must be re-signed by the same acting AID's current weighted keys over the current sequence (Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup) — no counterparty swap.",
       "pause": 300
     },
     {
@@ -103,7 +103,7 @@
       "pause": 300
     },
     {
-      "text": "The chain can enforce the first today (it is ACDC verification, Layer 3); the second is the deferred KERI-parity work. For contracts, credential-level delegation is sufficient and is the natural v1: role authority is what contract law cares about.",
+      "text": "The first is the job of ACDC verification (Layer 3), which is designed and prototyped but not built; the second is the deferred KERI-parity work. For contracts, credential-level delegation is sufficient and is the natural v1: role authority is what contract law cares about.",
       "pause": 400
     }
   ],
@@ -113,11 +113,11 @@
       "pause": 500
     },
     {
-      "text": "The enforcement point is the contract UTxO's spend validator at each state transition of a bilateral/multiparty state machine: escrow release, DvP settlement legs, repo open/roll/close, syndicated-position transfers. Each transition names which party (or quorum) must act. The acting party is an officer/service AID, not the counterparty's LE root AID (§1), so the validator makes two separate checks: (1) a witness set meeting the acting officer AID's current weighted threshold — read from that acting AID's own sovereign per-AID checkpoint (asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input, discovered by a generic exact-asset (policy_id, asset_name) lookup; #92) over the fully bound transition + current sequence; and (2), separately, that an unrevoked OOR/ECR credential chain links that acting AID to the fixed counterparty LE and an eligible role (L2 TEL proofs). Because a delta = 0 rotation consumes the acting AID's checkpoint, its authority is re-resolved fresh — a witness set meeting the current weighted threshold at the current sequence — at every transition; a revoked OOR instead forces re-designation to a different acting AID (§4).",
+      "text": "The enforcement point is the contract UTxO's spend validator at each state transition of a bilateral/multiparty state machine: escrow release, DvP settlement legs, repo open/roll/close, syndicated-position transfers. Each transition names which party (or quorum) must act. The acting party is an officer/service AID, not the counterparty's LE root AID (§1), so the validator makes two separate checks: (1) a witness set meeting the acting officer AID's current weighted threshold — read from that acting AID's own sovereign per-AID checkpoint (the registry's representative asset for the AID, in version 1 asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input, discovered by a generic exact-asset (policy_id, asset_name) lookup; #92) over the fully bound transition + current sequence; and (2), separately, that an unrevoked OOR/ECR credential chain links that acting AID to the fixed counterparty LE and an eligible role (L2 TEL proofs). Both checks apply only to an eligible holding of that acting AID's checkpoint (present, unfrozen, unpoisoned, at least W old): a holding that carries a valid weighted signature set but is poisoned, frozen or younger than W confers no authority. Because a delta = 0 rotation consumes the acting AID's checkpoint, its authority is re-resolved fresh — a witness set meeting the current weighted threshold at the current sequence — at every transition; a revoked OOR instead forces re-designation to a different acting AID (§4).",
       "pause": 400
     },
     {
-      "text": "An escrow template, as a state machine — every arrow is a transaction whose validator verifies the named party's acting-AID witness set against its sovereign checkpoint (a set meeting its current weighted threshold over the transition + current sequence) plus a separate OOR/ECR + TEL eligibility check linking that acting AID to the fixed counterparty LE, before allowing the transition:",
+      "text": "An escrow template, as a state machine — every arrow is a transaction whose validator verifies the named party's acting-AID witness set against its sovereign checkpoint (a set meeting its current weighted threshold over the transition + current sequence) plus a separate OOR/ECR + TEL eligibility check linking that acting AID to the fixed counterparty LE, and only while that checkpoint is an eligible holding (present, unfrozen, unpoisoned, at least W old), before allowing the transition:",
       "pause": 400
     },
     {
@@ -125,7 +125,7 @@
       "pause": 400
     },
     {
-      "text": "Formation is off-chain but uses the same rails: entities exchange trie_keys and replay each other's KELs to verify each other's credential chains (the binding-verification protocol of Veridian Bridge), then co-sign the instantiation transaction that locks funds under the template parameterized with both identities. That trie_key/KEL-replay step is historical due diligence only — it establishes provenance and the OOR/ECR eligibility chain, and never selects current keys. The template fixes, per counterparty, the stable counterparty LE identity and the designated acting officer AID / checkpoint-asset identity (checkpoint_policy_id, aid_asset_name); current authority is then the acting officer AID's sovereign per-AID checkpoint, read live at each transition (#92) — not KEL replay, and not the LE root AID's keys. No trusted introducer is needed — the registries and each acting AID's own checkpoint are the mutual due-diligence substrate.",
+      "text": "Formation is off-chain but uses the same rails: entities exchange trie_keys and replay each other's KELs to verify each other's credential chains (the binding-verification protocol of Veridian Bridge), then co-sign the instantiation transaction that locks funds under the template parameterized with both identities. That trie_key/KEL-replay step is historical due diligence only — it establishes provenance and the OOR/ECR eligibility chain, and never selects current keys. The template fixes, per counterparty, the stable counterparty LE identity and the designated acting officer AID / checkpoint-asset identity (the registry's representative asset for the AID; in version 1 (checkpoint_policy_id, aid_asset_name)); current authority is then the acting officer AID's sovereign per-AID checkpoint, read live at each transition (#92) — not KEL replay, and not the LE root AID's keys. No trusted introducer is needed — the registries and each acting AID's own checkpoint are the mutual due-diligence substrate.",
       "pause": 400
     }
   ],
@@ -147,15 +147,15 @@
       "pause": 300
     },
     {
-      "text": "Fixed at formation: bake the counterparty LE identity and the acting officer AID's per-AID checkpoint asset id (checkpoint_policy_id, aid_asset_name) into the datum. Stable (rotation-proof — the asset id is AID-derived and never changes across the acting AID's delta = 0 rotations), but blind to OOR revocation / officer departure unless paired with per-transition reads (which then force re-designation to a different acting AID).",
+      "text": "Fixed at formation: bake the counterparty LE identity and the acting officer AID's per-AID checkpoint asset id (the registry's representative asset for the AID; in version 1 (checkpoint_policy_id, aid_asset_name)) into the datum. Stable (rotation-proof — the asset id is AID-derived and never changes across the acting AID's delta = 0 rotations), but blind to OOR revocation / officer departure unless paired with per-transition reads (which then force re-designation to a different acting AID).",
       "pause": 300
     },
     {
-      "text": "Live per transition: re-read the acting officer AID's sovereign per-AID checkpoint as a CIP-31 reference input at every spend — a witness set meeting its current weighted keys/threshold, with exactly one current checkpoint at the ACTIVE role address — plus OOR non-revocation (L2 TEL) linking it to the fixed LE. ARMED, FROZEN, missing, duplicated, and stale candidates reject. The honest default for institutional risk: each transition is a fresh attestation; a delta = 0 rotation of the acting AID stales any authorization bound to a prior sequence (⇒ re-sign), while OOR revocation (⇒ re-designation) swaps in a different acting AID.",
+      "text": "Live per transition: re-read the acting officer AID's sovereign per-AID checkpoint as a CIP-31 reference input at every spend — a witness set meeting its current weighted keys/threshold, with exactly one current eligible checkpoint (in version 1, at the ACTIVE role address) — plus OOR non-revocation (L2 TEL) linking it to the fixed LE. Frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates reject (in version 1, ARMED and FROZEN). The honest default for institutional risk: each transition is a fresh attestation; a delta = 0 rotation of the acting AID stales any authorization bound to a prior sequence (⇒ re-sign), while OOR revocation (⇒ re-designation) swaps in a different acting AID.",
       "pause": 300
     },
     {
-      "text": "Recommended: fixed LE + acting-AID checkpoint asset id + live checkpoint/role read — identity cannot drift, standing is re-proven each transition.",
+      "text": "Recommended: fixed LE + acting-AID checkpoint asset id + live checkpoint read (the eligible holding; in version 1 the role read) — identity cannot drift, standing is re-proven each transition.",
       "pause": 300
     },
     {
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "institutional-contracts.md",
-    "sha256": "38fb178161880254707cceb51c6c055ad3d8400b93c36c0e180a165707b97ba2"
+    "sha256": "d29911ca120572428a136a47510340ef035a2c6f202fb860f8363be0fa7b915e"
   }
 }

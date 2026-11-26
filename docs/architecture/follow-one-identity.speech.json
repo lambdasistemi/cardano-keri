@@ -77,7 +77,7 @@
       "pause": 400
     },
     {
-      "text": "This is the proposed evidence boundary for M1; it is not yet implemented or represented as a separate action in the simulators. The architecture diagram shows the attestation, request, atomic fold and consumer boundaries together.",
+      "text": "This is an earlier stand-alone proposal for the evidence boundary. It is not the constitution's requirement (the controller's booking mint validates the inception) and not the behaviour of the model at this revision (the fold checks it); issue #559 records that conflict and its model-first repair. The proposal is not implemented or represented as a separate action in the simulators. The architecture diagram shows the attestation, request, atomic fold and consumer boundaries together.",
       "pause": 400
     },
     {
@@ -125,7 +125,7 @@
       "pause": 400
     },
     {
-      "text": "The checkpoint examples use model units: D = 1000 is the conviction bond (stake against duplicity), B = 5 the freeze bond (what a hunter takes when the pool cannot pay for a rotation), P = 2 the premium (the fee the pool pays whoever lands a rotation) and W = 10 the juvenility window (the age a checkpoint must reach before a consumer trusts it) in slots. Addresses 1 and 2 stand for Alice and Hal. These small integers are simulator values, not real addresses or deployment settings.",
+      "text": "The checkpoint examples use model units: D = 1000 is the conviction bond (stake against duplicity), B = 5 the freeze bond (what a freeze pays to the payee it names, once rotation evidence exists and the pool holds less than the premium), P = 2 the premium (what a rotation pays from the pool to the payee the submitter names, when the pool holds at least that much) and W = 10 the juvenility window (the age a checkpoint must reach before a consumer trusts it) in slots. Addresses 1 and 2 stand for Alice and Hal. These small integers are simulator values, not real addresses or deployment settings.",
       "pause": 400
     }
   ],
@@ -223,6 +223,10 @@
     {
       "text": "The Registry fixture books 17 units: carrier value 14, registration cost 2 and tip 1. The first fold creates the carrier and permanent binding. A second booking cannot be processed: the branch refuses with key exists. The trunk supplies an authenticated active-key mismatch and refunds 16 to address 42. The full transaction contains this refund. The original carrier and token remain, treasury holds 2, and no registration is pending. The expiry branch instead refuses reject not expired because its interval is too early. Mismatch and expiry are distinct rejection grounds.",
       "pause": 500
+    },
+    {
+      "text": "Guarantee and conditions: processing a registration requires an absent AID leaf. With Alice already registered, a duplicate request cannot create another checkpoint. A return whose validity interval starts before the request's deadline is refused, so until then a fold is the only way to spend the request, and the fold of this duplicate is refused because the key is already active (key-exists); a fold's whole validity interval must end at or before the deadline and a return's whole validity interval must start at or after it, so from the deadline anyone may return the request to its refund address.",
+      "pause": 400
     }
   ],
   "from-the-model-to-a-running-system": [
@@ -241,6 +245,6 @@
   ],
   "_source": {
     "file": "follow-one-identity.md",
-    "sha256": "9546c8c93daf05e39615ccd8c44e8259182985edc5c56248fa538ccafea3e1d1"
+    "sha256": "577317a456f0cae908c49dcf704dbb043979b6001dd08dd50d48f2fc31508e26"
   }
 }

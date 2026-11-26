@@ -19,7 +19,7 @@
       "pause": 500
     },
     {
-      "text": "A consumer trusts an active checkpoint only once it is older than the juvenility window W. A parked KERI output retains its token, minimum ADA and last key state, while the registry key stays active; consumers refuse it.",
+      "text": "A consumer trusts an active checkpoint only once it is at least the juvenility window W old (born_at + W ≤ now). There is no owner exit: no close, no parked output and no revival; a checkpoint is alive until it is convicted.",
       "pause": 400
     },
     {
@@ -63,6 +63,6 @@
   ],
   "_source": {
     "file": "words.md",
-    "sha256": "3ae563defad049d993808b1ea24e9fcd8ca30ad94584c75092e19f65b78847ad"
+    "sha256": "b6b26aa61f1684ea21c73e87ec587458edb66ef209a3d013d7c001d19a07f0d9"
   }
 }

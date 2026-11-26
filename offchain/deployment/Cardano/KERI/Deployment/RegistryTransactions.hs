@@ -76,6 +76,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     mintingIndex,
     outputReferenceOf,
     isFundable,
+    isPlainFunding,
     plutusAddressOf,
     scriptExUnits,
     hashProofBurnExUnits,
@@ -155,12 +156,14 @@ import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
     collateralInputsTxBodyL,
+    collateralReturnTxBodyL,
     feeTxBodyL,
     inputsTxBodyL,
     mintTxBodyL,
     mkBasicTxBody,
     outputsTxBodyL,
     referenceInputsTxBodyL,
+    totalCollateralTxBodyL,
     treasuryDonationTxBodyL,
     vldtTxBodyL,
  )
@@ -233,7 +236,7 @@ import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
-import Singular.Registry.TxBuilder.Publication (selectFunding)
+import Singular.Registry.TxBuilder.Publication (adaOnlyOut, selectFunding)
 
 -- | The registry a transaction is built against: the chain it runs on and what it is derived from.
 data RegistryDeployment = RegistryDeployment
@@ -1248,6 +1251,12 @@ isFundable out =
     out ^. referenceScriptTxOutL == SNothing
         && out ^. datumTxOutL == Ledger.NoDatum
 
+{- | Whether an output may be the seed, the funding or the collateral: Singular's 'adaOnlyOut', which tests native assets and a
+reference script, and no datum, which Singular does not test and a published template carries.
+-}
+isPlainFunding :: TxOut ConwayEra -> Bool
+isPlainFunding out = adaOnlyOut out && out ^. datumTxOutL == Ledger.NoDatum
+
 hasAssets :: TxOut ConwayEra -> Bool
 hasAssets = (/= mempty) . assetsOf
 
@@ -1283,7 +1292,7 @@ fundings :: [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
 fundings excluded funds =
     [ Funding inputs collateral
     | inputs <- spendingSets 1 (filter ((`notElem` excluded) . fst) funds)
-    , Right collateral <- [selectFunding Nothing (filter (isFundable . snd) inputs)]
+    , Right collateral <- [selectFunding Nothing (filter (isPlainFunding . snd) inputs)]
     ]
 
 -- | The first attempt that builds, or the failure of the first attempt.
@@ -1335,10 +1344,9 @@ balanced ::
     ConwayTx ->
     Either RegistryTransactionError ConwayTx
 balanced parameters resolved spent fixed changeAddress funding template = do
-    tx <- first feeRefused (balanceFeeLoop parameters outputsFor 1 resolved withInputs)
+    tx <- settledAt (Coin 0) (0 :: Int)
     let Coin fee = tx ^. bodyTxL . feeTxBodyL
-        percentage = fromIntegral (parameters ^. ppCollateralPercentageL)
-    when (coinOf (snd (fundingCollateral funding)) * 100 < fee * percentage) $
+    when (held * 100 < fee * percentage) $
         Left (NotEnoughFunds "the collateral does not cover the fee")
     let size = fromIntegral (tx ^. sizeTxF) + signatureAllowance
         limit = fromIntegral (parameters ^. ppMaxTxSizeL)
@@ -1346,6 +1354,34 @@ balanced parameters resolved spent fixed changeAddress funding template = do
         Left (TransactionTooLarge size limit)
     pure tx
   where
+    held = coinOf (snd (fundingCollateral funding))
+    percentage = fromIntegral (parameters ^. ppCollateralPercentageL)
+    -- the fee the body ends with names the collateral it needs and what is returned of the rest: the total is
+    -- 150% of that fee rounded up, the payer is paid the remainder when it is an output the ledger accepts, and a
+    -- remainder below that minimum is left in the collateral. The declaration is made at a fee, the body is then
+    -- priced with it, and the declaration is made again at the fee that came out until it covers that fee.
+    settledAt (Coin guess) attempts = do
+        tx <- first feeRefused (balanceFeeLoop parameters outputsFor 1 resolved (declaringReturn guess withInputs))
+        let Coin fee = tx ^. bodyTxL . feeTxBodyL
+            covered = case tx ^. bodyTxL . totalCollateralTxBodyL of
+                SJust (Coin declared) -> declared * 100 >= fee * percentage
+                SNothing -> True
+        if covered
+            then pure tx
+            else
+                if attempts >= 6
+                    then Left (FeeRefused "the collateral return did not settle")
+                    else settledAt (Coin fee) (attempts + 1)
+    declaringReturn guess body
+        | residual >= unCoin (getMinCoinTxOut parameters returned) && total <= held =
+            body
+                & bodyTxL . totalCollateralTxBodyL .~ SJust (Coin total)
+                & bodyTxL . collateralReturnTxBodyL .~ SJust returned
+        | otherwise = body
+      where
+        total = (guess * percentage + 99) `div` 100
+        residual = held - total
+        returned = mkBasicTxOut changeAddress (inject (Coin residual))
     withInputs =
         template
             & bodyTxL . inputsTxBodyL .~ Set.fromList (map fst spent)

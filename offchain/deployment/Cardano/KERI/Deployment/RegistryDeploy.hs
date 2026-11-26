@@ -82,6 +82,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     applicationPolicyId,
     createConfiguration,
     isFundable,
+    isPlainFunding,
     outputReferenceOf,
     publishReferenceScript,
     publishTemplate,
@@ -349,8 +350,7 @@ chooseSeed wallet =
     candidates =
         [ output
         | output@(_, out) <- wallet
-        , isFundable out
-        , not (hasAssets out)
+        , isPlainFunding out
         , coinOf out >= seedMinimumLovelace
         ]
 
@@ -663,9 +663,6 @@ networkDiscriminator = \case
 
 coinOf :: TxOut ConwayEra -> Integer
 coinOf out = let Coin c = out ^. coinTxOutL in c
-
-hasAssets :: TxOut ConwayEra -> Bool
-hasAssets out = let MaryValue _ assets = out ^. valueTxOutL in assets /= mempty
 
 -- | The output that holds a published script, before it is given its lovelace.
 scriptHolder :: Addr -> Script ConwayEra -> TxOut ConwayEra

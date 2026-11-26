@@ -15,6 +15,7 @@ module CheckpointE2ESpec (spec) where
 import Test.Hspec
 
 import CheckpointTxBuilder (
+    bookingRefusedWithoutAttestationJourney,
     bookingSettlementsJourney,
     productionFrozenTopUpScenario,
     productionRegisterAdvanceScenario,
@@ -36,6 +37,11 @@ spec = describe "#136 register a small identity end to end" $ do
         it
             "#559 settles one booking and one transaction of two bookings, each reported with its signed identifier, serialized size and the units each redeemer used"
             bookingSettlementsJourney
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#559 refuses a booking without its inception attestation at the application's mint on the local node, books nothing, and settles the same booking with its attestation"
+            bookingRefusedWithoutAttestationJourney
 
     around stagedCheckpointDevnet $ do
         it

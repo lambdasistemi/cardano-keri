@@ -31,33 +31,34 @@ import Cardano.KERI.Deployment.RegistryTransactions (RegistryDeployment (..))
 import Cardano.Ledger.Mary.Value (AssetName (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Singular.Registry.Evidence (NoWitness)
 import Singular.Registry.Ledger (Root (..))
 import Singular.Registry.LedgerProvider (Session (..))
-import Singular.Registry.Trie.Pure (provesMember, rootFromDb)
 import Singular.Registry.TrieState (
+    Incomplete (..),
     Leaf (..),
-    Missing (..),
+    PublicLineage (..),
     RegistryIdentity (..),
     StatePoint (..),
     StatePolicyId (..),
     TrieFailure (..),
     TrieSelection (..),
+    TrieState (..),
+    leafAt,
+    trieLineage,
+    trieRoot,
  )
 import Singular.State.Assemble (inlineDatumOf)
-import Singular.State.Lineage (Replayed (..), replayRegistry)
+import Singular.State.Lineage (registryTrieState)
 import Singular.State.Records (decodeStateDatum)
 
 -- | The registry as the public history of its state token shows it.
 data RegistryState = RegistryState
     { replayOutput :: !TxIn
     -- ^ the state output the replay reached
-    , replayRebuiltRoot :: !ByteString
-    -- ^ the root of the trie the replay rebuilt, recomputed from its nodes
-    , replaySeed :: !TxIn
-    -- ^ the seed the genesis spent
+    , replayRoot :: !ByteString
+    -- ^ the root of the registry's trie, which Singular's replay rebuilt from the history and checked against the root asked for
     , replayGenesis :: !TxId
     , replayFolds :: ![TxId]
     -- ^ every fold from the genesis to the output, in chain order
@@ -80,30 +81,28 @@ replayRegistryState ::
     ByteString ->
     IO (Either ReplayStop RegistryState)
 replayRegistryState session identity output root =
-    replayRegistry session selection >>= \case
+    withTrieState (registryTrieState session) selection classify >>= \case
         Left failure -> pure (Left (ReplayStop failure))
-        Right (replayed, nodes) -> do
-            let Root rebuilt = rootFromDb nodes
-                classify key
-                    | provesMember nodes rebuilt key activeLeaf = Right (key, Active)
-                    | provesMember nodes rebuilt key terminalLeaf = Right (key, Terminal)
-                    | otherwise = Left (MissingProof identity (NoProofFor key))
-            case traverse classify (replayedKeys replayed) of
-                Left failure -> pure (Left (ReplayStop failure))
-                Right classified ->
-                    pure
-                        ( Right
-                            RegistryState
-                                { replayOutput = output
-                                , replayRebuiltRoot = rebuilt
-                                , replaySeed = replayedSeed replayed
-                                , replayGenesis = replayedGenesis replayed
-                                , replayFolds = replayedFolds replayed
-                                , replayActive = [key | (key, Active) <- classified]
-                                , replayTerminal = [key | (key, Terminal) <- classified]
-                                }
-                        )
+        Right (Left failure) -> pure (Left (ReplayStop failure))
+        Right (Right state) -> pure (Right state)
   where
+    -- the keys and the lineage are Singular's own, read from the snapshot its replay serves; each key's leaf is Singular's
+    classify snapshot = case trieLineage snapshot of
+        Nothing -> pure (Left (HistoryIncomplete identity Nothing MissingTransaction))
+        Just lineage -> do
+            leaves <- traverse (\key -> fmap ((,) key) <$> leafAt snapshot key) (lineageKeys lineage)
+            pure $ case sequence leaves of
+                Left failure -> Left failure
+                Right classified ->
+                    Right
+                        RegistryState
+                            { replayOutput = output
+                            , replayRoot = let Root verified = trieRoot snapshot in verified
+                            , replayGenesis = lineageCreate lineage
+                            , replayFolds = lineageFolds lineage
+                            , replayActive = [key | (key, Active) <- classified]
+                            , replayTerminal = [key | (key, Terminal) <- classified]
+                            }
     selection =
         TrieSelection
             { trieSelectionIdentity = identity
@@ -163,8 +162,3 @@ foldFromHistory session runtime report input =
 singularIdentity :: KERI.RegistryIdentity -> RegistryIdentity
 singularIdentity (KERI.RegistryIdentity policy name) =
     RegistryIdentity (StatePolicyId policy) (AssetName (SBS.toShort name))
-
--- | What the registry binds a registered key to, and a terminated one, as Singular's leaves are written.
-activeLeaf, terminalLeaf :: ByteString
-activeLeaf = BS.singleton 1
-terminalLeaf = BS.singleton 2

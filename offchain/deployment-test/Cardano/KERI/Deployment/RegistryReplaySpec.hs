@@ -169,12 +169,11 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
             replayed <- replaying world (recordedSession (blocksOf txs)) live onChain
             state <- either (fail . renderReplayStop) pure replayed
             -- the root is the one the chain holds and the one our own trie computes, each read apart
-            replayRebuiltRoot state `shouldBe` onChain
-            replayRebuiltRoot state `shouldBe` registryRootOf [sceneFirstKey scene, sceneSecondKey scene] []
+            replayRoot state `shouldBe` onChain
+            replayRoot state `shouldBe` registryRootOf [sceneFirstKey scene, sceneSecondKey scene] []
             -- the genesis, then each fold, in chain order
             map txIdTx touching `shouldBe` (replayGenesis state : replayFolds state)
             length (replayFolds state) `shouldBe` 2
-            replaySeed state `shouldBe` seedOf world
             replayOutput state `shouldBe` live
             -- both keys are active, none terminal
             replayActive state `shouldMatchList` [sceneFirstKey scene, sceneSecondKey scene]
@@ -195,7 +194,7 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
                 live = TxIn (txIdTx ending) (TxIx 0)
             replayed <- replaying world (recordedSession (blocksOf (prior <> [ending]))) live root'
             state <- either (fail . renderReplayStop) pure replayed
-            replayRebuiltRoot state `shouldBe` root'
+            replayRoot state `shouldBe` root'
             replayTerminal state `shouldBe` [sceneFirstKey scene]
             replayActive state `shouldBe` [sceneSecondKey scene]
             length (replayFolds state) `shouldBe` 3

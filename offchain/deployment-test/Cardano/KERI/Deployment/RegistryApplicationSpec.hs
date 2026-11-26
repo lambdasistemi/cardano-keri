@@ -21,6 +21,7 @@ import Cardano.KERI.AID.Application (
     SpendAction (..),
     spendActionData,
  )
+import Cardano.KERI.AID.E2E.Datum (rawInlineData)
 import Cardano.KERI.Deployment.RecordedHistory
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
 import Cardano.KERI.Deployment.RegistryApplication
@@ -30,6 +31,7 @@ import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), noFaults, pricedP
 import Cardano.KERI.Deployment.RegistryTransactions (
     RegistryDeployment (..),
     RegistryReferences (..),
+    applicationAddress,
     applicationPolicyId,
  )
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
@@ -37,13 +39,15 @@ import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (getPlutusData)
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mintTxBodyL, referenceInputsTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (TxOut)
+import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, referenceScriptTxOutL)
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (treasuryDonationTxBodyL)
-import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..))
+import Cardano.Ledger.Core (Script, hashScript)
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.TxInfo (transAddr)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Tx.Build (draft)
@@ -52,7 +56,7 @@ import Data.IORef (readIORef)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import PlutusLedgerApi.V3 qualified as PV3
 import Singular.State.Fold (
     Application (..),
@@ -116,6 +120,43 @@ spec = describe "#558 the KERI application read by Singular's fold" $ do
                     ]
             forM_ others $ \(label, out) ->
                 (label :: String, appDecode application (singularIdentityOf (registryOf world)) [] out) `shouldBe` (label, Nothing)
+        it "refuses a request at another payment credential, with the registration datum unchanged" $ do
+            Booked world requests <- booked
+            deployment <- worldDeployment world
+            references <- worldReferences world
+            found <- rtOutputs (runtimeOf noFaults world) (Set.fromList (map fst requests))
+            let application = keriApplication deployment references
+                singular = singularIdentityOf (registryOf world)
+                wrongCredential = checkpointAddressOf world
+            applicationAddress deployment `shouldNotBe` wrongCredential
+            forM_ requests $ \(ref, record) -> do
+                out <- maybe (fail ("the booking output " <> show ref <> " is not on the chain")) pure (Map.lookup ref found)
+                -- the control: the booking as the chain holds it, at the application's address, is read
+                out ^. addrTxOutL `shouldBe` applicationAddress deployment
+                appDecode application singular [] out
+                    `shouldBe` Just (RegistrationRequest (expectedRegistration world record))
+                -- the same output and datum, at a script credential that is not the application's: not a request
+                let moved = out & addrTxOutL .~ wrongCredential
+                rawInlineData moved `shouldBe` rawInlineData out
+                appDecode application singular [] moved `shouldBe` Nothing
+        it "resolves the application's code and the registry's configuration as the exact outputs the chain holds" $ do
+            Booked world _ <- booked
+            deployment <- worldDeployment world
+            references <- worldReferences world
+            let application = keriApplication deployment references
+                resolved = appReferences application
+                refs = Set.fromList (map fst resolved)
+            -- what the chain holds under those references, read apart from the references the adapter was given
+            held <- rtOutputs (runtimeOf noFaults world) refs
+            map fst resolved `shouldBe` [fst (referenceApplication references), fst (referenceConfiguration references)]
+            forM_ resolved $ \(ref, out) -> Map.lookup ref held `shouldBe` Just out
+            -- the first carries the application's script, the second the registry's configuration token
+            case resolved of
+                [(_, applicationOut), (_, configurationOut)] -> do
+                    (applicationOut ^. referenceScriptTxOutL) `shouldSatisfy` carriesScriptOf (applicationPolicyId deployment)
+                    appIsConfiguration application configurationOut `shouldBe` True
+                    appIsConfiguration application applicationOut `shouldBe` False
+                other -> expectationFailure ("expected two resolved references, found " <> show (length other))
         it "names the configuration record as the configuration and no request as one" $ do
             Booked world requests <- booked
             deployment <- worldDeployment world
@@ -211,3 +252,9 @@ chainOutputsOf world = chainOutputs <$> readIORef (worldChain world)
 
 registrationCostOf :: RegistryDeployment -> Integer
 registrationCostOf = registrationCost . registryParameters . deploymentTerms
+
+-- | Whether a reference script is the script whose hash is the policy.
+carriesScriptOf :: PolicyID -> StrictMaybe (Script ConwayEra) -> Bool
+carriesScriptOf (PolicyID expected) = \case
+    SJust script -> hashScript script == expected
+    SNothing -> False

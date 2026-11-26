@@ -234,9 +234,12 @@ library deployment-koios
     , cardano-ledger-core
     , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-tx-tools:tx-build
     , containers
     , contra-tracer
     , microlens
+    , plutus-core
+    , plutus-tx
     , singular-registry
     , singular-registry:koios-http
     , singular-registry:local-services

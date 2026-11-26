@@ -18,6 +18,7 @@ module Cardano.KERI.Deployment.RegistryReplay (
     FoldFromHistoryStop (..),
     replayRegistryState,
     renderReplayStop,
+    singularIdentity,
     foldFromHistory,
 ) where
 

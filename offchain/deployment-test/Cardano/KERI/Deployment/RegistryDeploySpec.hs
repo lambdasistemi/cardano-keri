@@ -31,6 +31,7 @@ module Cardano.KERI.Deployment.RegistryDeploySpec (
     deployOn,
     loadTestBlueprint,
     pricedParameters,
+    chargedParameters,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
@@ -105,6 +106,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxCert (
     ConwayDelegCert (ConwayRegCert),
     ConwayTxCert (ConwayTxCertDeleg),
@@ -159,6 +161,8 @@ data Chain = Chain
     -- ^ how many transactions had been reported when each submission arrived, newest first
     , chainRegistered :: !(Set AccountAddress)
     -- ^ the reward accounts the chain holds registered
+    , chainParameters :: !(PParams ConwayEra)
+    -- ^ the protocol parameters it answers with
     }
 
 -- | What goes wrong, and when. Counts start at zero.
@@ -231,7 +235,7 @@ scriptHashOf :: Word8 -> ScriptHash
 scriptHashOf n = ScriptHash (fromJust (hashFromBytes (BS.replicate 28 n)))
 
 newChain :: [(TxIn, TxOut ConwayEra)] -> Chain
-newChain outputs = Chain (Map.fromList outputs) [] 0 0 0 0 [] [] Set.empty
+newChain outputs = Chain (Map.fromList outputs) [] 0 0 0 0 [] [] Set.empty pricedParameters
 
 {- | Protocol parameters whose prices are not zero, so a fee follows the units a
 transaction declares.
@@ -274,7 +278,7 @@ chainRuntime faults chainRef =
             pure (Map.restrictKeys (chainOutputs chain) wanted)
         , rtTransactions =
             TransactionRuntime
-                { trQueryProtocolParams = touch >> pure pricedParameters
+                { trQueryProtocolParams = touch >> (chainParameters <$> readIORef chainRef)
                 , trEvaluate = \tx -> do
                     touch
                     n <- atomicModifyIORef' chainRef (\c -> (c{chainEvaluations = chainEvaluations c + 1}, chainEvaluations c))
@@ -942,3 +946,9 @@ carriesProgram outputs reference artifact =
 txInOfOutputReference :: OutputReference -> TxIn
 txInOfOutputReference (OutputReference transaction index) =
     TxIn (txIdOf transaction) (TxIx (fromInteger index))
+
+{- | The same parameters with a price on the scripts a transaction reads by reference, 44 lovelace per byte as preprod
+charges them, so that a fee follows the reference scripts a transaction resolves.
+-}
+chargedParameters :: PParams ConwayEra
+chargedParameters = pricedParameters & ppMinFeeRefScriptCostPerByteL .~ fromJust (boundRational 44)

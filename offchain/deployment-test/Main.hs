@@ -20,6 +20,7 @@ import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptS
 import Cardano.KERI.Deployment.RegistryBookingCommandSpec qualified as RegistryBookingCommandSpec
 import Cardano.KERI.Deployment.RegistryBookingEvaluationSpec qualified as RegistryBookingEvaluationSpec
 import Cardano.KERI.Deployment.RegistryBookingShapeSpec qualified as RegistryBookingShapeSpec
+import Cardano.KERI.Deployment.RegistryCollateralSpec qualified as RegistryCollateralSpec
 import Cardano.KERI.Deployment.RegistryCommandDumpSpec qualified as RegistryCommandDumpSpec
 import Cardano.KERI.Deployment.RegistryCommandSpec qualified as RegistryCommandSpec
 import Cardano.KERI.Deployment.RegistryDeploySpec qualified as RegistryDeploySpec
@@ -122,6 +123,7 @@ suite = hspec $ do
     RegistryReplaySpec.spec
     RegistryApplicationSpec.spec
     RegistryOneOutputSpec.spec
+    RegistryCollateralSpec.spec
     RegistryCommandDumpSpec.spec
     RegistryTransactionDumpSpec.spec
     RegistryFoldV3Spec.spec

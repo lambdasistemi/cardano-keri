@@ -555,6 +555,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryBookingCommandSpec
     Cardano.KERI.Deployment.RegistryBookingEvaluationSpec
     Cardano.KERI.Deployment.RegistryBookingShapeSpec
+    Cardano.KERI.Deployment.RegistryCollateralSpec
     Cardano.KERI.Deployment.RegistryCommandDumpSpec
     Cardano.KERI.Deployment.RegistryCommandSpec
     Cardano.KERI.Deployment.RegistryDeploySpec

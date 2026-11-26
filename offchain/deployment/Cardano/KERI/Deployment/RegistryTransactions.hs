@@ -47,6 +47,8 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     publishReferenceScript,
     endOnly,
     createConfiguration,
+    balanced,
+    Funding (..),
     BookedRequest (..),
     bookRegistrations,
     burnAttestations,

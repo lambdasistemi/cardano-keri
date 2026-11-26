@@ -32,6 +32,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     applicationPolicyId,
     ledgerAddressOf,
  )
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx.Out (addrTxOutL, valueTxOutL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..))
@@ -63,9 +64,10 @@ keriApplication deployment references =
     policy = applicationPolicyId deployment
     registry = scriptsRegistry (deploymentScripts deployment)
 
-    -- a booked registration, as the booking wrote it, at the application's own address: nothing else is a request of this application
+    -- a booked registration, as the booking wrote it, at the application's payment credential (the validators
+    -- read the payment credential alone, so a stake reference is the booker's own): nothing else is a request of this application
     decode out = do
-        guard (out ^. addrTxOutL == applicationAddress deployment)
+        guard (paymentOf (out ^. addrTxOutL) == paymentOf (applicationAddress deployment))
         record <- registrationOfOutput out
         holding <- ledgerAddressOf (deploymentNetwork deployment) (requestHoldingAddress record)
         pure . RegistrationRequest $
@@ -77,6 +79,10 @@ keriApplication deployment references =
                 , regDeposit = Coin (requestDeposit record)
                 , regDeadline = requestProcessDeadline record
                 }
+
+    paymentOf = \case
+        Addr _ payment _ -> Just payment
+        _ -> Nothing
 
     -- the output that holds the registry's configuration token
     isConfiguration out = case out ^. valueTxOutL of

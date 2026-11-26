@@ -11,8 +11,8 @@ use cardano_keri/bounty_commitment.{CommitmentFamily}
 use cardano_keri/checkpoint/enforcement_observer.{validate_enforcement}
 use cardano_keri/checkpoint/entitlement.{validate_entitlement_observation}
 use cardano_keri/checkpoint/observer.{
-  ObserverEnvelope, observe_book, observe_freeze, validate_advance,
-  validate_booking, validate_freeze, validate_registration,
+  ObserverEnvelope, observe_freeze, validate_advance, validate_freeze,
+  validate_registration,
 }
 
 fn accept_own_registration_only(certificate: Certificate) -> Bool {
@@ -27,11 +27,7 @@ validator observer_lifecycle(
 ) {
   withdraw(redeemer: Data, _account: Data, tx: Transaction) {
     expect envelope: ObserverEnvelope = redeemer
-    if envelope.claim.action == observe_book {
-      validate_booking(hash_proof_policy, d_reg, envelope, tx)
-    } else {
-      validate_registration(hash_proof_policy, d_reg, envelope, tx)
-    }
+    validate_registration(hash_proof_policy, d_reg, envelope, tx)
   }
 
   publish(_redeemer: Data, certificate: Certificate, _tx: Transaction) {

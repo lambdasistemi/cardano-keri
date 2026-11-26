@@ -8,6 +8,7 @@ import Cardano.KERI.AID.Cage.SignSpec qualified as SignSpec
 import Cardano.KERI.AID.Cage.TypesSpec qualified as TypesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec qualified as AdvanceFixturesSpec
 import Cardano.KERI.AID.Checkpoint.AdvanceSpec qualified as AdvanceSpec
+import Cardano.KERI.AID.Checkpoint.AttestationVectorsSpec qualified as AttestationVectorsSpec
 import Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec qualified as BountyCommitmentSpec
 import Cardano.KERI.AID.Checkpoint.DatumSpec qualified as DatumSpec
 import Cardano.KERI.AID.Checkpoint.DatumV2Spec qualified as DatumV2Spec
@@ -67,6 +68,7 @@ main = hspec $ do
     RegistrationSpec.spec
     ValueSpec.spec
     WireSpec.spec
+    AttestationVectorsSpec.spec
     ConsumerVectorsSpec.spec
     ConsumerClausesSpec.spec
     ReleaseSpec.spec

@@ -33,6 +33,7 @@ import Cardano.KERI.Deployment.RegistryDeploySpec (
     walletOutputs,
  )
 import Cardano.KERI.Deployment.RegistryFiles (decodeReferenceRecord, readDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..))
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -65,7 +66,7 @@ settingsIn blueprint directory =
     RegistryDeploySettings
         { rdNetworkMagic = 42
         , rdBlueprint = blueprint
-        , rdNodeSocket = "no-node.socket"
+        , rdProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
         , rdFundingAddress = "addr_test1unused"
         , rdSigningKeyFile = Just "no-key.skey"
         , rdVault = Nothing
@@ -341,7 +342,7 @@ spec = describe "#351 ckeri registry deploy" $ do
             let seedRef = OutputReference (BS.replicate 32 0xa3) 4
                 seedSpent =
                     DeployFailure
-                        { failureLanded = [Landed PublishTemplate (transactionIdOf 1) 170_000 5_000_000 0]
+                        { failureLanded = [Landed PublishTemplate (transactionIdOf 1) 170_000 5_000_000 0 Nothing]
                         , failureStoppedAt = Just CreateRegistry
                         , failureNotLanded = drop 1 allSteps
                         , failureSkipped = []

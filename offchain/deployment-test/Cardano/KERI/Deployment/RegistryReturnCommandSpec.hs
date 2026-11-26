@@ -26,6 +26,7 @@ import Cardano.KERI.Deployment.RegistryCommandSpec (capturing, capturingLive)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (Faults (..), noFaults, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.RegistryTransactions (plutusAddressOf)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
@@ -85,7 +86,7 @@ withSetup world request action = withSystemTempDirectory "registry-return-comman
         RegistryReturnSettings
             { rnNetworkMagic = 42
             , rnBlueprint = blueprint
-            , rnNodeSocket = "no-node.socket"
+            , rnProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
             , rnFundingAddress = "addr_test1unused"
             , rnSigningKeyFile = Just "no-key.skey"
             , rnVault = Nothing
@@ -161,7 +162,7 @@ spec = describe "#351 ckeri registry return" $ around_ withinOneMinute $ do
                 (position "handing return " < position "return-transaction") `shouldBe` True
                 (position "return-transaction" < position "refund-output") `shouldBe` True
                 err `shouldSatisfy` ("ckeri: not for mainnet" `isInfixOf`)
-                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5])
+                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5 Nothing])
                 listDirectory directory >>= (`shouldBe` [])
         it "flushes what it will pay before the return is submitted, so whoever pipes it has it first" $ do
             (world, request, _) <- returnable True

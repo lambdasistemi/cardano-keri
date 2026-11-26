@@ -137,7 +137,7 @@ said only of a request refused when no attempt went unanswered.
 renderHandoff :: Handoff -> Text
 renderHandoff Handoff{..} = case handoffResult of
     Accepted -> "accepted by the provider: " <> txId <> " (" <> attempts <> ")"
-    Refused text -> "refused by the provider after " <> attempts <> ": " <> text <> earlier
+    Refused text -> "refused by the provider after " <> attempts <> ": transaction " <> txId <> ": " <> text <> earlier
     NoAnswer ->
         "no answer after "
             <> attempts

@@ -65,12 +65,14 @@ scripts still prove the inception at the fold.
 | Booking width (milliseconds) | `5000` |
 | Checkpoint minimum ADA (lovelace) | `2000000` |
 | Termination request carrier (lovelace) | `1500000` |
-| Application script hash | `11f47d838591d78c45922696515d82c9ba7326240efe6933d09fb71a` |
-| Application program bytes | `11612` |
-| State script hash | `bfb95008d0fef9e1a542b87e1d1b94703c5c9e1ec376a5cca87d0ebb` |
+| Booking attestation policy hash | `58854d37463e29fedf5990994f5e5e988770948d9cd1ca0e53e971ea` |
+| Booking attestation program bytes | `9261` |
+| Application script hash | `ea1b254f1cae4aa9ddaf09bdbb64aac646b8282adec55c822b2e4329` |
+| Application program bytes | `10856` |
+| State script hash | `66cf7ec25e703c46d3f884cf089f70702bcfba0e8685945cce108cf8` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `2e067aec68ffdb0d05be8f783f3654856f0b5920896156829f55962d` |
+| Checkpoint validator script hash | `f7cb75d0a4d43cf00cf452acc91cb07e4e0f370efc19ace725694da2` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->
@@ -93,8 +95,9 @@ applied program, which the chain carries and the transaction size limit counts.
 
 ```mermaid
 flowchart LR
-  T[One set of terms] --> O[Observers: proof policy, lifecycle]
-  O --> A[Application validator]
+  T[One set of terms] --> O[Proof policy]
+  O --> B[Booking attestation policy]
+  B --> A[Application validator]
   T --> A
   A --> S[State script]
   S --> C[Checkpoint validator]
@@ -102,7 +105,7 @@ flowchart LR
   T --> C
 ```
 
-The application is applied to the observer and the amounts of the deposit; the
+The booking attestation policy is applied to the hash-proof policy and the registration deposit; the application to that policy and the amounts of the deposit; the
 state script to the application; the checkpoint validator to the state script,
 the registry's name (which the seed fixes) and the same amounts. One set of
 terms feeds all three, so the amounts cannot disagree.

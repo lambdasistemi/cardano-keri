@@ -19,13 +19,17 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeSpendRedeemerData,
     topUpSpendRedeemerData,
     releaseSpendRedeemerData,
-    bookingObserverRedeemerData,
+    bookingAttestationBurnData,
+    bookingAttestationClaimData,
+    bookingAttestationIssueData,
+    bookingAttestationName,
     registerObserverRedeemerData,
     registrationEvidenceData,
     asPlcData,
 ) where
 
 import Cardano.KERI.AID.Checkpoint.Advance (AdvanceEvidence (..))
+import Cardano.KERI.AID.Checkpoint.Datum (blake2b_256, canonicalCbor)
 import Cardano.KERI.AID.Checkpoint.Deposit (BondOption, bondOptionData)
 import Cardano.KERI.AID.Checkpoint.Enforcement (EnforcementEvidence)
 import Cardano.KERI.AID.Checkpoint.Entitlement (EnforcementProofV1 (..))
@@ -49,27 +53,61 @@ registerObserverRedeemerData checkpointPolicy evidence =
         , registrationEvidenceData evidence
         ]
 
-{- | The lifecycle observer's @ObserverEnvelope@ for a booking of the
-application: a claim containing action five, the application policy (the
-script the requests sit at), and no input reference, followed by the evidence
-of every request the transaction books, each with the index of its output
-among the transaction's outputs. The indices are distinct and are exactly the
-outputs the application's mint books.
+{- | The booking attestation policy's Issue redeemer: the policy of the
+application whose requests are attested, and the evidence of every request the
+transaction books, each with the index of its output among the transaction's
+outputs. The indices are distinct and are exactly the outputs the application's
+mint books.
 -}
-bookingObserverRedeemerData ::
+bookingAttestationIssueData ::
     ByteString -> [(Integer, RegistrationEvidence)] -> Data
-bookingObserverRedeemerData applicationPolicy requests =
+bookingAttestationIssueData applicationPolicy requests =
     Constr
         0
-        [ Constr 0 [I 5, B applicationPolicy, Constr 1 []]
-        , Constr
-            0
-            [ List
-                [ Constr 0 [I index, registrationEvidenceData evidence]
-                | (index, evidence) <- requests
-                ]
+        [ B applicationPolicy
+        , List
+            [ Constr 0 [I index, registrationEvidenceData evidence]
+            | (index, evidence) <- requests
             ]
         ]
+
+-- | The booking attestation policy's Burn redeemer: nothing is minted.
+bookingAttestationBurnData :: Data
+bookingAttestationBurnData = Constr 1 []
+
+{- | The claim of a booking: the action, the application policy, the zero-based
+output index of the request, the exact initial datum it commits and the deposit
+it commits.
+-}
+bookingAttestationClaimData ::
+    ByteString -> Integer -> Data -> Integer -> Data
+bookingAttestationClaimData applicationPolicy index initialDatum deposit =
+    Constr
+        0
+        [ B "cardano-keri/book-registration/v1"
+        , B applicationPolicy
+        , I index
+        , initialDatum
+        , I deposit
+        ]
+
+{- | The name of the attestation of a booking: the BLAKE2b-256 of the serialised
+claim.
+-}
+bookingAttestationName ::
+    ByteString -> Integer -> Data -> Integer -> ByteString
+bookingAttestationName applicationPolicy index initialDatum deposit =
+    blake2b_256
+        ( canonicalCbor
+            ( BuiltinData
+                ( bookingAttestationClaimData
+                    applicationPolicy
+                    index
+                    initialDatum
+                    deposit
+                )
+            )
+        )
 
 {- | The checkpoint validator's @Advance@ arm is constructor index zero. It
 names the output that receives the premium when the pool covers it, then

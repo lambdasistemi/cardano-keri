@@ -168,7 +168,7 @@ for option in \
   grep -q -- "--$option" <<<"$registry_deploy_help"
   grep -q "CKERI_$(tr 'a-z-' 'A-Z_' <<<"$option")" <<<"$registry_deploy_help"
 done
-for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST; do
+for forbidden in --store --manifest --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST; do
   if grep -q -- "$forbidden" <<<"$registry_deploy_help"; then
     printf 'registry deploy help offers %s (#351: no store, manifest, provider or cardano-cli)\n' \
       "$forbidden" >&2
@@ -176,7 +176,6 @@ for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKER
   fi
 done
 reject_retired_cardano_cli_help registry-deploy registry deploy
-reject_write_koios_help registry-deploy registry deploy
 
 # An option is in a help text when both its flag and its variable are, each as a whole word:
 # `--snapshot-out` and `CKERI_SNAPSHOT_OUT` do not stand for `--snapshot` and `CKERI_SNAPSHOT`.
@@ -197,7 +196,7 @@ for verb in register fold; do
     timeout-seconds release-identity reference-record kli-export; do
     has_option "$option" <<<"$verb_help"
   done
-  for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium; do
+  for forbidden in --store --manifest --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium; do
     if grep -q -- "$forbidden" <<<"$verb_help"; then
       printf 'registry %s help offers %s (#351: no store, manifest, provider, cardano-cli or registry term)\n' \
         "$verb" "$forbidden" >&2
@@ -205,7 +204,6 @@ for verb in register fold; do
     fi
   done
   reject_retired_cardano_cli_help "registry-$verb" registry "$verb"
-  reject_write_koios_help "registry-$verb" registry "$verb"
 done
 registry_fold_help="$("$ckeri" registry fold --help)"
 for option in request snapshot snapshot-out; do
@@ -220,7 +218,7 @@ for option in \
   timeout-seconds release-identity reference-record request; do
   has_option "$option" <<<"$registry_return_help"
 done
-for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium --kli-export --snapshot --refund --tip --deposit; do
+for forbidden in --store --manifest --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium --kli-export --snapshot --refund --tip --deposit; do
   if grep -q -- "$forbidden" <<<"$registry_return_help"; then
     printf 'registry return help offers %s (#351: the request holds the refund address and the amounts)\n' \
       "$forbidden" >&2
@@ -228,7 +226,30 @@ for forbidden in --store --manifest --koios-token KOIOS_TOKEN --cardano-cli CKER
   fi
 done
 reject_retired_cardano_cli_help registry-return registry return
-reject_write_koios_help registry-return registry return
+
+# #546: the four registry commands run on a node socket or on Koios (a URL and an optional token file, whose
+# bytes are read by the transport): each offers the three options, and none offers a token by value.
+for verb in deploy register fold return; do
+  provider_help="$("$ckeri" registry "$verb" --help)"
+  has_option node-socket <<<"$provider_help"
+  has_option koios-url <<<"$provider_help"
+  has_option koios-token-file <<<"$provider_help"
+  # the network time directory is public Singular's: its option and its own variable, not a CKERI_ one; the fold
+  # reads no network time, so its help does not offer it
+  if [[ "$verb" == fold ]]; then
+    if grep -qE -- "--network-time|SINGULAR_NETWORK_TIME" <<<"$provider_help"; then
+      printf 'registry fold help offers a network time it does not read\n' >&2
+      exit 1
+    fi
+  else
+    grep -qE -- "--network-time([^a-z-]|\$)" <<<"$provider_help"
+    grep -qE "SINGULAR_NETWORK_TIME" <<<"$provider_help"
+  fi
+  if grep -qE -- "--koios-token([^a-z-]|\$)|CKERI_KOIOS_TOKEN([^A-Z_]|\$)" <<<"$provider_help"; then
+    printf 'registry %s help offers a Koios token by value (#546: the transport reads the token from its file)\n' "$verb" >&2
+    exit 1
+  fi
+done
 
 # #553: the four registry commands sign with a wallet vault, the supported way, beside the key file that
 # stays accepted. The descriptor is a command-line option alone: no variable of ours carries it, and the
@@ -278,6 +299,61 @@ for verb in register fold return; do
     fi
   done
 done
+
+# #546: a provider choice that is not exactly one is refused by name before any file is read: the files are
+# the pipes above, held open and empty, so a command that read one would never end.
+provider_wait=20
+provider_expect_hang=
+registry_provider_refusal() {
+  local verb="$1" wanted="$2" refused status=0
+  local -a verb_arguments
+  shift 2
+  case "$verb" in
+    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot" --kli-export "$unreadable/export") ;;
+    register) verb_arguments=(--kli-export "$unreadable/export") ;;
+    return) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0") ;;
+  esac
+  refused="$(cd "$outside" && timeout "$provider_wait" "$ckeri" registry "$verb" --network-magic 42 --blueprint "$unreadable/blueprint" \
+    --funding-address addr_test1unused --release-identity "$unreadable/identity" --reference-record "$unreadable/record" \
+    --signing-key-file "$unreadable/key" "${verb_arguments[@]}" "$@" 2>&1 </dev/null)" || status=$?
+  provider_status="$status"
+  provider_output="$refused"
+  [[ -z "$provider_expect_hang" ]] || return 0
+  if [[ "$status" != 1 ]]; then
+    printf 'registry %s exited %s, not 1, on a provider choice that is refused (#546; 124 is a command that read a file and waited)\n' "$verb" "$status" >&2
+    exit 1
+  fi
+  if ! grep -q "$wanted" <<<"$refused"; then
+    printf 'registry %s was not refused as %s (#546)\n' "$verb" "$wanted" >&2
+    exit 1
+  fi
+  if grep -qE "unreadable" <<<"$refused"; then
+    printf 'registry %s read a file before it refused the provider choice (#546)\n' "$verb" >&2
+    exit 1
+  fi
+}
+for verb in register return; do
+  registry_provider_refusal "$verb" provider-both-given --node-socket absent.socket --koios-url http://koios.invalid/api/v1
+  registry_provider_refusal "$verb" provider-none-given
+  registry_provider_refusal "$verb" koios-token-file-without-koios-url --node-socket absent.socket --koios-token-file "$unreadable/key"
+done
+# an empty network time directory is refused by name, before any file is read
+for verb in register return; do
+  registry_provider_refusal "$verb" "needs a nonempty value" --node-socket absent.socket --network-time ""
+done
+registry_provider_refusal fold provider-none-given
+# an exported empty network time does not touch the fold, which reads none
+SINGULAR_NETWORK_TIME="" registry_provider_refusal fold provider-none-given
+registry_provider_refusal fold fold-runs-on-the-node-only --koios-url http://koios.invalid/api/v1
+registry_provider_refusal fold fold-runs-on-the-node-only --node-socket absent.socket --koios-url http://koios.invalid/api/v1
+# the check can fail: a valid provider choice with the same pipes reads the blueprint and waits, which `timeout`
+# ends with status 124, and that is what the refusals above must never do
+provider_wait=3 provider_expect_hang=1 registry_provider_refusal register provider-none-given --node-socket absent.socket
+if [[ "$provider_status" != 124 ]]; then
+  printf 'the provider refusal check cannot tell a command that reads a file from one that refuses: status %s, not 124 (#546)\n' "$provider_status" >&2
+  exit 1
+fi
+provider_wait=20 provider_expect_hang=
 
 # a spelling outside the group is not a command
 registry_verdict() {

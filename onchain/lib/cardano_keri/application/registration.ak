@@ -7,9 +7,9 @@
 //// exactly that approval, whose committed fields are the ones the approval
 //// names, with the clock fixed from the configuration of its registry, at the
 //// checkpoint validator the configuration record names, committing the initial
-//// state of its key with a deposit that covers the initial floor. That the key
-//// has its inception is the booking transaction's observation
-//// (`application/inception`).
+//// state of its key with a deposit that covers the initial floor, and with the
+//// attestation of its inception minted in the same transaction
+//// (`application/attestation`).
 ////
 //// ## Dependencies
 //// `application/clock`, `application/configuration` and `application/held`;
@@ -32,6 +32,7 @@ use cardano/assets.{
   AssetName, PolicyId, flatten, lovelace_of, quantity_of, without_lovelace,
 }
 use cardano/transaction.{Output, Transaction}
+use cardano_keri/application/attestation.{attested}
 use cardano_keri/application/clock.{booking_clock}
 use cardano_keri/application/configuration.{configuration_of}
 use cardano_keri/application/held.{
@@ -100,9 +101,10 @@ pub fn request_lovelace(
 
 /// Model `bookRegistration`: the output at `index` is a request that books
 /// its registration, its datum is the initial state of its key and its deposit
-/// covers the initial floor, and exactly one approval of its payload is minted. That
+/// covers the initial floor, the attestation of its inception is minted, and exactly one approval of its payload is minted. That
 /// nothing else is minted is the caller's accounting (`application/mint`).
 pub fn book_registration(
+  attestation_policy: PolicyId,
   initial_floor: Int,
   network_id: Int,
   application_policy: PolicyId,
@@ -126,6 +128,14 @@ pub fn book_registration(
             ) == 1,
             minimum_deposit <= data.deposit,
             initial_floor <= data.deposit,
+            attested(
+              attestation_policy,
+              application_policy,
+              index,
+              data.initial_datum,
+              data.deposit,
+              tx,
+            ),
             books_initial_state(
               data.initial_datum,
               data.key,

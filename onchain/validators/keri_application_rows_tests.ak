@@ -50,7 +50,7 @@ fn accepts_at(initial_floor: Int, tx: Transaction) -> Bool {
 fn run_mint(initial_floor: Int, actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     initial_floor,
     rows.network_id,
@@ -69,7 +69,7 @@ fn run_spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -229,7 +229,9 @@ test row_approval_without_booking() {
 
 /// Lean row `booking-without-inception-evidence`: the booking of a key that has no inception evidence: refused.
 test row_booking_without_inception_evidence() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), claim: None })) == False
+  accepts(
+    requests.booking_tx(Booking { ..requests.booking(), attested: False }),
+  ) == False
 }
 
 /// Lean row `booking-advanced-sequence`: the request commits a checkpoint datum at sequence number 7: refused.

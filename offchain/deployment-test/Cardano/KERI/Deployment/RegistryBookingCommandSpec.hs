@@ -23,6 +23,7 @@ import Cardano.KERI.Deployment.RegistryCommandSpec (capturing, capturingLive)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (Faults (..), noFaults, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, encodeSnapshot)
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..), registryRootOf)
 import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningKey)
@@ -92,7 +93,7 @@ withSetup world action = withSystemTempDirectory "registry-booking-command" $ \s
                 RegistryRegisterSettings
                     { rgNetworkMagic = 42
                     , rgBlueprint = blueprint
-                    , rgNodeSocket = "no-node.socket"
+                    , rgProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rgFundingAddress = "addr_test1unused"
                     , rgSigningKeyFile = Just "no-key.skey"
                     , rgVault = Nothing
@@ -107,7 +108,7 @@ withSetup world action = withSystemTempDirectory "registry-booking-command" $ \s
                 RegistryFoldSettings
                     { rfNetworkMagic = 42
                     , rfBlueprint = blueprint
-                    , rfNodeSocket = "no-node.socket"
+                    , rfProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rfFundingAddress = "addr_test1unused"
                     , rfSigningKeyFile = Just "no-key.skey"
                     , rfVault = Nothing
@@ -171,7 +172,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 out `shouldSatisfy` ("cannot see a terminal key or another pending booking" `isInfixOf`)
                 out `shouldSatisfy` ("the fold is where a duplicate is stopped" `isInfixOf`)
                 -- it reached the node as it was told, and left nothing in its directory
-                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5])
+                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5 Nothing])
                 listDirectory (setupDirectory setup) >>= (`shouldBe` [])
         it "flushes the window before the booking is submitted, so whoever pipes it has it first" $ do
             world <- newWorld 1_000
@@ -354,7 +355,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 out `shouldSatisfy` ("an input the next fold checks again" `isInfixOf`)
                 written <- BS.readFile (setupDirectory setup </> "after.json")
                 fmap snapshotActive (decodeSnapshot written) `shouldBe` Right [requestKey record]
-                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5])
+                reachedBy >>= (`shouldBe` [NodeAccess 42 "no-node.socket" "addr_test1unused" (KeyFile "no-key.skey") 5 Nothing])
         it "refuses a snapshot that is not the registry, as stale or unavailable, and a key it holds, as held: each by name, as the command's refusal, with no transaction" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
@@ -795,7 +796,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                                 (setupFold setup)
                                     { rfSigningKeyFile = Just keyFile
                                     , rfFundingAddress = keyAddressText
-                                    , rfNodeSocket = socketPath
+                                    , rfProvider = ProviderChoice (Just socketPath) Nothing Nothing Nothing
                                     , rfRequest = T.pack (replicate 64 'a' <> "#0")
                                     }
                             open access use = openRegistryNode access (\runtime -> whenBegun >> use runtime)
@@ -820,7 +821,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                                 (setupRegister setup)
                                     { rgSigningKeyFile = Just keyFile
                                     , rgFundingAddress = keyAddressText
-                                    , rgNodeSocket = socketPath
+                                    , rgProvider = ProviderChoice (Just socketPath) Nothing Nothing Nothing
                                     }
                             open access use = openRegistryNode access (\runtime -> whenBegun >> use runtime)
                         started <- getMonotonicTime
@@ -840,7 +841,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
             signed <- last <$> accepted world
             withSetup world $ \setup -> withSystemTempDirectory "ckn" $ \short -> do
                 let keyFile = setupDirectory setup </> "payment.skey"
-                    access = NodeAccess 42 (short <> "/n.socket") keyAddressText (KeyFile keyFile) 5
+                    access = NodeAccess 42 (short <> "/n.socket") keyAddressText (KeyFile keyFile) 5 Nothing
                 BL.writeFile keyFile (encode keyEnvelope)
                 withNodeThatHangsUp (short <> "/n.socket") $ \node -> do
                     measured <- newIORef Nothing
@@ -864,7 +865,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
             forM_ [("query", Left request), ("submission", Right signed)] $ \(label, call) ->
                 withSetup world $ \setup -> withSystemTempDirectory "ckn" $ \short -> do
                     let keyFile = setupDirectory setup </> "payment.skey"
-                        access = NodeAccess 42 (short <> "/n.socket") keyAddressText (KeyFile keyFile) 5
+                        access = NodeAccess 42 (short <> "/n.socket") keyAddressText (KeyFile keyFile) 5 Nothing
                     BL.writeFile keyFile (encode keyEnvelope)
                     withNodeThatHangsUp (short <> "/n.socket") $ \node -> do
                         measured <- newIORef Nothing
@@ -1009,7 +1010,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 -- the node client neither fails nor ends: the operation fails as soon as it is handed the runtime
                 withSystemTempDirectory "ckn" $ \short -> do
                     let socketPath = short <> "/n.socket"
-                        access = NodeAccess 42 socketPath keyAddressText (KeyFile keyFile) 5
+                        access = NodeAccess 42 socketPath keyAddressText (KeyFile keyFile) 5 Nothing
                     withListeningSocket socketPath $ do
                         reached <- newIORef False
                         ((outcome, _), err) <-

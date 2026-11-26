@@ -1,72 +1,30 @@
-//// The inception of a booked key and the initial state its request commits.
+//// The initial state a booked request commits.
 ////
 //// ## Responsibility
-//// Realizes the Lean premise `Env.inception data.key` for a booking: the
-//// transaction that books requests carries one withdrawal of the lifecycle
-//// observer whose claim is the booking claim of this application and which lists
-//// exactly the requests the transaction books (`bookings_observed`); and the
-//// Lean `initialStateDatum`: a request's datum is the live version 2 datum of
-//// its key at sequence number 0 and epoch 0, neither poisoned, frozen nor
-//// topped up, born at the booking bound and recording as refund address the
-//// ledger bytes of the request's refund address (`books_initial_state`).
+//// Realizes the Lean `initialStateDatum`: a request's datum is the live version 2
+//// datum of its key at sequence number 0 and epoch 0, neither poisoned, frozen nor
+//// topped up, born at the booking bound and recording as refund address the ledger
+//// bytes of the request's refund address (`books_initial_state`). That the key has
+//// its inception is the attestation minted with the booking
+//// (`application/attestation`).
 ////
 //// ## Dependencies
 //// `checkpoint/refund` for the ledger bytes of a refund address; the Aiken
-//// standard library. The observer envelope and the version 2 checkpoint datum
-//// are read here only as far as the binding needs, with the fields they do not
-//// read left as `Data`, so that no decoder for them is compiled into the script.
-////
-//// ## Assumptions
-//// The lifecycle observer's withdrawal validator verifies, for each request the
-//// envelope lists, the inception of the AID and keys the request's datum
-//// declares (the hash-proof burn and the registration predicate), over the
-//// deposit the request commits. It attests the outputs at the application
-//// address by their index among the transaction's outputs.
+//// standard library. The version 2 checkpoint datum is read here only as far as the
+//// initial state needs, with the key material read by the codec's own type.
 ////
 //// ## Invariants
-//// The claim is the booking claim (action `observe_book` = 5, this application's
-//// policy, no spent output); the withdrawal pays no lovelace; the indices the
-//// payload lists are distinct and are exactly the outputs the transaction books.
+//// The datum is read as the checkpoint codec reads it: a datum the codec refuses
+//// is no initial state.
 
-use aiken/collection/list
-use cardano/address.{Address, Credential, Script}
-use cardano/transaction.{Transaction, Withdraw}
+use cardano/address.{Address}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live, TerminationPending}
 use cardano_keri/checkpoint/refund.{ledger_bytes}
-
-/// The stable action tag of the booking claim (`checkpoint/observer.observe_book`).
-const observe_book: Int = 5
-
-/// The claim of an observer envelope (`checkpoint/observer.ObserverClaim`):
-/// the spent output it names is left undecoded.
-type Claim {
-  action: Int,
-  checkpoint_policy: ByteArray,
-  own_ref: Data,
-}
-
-/// The envelope the lifecycle observer is called with
-/// (`checkpoint/observer.ObserverEnvelope`).
-type Envelope {
-  claim: Claim,
-  payload: Data,
-}
-
-/// The payload of the booking claim (`checkpoint/observer.BookingEvidence`): the
-/// evidence of each request is not read.
-type Booked {
-  requests: List<Listed>,
-}
-
-type Listed {
-  request_index: Int,
-  evidence: Data,
-}
 
 /// A checkpoint datum as `checkpoint/datum` writes it: nothing for version 1,
 /// the version 2 datum inside constructor 1. It is the codec's own type, so a datum
 /// the codec refuses is no datum here either; only the facts of a live datum are
-/// read, and the well-formedness of the key material is the observer's.
+/// read, and the well-formedness of the key material is the attestation policy's.
 type Written {
   /// Version 1: nothing to read. Present so that version 2 keeps constructor 1.
   Skipped
@@ -144,82 +102,5 @@ pub fn books_initial_state(
         facts.refund_to == refund,
       }
     _ -> False
-  }
-}
-
-/// Whether the lifecycle observer's withdrawal agrees with the bookings of the
-/// transaction: `booked` is the output index of each booking action. With bookings,
-/// the withdrawal pays nothing and its redeemer is the booking claim of
-/// `application_policy` listing exactly those outputs; with none, an observation
-/// of this application's bookings lists none (a withdrawal that makes no such claim
-/// is not an observation of them, and a fold that carries one is accepted).
-pub fn bookings_observed(
-  lifecycle_observer: ByteArray,
-  application_policy: ByteArray,
-  booked: List<Int>,
-  tx: Transaction,
-) -> Bool {
-  let observer: Credential = Script(lifecycle_observer)
-  let redeemers = list.filter_map(
-    tx.redeemers,
-    fn(Pair(purpose, redeemer)) {
-      when purpose is {
-        Withdraw(credential) ->
-          if credential == observer {
-            Some(redeemer)
-          } else {
-            None
-          }
-        _ -> None
-      }
-    },
-  )
-  and {
-    list.all(
-      redeemers,
-      fn(redeemer) { agrees(redeemer, application_policy, booked) },
-    ),
-    list.is_empty(booked) || and {
-      !list.is_empty(redeemers),
-      list.any(
-        tx.withdrawals,
-        fn(Pair(credential, lovelace)) {
-          credential == observer && lovelace == 0
-        },
-      ),
-    },
-  }
-}
-
-/// Whether `redeemer` agrees with the bookings: an envelope that makes the booking
-/// claim of `application_policy` is an observation of them and lists each index of
-/// `booked` once and nothing else (as many entries as bookings, each booking among
-/// them; the bookings are distinct, so no entry repeats); any other redeemer is no
-/// observation of them, which agrees only with no bookings.
-fn agrees(
-  redeemer: Data,
-  application_policy: ByteArray,
-  booked: List<Int>,
-) -> Bool {
-  let none: Data = None
-  if redeemer is Envelope { claim, payload }: Envelope {
-    if claim.action == observe_book && claim.checkpoint_policy == application_policy {
-      and {
-        claim.own_ref == none,
-        if payload is Booked { requests }: Booked {
-          let listed = list.map(requests, fn(entry) { entry.request_index })
-          and {
-            list.length(listed) == list.length(booked),
-            list.all(booked, fn(index) { list.has(listed, index) }),
-          }
-        } else {
-          False
-        },
-      }
-    } else {
-      list.is_empty(booked)
-    }
-  } else {
-    list.is_empty(booked)
   }
 }

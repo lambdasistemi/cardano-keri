@@ -44,6 +44,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     -- * Transactions
     publishTemplate,
     publishReferenceScript,
+    endOnly,
     createConfiguration,
     bookRegistration,
     mintHashProof,
@@ -436,18 +437,27 @@ deliveredHolding deployment record =
 -- Transactions
 -- ---------------------------------------------------------------------
 
+{- | The validity of a transaction that has only an end: from the start of the chain, until the exclusive upper slot,
+if it has one.
+-}
+endOnly :: Maybe SlotNo -> ValidityInterval
+endOnly = ValidityInterval SNothing . maybe SNothing SJust
+
 {- | Publish the template of the state script: an output holding the given
 lovelace whose inline datum is the template bytes, referenced by the genesis.
 -}
 publishTemplate ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
     PParams ConwayEra ->
     Payer ->
     -- | the lovelace of the published output
     Coin ->
     ByteString ->
     Either RegistryTransactionError ConwayTx
-publishTemplate parameters payer lovelace template =
+publishTemplate end parameters payer lovelace template =
     publishOutput
+        end
         parameters
         payer
         ( mkBasicTxOut (payerAddress payer) (inject lovelace)
@@ -456,14 +466,17 @@ publishTemplate parameters payer lovelace template =
 
 -- | Publish a script as a reference script of an output holding the given lovelace.
 publishReferenceScript ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
     PParams ConwayEra ->
     Payer ->
     -- | the lovelace of the published output
     Coin ->
     Script ConwayEra ->
     Either RegistryTransactionError ConwayTx
-publishReferenceScript parameters payer lovelace script =
+publishReferenceScript end parameters payer lovelace script =
     publishOutput
+        end
         parameters
         payer
         ( mkBasicTxOut (payerAddress payer) (inject lovelace)
@@ -471,11 +484,12 @@ publishReferenceScript parameters payer lovelace script =
         )
 
 publishOutput ::
+    Maybe SlotNo ->
     PParams ConwayEra ->
     Payer ->
     TxOut ConwayEra ->
     Either RegistryTransactionError ConwayTx
-publishOutput parameters payer output =
+publishOutput end parameters payer output =
     firstSuccess
         [ balancedTx
             <$> first
@@ -486,7 +500,10 @@ publishOutput parameters payer output =
   where
     skeleton =
         mkBasicTx
-            (mkBasicTxBody & outputsTxBodyL .~ StrictSeq.singleton output)
+            ( mkBasicTxBody
+                & outputsTxBodyL .~ StrictSeq.singleton output
+                & vldtTxBodyL .~ endOnly end
+            )
 
 {- | The genesis of the registry: spend the seed, mint the state token into an
 empty state and the configuration token into the configuration record, with the
@@ -495,6 +512,8 @@ registry's identity is derived from: any other is refused. The payer's outputs
 fund what the seed does not cover and one of them is the collateral.
 -}
 createConfiguration ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
     PParams ConwayEra ->
     RegistryDeployment ->
     -- | the template and the two reference scripts the genesis reads
@@ -506,7 +525,7 @@ createConfiguration ::
     ApplicationParameters ->
     Budgets ->
     Either RegistryTransactionError BuiltTransaction
-createConfiguration parameters deployment references payer seedUtxo configured budgets = do
+createConfiguration end parameters deployment references payer seedUtxo configured budgets = do
     when (outputReferenceOf (fst seedUtxo) /= seedOf deployment) $
         Left SeedIsNotTheRegistrys
     firstFunded budgets (fundings [fst seedUtxo] (payerFunds payer)) attempt
@@ -557,6 +576,7 @@ createConfiguration parameters deployment references payer seedUtxo configured b
                 ( mkBasicTx
                     ( mkBasicTxBody
                         & mintTxBodyL .~ minted
+                        & vldtTxBodyL .~ endOnly end
                         & referenceInputsTxBodyL .~ Set.fromList (map fst references)
                         & scriptIntegrityHashTxBodyL
                             .~ computeScriptIntegrity (Set.singleton PlutusV3) parameters redeemers (TxDats mempty)

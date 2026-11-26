@@ -38,11 +38,11 @@ use keri_application
 use keri_application_fixture.{template_input}
 use keri_application_requests.{
   Booking, Fold, Return, Termination, active_of, app_address, application,
-  approval_of, booking, booking_claim, booking_tx, checkpoint_address,
-  checkpoint_spend, config_input, config_output, envelope, fold, fold_tx,
-  foreign_registry, holding_output, mint_of, payload_of, pending_output, range,
-  reference, registry, request_input, request_output, returned, termination,
-  termination_approval_of, termination_tx,
+  approval_of, attestation_policy, booking, booking_tx, checkpoint_address,
+  checkpoint_spend, config_input, config_output, fold, fold_tx, foreign_registry,
+  holding_output, mint_of, name_for, pending_output, range, reference, registry,
+  request_input, request_output, returned, termination, termination_approval_of,
+  termination_tx,
 }
 use singular_state/preimage.{
   RegistryIdentity, active_token_name, configuration_token_name,
@@ -53,7 +53,7 @@ use singular_state/preimage.{
 fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -72,7 +72,7 @@ fn run_spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -1235,16 +1235,7 @@ test a_booking_and_a_fold_in_one_transaction_are_accepted_together() {
         (application(), approval_of(booked_here.data), 1),
         (application(), approval_of(f.data), -1),
         (f.data.registry.policy, active_of(f.data), 1),
-      ],
-    ),
-    withdrawals: [Pair(Script(rows.observer_hash), 0)],
-    redeemers: list.concat(
-      both.redeemers,
-      [
-        Pair(
-          Withdraw(Script(rows.observer_hash)),
-          envelope(booking_claim(), payload_of([1])),
-        ),
+        (attestation_policy(), name_for(booked_here.data, 1), 1),
       ],
     ),
   }
@@ -1491,6 +1482,8 @@ test two_bookings_of_two_requests_mint_two_approvals() {
       [
         (application(), approval_of(b.data), 1),
         (application(), approval_of(other), 1),
+        (attestation_policy(), name_for(b.data, 0), 1),
+        (attestation_policy(), name_for(other, 1), 1),
       ],
     ),
     redeemers: [
@@ -1503,12 +1496,7 @@ test two_bookings_of_two_requests_mint_two_approvals() {
           ],
         ),
       ),
-      Pair(
-        Withdraw(Script(rows.observer_hash)),
-        envelope(booking_claim(), payload_of([0, 1])),
-      ),
     ],
-    withdrawals: [Pair(Script(rows.observer_hash), 0)],
   }
   books(b) && accepts(both)
 }

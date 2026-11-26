@@ -113,31 +113,12 @@ pub fn proof_name_of(
   proof_token_name(evidence.event_bytes, d.cesr_aid)
 }
 
-pub fn connected_fold(burn_proof: Bool) -> Fold {
-  let data = connected_request()
-  let proof_input = Input {
-    output_reference: reference(90),
-    output: Output {
-      address: from_verification_key(
-        #"0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee0bee",
-      ),
-      value: add(from_lovelace(2_000_000), hash_proof_policy, proof_name(), 1),
-      datum: NoDatum,
-      reference_script: None,
-    },
-  }
+pub fn connected_fold() -> Fold {
   Fold {
     ..fold(),
-    data,
+    data: connected_request(),
     request_lovelace: floor + cfg.registration_cost + cfg.minimum_tip,
     holding_lovelace: floor,
     holding_datum: live_datum(),
-    payload: as_data(vec.pos_2key_evidence),
-    extra_inputs: [proof_input],
-    extra_mint: if burn_proof {
-      [(hash_proof_policy, proof_name(), -1)]
-    } else {
-      []
-    },
   }
 }

@@ -13,6 +13,7 @@
 use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/crypto.{blake2b_256}
 use aiken/interval.{Finite, Interval, IntervalBound}
 use aiken/primitive/bytearray
 use cardano/address.{Address, Credential, Script, from_script}
@@ -21,7 +22,7 @@ use cardano/assets.{
 }
 use cardano/transaction.{
   InlineDatum, Input, Mint, NoDatum, Output, OutputReference, ScriptPurpose,
-  Spend, Transaction, Withdraw, placeholder,
+  Spend, Transaction, placeholder,
 }
 use cardano_keri/application/action.{
   Action, BookRegistration, BookTermination, FoldRegistration, FoldTermination,
@@ -34,9 +35,6 @@ use cardano_keri/application/held.{
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum as checkpoint_datum
 use cardano_keri/checkpoint/datum.{TerminationPending}
-use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_book,
-}
 use singular_state/preimage.{
   RegistryIdentity, active_token_name, approval_name, configuration_token_name,
   initial_datum_hash, registration_preimage, termination_preimage,
@@ -271,47 +269,57 @@ pub fn donation_of(amount: Int) -> Option<Int> {
   }
 }
 
-pub fn envelope(claim: ObserverClaim, payload: Data) -> Data {
-  let value: Data = ObserverEnvelope { claim, payload }
-  value
+// ---- the attestation of a booking ---------------------------------------------
+
+/// The action of the claim of a booking.
+pub const claim_tag: ByteArray = "cardano-keri/book-registration/v1"
+
+/// The policy of the booking attestation of the deployment these tests run in.
+pub fn attestation_policy() -> PolicyId {
+  rows.attestation_hash
 }
 
-// ---- the booking observation ---------------------------------------------------
-
-/// The claim of a booking: the application policy is the script the requests sit
-/// at, no output is spent.
-pub fn booking_claim() -> ObserverClaim {
-  ObserverClaim {
-    action: observe_book,
-    checkpoint_policy: application(),
-    own_ref: None,
-  }
-}
-
-/// One entry of the payload: the request at `index` and its key's evidence. The
-/// payload is built as raw Plutus Data (constructor 0 holding the list of
-/// constructor 0 entries `request_index, evidence`), never with the types of the
-/// code under test, so a change of the code's own idea of the shape is a change of
-/// the transaction these tests build.
-pub fn booked_entry(index: Int, evidence: Data) -> Data {
-  builtin.constr_data(0, [builtin.i_data(index), evidence])
-}
-
-/// The payload of the booking claim.
-pub fn booking_payload(entries: List<Data>) -> Data {
-  builtin.constr_data(0, [builtin.list_data(entries)])
-}
-
-/// What the application never reads: the evidence the observer reads.
-pub fn unread_evidence() -> Data {
-  builtin.i_data(0)
-}
-
-/// The payload of a perfect booking of the requests at `indices`.
-pub fn payload_of(indices: List<Int>) -> Data {
-  booking_payload(
-    list.map(indices, fn(index) { booked_entry(index, unread_evidence()) }),
+/// The claim of a booking, built as raw Plutus Data (constructor 0 holding the
+/// action, the application policy, the zero-based output index, the exact initial
+/// datum of the request and the deposit it commits), never with the types of the
+/// code under test, so a change of the code's own idea of the shape is a change
+/// of the transaction these tests build.
+pub fn claim_of(
+  application_policy: PolicyId,
+  index: Int,
+  initial_datum: Data,
+  deposit: Int,
+) -> Data {
+  builtin.constr_data(
+    0,
+    [
+      builtin.b_data(claim_tag),
+      builtin.b_data(application_policy),
+      builtin.i_data(index),
+      initial_datum,
+      builtin.i_data(deposit),
+    ],
   )
+}
+
+/// The name of the attestation of a booking: the digest of its serialised claim.
+pub fn attestation_of(
+  application_policy: PolicyId,
+  index: Int,
+  initial_datum: Data,
+  deposit: Int,
+) -> AssetName {
+  blake2b_256(
+    builtin.serialise_data(
+      claim_of(application_policy, index, initial_datum, deposit),
+    ),
+  )
+}
+
+/// The name of the attestation of the request `data` booked at output `index` of
+/// a transaction of the application.
+pub fn name_for(data: RegistrationData, index: Int) -> AssetName {
+  attestation_of(application(), index, data.initial_datum, data.deposit)
 }
 
 // ---- booking ------------------------------------------------------------------
@@ -327,11 +335,8 @@ pub type Booking {
   actions: List<Action>,
   /// How many identical request outputs the transaction creates.
   copies: Int,
-  /// The claim of the lifecycle observer's withdrawal; None leaves the
-  /// withdrawal out.
-  claim: Option<ObserverClaim>,
-  /// The payload of the observer envelope: the requests it lists.
-  payload: Data,
+  /// Whether the transaction mints the attestation of each request it books.
+  attested: Bool,
 }
 
 /// Lean row `booking`: a perfect booking.
@@ -346,8 +351,7 @@ pub fn booking() -> Booking {
     checkpoint: cfg.checkpoint_credential,
     actions: [BookRegistration { output_index: 0 }],
     copies: 1,
-    claim: Some(booking_claim()),
-    payload: payload_of([0]),
+    attested: True,
   }
 }
 
@@ -355,7 +359,27 @@ pub fn booking_tx(b: Booking) -> Transaction {
   Transaction {
     ..placeholder,
     outputs: list.repeat(request_output(b.data, b.lovelace), b.copies),
-    mint: mint_of([(application(), approval_of(b.data), b.mint)]),
+    mint: mint_of(
+      list.concat(
+        [(application(), approval_of(b.data), b.mint)],
+        if b.attested {
+          list.filter_map(
+            b.actions,
+            fn(action) {
+              when action is {
+                BookRegistration { output_index } ->
+                  Some(
+                    (attestation_policy(), name_for(b.data, output_index), 1),
+                  )
+                _ -> None
+              }
+            },
+          )
+        } else {
+          []
+        },
+      ),
+    ),
     // No record of another registry exists under this application: a record is
     // created only for a registry whose state policy was checked at its genesis.
     reference_inputs: if b.references {
@@ -364,23 +388,7 @@ pub fn booking_tx(b: Booking) -> Transaction {
       []
     },
     validity_range: range(b.lower, b.upper),
-    withdrawals: when b.claim is {
-      Some(_) -> [Pair(Script(rows.observer_hash), 0)]
-      None -> []
-    },
-    redeemers: list.concat(
-      [Pair(Mint(application()), as_data(b.actions))],
-      when b.claim is {
-        Some(claim) ->
-          [
-            Pair(
-              Withdraw(Script(rows.observer_hash)),
-              envelope(claim, b.payload),
-            ),
-          ]
-        None -> []
-      },
-    ),
+    redeemers: [Pair(Mint(application()), as_data(b.actions))],
   }
 }
 
@@ -398,17 +406,11 @@ pub type Fold {
   lower: Int,
   upper: Int,
   donation: Int,
-  /// The claim of an observer withdrawal a fold does not need and does not read;
-  /// None leaves the withdrawal out.
-  claim: Option<ObserverClaim>,
-  withdrawn: Int,
   redeemer: SpendAction,
   /// A second request input at the application address, with its redeemer.
   second: Option<(RegistrationData, Option<SpendAction>)>,
-  /// The payload of the observer envelope (the evidence the observer reads).
-  payload: Data,
   /// Inputs and mint items beside the fold's own (a hash-proof token and
-  /// its burn, for a transaction the real observer runs over).
+  /// its burn, for a transaction the real policy runs over).
   extra_inputs: List<Input>,
   extra_mint: List<(PolicyId, AssetName, Int)>,
   /// Outputs a client puts before and after the holding (the folder's own change).
@@ -435,11 +437,8 @@ pub fn fold() -> Fold {
     lower: 12,
     upper: 15,
     donation: 2,
-    claim: None,
-    withdrawn: 0,
     redeemer: FoldRegistration { holding_index: 0 },
     second: None,
-    payload: builtin.i_data(0),
     extra_inputs: [],
     extra_mint: [],
     before: [],
@@ -530,15 +529,6 @@ pub fn fold_tx(f: Fold) -> Transaction {
       list.concat(second_approval, f.extra_mint),
     ),
   )
-  let withdrawals = when f.claim is {
-    Some(_) -> [Pair(Script(rows.observer_hash), f.withdrawn)]
-    None -> []
-  }
-  let observer = when f.claim is {
-    Some(claim) ->
-      [Pair(Withdraw(Script(rows.observer_hash)), envelope(claim, f.payload))]
-    None -> []
-  }
   let burn_redeemer = if f.burn == 0 {
     []
   } else {
@@ -563,13 +553,12 @@ pub fn fold_tx(f: Fold) -> Transaction {
     },
     validity_range: range(f.lower, f.upper),
     treasury_donation: donation_of(f.donation),
-    withdrawals,
     redeemers: list.concat(
       list.concat(
         [Pair(Spend(reference(60)), as_data(f.redeemer))],
         second_redeemers,
       ),
-      list.concat(burn_redeemer, observer),
+      burn_redeemer,
     ),
   }
 }

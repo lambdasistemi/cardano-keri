@@ -5,12 +5,11 @@
 //// the actions its redeemer lists: each action is accepted by its own rule,
 //// each asset an action brings into being is minted exactly once, no other
 //// positive quantity is minted, and every burn is the approval of a request
-//// the transaction spends from the application address. The requests a
-//// transaction books are exactly the ones the lifecycle observer's booking
-//// observation lists.
+//// the transaction spends from the application address. A booking also needs
+//// the attestation of its inception in the mint field (`application/registration`).
 ////
 //// ## Dependencies
-//// `application/configuration`, `application/held`, `application/inception`,
+//// `application/configuration`, `application/held`,
 //// `application/registration`;
 //// `singular_state/preimage`; the Aiken standard library.
 ////
@@ -33,7 +32,6 @@ use cardano_keri/application/action.{
   Action, BookRegistration, BookTermination, CreateConfiguration,
 }
 use cardano_keri/application/configuration.{create_configuration}
-use cardano_keri/application/inception.{bookings_observed}
 use cardano_keri/application/registration.{
   book_registration, registration_approval, registration_at,
 }
@@ -82,6 +80,7 @@ fn distinct(items: List<Int>) -> Bool {
 
 /// One action.
 fn action_accepted(
+  attestation_policy: PolicyId,
   initial_floor: Int,
   network_id: Int,
   state_template_hash: ByteArray,
@@ -108,6 +107,7 @@ fn action_accepted(
       }
     BookRegistration { output_index } ->
       book_registration(
+        attestation_policy,
         initial_floor,
         network_id,
         application_policy,
@@ -181,7 +181,7 @@ fn accounted(
 
 /// The accepted mint and burn under the application policy of a transaction.
 pub fn application_mint(
-  lifecycle_observer: ByteArray,
+  attestation_policy: PolicyId,
   initial_floor: Int,
   network_id: Int,
   state_template_hash: ByteArray,
@@ -194,24 +194,11 @@ pub fn application_mint(
 ) -> Bool {
   and {
     booked_once(actions),
-    bookings_observed(
-      lifecycle_observer,
-      application_policy,
-      list.filter_map(
-        actions,
-        fn(action) {
-          when action is {
-            BookRegistration { output_index } -> Some(output_index)
-            _ -> None
-          }
-        },
-      ),
-      tx,
-    ),
     list.all(
       actions,
       fn(action) {
         action_accepted(
+          attestation_policy,
           initial_floor,
           network_id,
           state_template_hash,

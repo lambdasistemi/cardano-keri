@@ -29,7 +29,7 @@
 //   request datum (Lean: a hash)      -> the initial checkpoint datum itself; the approval
 //                                        commits its BLAKE2b-256
 //   controller 0                      -> 28 zero bytes (no row reads it)
-//   lifecycle observer                -> a stand-in script hash (the Lean has no such input;
+//   booking attestation policy         -> a stand-in script hash (the Lean has no such input;
 //                                        a parameter of the validator)
 //   minimum deposit                   -> minimum ADA plus deposit of the Lean scenario
 //                                        (read from the booking-short-deposit note)
@@ -220,8 +220,8 @@ const generate = () => {
     // A booking row names its inception evidence in the Lean: the call is derived from the flag, never typed here.
     if (kind === 'booking' || kind === 'booking-floor') {
       const without = row(id).inceptionEvidence === false;
-      const typed = call.includes('claim: None');
-      if (without && !typed) call = call === 'requests.booking()' ? 'Booking { ..requests.booking(), claim: None }' : call.replace(/ \}$/, ', claim: None }');
+      const typed = call.includes('attested: False');
+      if (without && !typed) call = call === 'requests.booking()' ? 'Booking { ..requests.booking(), attested: False }' : call.replace(/ \}$/, ', attested: False }');
       if (!without && typed) throw new Error(`row ${id}: the call drops the observation of a row that has inception evidence`);
     }
     spec.push({ id, kind, call, shape });
@@ -392,9 +392,9 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/checkpoint/datum.{KeyMaterial, Live, TerminationPending}
 use singular_state/preimage.{RegistryIdentity}
 
-/// The script hash standing for the lifecycle observer (a parameter of the
+/// The policy standing for the booking attestation (a parameter of the
 /// validator; the Lean model has no such input).
-pub const observer_hash: ByteArray = #"${hex(scriptHash(11))}"
+pub const attestation_hash: ByteArray = #"${hex(scriptHash(11))}"
 
 /// What a fold's holding must hold: the registry's minimum ADA, the checkpoint
 /// deposit, the freeze bond and one premium (Lean Mc + D + B + P). The pool is
@@ -808,7 +808,7 @@ fn accepts_at(initial_floor: Int, tx: Transaction) -> Bool {
 fn run_mint(initial_floor: Int, actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     initial_floor,
     rows.network_id,
@@ -827,7 +827,7 @@ fn run_spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,

@@ -43,6 +43,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
 
     -- * Transactions
     publishTemplate,
+    publishTemplateAndSeed,
     publishReferenceScript,
     endOnly,
     createConfiguration,
@@ -232,6 +233,7 @@ import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
+import Singular.Registry.TxBuilder.Publication (selectFunding)
 
 -- | The registry a transaction is built against: the chain it runs on and what it is derived from.
 data RegistryDeployment = RegistryDeployment
@@ -523,7 +525,41 @@ publishOutput ::
     Payer ->
     TxOut ConwayEra ->
     Either RegistryTransactionError ConwayTx
-publishOutput end parameters payer output =
+publishOutput end parameters payer output = publishOutputs end parameters payer [output]
+
+{- | The publication of the template that also creates the output the registry will be created
+from, for a wallet that holds one output of lovelace alone: it is the output after the
+template's, so the wallet keeps the change to pay for the rest, as public Singular's chained
+seed does. The seed holds the given lovelace.
+-}
+publishTemplateAndSeed ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
+    PParams ConwayEra ->
+    Payer ->
+    -- | the lovelace of the published output
+    Coin ->
+    -- | the lovelace of the seed
+    Coin ->
+    ByteString ->
+    Either RegistryTransactionError ConwayTx
+publishTemplateAndSeed end parameters payer lovelace seedLovelace template =
+    publishOutputs
+        end
+        parameters
+        payer
+        [ mkBasicTxOut (payerAddress payer) (inject lovelace)
+            & datumTxOutL .~ mkInlineDatum (B template)
+        , mkBasicTxOut (payerAddress payer) (inject seedLovelace)
+        ]
+
+publishOutputs ::
+    Maybe SlotNo ->
+    PParams ConwayEra ->
+    Payer ->
+    [TxOut ConwayEra] ->
+    Either RegistryTransactionError ConwayTx
+publishOutputs end parameters payer outputs =
     firstSuccess
         [ balancedTx
             <$> first
@@ -535,7 +571,7 @@ publishOutput end parameters payer output =
     skeleton =
         mkBasicTx
             ( mkBasicTxBody
-                & outputsTxBodyL .~ StrictSeq.singleton output
+                & outputsTxBodyL .~ StrictSeq.fromList outputs
                 & vldtTxBodyL .~ endOnly end
             )
 
@@ -1215,8 +1251,9 @@ isFundable out =
 hasAssets :: TxOut ConwayEra -> Bool
 hasAssets = (/= mempty) . assetsOf
 
-{- | The outputs that fund a transaction: the ones that pay its fee and the
-change, and the one that is its collateral.
+{- | The outputs that fund a transaction: the ones that pay its fee and the change, one of
+which is its collateral, as in public Singular: a transaction is funded and collateralised from
+the same ada-only output of the wallet.
 -}
 data Funding = Funding
     { fundingInputs :: ![(TxIn, TxOut ConwayEra)]
@@ -1236,19 +1273,18 @@ spendingSets least funds =
   where
     ordered = spendOrder funds
 
-{- | What a payer's outputs can fund, best first: a collateral without native
-assets, the smallest first, and for each every other output that pays the fee,
-in the spending order, one more at a time and without a limit on their number.
-The outputs excluded are spent by the transaction already.
+{- | What a payer's outputs can fund, best first: the outputs of the spending order, one more at a
+time and without a limit on their number, the first of them alone when it covers the transaction.
+The collateral is the one of them that Singular's 'selectFunding' chooses: the largest output of
+lovelace alone among those spent, so that one output of lovelace alone is the whole wallet
+needed. The outputs excluded are spent by the transaction already.
 -}
 fundings :: [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
 fundings excluded funds =
     [ Funding inputs collateral
-    | collateral <- sortOn (coinOf . snd) (filter (not . hasAssets . snd) usable)
-    , inputs <- spendingSets 0 (filter ((/= fst collateral) . fst) usable)
+    | inputs <- spendingSets 1 (filter ((`notElem` excluded) . fst) funds)
+    , Right collateral <- [selectFunding Nothing (filter (isFundable . snd) inputs)]
     ]
-  where
-    usable = filter (\(ref, out) -> ref `notElem` excluded && isFundable out) funds
 
 -- | The first attempt that builds, or the failure of the first attempt.
 firstSuccess :: [Either RegistryTransactionError a] -> Either RegistryTransactionError a

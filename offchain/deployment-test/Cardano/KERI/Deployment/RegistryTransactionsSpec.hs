@@ -168,7 +168,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, listToMaybe)
 import Data.Ratio ((%))
 import Data.Set qualified as Set
 import Data.Text.Encoding qualified as Text
@@ -768,8 +768,8 @@ spec = do
             let payer =
                     walletWith
                         [ MaryValue (ada 6_000) nativeToken
-                        , inject (ada 800)
-                        , inject (ada 700)
+                        , inject (ada 400)
+                        , inject (ada 300)
                         ]
             tx <- booking payer
             proof <- proofKnown payer
@@ -794,13 +794,15 @@ spec = do
             proof <- proofKnown payer
             paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
             collateral `shouldBe` [fst (payerFunds payer !! 2)]
-        it "may all be needed when the collateral is the smallest suitable output" $ do
+        it "have the collateral among them, the largest of lovelace alone, however many are needed" $ do
             let payer =
                     walletWith
                         (map (inject . ada) [300, 290, 280, 270, 10])
             tx <- booking payer
-            toList (tx ^. bodyTxL . collateralInputsTxBodyL)
-                `shouldBe` [fst (payerFunds payer !! 4)]
+            let largest = fst (fromJust (listToMaybe (payerFunds payer)))
+            toList (tx ^. bodyTxL . collateralInputsTxBodyL) `shouldBe` [largest]
+            -- the collateral is one of the outputs that pay, never one besides them
+            (largest `Set.member` (tx ^. bodyTxL . inputsTxBodyL)) `shouldBe` True
             -- the four of the wallet and the proof the booking spends
             length (tx ^. bodyTxL . inputsTxBodyL) `shouldBe` 5
             proof <- proofKnown payer

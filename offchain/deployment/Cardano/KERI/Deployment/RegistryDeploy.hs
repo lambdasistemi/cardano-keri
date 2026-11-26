@@ -85,6 +85,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     outputReferenceOf,
     publishReferenceScript,
     publishTemplate,
+    publishTemplateAndSeed,
  )
 import Cardano.KERI.Deployment.Script (
     Blueprint,
@@ -128,7 +129,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (PParams, Script)
-import Cardano.Ledger.Hashes (extractHash)
+import Cardano.Ledger.Hashes (ScriptHash, extractHash)
 import Cardano.Ledger.Mary.Value (
     AssetName (..),
     MaryValue (..),
@@ -406,9 +407,9 @@ deployRegistry runtime onLanded request = do
         try @SomeException action >>= either (stop step . NodeFailed . show) pure
 
     -- the wallet as the node holds it now, without the seed
-    spendable step seedIn = do
+    spendable step withheld = do
         wallet <- onNode step (rtUtxosAt runtime payerAddress')
-        pure [output | output@(ref, out) <- wallet, ref /= seedIn, isFundable out]
+        pure [output | output@(ref, out) <- wallet, ref `notElem` withheld, isFundable out]
 
     -- what is not seen is unconfirmed when the observation says it was not seen before its deadline, and uncertain
     -- otherwise: either way nothing is known of whether it is on the chain
@@ -434,10 +435,10 @@ deployRegistry runtime onLanded request = do
         pure signed
 
     -- a transaction without scripts: built once, from the wallet as it stands
-    publication landedRef seedIn step build = do
+    publication landedRef withheld step build = do
         end <- endOf step
         params <- onNode (Just step) (trQueryProtocolParams transactions)
-        wallet <- spendable (Just step) seedIn
+        wallet <- spendable (Just step) withheld
         tx <-
             either
                 (stop (Just step) . BuildRefused)
@@ -446,8 +447,8 @@ deployRegistry runtime onLanded request = do
         signed <- settle landedRef step Map.empty tx
         pure (TxIn (transactionId signed) (TxIx 0))
 
-    publishScript landedRef seedIn lovelace step script =
-        publication landedRef seedIn step $ \params payer end ->
+    publishScript landedRef withheld lovelace step script =
+        publication landedRef withheld step $ \params payer end ->
             publishReferenceScript
                 end
                 params
@@ -461,10 +462,10 @@ deployRegistry runtime onLanded request = do
                 script
 
     -- a transaction with script purposes: measured, then built under the measured budgets
-    budgeted landedRef seedIn step build = do
+    budgeted landedRef withheld step build = do
         end <- endOf step
         params <- onNode (Just step) (trQueryProtocolParams transactions)
-        wallet <- spendable (Just step) seedIn
+        wallet <- spendable (Just step) withheld
         let built budgets =
                 either (stop (Just step) . BuildRefused) pure (build params wallet budgets end)
         (discovery, expected) <- built Map.empty
@@ -489,48 +490,59 @@ deployRegistry runtime onLanded request = do
         when (discriminator /= networkDiscriminator network) $
             stop Nothing (NetworkDisagrees discriminator)
         wallet0 <- onNode Nothing (rtUtxosAt runtime payerAddress')
-        (seedIn, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed wallet0)
-        let seedRef = outputReferenceOf seedIn
-        scripts <-
-            either
-                (stop Nothing . ScriptsRefused)
-                pure
-                (deriveRegistryScripts stateTemplate terms seedRef (requestBlueprint request))
-        let deployment = RegistryDeployment network terms scripts
-            observers = scriptsObservers scripts
+        (candidate, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed wallet0)
+        -- a wallet whose only output of lovelace alone is the seed candidate has nothing to pay the publications
+        -- with once the seed is set aside: the publication of the template then makes the seed, as public
+        -- Singular's chained seed does, and the registry is created from it
+        let chained = null [ref | (ref, out) <- wallet0, ref /= candidate, isFundable out]
+        let derivedFor seed =
+                either
+                    (stop Nothing . ScriptsRefused)
+                    pure
+                    (deriveRegistryScripts stateTemplate terms (outputReferenceOf seed) (requestBlueprint request))
+        scripts0 <- derivedFor candidate
+        let observers0 = scriptsObservers scripts0
             lovelace = requestReferenceLovelace request
-            publishedScript = publishScript landedRef seedIn lovelace
         -- the publications are paid from outputs that carry nothing but lovelace and assets: if those hold
         -- less than the six published outputs must hold, nothing is submitted
         checkParams <- onNode Nothing (trQueryProtocolParams transactions)
         let holders =
-                templateHolder payerAddress' (scriptsTemplate scripts)
+                templateHolder payerAddress' (scriptsTemplate scripts0)
                     : [ scriptHolder payerAddress' script
                       | script <-
-                            [ mkCageScript (artifactProgram (scriptsAttestation scripts))
-                            , mkCageScript (artifactProgram (scriptsApplication scripts))
-                            , mkCageScript (scriptsStateProgram scripts)
-                            , mkCageScript (artifactProgram (observerHashProof observers))
-                            , mkCageScript (artifactProgram (scriptsCheckpoint scripts))
+                            [ mkCageScript (artifactProgram (scriptsAttestation scripts0))
+                            , mkCageScript (artifactProgram (scriptsApplication scripts0))
+                            , mkCageScript (scriptsStateProgram scripts0)
+                            , mkCageScript (artifactProgram (observerHashProof observers0))
+                            , mkCageScript (artifactProgram (scriptsCheckpoint scripts0))
                             ]
                       ]
             needed = sum [fromMaybe (minimumHolding checkParams holder) lovelace | holder <- holders]
-            held = sum [coinOf out | (ref, out) <- wallet0, ref /= seedIn, isFundable out]
+            held
+                | chained = sum [coinOf out | (_, out) <- wallet0, isFundable out] - seedMinimumLovelace
+                | otherwise = sum [coinOf out | (ref, out) <- wallet0, ref /= candidate, isFundable out]
         when (held < needed) $
             stop Nothing (FundsBelowRequirement needed held)
-        templateIn <-
-            publication landedRef seedIn PublishTemplate $ \params payer end ->
-                publishTemplate
-                    end
-                    params
-                    payer
-                    ( Coin
-                        ( fromMaybe
-                            (minimumHolding params (templateHolder payerAddress' (scriptsTemplate scripts)))
-                            lovelace
-                        )
-                    )
-                    (scriptsTemplate scripts)
+        let templateLovelace params =
+                Coin (fromMaybe (minimumHolding params (templateHolder payerAddress' (scriptsTemplate scripts0))) lovelace)
+        (templateIn, seedIn) <-
+            if chained
+                then do
+                    published <-
+                        publication landedRef [] PublishTemplate $ \params payer end ->
+                            publishTemplateAndSeed end params payer (templateLovelace params) (Coin seedMinimumLovelace) (scriptsTemplate scripts0)
+                    pure (published, case published of TxIn created _ -> TxIn created (TxIx 1))
+                else do
+                    templateIn <-
+                        publication landedRef [candidate] PublishTemplate $ \params payer end ->
+                            publishTemplate end params payer (templateLovelace params) (scriptsTemplate scripts0)
+                    pure (templateIn, candidate)
+        scripts <- if chained then derivedFor seedIn else pure scripts0
+        unless (seedFreeHashes scripts == seedFreeHashes scripts0) $
+            stop (Just PublishTemplate) (ScriptsRefused "the scripts the first publications carry depend on the seed")
+        let deployment = RegistryDeployment network terms scripts
+            observers = scriptsObservers scripts
+            publishedScript = publishScript landedRef [seedIn] lovelace
         attestationIn <-
             publishedScript PublishAttestation $
                 mkCageScript (artifactProgram (scriptsAttestation scripts))
@@ -553,7 +565,7 @@ deployRegistry runtime onLanded request = do
                     (Set.fromList [seedIn, templateIn, applicationIn, stateIn])
         seedOut <-
             maybe
-                (stop (Just CreateRegistry) (SeedSpent seedRef))
+                (stop (Just CreateRegistry) (SeedSpent (outputReferenceOf seedIn)))
                 pure
                 (Map.lookup seedIn found)
         references <-
@@ -566,7 +578,7 @@ deployRegistry runtime onLanded request = do
                 )
                 [templateIn, applicationIn, stateIn]
         genesisTx <-
-            budgeted landedRef seedIn CreateRegistry $ \params funds budgets end ->
+            budgeted landedRef [seedIn] CreateRegistry $ \params funds budgets end ->
                 createConfiguration
                     end
                     params
@@ -707,3 +719,15 @@ lockedBy tx =
     sum (map coinOf (dropLast (toList (tx ^. bodyTxL . outputsTxBodyL))))
   where
     dropLast items = take (length items - 1) items
+
+{- | What the scripts published before the seed is known are, by their hashes: the registry the seed names
+reaches none of them.
+-}
+seedFreeHashes :: RegistryScripts -> (ByteString, ScriptHash, ScriptHash, ByteString, ScriptHash)
+seedFreeHashes scripts =
+    ( scriptsTemplate scripts
+    , artifactScriptHash (scriptsAttestation scripts)
+    , artifactScriptHash (scriptsApplication scripts)
+    , scriptsStateHash scripts
+    , artifactScriptHash (observerHashProof (scriptsObservers scripts))
+    )

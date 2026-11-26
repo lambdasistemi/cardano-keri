@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -22,9 +21,9 @@ import Cardano.KERI.Deployment.RegistryFold
 import Cardano.KERI.Deployment.RegistryReturn
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..))
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Api.Tx (bodyTxL)
-import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, inputsTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (mkBasicTxOut)
+import Cardano.Ledger.Api.Tx (bodyTxL, txIdTx)
+import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, inputsTxBodyL, outputsTxBodyL)
+import Cardano.Ledger.Api.Tx.Out (coinTxOutL, mkBasicTxOut)
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeReference (StakeRefNull))
@@ -33,6 +32,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Monad (forM_)
 import Data.ByteString qualified as BS
+import Data.Foldable (toList)
 import Data.IORef (newIORef, readIORef)
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
@@ -127,5 +127,14 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
         deployed <- either (fail . show) pure outcome
         length (deployedLanded deployed) `shouldBe` 7
         chain <- readIORef chainRef
-        forM_ (reverse (chainAccepted chain)) $ \tx ->
+        let landed = reverse (chainAccepted chain)
+        forM_ landed $ \tx ->
             Set.size (tx ^. bodyTxL . collateralInputsTxBodyL) `shouldSatisfy` (<= 1)
+        -- the first publication made the seed, after the template and before the change, and the genesis spent it
+        (first, genesis) <- case (landed, reverse landed) of
+            (a : _, z : _) -> pure (a, z)
+            _ -> fail "nothing landed"
+        let created = toList (first ^. bodyTxL . outputsTxBodyL)
+        length created `shouldBe` 3
+        fmap (\out -> let Coin c = out ^. coinTxOutL in c) (take 1 (drop 1 created)) `shouldBe` [10_000_000]
+        (TxIn (txIdTx first) (TxIx 1) `Set.member` (genesis ^. bodyTxL . inputsTxBodyL)) `shouldBe` True

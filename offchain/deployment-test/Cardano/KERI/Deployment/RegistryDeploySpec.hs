@@ -699,7 +699,7 @@ spec = describe "#351 deploying a registry" $ do
                     other -> fail ("expected the funds named as too low, got " <> show other)
                 Right _ -> fail "a deployment went on with funds that cannot pay for it"
             chainSubmissions chain `shouldBe` 0
-        it "stops by name before any transaction when nothing but outputs that carry a script is left" $ do
+        it "stops by name before any transaction when one output of lovelace alone is left, less the seed it makes" $ do
             blueprint <- loadTestBlueprint
             carrier <- referenceCarrier blueprint
             let wallet =
@@ -709,7 +709,10 @@ spec = describe "#351 deploying a registry" $ do
             (outcome, chain) <- runOn noFaults blueprint testTerms wallet
             case outcome of
                 Left failure -> case failureCause failure of
-                    FundsBelowRequirement _ held -> held `shouldBe` 0
+                    FundsBelowRequirement needed held -> do
+                        -- the one output of lovelace alone makes the seed: what is left of it pays
+                        held `shouldBe` 12_000_000
+                        needed `shouldSatisfy` (> held)
                     other -> fail ("expected the funds named as too low, got " <> show other)
                 Right _ -> fail "a deployment went on with nothing to pay with"
             chainSubmissions chain `shouldBe` 0

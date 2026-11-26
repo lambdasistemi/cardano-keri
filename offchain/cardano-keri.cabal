@@ -176,6 +176,7 @@ library deployment
     , plutus-ledger-api
     , plutus-tx
     , scientific
+    , singular-registry
     , text
     , time
     , transformers
@@ -213,8 +214,8 @@ library deployment
     Cardano.KERI.Deployment.WalletHolding
 
 -- The Koios instance of the registry runtime: its reads and its settlement.
--- It alone holds the dependency on Singular's main library, which carries
--- the Koios client, so "deployment" and everything that reaches only
+-- It alone holds the dependency on Singular's Koios client and local-services
+-- libraries, so "deployment" and everything that reaches only
 -- "deployment" stays free of a provider. "write-composition" does not depend
 -- on this component and the boundary check refuses the edge.
 library deployment-koios

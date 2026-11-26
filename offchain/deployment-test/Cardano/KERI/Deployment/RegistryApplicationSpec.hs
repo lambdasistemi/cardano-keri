@@ -191,28 +191,29 @@ spec = describe "#558 the KERI application read by Singular's fold" $ do
                 pendingApproval seenPending `shouldBe` derived
                 pendingRequest seenPending `shouldBe` RegistrationRequest expected
     describe "what the batch spends, burns, references and donates" $ do
-        it "spends each request with the fold action naming its holding, burns each approval, references the application and the configuration, and donates the registration costs" $ do
-            Booked world requests <- booked
-            deployment <- worldDeployment world
-            references <- worldReferences world
-            let application = keriApplication deployment references
-                singular = singularIdentityOf (registryOf world)
-                folds =
-                    [ Folded
-                        { foldedRequest = ref
-                        , foldedApproval = approvalOf world record
-                        , foldedRegistry = singular
-                        , foldedKey = requestKey record
-                        , foldedHolding = Just holding
-                        }
-                    | (holding, (ref, record)) <- zip [1 ..] requests
-                    ]
-                batch = draft pricedParameters (appFold application folds)
-                inputs = batch ^. bodyTxL . inputsTxBodyL
+        let drafted = do
+                Booked world requests <- booked
+                deployment <- worldDeployment world
+                references <- worldReferences world
+                let application = keriApplication deployment references
+                    singular = singularIdentityOf (registryOf world)
+                    folds =
+                        [ Folded
+                            { foldedRequest = ref
+                            , foldedApproval = approvalOf world record
+                            , foldedRegistry = singular
+                            , foldedKey = requestKey record
+                            , foldedHolding = Just holding
+                            }
+                        | (holding, (ref, record)) <- zip [1 ..] requests
+                        ]
+                pure (world, deployment, references, requests, draft pricedParameters (appFold application folds))
+        it "spends each request with the fold action naming its holding, burns each approval and references the application and the configuration" $ do
+            (world, deployment, references, requests, batch) <- drafted
+            let inputs = batch ^. bodyTxL . inputsTxBodyL
                 Redeemers declared = batch ^. witsTxL . rdmrsTxWitsL
                 MultiAsset minted = batch ^. bodyTxL . mintTxBodyL
-                policy = applicationPolicyId deployment
-                burned = Map.findWithDefault Map.empty policy minted
+                burned = Map.findWithDefault Map.empty (applicationPolicyId deployment) minted
                 spends =
                     Map.fromList
                         [ (index, getPlutusData datum)
@@ -228,7 +229,8 @@ spec = describe "#558 the KERI application read by Singular's fold" $ do
             -- the application's code and the configuration are read by reference
             batch ^. bodyTxL . referenceInputsTxBodyL
                 `shouldSatisfy` \refs -> all (`Set.member` refs) [fst (referenceApplication references), fst (referenceConfiguration references)]
-            -- the treasury is paid the registration cost of each folded request
+        it "donates to the treasury the registration cost of each folded request" $ do
+            (_, deployment, _, requests, batch) <- drafted
             batch ^. bodyTxL . treasuryDonationTxBodyL `shouldBe` Coin (fromIntegral (length requests) * registrationCostOf deployment)
 
 approvalOf :: World -> RegistrationData -> AssetName

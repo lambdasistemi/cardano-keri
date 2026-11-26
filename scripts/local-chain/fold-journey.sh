@@ -63,7 +63,9 @@ FIXTURE_PID=$!
 keep_chain() {
     [[ -n "${URL:-}" ]] || return 0
     mkdir -p "$WORK/txinfo"
-    curl -s "$URL/epoch_params" >"$WORK/txinfo/epoch_params.json" || true
+    local epoch
+    epoch=$(curl -s "$URL/tip" | jq -r '.[0].epoch_no' 2>/dev/null || true)
+    curl -s "$URL/epoch_params?_epoch_no=$epoch" >"$WORK/txinfo/epoch_params.json" || true
     local id
     for id in $(grep -hoE '[0-9a-f]{64}' "$WORK"/deploy.out "$WORK"/register-*.out "$WORK"/fold-1.out "$WORK"/fold-2.out 2>/dev/null | sort -u); do
         curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' \

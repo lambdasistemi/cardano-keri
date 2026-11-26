@@ -32,20 +32,20 @@ wallet() { # wallet <name> -> address
     "$SINGULAR" wallet address --vault "$WORK/$1.vault" --network-magic $MAGIC | tail -1
 }
 FUNDER=$(wallet funder)       # several outputs: it deploys the registry the others use and books for them
-DEPLOYER=$(wallet deployer); BOOKER=$(wallet booker); FOLDER=$(wallet folder); RETURNER=$(wallet returner)
+DEPLOYER=$(wallet deployer); BOOKER=$(wallet booker); FOLDER=$(wallet folder); NAMED=$(wallet named); RETURNER=$(wallet returner)
 
 ( source "$NODE_ENV"; TMPDIR="$WORK" exec "$DEVNET" --evidence-dir "$WORK/evidence" \
     --fund-address "$FUNDER:8:5000000000" \
     --fund-address "$DEPLOYER:1:5000000000" --fund-address "$BOOKER:1:3000000000" \
-    --fund-address "$FOLDER:1:500000000" --fund-address "$RETURNER:1:100000000" ) \
+    --fund-address "$FOLDER:1:500000000" --fund-address "$NAMED:1:500000000" --fund-address "$RETURNER:1:100000000" ) \
     >"$WORK/fixture.out" 2>"$WORK/fixture.err" &
 FIXTURE_PID=$!
 trap 'kill "$FIXTURE_PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 120); do grep -q providerUrl "$WORK/fixture.out" 2>/dev/null && break; sleep 1; done
 grep -q providerUrl "$WORK/fixture.out" || fail "the fixture did not report its settings"
 URL=$(jq -r .providerUrl "$WORK/fixture.out"); TIME_DIR=$(jq -r .networkTimeDirectory "$WORK/fixture.out"); SOCKET=$(jq -r .privateProbeSocket "$WORK/fixture.out")
-for _ in $(seq 1 120); do [[ "$(grep -c '^devnet: funded' "$WORK/fixture.err" 2>/dev/null || true)" == 5 ]] && break; sleep 1; done
-[[ "$(grep -c '^devnet: funded' "$WORK/fixture.err")" == 5 ]] || fail "the fixture did not fund the five wallets"
+for _ in $(seq 1 120); do [[ "$(grep -c '^devnet: funded' "$WORK/fixture.err" 2>/dev/null || true)" == 6 ]] && break; sleep 1; done
+[[ "$(grep -c '^devnet: funded' "$WORK/fixture.err")" == 6 ]] || fail "the fixture did not fund the six wallets"
 ( source "$NODE_ENV"; $ENACT_PV11 "$SOCKET" ) >"$WORK/enact-pv11.log" 2>&1 || fail "the protocol transition to 11 failed"
 for waited in $(seq 1 300); do
     curl -s "$URL/tip" >/dev/null || true
@@ -59,22 +59,33 @@ log "local fixture at protocol version 11 (preprod's, epoch 327 snapshot); facad
 outputs_of() { # how many outputs a wallet holds, from the facade
     curl -s -X POST "$URL/address_utxos" -H 'content-type: application/json' -d "{\"_addresses\":[\"$1\"]}" | jq 'length'
 }
-for pair in "deployer:$DEPLOYER" "booker:$BOOKER" "folder:$FOLDER" "returner:$RETURNER"; do
+for pair in "deployer:$DEPLOYER" "booker:$BOOKER" "folder:$FOLDER" "named:$NAMED" "returner:$RETURNER"; do
     [[ "$(outputs_of "${pair#*:}")" == 1 ]] || fail "the ${pair%%:*} wallet does not hold exactly one output"
 done
-log "ok: the deployer, booker, folder and returner each hold exactly one output"
+log "ok: the deployer, booker, folder, named-folder and returner wallets each hold exactly one output"
 
 common=(--network-magic $MAGIC --blueprint "$BLUEPRINT" --timeout-seconds 300)
 provider=(--koios-url "$URL" --network-time "$TIME_DIR")
 terms=(--registration-cost 1000000 --minimum-tip 500000 --process-time 90000 --booking-width 5000 --deposit 1000000000 --freeze-bond 5000000 --premium 2000000 --minimum-ada 2000000 --termination-carrier 1500000)
 cd "$WORK"
 
-attempt() { # attempt <label> <outfile> <command...>: record the command's outcome
-    local label="$1" out="$2" status=0; shift 2
+payer_utxos() { # payer_utxos <label> <address>: the wallet's outputs, as the facade holds them, right now
+    log "payer-utxos $1: $(curl -s -X POST "$URL/address_utxos" -H 'content-type: application/json' -d "{\"_addresses\":[\"$2\"]}" | jq -c '[.[] | {ref: (.tx_hash + "#" + (.tx_index | tostring)), lovelace: .value, assets: (.asset_list | length), referenceScript: (.reference_script != null), datum: (.inline_datum != null)}]')"
+}
+settled() { # settled <label> <outfile>: each transaction the command reported, as the chain holds it
+    local id
+    for id in $(sed -n -E 's/^(premint|booking|fold|return)-transaction: ([0-9a-f]{64})$/\2/p; s/^(publish-[a-z-]+|create-registry): ([0-9a-f]{64}) fee=.*/\2/p' "$WORK/$2.out"); do
+        log "settled $1 $id: $(curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$id\"]}" | jq -c '.[0] | {fee: (.fee | tonumber), inputs: [.inputs[] | .tx_hash + "#" + (.tx_index | tostring)], collateralInputs: [.collateral_inputs[]? | .tx_hash + "#" + (.tx_index | tostring)], collateralLovelace: ([.collateral_inputs[]? | .value | tonumber] | add), collateralReturn: (.collateral_output != null), totalCollateral: .total_collateral, outputs: [.outputs[] | {ref: (.tx_index | tostring), lovelace: .value}]}')"
+    done
+}
+attempt() { # attempt <label> <outfile> <payer-address> <command...>: record the payer's outputs, the command's outcome and its transactions
+    local label="$1" out="$2" payer="$3" status=0; shift 3
+    payer_utxos "$label" "$payer"
     "$@" >"$WORK/$out.out" 2>"$WORK/$out.err" || status=$?
     local first
     first=$(grep -v "not for mainnet" "$WORK/$out.err" | grep -m1 -E "^ckeri: " | cut -c1-300 || true)
     log "$label: exit $status ${first:+| $first}"
+    settled "$label" "$out"
     ATTEMPT_STATUS=$status
     if [[ "$MODE" == assert && $status != 0 ]]; then fail "$label exited $status"; fi
 }
@@ -91,23 +102,23 @@ REQ_RETURN=$(book "$FUNDER" funder kli-export-single.cesr 2>"$WORK/setup-book-3.
 log "setup: registry deployed and three requests booked by a multi-output wallet"
 
 # deploy, from the deployer's single output (a registry of its own)
-attempt "deploy from one output" one-deploy "$CKERI" registry deploy "${common[@]}" "${provider[@]}" --funding-address "$DEPLOYER" --vault "$WORK/deployer.vault" \
+attempt "deploy from one output" one-deploy "$DEPLOYER" "$CKERI" registry deploy "${common[@]}" "${provider[@]}" --funding-address "$DEPLOYER" --vault "$WORK/deployer.vault" \
     --release-identity-out "$WORK/deployer-identity.json" --reference-record-out "$WORK/deployer-records.json" "${terms[@]}"
 
 # register, from the booker's single output, into the setup registry (the deposit is held in the booking)
-attempt "register from one output" one-register book "$BOOKER" booker kli-export-2-of-5-rotation.cesr
+attempt "register from one output" one-register "$BOOKER" book "$BOOKER" booker kli-export-2-of-5-rotation.cesr
 
 # fold: supplied state on the node socket, then the named path on the facade
 printf '{"schema_version":1,"supplied_by":"the empty registry","active":[],"terminal":[]}\n' >"$WORK/snapshot-empty.json"
-attempt "fold (supplied state, node socket) from one output" one-fold-node "$CKERI" registry fold "${common[@]}" --node-socket "$SOCKET" \
+attempt "fold (supplied state, node socket) from one output" one-fold-node "$FOLDER" "$CKERI" registry fold "${common[@]}" --node-socket "$SOCKET" \
     --funding-address "$FOLDER" --vault "$WORK/folder.vault" --release-identity "$WORK/identity.json" --reference-record "$WORK/records.json" \
     --request "$REQ_NODE" --snapshot "$WORK/snapshot-empty.json"
-attempt "fold (named, public history, facade) from one output" one-fold-named "$CKERI" registry fold "${common[@]}" "${provider[@]}" \
-    --funding-address "$FOLDER" --vault "$WORK/folder.vault" --release-identity "$WORK/identity.json" --reference-record "$WORK/records.json" \
+attempt "fold (named, public history, facade) from one output" one-fold-named "$NAMED" "$CKERI" registry fold "${common[@]}" "${provider[@]}" \
+    --funding-address "$NAMED" --vault "$WORK/named.vault" --release-identity "$WORK/identity.json" --reference-record "$WORK/records.json" \
     --pending "$REQ_NAMED"
 
 # return, from the returner's single output, after the request's deadline (the process time is ninety seconds)
 sleep 100
-attempt "return from one output" one-return "$CKERI" registry return "${common[@]}" "${provider[@]}" --funding-address "$RETURNER" --vault "$WORK/returner.vault" \
+attempt "return from one output" one-return "$RETURNER" "$CKERI" registry return "${common[@]}" "${provider[@]}" --funding-address "$RETURNER" --vault "$WORK/returner.vault" \
     --release-identity "$WORK/identity.json" --reference-record "$WORK/records.json" --request "$REQ_RETURN"
 log "done (mode $MODE)"

@@ -278,9 +278,10 @@ theorem fold_effect_erase_all (p : Params) {s : Sys} (hw : WellFormed p s)
 /-- Given the actual full before Sys and actual successful adapter fold; when
 reading its result; then the actual imported fold accepted exactly its full
 projected successor and the exact two pools are filtered by consumed refs.
-Conversely a reachable Sys, preserved KERI registration authorization and
-actual upstream acceptance must reconstruct successfully: a metadata guard
-cannot hide missing adapter behavior. The two custody theorems preserve the
+Conversely a reachable Sys and actual upstream acceptance must reconstruct
+successfully, with no inception evidence shown at the fold: every registration
+a fold can take was booked, and the booking required the evidence. A metadata
+guard cannot hide missing adapter behavior. The two custody theorems preserve the
 entire unselected record and retire/burn/remove only the exact selected one,
 including alias and tag identity observations. These types are universal over
 mixed batches, not just terminal-only lists. Positive witness: registration
@@ -291,9 +292,8 @@ not count as semantic kills. -/
 theorem fold_complete (p : Params) (env : Env) (cfg : Singular.Config)
     {s : Sys} (hr : Reach p env cfg s)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (world : Singular.World)
-    (auth : registrationsAuthorized env (Singular.foldMembers s.toWorld tx) = true)
     (accepted : Singular.foldAccepted s.toWorld u tx = .ok world) :
-    ∃ f s', fold p env s s.gen s.config.applicationPolicy u tx = .ok (f, s') ∧
+    ∃ f s', fold p s s.gen s.config.applicationPolicy u tx = .ok (f, s') ∧
       s'.toWorld = world := by
   have hw := reachable_wellFormed p env cfg hr
   obtain ⟨_, result, batch, _, effect⟩ := Singular.foldAccepted_checks accepted
@@ -340,7 +340,7 @@ theorem fold_complete (p : Params) (env : Env) (cfg : Singular.Config)
     change (if after.toWorld ≠ world then Except.error "keri-fold-reconstruction-mismatch"
       else Except.ok (flow, after)) = Except.ok (flow, after)
     rw [if_neg (by simp [projected])]
-  exact ⟨flow, after, (fold_iff p env s after s.gen s.config.applicationPolicy u tx flow).mpr
-    ⟨rfl, rfl, auth, world, accepted, reconstructed⟩, projected⟩
+  exact ⟨flow, after, (fold_iff p s after s.gen s.config.applicationPolicy u tx flow).mpr
+    ⟨rfl, rfl, world, accepted, reconstructed⟩, projected⟩
 
 end CardanoKeri.Registry

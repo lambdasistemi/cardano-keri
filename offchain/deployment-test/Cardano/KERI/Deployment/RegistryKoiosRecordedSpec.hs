@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -24,14 +23,13 @@ import Cardano.KERI.Deployment.RegistryCommand
 import Cardano.KERI.Deployment.RegistryCommandSpec (capturing)
 import Cardano.KERI.Deployment.RegistryProvider
 import Cardano.KERI.Deployment.TransactionRuntime (transactionId)
-import Cardano.Ledger.Address (AccountAddress (..), AccountId (..))
+import Cardano.Ledger.Address (AccountAddress)
 import Cardano.Ledger.Api.Tx (bodyTxL)
 import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, coinTxOutL, referenceScriptTxOutL)
-import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Exception (try)
@@ -39,11 +37,8 @@ import Data.Bifunctor (second)
 import Data.Either (fromLeft)
 import Data.Foldable (toList)
 import Data.IORef (modifyIORef', newIORef, readIORef)
-import Data.List (isInfixOf, isPrefixOf)
 import Data.Set qualified as Set
-import Data.Text qualified as T
 import Lens.Micro ((&), (.~), (^.))
-import Singular.Provider.Koios.Wire qualified as Wire
 import Singular.Registry.Signing (signedTx)
 import System.Environment (getEnv)
 import System.Exit (ExitCode (..))
@@ -70,22 +65,9 @@ spec = describe "#546 registry deploy on Koios, over the wallet recorded from pr
         funds <- walletFunds
         first' <- firstPublication (map (second (referenceScriptTxOutL .~ SNothing)) . enlarged)
         Set.intersection (spentBy first') (scriptedOf funds) `shouldSatisfy` (not . Set.null)
-    it "asks whether the registry's observer credential is registered, once, before its first transaction: a script credential of the test network" $ do
+    it "asks no reward account whether it is registered, and hands over its first publication" $ do
         (_, accounts) <- deployed id
-        case accounts of
-            [account@(AccountAddress network (AccountId credential))] -> do
-                network `shouldBe` Testnet
-                credential `shouldSatisfy` (\case ScriptHashObj _ -> True; KeyHashObj _ -> False)
-                putStrLn ("account_info asked of: " <> T.unpack (Wire.renderRewardAccount account))
-            other -> expectationFailure ("one account was wanted: " <> show other)
-    it "stops by name before any transaction when Koios answers no row for the observer credential, as it did for this one" $ do
-        (reads', _) <- riggedRecorded (pure recordedTipStart)
-        ran <- deployOver reads'
-        ranCode ran `shouldBe` ExitFailure 1
-        ranHanded ran `shouldBe` []
-        ranErr ran `shouldSatisfy` ("UnknownRegistration" `isInfixOf`)
-        ranErr ran `shouldSatisfy` ("stake_test17zhg8dr4e9jyhty4edq5g434505n2zkxufw0gtt3y7spx6gv687ly" `isInfixOf`)
-        ranErr ran `shouldSatisfy` (not . any ("landed: " `isPrefixOf`) . lines)
+        accounts `shouldBe` []
   where
     -- the six hold more than any other output, so that the spending order prefers them: only their script keeps them unspent
     enlarged = map (\(ref, out) -> (ref, if isScripted out then out & coinTxOutL .~ Coin 400_000_000 else out))

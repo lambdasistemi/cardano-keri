@@ -74,11 +74,11 @@ theorem generic_termination_keys_unique (s : Singular.RegistryState)
         · simpa [edge] using tail
 
 /-- Actual adapter folds therefore select distinct termination keys. -/
-theorem fold_termination_keys_unique (p : Params) (env : Env) {s s' : Sys}
+theorem fold_termination_keys_unique (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s')) :
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s')) :
     (terminationKeys (Singular.foldMembers s.toWorld tx)).Nodup := by
-  obtain ⟨_, result, batch, _, _⟩ := Singular.foldAccepted_checks (fold_sound p env hs).2.2.2.1
+  obtain ⟨_, result, batch, _, _⟩ := Singular.foldAccepted_checks (fold_sound p hs).2.2.1
   have unique := generic_termination_keys_unique _ _ result (Singular.foldBatch_inv _ _ _ batch).2
   have projection : (fun m =>
       if (Singular.foldLegacyRequest s.config m).edge = .updateTerminal
@@ -154,10 +154,10 @@ theorem foldCarrierTags_absent (cfg : Singular.Config) (members : List Singular.
 
 /-- A consumed pending request burns exactly one of its own singular tag and
 creates no output carrying that tag, even in an accepted mixed fold. -/
-theorem booked_fold_token_effects (p : Params) (env : Env) {s s' : Sys}
+theorem booked_fold_token_effects (p : Params) {s s' : Sys}
     (hw : WellFormed p s) {gen plugin : Nat} {u : Singular.EconomicUtxo}
     {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    (hs : fold p s gen plugin u tx = .ok (f, s'))
     {ref : Singular.OutRef} {e : TerminationEntry} (hp : pendingAt s ref = some e)
     (consumed : Singular.inputsContainReference tx.transaction.inputs ref = true) :
     ((tx.singularMint.filter (fun pair =>
@@ -168,7 +168,7 @@ theorem booked_fold_token_effects (p : Params) (env : Env) {s s' : Sys}
   have noRegistration : ∀ b, .registration b ∈ Singular.foldMembers s.toWorld tx →
       b.request.key ≠ e.payload.aid := by
     intro b member same
-    have fresh := fold_registration_binding_fresh p env hw hs b member
+    have fresh := fold_registration_binding_fresh p hw hs b member
     rw [same, shape.2.2.2.2.2.2.2.2.2.1] at fresh
     contradiction
   have tags : ∀ b, .termination b ∈ Singular.foldMembers s.toWorld tx →
@@ -179,14 +179,14 @@ theorem booked_fold_token_effects (p : Params) (env : Env) {s s' : Sys}
   have keyMember : e.payload.aid ∈ terminationKeys (Singular.foldMembers s.toWorld tx) :=
     List.mem_filterMap.mpr ⟨.termination e.booking, selected, by simp [shape.1]⟩
   have count : (terminationKeys (Singular.foldMembers s.toWorld tx)).count e.payload.aid = 1 := by
-    rw [(fold_termination_keys_unique p env hs).count]
+    rw [(fold_termination_keys_unique p hs).count]
     simp [keyMember]
   have expected := foldMint_termination_quantity s.config (Singular.foldMembers s.toWorld tx)
     e.payload.aid noRegistration tags
   have expectedOne : (((Singular.foldMint s.config (Singular.foldMembers s.toWorld tx)).filter
       (fun pair => decide (pair.1 = s.config.singularTag e.payload.aid))).map Prod.snd).sum = -1 := by
     simpa [count] using expected
-  obtain ⟨_, result, _, routing, _⟩ := Singular.foldAccepted_checks (fold_sound p env hs).2.2.2.1
+  obtain ⟨_, result, _, routing, _⟩ := Singular.foldAccepted_checks (fold_sound p hs).2.2.1
   constructor
   · have pairMember : (s.config.singularTag e.payload.aid, (-1 : Int)) ∈
         Singular.foldMint s.config (Singular.foldMembers s.toWorld tx) := by
@@ -208,9 +208,10 @@ theorem booked_fold_token_effects (p : Params) (env : Env) {s s' : Sys}
 /-- Given the actual full before Sys and actual successful adapter fold; when
 reading its result; then the actual imported fold accepted exactly its full
 projected successor and the exact two pools are filtered by consumed refs.
-Conversely a reachable Sys, preserved KERI registration authorization and
-actual upstream acceptance must reconstruct successfully: a metadata guard
-cannot hide missing adapter behavior. The two custody theorems preserve the
+Conversely a reachable Sys and actual upstream acceptance must reconstruct
+successfully, with no inception evidence shown at the fold: every registration
+a fold can take was booked, and the booking required the evidence. A metadata
+guard cannot hide missing adapter behavior. The two custody theorems preserve the
 entire unselected record and retire/burn/remove only the exact selected one,
 including alias and tag identity observations. These types are universal over
 mixed batches, not just terminal-only lists. Positive witness: registration
@@ -221,7 +222,7 @@ not count as semantic kills. -/
 theorem fold_consumes_exact (p : Params) (env : Env) (cfg : Singular.Config)
     {s s' : Sys} (hr : Reach p env cfg s) {gen plugin : Nat}
     {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    (hs : fold p s gen plugin u tx = .ok (f, s'))
     {ref : Singular.OutRef} {e : TerminationEntry}
     (hp : pendingAt s ref = some e)
     (hc : Singular.inputsContainReference tx.transaction.inputs ref = true) :
@@ -233,11 +234,11 @@ theorem fold_consumes_exact (p : Params) (env : Env) (cfg : Singular.Config)
       decide (pair.1 = s.config.singularTag e.payload.aid))).map Prod.snd).sum = -1 ∧
     (tx.outputs.flatMap (·.singularTags)).count (s.config.singularTag e.payload.aid) = 0 := by
   have before := reachable_wellFormed p env cfg hr
-  have after := wellFormed_fold p env before hs
+  have after := wellFormed_fold p before hs
   have shape := before.terminationShape e (pending_lookup_mem s ref e hp).1
   have selected := consumed_pending_member p before hp hc
   obtain ⟨result, batch, effect⟩ := Singular.economic_fold_registry_correspondence
-    (fold_sound p env hs).2.2.2.1
+    (fold_sound p hs).2.2.1
   have trie : s'.trie = result.state.trie := congrArg Singular.RegistryState.trie effect
   have terminal : Singular.trieGet s'.trie e.payload.aid = .known .terminal := by
     rw [trie]
@@ -250,10 +251,10 @@ theorem fold_consumes_exact (p : Params) (env : Env) (cfg : Singular.Config)
   have supply : Singular.worldSingularSupply s'.toWorld e.payload.aid = 0 :=
     (Singular.Statements.world_supply_sync s'.toWorld after.worldReachable e.payload.aid).2.1.mpr
       (by simp [Sys.toWorld, terminal])
-  have alias := fold_old_binding p env before hs e.payload.aid e.payload.token
+  have alias := fold_old_binding p before hs e.payload.aid e.payload.token
     shape.2.2.2.2.2.2.2.2.2.1
-  exact ⟨fold_pending_consumed p env hs ref hc, noCarrier, terminal, supply, alias,
-    booked_fold_token_effects p env before hs hp hc⟩
+  exact ⟨fold_pending_consumed p hs ref hc, noCarrier, terminal, supply, alias,
+    booked_fold_token_effects p before hs hp hc⟩
 
 /-- Given an actual reachable/executed FoldReceipt and exact Completes relation;
 when using it for a Checkpoint focused completion; then actual imported
@@ -272,7 +273,7 @@ theorem completion_receipt_effects (p : Params) (env : Env) (cfg : Singular.Conf
     bindingAt r.after aid = some token := by
   obtain ⟨e, pending, aidEqual, tokenEqual, consumed⟩ := hc
   have effects := fold_consumes_exact p env cfg r.reachable r.executed pending consumed
-  refine ⟨(fold_sound p env r.executed).2.2.2.1, effects.1, ?_, ?_, ?_, ?_⟩
+  refine ⟨(fold_sound p r.executed).2.2.1, effects.1, ?_, ?_, ?_, ?_⟩
   · simpa [aidEqual] using effects.2.1
   · simpa [aidEqual] using effects.2.2.1
   · simpa [aidEqual] using effects.2.2.2.1

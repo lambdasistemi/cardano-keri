@@ -38,7 +38,8 @@ def bookingCells : List Json :=
     ("registration-backdated", { b with request.submittedAt := 0 }),
     ("registration-too-wide", { b with interval := ⟨0, 2⟩, request.submittedAt := 2 }),
     ("registration-large-nat", registration s 9007199254740993 9007199254740995)
-  ].map (fun (name, booking) => appendCell s name (.bookRegistration booking))
+  ].map (fun (name, booking) => appendCell s name (.bookRegistration booking)) ++
+  [ cell "registration-missing-inception" p {} s (.bookRegistration b) ]
 
 def foldCells (s : Sys) (refs : List Singular.OutRef) : Except String (List Json) := do
   let (u, tx) ← foldTransaction s refs 2 1 1
@@ -95,7 +96,7 @@ def foldCells (s : Sys) (refs : List Singular.OutRef) : Except String (List Json
       if o.request.isSome then { o with contents.lovelace := 999 } else o)) tx,
     run "fold-wrong-input-state" (u.map fun (ref, o) => (ref,
       if o.output.stateTokens > 0 then { o with output.stateToken := some ⟨99, 0⟩ } else o)) tx,
-    cell "fold-missing-inception" p {} s (.fold s.gen s.config.applicationPolicy u tx) ])
+    cell "fold-without-inception-evidence" p {} s (.fold s.gen s.config.applicationPolicy u tx) ])
 
 def terminationCells (s : Sys) : Except String (List Json) := do
   let b ← termination s 11 200

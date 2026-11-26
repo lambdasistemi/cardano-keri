@@ -24,6 +24,7 @@ module Cardano.KERI.Deployment.RegistryDeploySpec (
     walletOutputs,
     expectedSeedIn,
     lifecycleAccount,
+    registrationsOf,
     testTerms,
     newChain,
     chainRuntime,
@@ -98,7 +99,7 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
     Network (..),
-    StrictMaybe (SJust, SNothing),
+    StrictMaybe (SJust),
     TxIx (..),
     boundRational,
  )
@@ -128,7 +129,7 @@ import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
 import Data.List (isInfixOf)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromJust, isJust, listToMaybe, maybeToList)
+import Data.Maybe (fromJust, isJust, listToMaybe)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -473,24 +474,23 @@ spec = describe "#351 deploying a registry" $ do
             fmap fst (chooseSeed (take 2 walletOutputs)) `shouldBe` Nothing
 
     describe "a deployment that completes" $ beforeAll deployed $ do
-        it "lands the eight transactions in order, and reports each as it settles" $ \(outcome, chain) -> do
+        it "lands the seven transactions in order, the booking attestation policy published before the application, and reports each as it settles" $ \(outcome, chain) -> do
             result <- expectDeployed outcome
             map landedStep (deployedLanded result) `shouldBe` allSteps
             map landedStep (deployedLanded result)
                 `shouldBe` [ PublishTemplate
+                           , PublishAttestation
                            , PublishApplication
                            , PublishState
-                           , PublishRegistrationObserver
                            , PublishHashProof
                            , PublishCheckpoint
-                           , RegisterObserverCredential
                            , CreateRegistry
                            ]
             map landedTransaction (deployedLanded result)
                 `shouldBe` map transactionId (reverse (chainAccepted chain))
             reverse (chainReported chain) `shouldBe` deployedLanded result
             -- each is reported before the next is submitted: at the n-th submission n are reported
-            reverse (chainReportedAtSubmission chain) `shouldBe` [0 .. 7]
+            reverse (chainReportedAtSubmission chain) `shouldBe` [0 .. 6]
         it "reports what each transaction paid and what it leaves locked, from the transaction itself" $ \(outcome, chain) -> do
             result <- expectDeployed outcome
             let transactions = reverse (chainAccepted chain)
@@ -499,10 +499,8 @@ spec = describe "#351 deploying a registry" $ do
             -- a publication locks its one published output; the change is not locked
             forM_ (take 6 (zip (deployedLanded result) transactions)) $ \(landed, tx) ->
                 landedLocked landed `shouldBe` sum (take 1 (outputCoins tx))
-            -- the registration of the credential locks the key deposit and nothing else
-            map landedLocked (take 1 (drop 6 (deployedLanded result))) `shouldBe` [2_000_000]
             -- the genesis locks its state output and its configuration record
-            map landedLocked (drop 7 (deployedLanded result))
+            map landedLocked (drop 6 (deployedLanded result))
                 `shouldBe` [sum (take 2 (outputCoins (last transactions)))]
             -- the collateral posted is the lovelace of the outputs a transaction names, as they were when it was built
             let created =
@@ -528,7 +526,7 @@ spec = describe "#351 deploying a registry" $ do
             riSeed (deployedIdentity result) `shouldBe` outputReferenceOf expectedSeedIn
             let transactions = reverse (chainAccepted chain)
                 spends tx = tx ^. bodyTxL . inputsTxBodyL
-                (beforeGenesis, genesisOnly) = splitAt 7 transactions
+                (beforeGenesis, genesisOnly) = splitAt 6 transactions
             forM_ beforeGenesis $ \tx ->
                 Set.member expectedSeedIn (spends tx) `shouldBe` False
             map (Set.member expectedSeedIn . spends) genesisOnly `shouldBe` [True]
@@ -571,14 +569,14 @@ spec = describe "#351 deploying a registry" $ do
                 outputAt' (OutputReference transaction index) =
                     Map.lookup (TxIn (txIdOf transaction) (TxIx (fromInteger index))) outputsNow
                 observers = scriptsObservers scripts
-                holdsScript ref artifactHash = case outputAt' (scriptOutput ref) of
-                    Just out -> (out ^. referenceScriptTxOutL) /= SNothing && scriptHash ref == scriptHashBytes artifactHash
-                    Nothing -> False
+                holdsScript = carriesProgram outputsNow
             recordNetwork record `shouldBe` 0
-            holdsScript (recordApplication record) (artifactScriptHash (scriptsApplication scripts)) `shouldBe` True
-            holdsScript (recordRegistration record) (artifactScriptHash (observerLifecycle observers)) `shouldBe` True
-            holdsScript (recordHashProof record) (artifactScriptHash (observerHashProof observers)) `shouldBe` True
-            holdsScript (recordCheckpoint record) (artifactScriptHash (scriptsCheckpoint scripts)) `shouldBe` True
+            holdsScript (recordApplication record) (scriptsApplication scripts) `shouldBe` True
+            holdsScript (recordAttestation record) (scriptsAttestation scripts) `shouldBe` True
+            -- the new policy is told apart from the historical registration observer
+            scriptHash (recordAttestation record) `shouldSatisfy` (/= scriptHashBytes (artifactScriptHash (observerLifecycle observers)))
+            holdsScript (recordHashProof record) (observerHashProof observers) `shouldBe` True
+            holdsScript (recordCheckpoint record) (scriptsCheckpoint scripts) `shouldBe` True
             fmap (^. referenceScriptTxOutL) (outputAt' (scriptOutput (recordState record)))
                 `shouldBe` Just (SJust (mkCageScript (scriptsStateProgram scripts)))
             scriptHash (recordState record) `shouldBe` scriptsStateHash scripts
@@ -610,11 +608,10 @@ spec = describe "#351 deploying a registry" $ do
                     ]
                 txOf (OutputReference transaction _) = [transaction]
             [recordGenesis record] `shouldBe` idOf CreateRegistry
-            maybeToList (recordCredentialRegistration record) `shouldBe` idOf RegisterObserverCredential
             txOf (recordTemplate record) `shouldBe` idOf PublishTemplate
             txOf (scriptOutput (recordApplication record)) `shouldBe` idOf PublishApplication
             txOf (scriptOutput (recordState record)) `shouldBe` idOf PublishState
-            txOf (scriptOutput (recordRegistration record)) `shouldBe` idOf PublishRegistrationObserver
+            txOf (scriptOutput (recordAttestation record)) `shouldBe` idOf PublishAttestation
             txOf (scriptOutput (recordHashProof record)) `shouldBe` idOf PublishHashProof
             txOf (scriptOutput (recordCheckpoint record)) `shouldBe` idOf PublishCheckpoint
             txOf (recordConfiguration record) `shouldBe` idOf CreateRegistry
@@ -624,19 +621,36 @@ spec = describe "#351 deploying a registry" $ do
                 [ recordTemplate record
                 , scriptOutput (recordApplication record)
                 , scriptOutput (recordState record)
-                , scriptOutput (recordRegistration record)
+                , scriptOutput (recordAttestation record)
                 , scriptOutput (recordHashProof record)
                 , scriptOutput (recordCheckpoint record)
                 , recordConfiguration record
                 , recordRegistryState record
                 ]
                 $ \ref -> outputAt' ref `shouldSatisfy` isJust
+        it "tells the right script from a wrong one: the output the record names holds the applied program, and the hash-proof program in the attestation's output fails the same check" $ \(outcome, chain) -> do
+            result <- expectDeployed outcome
+            blueprint <- loadTestBlueprint
+            scripts <-
+                either fail pure $
+                    deriveRegistryScripts stateTemplate testTerms (riSeed (deployedIdentity result)) blueprint
+            let record = deployedRecord result
+                outputsNow = chainOutputs chain
+                attestation = recordAttestation record
+                hashProof = observerHashProof (scriptsObservers scripts)
+                attestationAt = txInOfOutputReference (scriptOutput attestation)
+                swapped = Map.adjust (referenceScriptTxOutL .~ SJust (mkCageScript (artifactProgram hashProof))) attestationAt outputsNow
+            carriesProgram outputsNow attestation (scriptsAttestation scripts) `shouldBe` True
+            -- the record's hash is the attestation's, and the output carries another program
+            Map.lookup attestationAt swapped `shouldSatisfy` (/= Map.lookup attestationAt outputsNow)
+            carriesProgram swapped attestation (scriptsAttestation scripts) `shouldBe` False
+            carriesProgram outputsNow attestation hashProof `shouldBe` False
         it "pays everything it holds out of one wallet: nothing but that wallet's outputs fund it" $ \(outcome, chain) -> do
             _ <- expectDeployed outcome
             let walletTotal = sum [coinOf out | (_, out) <- walletOutputs]
                 chainTotal = sum [coinOf out | out <- Map.elems (chainOutputs chain)]
-                feesAndDeposits = sum [fee tx | tx <- chainAccepted chain] + 2_000_000
-            chainTotal + feesAndDeposits `shouldBe` walletTotal
+                fees = sum [fee tx | tx <- chainAccepted chain]
+            chainTotal + fees `shouldBe` walletTotal
 
     describe "a wallet that already holds the reference outputs of an earlier deployment" $ do
         it "never takes one of them, or an output that carries a datum, as the seed, as funding or as collateral" $ do
@@ -701,73 +715,38 @@ spec = describe "#351 deploying a registry" $ do
             chainSubmissions chain `shouldBe` 0
 
     describe "a deployment after another on the same network" $ do
-        it "does not register again a credential an earlier deployment registered: it is found before anything is paid and skipped" $ do
-            blueprint <- loadTestBlueprint
-            scripts <-
-                either fail pure $
-                    deriveRegistryScripts stateTemplate testTerms (outputReferenceOf expectedSeedIn) blueprint
-            let account =
-                    AccountAddress
-                        Testnet
-                        (AccountId (ScriptHashObj (artifactScriptHash (observerLifecycle (scriptsObservers scripts)))))
-            chainRef <- newIORef ((newChain walletOutputs){chainRegistered = Set.singleton account})
-            outcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
-            chain <- readIORef chainRef
-            result <- expectDeployed outcome
-            map landedStep (deployedLanded result) `shouldBe` filter (/= RegisterObserverCredential) allSteps
-            deployedSkipped result `shouldBe` [RegisterObserverCredential]
-            recordCredentialRegistration (deployedRecord result) `shouldBe` Nothing
-            length (chainAccepted chain) `shouldBe` 7
-            forM_ (chainAccepted chain) $ \tx ->
-                registrationsOf tx `shouldBe` Set.empty
-        it "creates a second registry on the same chain, registering the credential once" $ do
+        it "registers no stake credential, before or after another deployment, and lands the same seven steps" $ do
             blueprint <- loadTestBlueprint
             chainRef <- newIORef (newChain (walletOutputs <> moreFunds))
             firstOutcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
             secondOutcome <- deployOn noFaults chainRef (requestFor blueprint testTerms)
             first <- expectDeployed firstOutcome
             second <- expectDeployed secondOutcome
-            deployedSkipped first `shouldBe` []
-            deployedSkipped second `shouldBe` [RegisterObserverCredential]
+            map landedStep (deployedLanded first) `shouldBe` allSteps
+            map landedStep (deployedLanded second) `shouldBe` allSteps
             riSeed (deployedIdentity first) `shouldSatisfy` (/= riSeed (deployedIdentity second))
-            recordCredentialRegistration (deployedRecord first) `shouldSatisfy` isJust
-            recordCredentialRegistration (deployedRecord second) `shouldBe` Nothing
             chain <- readIORef chainRef
-            length (chainAccepted chain) `shouldBe` 15
-        it "says what it skipped when it stops" $ do
-            blueprint <- loadTestBlueprint
-            scripts <-
-                either fail pure $
-                    deriveRegistryScripts stateTemplate testTerms (outputReferenceOf expectedSeedIn) blueprint
-            let account =
-                    AccountAddress
-                        Testnet
-                        (AccountId (ScriptHashObj (artifactScriptHash (observerLifecycle (scriptsObservers scripts)))))
-            chainRef <- newIORef ((newChain walletOutputs){chainRegistered = Set.singleton account})
-            outcome <- deployOn noFaults{rejectSubmissionAt = Just 0} chainRef (requestFor blueprint testTerms)
-            case outcome of
-                Left failure -> do
-                    failureSkipped failure `shouldBe` [RegisterObserverCredential]
-                    failureNotLanded failure `shouldBe` filter (/= RegisterObserverCredential) allSteps
-                Right _ -> fail "a refused transaction was not reported"
+            length (chainAccepted chain) `shouldBe` 14
+            forM_ (chainAccepted chain) $ \tx ->
+                registrationsOf tx `shouldBe` Set.empty
 
     describe "a deployment that does not begin" $ do
         it "refuses the terms before it asks the chain anything" $ do
             blueprint <- loadTestBlueprint
             let bad = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsDeposit = 1}}
             (outcome, chain) <- runOn noFaults blueprint bad walletOutputs
-            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps [] (TermsRefused [DepositBelowFloor]))
+            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps (TermsRefused [DepositBelowFloor]))
             chainCalls chain `shouldBe` 0
         it "refuses terms that name another network than the node's" $ do
             blueprint <- loadTestBlueprint
             let other = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsNetwork = 1}}
             (outcome, chain) <- runOn noFaults blueprint other walletOutputs
-            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps [] (NetworkDisagrees 1))
+            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps (NetworkDisagrees 1))
             chainSubmissions chain `shouldBe` 0
         it "stops by name when the wallet holds no output to create the registry from" $ do
             blueprint <- loadTestBlueprint
             (outcome, chain) <- runOn noFaults blueprint testTerms (take 2 walletOutputs)
-            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps [] NoSeedOutput)
+            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps NoSeedOutput)
             chainSubmissions chain `shouldBe` 0
         it "stops by name when the scripts cannot be derived from the blueprint, before any transaction" $ do
             (outcome, chain) <- runOn noFaults (Blueprint []) testTerms walletOutputs
@@ -818,7 +797,7 @@ spec = describe "#351 deploying a registry" $ do
         it "stops by name, before the genesis, when the seed was spent after the deployment began" $ do
             blueprint <- loadTestBlueprint
             -- after the n-th accepted transaction something else spends the seed
-            forM_ [0, 2, 5] $ \n -> do
+            forM_ [0, 2, 4] $ \n -> do
                 let spendSeed accepted chain
                         | accepted == n =
                             chain{chainOutputs = Map.delete expectedSeedIn (chainOutputs chain)}
@@ -829,11 +808,11 @@ spec = describe "#351 deploying a registry" $ do
                     Left failure -> do
                         failureCause failure `shouldBe` SeedSpent (outputReferenceOf expectedSeedIn)
                         failureStoppedAt failure `shouldBe` Just CreateRegistry
-                        map landedStep (failureLanded failure) `shouldBe` take 7 allSteps
+                        map landedStep (failureLanded failure) `shouldBe` take 6 allSteps
                         failureNotLanded failure `shouldBe` [CreateRegistry]
                         map landedTransaction (failureLanded failure)
                             `shouldBe` map transactionId (reverse (chainAccepted chain))
-                length (chainAccepted chain) `shouldBe` 7
+                length (chainAccepted chain) `shouldBe` 6
         it "leaves the seed unspent by every publication even when it is the largest output the wallet holds" $ do
             blueprint <- loadTestBlueprint
             -- the seed is the one output of lovelace alone above ten ada: it is also the first the publications would take
@@ -864,8 +843,8 @@ spec = describe "#351 deploying a registry" $ do
                 Set.member expectedSeedIn (tx ^. bodyTxL . inputsTxBodyL) `shouldBe` False
         it "refuses an evaluation that does not answer for the purposes it declared, without submitting that transaction" $ do
             blueprint <- loadTestBlueprint
-            -- the evaluations of the credential registration (the first) and the genesis (the second)
-            forM_ [(0 :: Int, RegisterObserverCredential, 6), (1, CreateRegistry, 7)] $ \(n, step, landedCount) -> do
+            -- the evaluation of the genesis, the one transaction of the deployment that runs a script
+            forM_ [(0 :: Int, CreateRegistry, 6)] $ \(n, step, landedCount) -> do
                 (outcome, chain) <- runOn noFaults{distortEvaluation = \k m -> if k == n then Map.empty else m} blueprint testTerms walletOutputs
                 case outcome of
                     Right _ -> fail "an evaluation that answered for nothing was accepted"
@@ -885,7 +864,7 @@ spec = describe "#351 deploying a registry" $ do
                     walletOutputs
             case outcome of
                 Left failure -> do
-                    failureStoppedAt failure `shouldBe` Just RegisterObserverCredential
+                    failureStoppedAt failure `shouldBe` Just CreateRegistry
                     case failureCause failure of
                         EvaluationFailed message -> message `shouldSatisfy` ("UnknownTxIn" `isInfixOf`)
                         other -> fail ("expected an evaluation failure, got " <> show other)
@@ -945,3 +924,18 @@ hashBytesOf (PolicyID (ScriptHash hash)) = hashToBytes hash
 
 nameBytes :: AssetName -> ByteString
 nameBytes (AssetName name) = SBS.fromShort name
+
+{- | Whether the output a script reference names carries exactly the applied program of the artifact, and the
+reference names its hash: the hash alone, or some script, is not the program.
+-}
+carriesProgram :: Map TxIn (TxOut ConwayEra) -> ScriptReference -> ScriptArtifact -> Bool
+carriesProgram outputs reference artifact =
+    case Map.lookup (txInOfOutputReference (scriptOutput reference)) outputs of
+        Just out ->
+            out ^. referenceScriptTxOutL == SJust (mkCageScript (artifactProgram artifact))
+                && scriptHash reference == scriptHashBytes (artifactScriptHash artifact)
+        Nothing -> False
+
+txInOfOutputReference :: OutputReference -> TxIn
+txInOfOutputReference (OutputReference transaction index) =
+    TxIn (txIdOf transaction) (TxIx (fromInteger index))

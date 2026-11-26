@@ -193,9 +193,16 @@ for verb in register fold; do
   verb_help="$("$ckeri" registry "$verb" --help)"
   for option in \
     network-magic blueprint node-socket funding-address signing-key-file \
-    timeout-seconds release-identity reference-record kli-export; do
+    timeout-seconds release-identity reference-record; do
     has_option "$option" <<<"$verb_help"
   done
+  # register takes the controller's export; the fold takes none: the booking attested the inception
+  if [[ $verb == register ]]; then
+    has_option kli-export <<<"$verb_help"
+  elif grep -q -- "kli-export" <<<"$verb_help"; then
+    printf 'registry fold help offers kli-export (the booking attested the inception: the fold takes no export)\n' >&2
+    exit 1
+  fi
   for forbidden in --store --manifest --cardano-cli CKERI_CARDANO_CLI CKERI_STORE CKERI_MANIFEST --booking-width --process-time --registration-cost --premium; do
     if grep -q -- "$forbidden" <<<"$verb_help"; then
       printf 'registry %s help offers %s (#351: no store, manifest, provider, cardano-cli or registry term)\n' \
@@ -281,7 +288,7 @@ if timeout 2 cat "$unreadable/vault" >/dev/null 2>&1; then
 fi
 for verb in register fold return; do
   case "$verb" in
-    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot" --kli-export "$unreadable/export") ;;
+    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot") ;;
     register) verb_arguments=(--kli-export "$unreadable/export") ;;
     return) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0") ;;
   esac
@@ -309,7 +316,7 @@ registry_provider_refusal() {
   local -a verb_arguments
   shift 2
   case "$verb" in
-    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot" --kli-export "$unreadable/export") ;;
+    fold) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0" --snapshot "$unreadable/snapshot") ;;
     register) verb_arguments=(--kli-export "$unreadable/export") ;;
     return) verb_arguments=(--request "$(printf 'a%.0s' {1..64})#0") ;;
   esac

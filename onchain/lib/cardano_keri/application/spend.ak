@@ -4,13 +4,14 @@
 //// The Lean model's `spendRegistration`, `spendTermination` and `moneyRouted`
 //// for the input a spend handler is run for: a request is folded into its
 //// delivered holding by its deadline or returned from its deadline, a pending
-//// termination is spent only by the fold that burns its active token, every
+//// termination is spent only by the fold that burns its active token, a fold
+//// reads nothing of KERI's (the booking validated the registration), every
 //// spend burns the approval it consumes, the refunds of the returns are paid
 //// in full and the treasury donation covers the costs of the folds.
 ////
 //// ## Dependencies
-//// `application/clock`, `application/configuration`, `application/held`,
-//// `application/inception` and `application/registration`;
+//// `application/clock`, `application/configuration`, `application/held`
+//// and `application/registration`;
 //// `singular_state/preimage`; the Aiken standard library.
 ////
 //// ## Assumptions
@@ -40,9 +41,6 @@ use cardano_keri/application/configuration.{
 }
 use cardano_keri/application/held.{
   ApplicationParameters, Registration, RegistrationData, address_of, held_datum,
-}
-use cardano_keri/application/inception.{
-  inception_attested, writes_initial_state,
 }
 use cardano_keri/application/registration.{
   registration_approval, registration_shape,
@@ -76,13 +74,10 @@ pub fn approval_burned(
 }
 
 /// Model `delivered`: the output at `index` is the holding the fold delivers:
-/// at the committed address, which is the checkpoint validator's, carrying the
-/// committed initial datum, holding exactly the committed deposit and the one
-/// newly minted active token of the key.
+/// at the committed address, carrying the committed initial datum, holding
+/// exactly the committed deposit and the one newly minted active token of the
+/// key. Nothing here is KERI's: the booking validated the datum and the address.
 pub fn delivered(
-  record: Record,
-  initial_floor: Int,
-  network_id: Int,
   data: RegistrationData,
   index: Int,
   tx: Transaction,
@@ -92,15 +87,7 @@ pub fn delivered(
     Some(holding) ->
       if and {
         holding.address == data.holding_address,
-        holding.address == address_of(record.checkpoint_credential),
         holding.datum == InlineDatum(data.initial_datum),
-        initial_floor <= data.deposit,
-        writes_initial_state(
-          holding,
-          data.booked_at,
-          data.refund_address,
-          network_id,
-        ),
         lovelace_of(holding.value) == data.deposit,
         quantity_of(holding.value, data.registry.policy, active) == 1,
         quantity_of(tx.mint, data.registry.policy, active) == 1,
@@ -115,9 +102,6 @@ pub fn delivered(
 
 /// Model `spendRegistration`.
 pub fn spend_registration(
-  lifecycle_observer: ByteArray,
-  initial_floor: Int,
-  network_id: Int,
   application_policy: PolicyId,
   action: SpendAction,
   input: Output,
@@ -134,26 +118,7 @@ pub fn spend_registration(
         when action is {
           FoldRegistration { holding_index } -> and {
               fold_window(data, tx.validity_range),
-              when
-                delivered(
-                  record,
-                  initial_floor,
-                  network_id,
-                  data,
-                  holding_index,
-                  tx,
-                )
-              is {
-                Some(holding) ->
-                  inception_attested(
-                    lifecycle_observer,
-                    record.checkpoint_credential,
-                    holding,
-                    data.key,
-                    tx,
-                  )
-                None -> False
-              },
+              delivered(data, holding_index, tx) != None,
             }
           ReturnRegistration -> return_window(data, tx.validity_range)
           FoldTermination { .. } -> False
@@ -360,9 +325,6 @@ pub fn money_routed(application_policy: PolicyId, tx: Transaction) -> Bool {
 /// The spend of the input `own_reference`: the action of its redeemer decides
 /// it, and the money the whole transaction moves must be routed.
 pub fn application_spend(
-  lifecycle_observer: ByteArray,
-  initial_floor: Int,
-  network_id: Int,
   redeemer: Data,
   own_reference: OutputReference,
   tx: Transaction,
@@ -375,9 +337,6 @@ pub fn application_spend(
             when held_datum(spent.output) is {
               Some(Registration { registration }) ->
                 spend_registration(
-                  lifecycle_observer,
-                  initial_floor,
-                  network_id,
                   application_policy,
                   action,
                   spent.output,

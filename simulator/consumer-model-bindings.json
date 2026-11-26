@@ -7,10 +7,10 @@
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "843c264cb8e6c3ca1cbde6644654a4750a7f008bc73300b56ad1dd5d4a0af5b1",
-    "lean/CardanoKeri/ConsumerControls.lean": "85f43141c5c30909edd45e8f3cd9ca558c38390734076d4c8ab37d464b7ca7bb",
-    "lean/CardanoKeri/ConsumerFixtures.lean": "4a7a28c517b4eeb7448ffb66b5cf8f5b69e3eef2e6e4fbd56f1836340e1918d9",
-    "lean/CardanoKeri/ConsumerGoals.lean": "e7c41b2760a5afd4a9ee910720f714758e040c1d901d09e2bdda491d37d36537",
-    "lean/CardanoKeri/ConsumerIdentity.lean": "8abd7916cf7129bc16067e68432a6a42b51389322f4eaa10d3df651276d49033",
+    "lean/CardanoKeri/ConsumerControls.lean": "6d0b585c1a184581b2c17281cf296faacc817a963211ff9cf186eaff28cdc71c",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "56fd572a9e1ef37f75361ac846040c54c52c8bec013aa51d9c41bc5e088449e8",
+    "lean/CardanoKeri/ConsumerGoals.lean": "5e05fafd7490e4bcf9eac94e41f61d7408bfb8b823bfee26002028c420de33e5",
+    "lean/CardanoKeri/ConsumerIdentity.lean": "7e99eff3f8866967b728f6f0ba394fbea26044851f6ed962b66370fbbfb95074",
     "lean/CardanoKeri/ConsumerJourney.lean": "6b0128addf84c4003efdb8473c0dba5dfa315e88a1c6d64cd4994c9d1588f757",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
     "lean/ConsumerTraceDriver.lean": "9c076becf7a5878bf2bf606c370443d368b138a110f7b6a1e80a59248ab04581",
@@ -135,7 +135,7 @@
     {
       "id": "CI23",
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_sound",
-      "statementSha256": "a496e70eb06ef30d446c3fbed95e28f4a5485214dd1475aabc2e61df7d64ec30"
+      "statementSha256": "d9b9230165d5db571557b6d86163047b42421423918f78b8aed29608f46cc01b"
     },
     {
       "id": "CI24",
@@ -150,7 +150,7 @@
     {
       "id": "CI26",
       "declaration": "CardanoKeri.ConsumerIdentity.registerJoint_complete",
-      "statementSha256": "745d394f35827a6f8c7caf817f362e6fdd786e38363d37160090886af2e96df8"
+      "statementSha256": "98bb9e6b351e221bc31be2bcb0a60b7627f27f58dfc8dbb41736be3eed585976"
     }
   ],
   "roster": {

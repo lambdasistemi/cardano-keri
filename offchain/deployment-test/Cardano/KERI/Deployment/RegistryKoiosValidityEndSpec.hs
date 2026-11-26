@@ -255,8 +255,6 @@ data Setup = Setup
     -- ^ the status and the headers of the provider's answer to the tip
     , setIncluded :: Bool
     -- ^ the chain includes what the provider accepted
-    , setRegistered :: Bool
-    -- ^ the registry's observer credential is already registered
     , setNoWindowFrom :: Maybe Int
     -- ^ the build from which the window is not usable, whatever the tip
     , setSupplyEnd :: Bool
@@ -276,7 +274,6 @@ standard =
         , setHidden = False
         , setTipShape = (200, [])
         , setIncluded = True
-        , setRegistered = False
         , setNoWindowFrom = Nothing
         , setSupplyEnd = False
         }
@@ -373,10 +370,7 @@ runKoios setup = withDeploy $ \c -> do
                 , hookIncludes = pure (setIncluded setup)
                 , hookPrepare = if setSupplyEnd setup then supplyEnd tip else pure
                 }
-        base =
-            (caseRuntime c)
-                { rtRewardRegistered = if setRegistered setup then \_ -> pure True else rtRewardRegistered (caseRuntime c)
-                }
+        base = caseRuntime c
     withStandIn accepting $ \url seen -> do
         wired <- wireWith hooks 3 base (casePayer c)
         (code, out, err) <- caseRun c (wiredOpeners wired) (koiosAt url)
@@ -407,7 +401,6 @@ runNode setup = withDeploy $ \c -> do
         lookedAt =
             (caseRuntime c)
                 { rtObserve = observe
-                , rtRewardRegistered = if setRegistered setup then \_ -> pure True else rtRewardRegistered (caseRuntime c)
                 , rtTransactions = transactions{trSubmit = \tx -> modifyIORef' tip (+ setStep setup) >> trSubmit transactions tx}
                 }
         installed = installNodeWindowWith (pure (Right (testTimeSource (setNetwork setup)))) (Network 42) lookedAt
@@ -445,40 +438,35 @@ spec = describe "#546 registry deploy: every transaction carries public Singular
 
 endsSpec :: Provider -> Spec
 endsSpec provider = do
-    it "hands over all eight transactions, each valid until one hour after the tip of its own build, and creates the registry" $ do
+    it "hands over all seven transactions, each valid until one hour after the tip of its own build, and creates the registry" $ do
         ran <- run provider standard
         ranErr ran `shouldSatisfy` (not . ("stopped" `isInfixOf`))
         ranCode ran `shouldBe` ExitSuccess
-        length (ranHanded ran) `shouldBe` 8
-        map upperOf (ranHanded ran) `shouldBe` [Just (tipOfBuild standard n + 3_600) | n <- [0 .. 7]]
+        length (ranHanded ran) `shouldBe` 7
+        map upperOf (ranHanded ran) `shouldBe` [Just (tipOfBuild standard n + 3_600) | n <- [0 .. 6]]
         length (ranFiles ran) `shouldBe` 2
     it "reports each landed transaction with the end its signed body carries" $ do
         ran <- run provider standard
         ranCode ran `shouldBe` ExitSuccess
-        reportedEnds (ranOut ran) `shouldBe` [show (tipOfBuild standard n + 3_600) | n <- [0 .. 7]]
+        reportedEnds (ranOut ran) `shouldBe` [show (tipOfBuild standard n + 3_600) | n <- [0 .. 6]]
     it "reads the window again at each build: the ends differ as the tip moves, and no two transactions share one" $ do
         ran <- run provider standard{setStep = 25}
         ranCode ran `shouldBe` ExitSuccess
         let ends = map upperOf (ranHanded ran)
-        length ends `shouldBe` 8
-        length (distinct ends) `shouldBe` 8
-    it "skips the credential when it is registered and gives the seven others their ends" $ do
-        ran <- run provider standard{setRegistered = True}
-        ranCode ran `shouldBe` ExitSuccess
-        length (ranHanded ran) `shouldBe` 7
-        map upperOf (ranHanded ran) `shouldBe` [Just (tipOfBuild standard n + 3_600) | n <- [0 .. 6]]
+        length ends `shouldBe` 7
+        length (distinct ends) `shouldBe` 7
     it "is cut by the ledger's horizon where the horizon is near: the last slot the ledger converts, below one hour" $ do
         ran <- run provider standard{setNetwork = shortNetwork, setStartSlot = 100}
         ranCode ran `shouldBe` ExitSuccess
-        length (ranHanded ran) `shouldBe` 8
-        map upperOf (ranHanded ran) `shouldBe` replicate 8 (Just 499)
+        length (ranHanded ran) `shouldBe` 7
+        map upperOf (ranHanded ran) `shouldBe` replicate 7 (Just 499)
     it "converts the instant an hour after the tip through the network's time: a slot that changes its length inside the hour is not extrapolated" $ do
         ran <- run provider standard{setNetwork = changingNetwork, setStartSlot = 1_500}
         ranCode ran `shouldBe` ExitSuccess
         -- the first era ends at slot 2,000, the instant 2,000 s; the instant an hour after the tip's start is 5,100 s,
         -- in the second era, whose slots last two seconds: slot 2,000 + (5,100 - 2,000) / 2
-        map upperOf (ranHanded ran) `shouldBe` [Just (3_550 + 5 * toInteger n) | n <- [0 .. 7 :: Int]]
-        map upperOf (ranHanded ran) `shouldNotBe` [Just (tipOfBuild standard{setStartSlot = 1_500} n + 3_600) | n <- [0 .. 7]]
+        map upperOf (ranHanded ran) `shouldBe` [Just (3_550 + 5 * toInteger n) | n <- [0 .. 6 :: Int]]
+        map upperOf (ranHanded ran) `shouldNotBe` [Just (tipOfBuild standard{setStartSlot = 1_500} n + 3_600) | n <- [0 .. 6]]
     it "refuses the first publication by name, and hands over nothing, when no window from the tip is usable" $ do
         ran <- run provider standard{setNetwork = hourSlotNetwork, setStartSlot = 1_000}
         ranCode ran `shouldBe` ExitFailure 1
@@ -490,7 +478,7 @@ endsSpec provider = do
         ran <- run provider standard{setNoWindowFrom = Just 2}
         ranCode ran `shouldBe` ExitFailure 1
         ranErr ran `shouldSatisfy` ("no-usable-window" `isInfixOf`)
-        ranErr ran `shouldSatisfy` ("stopped at: publish-state-script" `isInfixOf`)
+        ranErr ran `shouldSatisfy` ("stopped at: publish-application" `isInfixOf`)
         length (ranHanded ran) `shouldBe` 2
         let landed = [line | line <- lines (ranErr ran), "landed: " `isPrefixOf` line]
         length landed `shouldBe` 2
@@ -616,10 +604,10 @@ partialTipSpec = describe "a tip the provider answers partially" $ do
             ranErr ran `shouldSatisfy` ("stopped at: publish-state-template" `isInfixOf`)
             length (ranHanded ran) `shouldBe` 0
             length (ranAccepted ran) `shouldBe` 0
-    it "answers a whole tip as it did: the same run with the status 200 hands over its eight transactions" $ do
+    it "answers a whole tip as it did: the same run with the status 200 hands over its seven transactions" $ do
         ran <- run OnKoios standard
         ranCode ran `shouldBe` ExitSuccess
-        length (ranHanded ran) `shouldBe` 8
+        length (ranHanded ran) `shouldBe` 7
   where
     standardSlot = setStartSlot standard
     partialTips =

@@ -143,7 +143,7 @@
       "pause": 500
     },
     {
-      "text": "This section describes the shipped V1 flow. The proposed M1 architecture moves inception admission into a repeatable attestation, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception attestation.",
+      "text": "This section describes the shipped V1 flow. The M1 architecture shows, in the model, the inception evidence when the registration is booked, leaving registry absence and checkpoint creation at the registration fold. The existing hash-proof token below is not that full inception evidence.",
       "pause": 400
     },
     {
@@ -223,6 +223,6 @@
   ],
   "_source": {
     "file": "observer-architecture.md",
-    "sha256": "58c40afb96095707b779833aebe09a438e7add3210cab0e2149201f62ce3acd0"
+    "sha256": "17da075ba9c78a8ef994e060fd8c8bf7d7c14f5231152d5c61ab8eee720b6066"
   }
 }

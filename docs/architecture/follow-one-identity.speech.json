@@ -41,7 +41,7 @@
       "pause": 500
     },
     {
-      "text": "In the registry model, a successful first registration creates one registry entry and its matching checkpoint together. A second registration of the same AID is refused. This guarantee depends on valid inception evidence, an absent registry key and a successful fold. Merely submitting a request establishes none of those outcomes.",
+      "text": "In the registry model, a successful first registration creates one registry entry and its matching checkpoint together. A second registration of the same AID is refused. This guarantee depends on valid inception evidence, shown when the request is booked, an absent registry key and a successful fold. A booked request has shown its evidence and establishes neither of the other two.",
       "pause": 400
     },
     {
@@ -59,7 +59,7 @@
       "pause": 400
     },
     {
-      "text": "These are required implementation obligations. The registry's fold models their combined result; its Env.inception predicate assumes the cryptographic answer. It does not specify the exact division of checks between the KERI plugin, checkpoint minting policy and registration observers. The concrete script interfaces and asset-name encoding must be verified separately before this becomes an implementation guarantee.",
+      "text": "These are required implementation obligations. The Registry's bookRegistration reads the Env.inception predicate, which assumes the cryptographic answer; fold invokes the imported economic judgment, installs the resulting carriers and reads no evidence. The model does not specify how the booking's evidence is divided between the application's mint, the checkpoint minting policy and the registration observers. The concrete script interfaces and asset-name encoding must be verified separately before this becomes an implementation guarantee.",
       "pause": 400
     },
     {
@@ -67,29 +67,33 @@
       "pause": 400
     }
   ],
-  "proposed-attest-inception-before-requesting-registration": [
+  "the-booking-shows-the-inception-the-fold-shows-nothing": [
     {
-      "text": "Proposed: attest inception before requesting registration.",
+      "text": "The booking shows the inception; the fold shows nothing.",
       "pause": 500
     },
     {
-      "text": "The attestation says: “This hash identifies a valid KERI inception.” It does not say: “This AID has never been registered.” Multiple attestations of the same inception are allowed. The registry supplies uniqueness when it admits registration and creates the checkpoint.",
+      "text": "The controller, who holds the inception event, proves it once, when booking. A folder then needs nothing from the controller. Booking the same identifier twice is allowed. The registry supplies uniqueness when a fold admits the first request and creates the checkpoint.",
       "pause": 400
     },
     {
-      "text": "This is an earlier stand-alone proposal for the evidence boundary. It is not the constitution's requirement (the controller's booking mint validates the inception) and not the behaviour of the model at this revision (the fold checks it); issue #559 records that conflict and its model-first repair. The proposal is not implemented or represented as a separate action in the simulators. The architecture diagram shows the attestation, request, atomic fold and consumer boundaries together.",
+      "text": "This is the model's rule, and the merged code follows it: the application mint verifies the inception at the booking, through an attestation minted in the same transaction, which is what the constitution requires of the controller's booking mint; the fold consumes the admitted request and reads no inception evidence. The evidence is local: no deployed registry runs it yet. The model's statement that Singular's client can fold a KERI request is for one request per fold.",
       "pause": 400
     },
     {
-      "text": "To remove the full inception from the request and fold, the earlier validation must establish the required inception admission checks, including signatures and witness receipts. The attestation must authenticate both the AID and the initial key-state projection, under a pinned validation policy. Otherwise a request could pair a valid inception hash with unrelated checkpoint keys. An unauthenticated datum placed beside an attestation token is not enough. Registration-time fields such as the refund address, birth slot and bonds are still checked at the fold.",
+      "text": "The architecture diagram shows the booking, the booked request, the fold and the consumer boundaries together.",
       "pause": 400
     },
     {
-      "text": "The existing V1 BLAKE3 proof token supplies only the hash relationship; it does not by itself certify inception admission. Extending that boundary requires a concrete attestation format and validation rules. Whether a fold references or consumes the attestation is still to be specified; single-use attestation is not the source of checkpoint uniqueness. Even with two valid attestations and two pending requests, only the first successful registration can satisfy the registry absence check.",
+      "text": "The evidence must cover the AID and the initial key state together, under a pinned validation policy. Otherwise a booking could pair a valid inception with unrelated checkpoint keys. The model states the evidence as one fact of the key and leaves its content (signatures, witness receipts, the keys written in the datum) to the validator that realizes it; that limit is recorded in the Lean correspondence register. Registration-time fields such as the refund address, the birth slot and the bonds are checked at the booking, with the rest of the initial datum.",
       "pause": 400
     },
     {
-      "text": "The duplicate scenario already demonstrates that registration boundary using an assumed inception fact. It does not execute the proposed attestation validation. Moving this work earlier can keep the raw inception out of the shared fold, but transaction size and execution-budget feasibility still need measurement.",
+      "text": "A booking is not the source of checkpoint uniqueness. Even with two booked requests of one AID, only the first successful fold can satisfy the registry absence check.",
+      "pause": 400
+    },
+    {
+      "text": "The duplicate scenario demonstrates that registration boundary using an assumed inception fact.",
       "pause": 400
     }
   ],
@@ -245,6 +249,6 @@
   ],
   "_source": {
     "file": "follow-one-identity.md",
-    "sha256": "577317a456f0cae908c49dcf704dbb043979b6001dd08dd50d48f2fc31508e26"
+    "sha256": "a73910d28fc831194c96ece3f2f8b2119eeaa69e6605b036fc88713f0517378b"
   }
 }

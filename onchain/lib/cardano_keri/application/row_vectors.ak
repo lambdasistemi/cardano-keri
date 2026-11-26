@@ -23,9 +23,9 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/checkpoint/datum.{KeyMaterial, Live, TerminationPending}
 use singular_state/preimage.{RegistryIdentity}
 
-/// The script hash standing for the lifecycle observer (a parameter of the
+/// The policy standing for the booking attestation (a parameter of the
 /// validator; the Lean model has no such input).
-pub const observer_hash: ByteArray =
+pub const attestation_hash: ByteArray =
   #"9a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9fe03080d12171c21"
 
 /// What a fold's holding must hold: the registry's minimum ADA, the checkpoint

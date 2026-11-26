@@ -46,11 +46,11 @@ theorem generic_registration_keys_unique (s : Singular.RegistryState)
         · simpa [edge] using tail
 
 /-- An accepted adapter fold selects distinct registration keys. -/
-theorem fold_registration_keys_unique (p : Params) (env : Env) {s s' : Sys}
+theorem fold_registration_keys_unique (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s')) :
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s')) :
     (registrationKeys (Singular.foldMembers s.toWorld tx)).Nodup := by
-  obtain ⟨_, result, batch, _, _⟩ := Singular.foldAccepted_checks (fold_sound p env hs).2.2.2.1
+  obtain ⟨_, result, batch, _, _⟩ := Singular.foldAccepted_checks (fold_sound p hs).2.2.1
   have unique := generic_registration_keys_unique _ _ result (Singular.foldBatch_inv _ _ _ batch).2
   have projection : (fun m =>
       if (Singular.foldLegacyRequest s.config m).edge = .insertActive
@@ -64,10 +64,10 @@ theorem fold_registration_keys_unique (p : Params) (env : Env) {s s' : Sys}
 
 /-- A selected registration is fresh with respect to every existing alias
 binding; the full invariant's domain clause binds aliases to registry leaves. -/
-theorem fold_registration_binding_fresh (p : Params) (env : Env) {s s' : Sys}
+theorem fold_registration_binding_fresh (p : Params) {s s' : Sys}
     (hw : WellFormed p s) {gen plugin : Nat} {u : Singular.EconomicUtxo}
     {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    (hs : fold p s gen plugin u tx = .ok (f, s'))
     (b : Singular.RegistrationBooking)
     (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) :
     bindingAt s b.request.key = none := by
@@ -75,7 +75,7 @@ theorem fold_registration_binding_fresh (p : Params) (env : Env) {s s' : Sys}
   | none => rfl
   | some token =>
     have known := (hw.bindingDomain b.request.key).mp ⟨token, binding⟩
-    have refused := registered_registration_refused p env s gen plugin u tx b selected known
+    have refused := registered_registration_refused p s gen plugin u tx b selected known
     simp [hs, Except.toOption] at refused
 
 /-- An imported step adds exactly its registration key to the registered
@@ -368,17 +368,17 @@ theorem legacy_registration_mem (cfg : Singular.Config) (members : List Singular
 
 /-- A successful fold preserves the full alias/registered-leaf domain in both
 directions, including aliases of permanently retired keys. -/
-theorem fold_binding_domain (p : Params) (env : Env) {s s' : Sys} (hw : WellFormed p s)
+theorem fold_binding_domain (p : Params) {s s' : Sys} (hw : WellFormed p s)
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s')) (aid : Nat) :
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s')) (aid : Nat) :
     (∃ token, bindingAt s' aid = some token) ↔
       (Singular.trieGet s'.trie aid = .known .active ∨
         Singular.trieGet s'.trie aid = .known .terminal) := by
-  obtain ⟨_, _, _, world, _, reconstructed⟩ := (fold_iff p env s s' gen plugin u tx f).mp hs
+  obtain ⟨_, _, world, _, reconstructed⟩ := (fold_iff p s s' gen plugin u tx f).mp hs
   obtain ⟨acc, installed, _, bindings, _⟩ := foldResult_installer p reconstructed
   have aliases := installMembers_domain p s s acc _ installed aid
   obtain ⟨result, batch, effect⟩ := Singular.economic_fold_registry_correspondence
-    (fold_sound p env hs).2.2.2.1
+    (fold_sound p hs).2.2.1
   have trie : s'.trie = result.state.trie := congrArg Singular.RegistryState.trie effect
   have domain := generic_fold_domain _ _ result aid (Singular.foldBatch_inv _ _ _ batch).2
   have converted := domain.trans (or_congr Iff.rfl
@@ -394,26 +394,26 @@ theorem fold_binding_domain (p : Params) (env : Env) {s s' : Sys} (hw : WellForm
 
 /-- An accepted imported fold and its exact application reconstruction
 preserve every field of the full invariant, for arbitrary well-formed input. -/
-theorem wellFormed_fold (p : Params) (env : Env) {s s' : Sys} (hw : WellFormed p s)
+theorem wellFormed_fold (p : Params) {s s' : Sys} (hw : WellFormed p s)
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s')) : WellFormed p s' := by
-  have sound := fold_sound p env hs
-  obtain ⟨_, _, _, world, _, reconstructed⟩ := (fold_iff p env s s' gen plugin u tx f).mp hs
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s')) : WellFormed p s' := by
+  have sound := fold_sound p hs
+  obtain ⟨_, _, world, _, reconstructed⟩ := (fold_iff p s s' gen plugin u tx f).mp hs
   obtain ⟨acc, installed, carriers, bindings, next⟩ := foldResult_installer p reconstructed
   have frames := installMembers_frame p s s acc _ installed
   have metadata := installMembers_metadata p s s acc _ hw.metadata installed
-    (fold_registration_keys_unique p env hs) (fold_registration_binding_fresh p env hw hs)
+    (fold_registration_keys_unique p hs) (fold_registration_binding_fresh p hw hs)
   have config : s'.config = { s.config with root := s'.config.root } :=
-    Singular.foldAccepted_config sound.2.2.2.1
+    Singular.foldAccepted_config sound.2.2.1
   have afterMetadata : Metadata p s' := metadata.transport carriers bindings next
-    (by rw [frames.2.1, sound.2.2.2.2.2.1]; exact List.filter_sublist)
-    (by rw [frames.2.2, sound.2.2.2.2.2.2]; exact List.filter_sublist)
+    (by rw [frames.2.1, sound.2.2.2.2.1]; exact List.filter_sublist)
+    (by rw [frames.2.2, sound.2.2.2.2.2]; exact List.filter_sublist)
     (by rw [frames.1]; exact config)
-  obtain ⟨result, batch, effect⟩ := Singular.economic_fold_registry_correspondence sound.2.2.2.1
+  obtain ⟨result, batch, effect⟩ := Singular.economic_fold_registry_correspondence sound.2.2.1
   have trie : s'.trie = result.state.trie := congrArg Singular.RegistryState.trie effect
-  apply afterMetadata.wellFormed (.fold hw.worldReachable u tx sound.2.2.2.1)
+  apply afterMetadata.wellFormed (.fold hw.worldReachable u tx sound.2.2.1)
   · rw [trie]
     exact generic_fold_trie_keys _ _ result hw.trieKeys (Singular.foldBatch_inv _ _ _ batch).2
-  · exact fold_binding_domain p env hw hs
+  · exact fold_binding_domain p hw hs
 
 end CardanoKeri.Registry

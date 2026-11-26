@@ -15,7 +15,7 @@ config:
 id: 8
 slug: plugin-swap
 story: "A fold preserves the pinned application"
-narrative: "A generation and plugin mismatch or missing inception evidence refuses processing; the complete valid transaction succeeds."
+narrative: "A substituted application policy refuses processing; the complete valid transaction succeeds, and it needs no inception evidence at hand: the booking showed it."
 params:
   D: 10
   Mc: 4
@@ -170,31 +170,33 @@ step:
             - [11,{"known":{"s":"active"}}]
   note: "Process the selected requests"
 fork:
-  id: no-inception
+  id: no-evidence-at-the-fold
   at: 1
-  title: "Try processing without inception evidence"
+  title: "Process with no inception evidence at hand"
   env:
     inception: []
     duplicity: []
   expectFinal:
-    bindings: []
-    carriers: []
+    gen: 1
+    treasury: 2
+    nextToken: 1
     config:
-      activePolicy: 8
-      applicationPolicy: 7
-      bookingWidth: 1
+      registryId: 9
       maxFee: 1
       processTime: 5
-      registrationCost: 2
-      registryId: 9
       retractTime: 0
-      root: [203, 242, 156, 228, 132, 34, 35, 37]
-    gen: 0
-    nextToken: 0
-    registrations: [{"applicationTagsMinted":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"interval":{"lower":0,"upper":1},"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"5369963716140239679","destination":111,"edge":"insertActive","key":11,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"14272158603032493918","policy":9}]},"datum":711,"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":100},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1},"trieReadyTagsMinted":[{"name":"14272158603032493918","policy":9}]}]
+      applicationPolicy: 7
+      activePolicy: 8
+      root: [187, 43, 111, 81, 131, 142, 177, 246]
+      registrationCost: 2
+      bookingWidth: 1
+    trie:
+      - [11,{"known":{"s":"active"}}]
+    carriers: [{"aid":11,"token":0,"k":0,"minAda":4,"original":{"key":11,"output":111,"kind":"active","datum":711},"st":"live"}]
+    registrations: []
     terminations: []
-    treasury: 0
-    trie: []
+    bindings:
+      - [11, 0]
   step:
     now: 0
     actor: "anyone presenting the required evidence"
@@ -230,11 +232,40 @@ fork:
           - [{"index":0,"tx":101},{"contents":{"applicationTags":[],"lovelace":0,"otherAssets":[],"trieReadyTags":[]},"output":{"address":null,"assets":[],"commitment":null,"config":{"activePolicy":8,"applicationPolicy":7,"bookingWidth":1,"maxFee":1,"processTime":5,"registrationCost":2,"registryId":9,"retractTime":0,"root":[203,242,156,228,132,34,35,37]},"datum":"inline","datumValue":null,"lovelace":0,"reference":null,"role":"state","stateToken":{"name":0,"policy":9},"stateTokens":1},"request":null,"singularTags":[]}]
           - [{"index":1,"tx":101},{"contents":{"applicationTags":[],"lovelace":1,"otherAssets":[],"trieReadyTags":[]},"output":{"address":0,"assets":[],"commitment":null,"config":null,"datum":"none","datumValue":null,"lovelace":1,"reference":null,"role":"owner","stateToken":null,"stateTokens":0},"request":null,"singularTags":[]}]
     expect:
-      ok: false
-      reason: keri-inception-refused
+      ok: true
       result:
-        error: keri-inception-refused
-    note: "Try processing without inception evidence"
+        ok:
+          flow:
+            deposited: 0
+            intoRequest: 0
+            bookingFee: 0
+            locked:
+              - [11, 10]
+            bondReturn: null
+            premium: null
+          state:
+            gen: 1
+            treasury: 2
+            nextToken: 1
+            config:
+              registryId: 9
+              maxFee: 1
+              processTime: 5
+              retractTime: 0
+              applicationPolicy: 7
+              activePolicy: 8
+              root: [187, 43, 111, 81, 131, 142, 177, 246]
+              registrationCost: 2
+              bookingWidth: 1
+            trie:
+              - [11,{"known":{"s":"active"}}]
+            carriers: [{"aid":11,"token":0,"k":0,"minAda":4,"original":{"key":11,"output":111,"kind":"active","datum":711},"st":"live"}]
+            registrations: []
+            terminations: []
+            bindings:
+              - [11, 0]
+          observations: [{"aid":11,"minAda":4,"supply":1,"binding":0,"leaf":{"known":{"s":"active"}}}]
+    note: "Process with no inception evidence at hand"
 fork:
   id: control-1-keri-plugin-mismatch
   at: 1

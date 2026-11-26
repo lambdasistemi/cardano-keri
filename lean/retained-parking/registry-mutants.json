@@ -25,10 +25,10 @@
   },
   {
     "id": "registration-no-inception",
-    "before": "if !registrationsAuthorized env members then",
-    "after": "if !registrationsAuthorized env members && false then",
+    "before": "  if !env.inception b.request.key then throw \"keri-inception-refused\"",
+    "after": "  if !env.inception b.request.key && false then throw \"keri-inception-refused\"",
     "failure": "missing-inception",
-    "owner": "CardanoKeri.Registry.fold_iff",
+    "owner": "CardanoKeri.Registry.booking_refuses_missing_inception",
     "test": "RegistryRetentionChecks"
   },
   {
@@ -153,5 +153,21 @@
     "failure": "return-without-member-refused",
     "owner": "CardanoKeri.Registry.return_member_is_registration",
     "test": "RegistryReturnChecks"
+  },
+  {
+    "id": "fold-reads-inception",
+    "before": "  | .fold gen plugin u tx => fold p s gen plugin u tx",
+    "after": "  | .fold gen plugin u tx => if (Singular.foldMembers s.toWorld tx).all (fun m => match m with | .registration b => env.inception b.request.key | .termination _ => true) then fold p s gen plugin u tx else .error \"keri-inception-refused\"",
+    "failure": "fold-reads-no-inception",
+    "owner": "CardanoKeri.Registry.only_booking_reads_inception",
+    "test": "RegistryRetentionChecks"
+  },
+  {
+    "id": "booking-evidence-of-another-field",
+    "before": "  if !env.inception b.request.key then throw \"keri-inception-refused\"",
+    "after": "  if !env.inception b.request.refundAddress then throw \"keri-inception-refused\"",
+    "failure": "pending-requests-have-evidence",
+    "owner": "CardanoKeri.Registry.booked_request_has_inception",
+    "test": "RegistryRetentionChecks"
   }
 ]

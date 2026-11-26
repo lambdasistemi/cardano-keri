@@ -289,7 +289,6 @@ runners =
                     , rfTimeoutSeconds = 5
                     , rfReleaseIdentity = unreadable directory "identity"
                     , rfReferenceRecord = unreadable directory "record"
-                    , rfKliExport = unreadable directory "export"
                     , rfRequest = ""
                     , rfSnapshot = unreadable directory "snapshot"
                     , rfSnapshotOut = Nothing

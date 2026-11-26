@@ -85,12 +85,11 @@ their epoch.
 
 ### Under the accepted design
 
-Registration becomes a **request** against the registry: it identifies the AID and carries the bonds and a refund address chosen by whoever pays. The constitution requires the controller's booking to validate the inception evidence; at this revision the model and the validators check it at the fold, and issue #559 records that conflict and its model-first repair. The registry's folder applies it in a batch. This does not require the
-raw inception to be stored in the request: the proposed
-[earlier attestation](follow-one-identity.md#proposed-attest-inception-before-requesting-registration)
-would authenticate inception validity and its initial key state. Such an
-attestation may be issued more than once; registry admission supplies checkpoint
-uniqueness. Its concrete format and validation are still to be implemented.
+Registration becomes a **request** against the registry: it identifies the AID and carries the bonds and a refund address chosen by whoever pays. The constitution requires the controller's booking to validate the inception evidence, and the application mint now does: it verifies the inception at the booking, through an attestation minted in the same transaction. The registry's folder applies the request in a batch, needs nothing from the controller and reads no inception evidence. This does not require the
+raw inception to be stored in the request: the
+[attestation](follow-one-identity.md#the-booking-shows-the-inception-the-fold-shows-nothing)
+authenticates the inception's validity and its initial key state. An identifier may be booked more than once; registry admission supplies checkpoint
+uniqueness. The evidence is local: no deployed registry runs it yet.
 The registry's fold checks that the AID has **no leaf**, inserts one, and delivers the checkpoint holding the booking committed. The persistent
 leaf prevents a second first-registration of the AID, and there is no revival:
 a registered identity stays live until it is convicted. See

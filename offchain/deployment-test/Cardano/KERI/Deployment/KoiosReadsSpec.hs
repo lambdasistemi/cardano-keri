@@ -50,7 +50,7 @@ import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), noFaults)
 import Cardano.KERI.Deployment.RegistryRegister (registerRegistration)
 import Cardano.KERI.Deployment.RegistryTransactions (Payer (..), ValidityPlan (..), publishReferenceScript)
 import Cardano.KERI.Deployment.TestNetworkTime (TestNetwork (..), testNetworkTime)
-import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
+import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
 
@@ -65,7 +65,7 @@ import Cardano.Ledger.Api.PParams (
     ppTxFeePerByteL,
  )
 import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx)
-import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mkBasicTxBody)
+import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mkBasicTxBody, outputsTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, coinTxOutL, datumTxOutL, mkBasicTxOut, referenceScriptTxOutL, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), TxIx (..), natVersion)
 import Cardano.Ledger.Binary (decodeFull')
@@ -563,11 +563,18 @@ bookingTransaction = do
     outcome <- registerRegistration runtime (\_ -> pure ()) (registerRequestOf world export)
     _ <- either (fail . show) pure outcome
     chain <- readIORef (worldChain world)
-    booking <- case chainAccepted chain of
-        tx : _ -> pure tx
-        [] -> fail "the booking landed no transaction"
+    -- the booking is the last transaction landed; the premint of its hash proof is the one before it
+    (booking, premint) <- case chainAccepted chain of
+        tx : earlier : _ -> pure (tx, earlier)
+        _ -> fail "the registration landed no premint and booking"
+    let preminted =
+            Map.fromList
+                [ (TxIn (transactionId premint) (TxIx ix), out)
+                | (ix, out) <- zip [0 ..] (toList (premint ^. bodyTxL . outputsTxBodyL))
+                ]
+        beforeBooking = preminted <> standing
     scripted <- trEvaluate (rtTransactions runtime) booking
-    pure (booking, standing, scripted)
+    pure (booking, beforeBooking, scripted)
 
 resolveFrom :: Map TxIn (TxOut ConwayEra) -> Set TxIn -> IO (Map TxIn (TxOut ConwayEra))
 resolveFrom world wanted = pure (Map.restrictKeys world wanted)

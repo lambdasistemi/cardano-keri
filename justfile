@@ -773,6 +773,14 @@ gen-application-vectors: stage-onchain
 check-application-vectors: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/application-vectors.mjs --check
 
+# The booking attestation: regenerate the claim, name and redeemer parity vectors (the Aiken tests and the fixture the Haskell encoder reads).
+gen-attestation-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/attestation-vectors.mjs
+
+# The booking attestation: the committed parity vectors are exactly what the generator writes; identical to CI.
+check-attestation-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/attestation-vectors.mjs --check
+
 # #343: regenerate the consumer corpus vectors from simulator/consumer-corpus.json.
 gen-consumer-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-vectors.mjs

@@ -48,7 +48,7 @@ commands =
     , Command "register" (common <> files <> [("--kli-export", "export.cesr")]) $ \case
         RegistryRegister s -> Just (rgSigningKeyFile s, rgVault s, rgPassphraseFd s)
         _ -> Nothing
-    , Command "fold" (common <> files <> [("--kli-export", "export.cesr"), ("--request", request), ("--snapshot", "snapshot.json")]) $ \case
+    , Command "fold" (common <> files <> [("--request", request), ("--snapshot", "snapshot.json")]) $ \case
         RegistryFold s -> Just (rfSigningKeyFile s, rfVault s, rfPassphraseFd s)
         _ -> Nothing
     , Command "return" (common <> files <> [("--request", request)]) $ \case

@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is that of the earlier deployed design (version 1). The proposed M1 registration flow below is an earlier stand-alone proposal that moves full inception admission into a repeatable attestation. It is neither the constitution's requirement (the controller's booking mint validates the inception) nor the behaviour of the model and the validators at this revision (the fold checks it); issue #559 records that conflict and its model-first repair. The proposal is not implemented; the existing BLAKE3 token proves a narrower fact. How lifecycle state is represented also changes: in version 1 it is role addresses, in the accepted design it is the datum's poison and frozen bits and its pending-termination form, read by the holding predicate. Both are described below, marked.",
+      "text": "The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is that of the earlier deployed design (version 1). The M1 registration flow below is the merged code's: the application mint verifies the inception at the booking, through an attestation minted in the same transaction, and the fold consumes the admitted request and reads no inception evidence. The evidence is local: no deployed registry runs it yet. The existing BLAKE3 token proves a narrower fact. How lifecycle state is represented also changes: in version 1 it is role addresses, in the accepted design it is the datum's poison and frozen bits and its pending-termination form, read by the holding predicate. Both are described below, marked.",
       "pause": 400
     }
   ],
@@ -31,13 +31,13 @@
       "pause": 400
     }
   ],
-  "proposed-m1-registration-flow": [
+  "m1-registration-flow": [
     {
-      "text": "Proposed M1 registration flow.",
+      "text": "M1 registration flow.",
       "pause": 500
     },
     {
-      "text": "The request need not carry the raw inception if the attestation authenticates the initial key-state projection as well as the AID. The concrete evidence carrier, reference or consumption rules, and transaction budgets remain to be specified and measured. Attestation is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
+      "text": "A folder reads everything it needs from the chain: the holding address, the initial datum and the deposit are the request's own data. The model states this for Singular's fold of one request. The controller, who holds the inception event, shows it once, when booking. A booking is repeatable; checkpoint uniqueness is enforced by registry admission. There is no revival: an identity is alive until it is convicted. The registration guarantees explain the model boundaries and link the playable duplicate-registration case.",
       "pause": 400
     }
   ],
@@ -163,7 +163,7 @@
       "pause": 400
     },
     {
-      "text": "For the proposed registration flow, the heavy inception admission moves to the earlier attestation transaction. The fold must still authenticate that result and couple registry insertion, checkpoint mint and output validation. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations. At this revision the fold checks the inception; the constitution requires the controller's booking to do so, and issue #559 records the conflict.",
+      "text": "In the registry's registration flow, as the model states it, the inception admission is checked when the request is booked. The fold checks no inception evidence; it still couples registry insertion, the checkpoint mint and the delivery of what the approval commits. This changes where registration evidence is checked; it does not remove those checks or change rotation evidence into inception attestations. The application mint verifies the inception at the booking, through an attestation minted in the same transaction; the fold consumes the admitted request and reads no inception evidence. The evidence is local: no deployed registry runs it yet.",
       "pause": 400
     }
   ],
@@ -231,6 +231,6 @@
   ],
   "_source": {
     "file": "overview.md",
-    "sha256": "a9fd89ddbae2dd3e26e937c3783acfef4ff88dc8f6926ae9cfb2deac6c2bf777"
+    "sha256": "0105785ca168c73be5eea3676e84cd9ef76f02a35d87767391d81c41e536810a"
   }
 }

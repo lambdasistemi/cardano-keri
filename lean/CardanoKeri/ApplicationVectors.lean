@@ -26,7 +26,9 @@ transactions: configuration creation, bookings, folds and returns of one
 request, the spends of a pending termination, and the spend of a delivered
 checkpoint by its own lifecycle. The request and configuration datums' own
 byte layouts are not fixed here: the fixture decoders map a fixture number to
-the decoded registration or configuration. The holding address is the
+the decoded registration or configuration, and a fixture table gives the
+initial checkpoint datum each request carries is in its decoded data. Three rows run with no
+inception evidence for the fixture key; every other row runs with it. The holding address is the
 checkpoint validator's, a Plutus `Address` with a script payment credential and
 no stake credential, another script than the application's. Evidence over the
 listed inputs, not a proof over all inputs. -/
@@ -131,10 +133,19 @@ def otherKeysRaw : Nat :=
 /-- BLAKE2b-256 of an initial datum's serialisation. -/
 def datumHash (raw : Nat) : Nat := pack (blake2b256 (unpack raw))
 
+/-- The byte encoding of the application's preimages. A registration approval
+names its initial datum by the datum's hash: the request carries the datum
+itself, and the encoding hashes it. Every other preimage is the consumer's. -/
+def approvalCode : Codec := fun preimage =>
+  CardanoKeri.ConsumerIdentity.Bytes.code (match preimage with
+    | .registrationApproval r key address datum deposit =>
+      .registrationApproval r key address (datumHash datum) deposit
+    | other => other)
+
 /-! ## Requests and the fixture decoder -/
 
 def registry : TokenId := deployment.registry ⟨CardanoKeri.ConsumerIdentity.Bytes.hash,
-  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none, datumHash,
+  CardanoKeri.ConsumerIdentity.Bytes.code, CardanoKeri.ConsumerIdentity.Bytes.keyOf, fun _ => none,
   fun _ => none, fun _ => none, fun _ => none⟩
 
 /-- A registry whose state policy is not `state(A_keri)`. -/
@@ -142,11 +153,11 @@ def foreignRegistry : TokenId := ⟨ofBytes (scriptHash 9), registry.name⟩
 
 def requestData (deposit : Nat) : RegistrationData :=
   { registry, key := aidOfCesr aidE, controller := 0, refundAddress,
-    holdingAddress := checkpointCredential, initialDatum := datumHash (initialRaw aidE),
+    holdingAddress := checkpointCredential, initialDatum := initialRaw aidE,
     deposit, bookedAt := 10, processDeadline := 15, reclaimEnd := 15 }
 
-/-- A request committing the hash of another checkpoint datum. -/
-def committing (raw : Nat) : RegistrationData := { requestData 15 with initialDatum := datumHash raw }
+/-- A request committing another checkpoint datum. -/
+def committing (raw : Nat) : RegistrationData := { requestData 15 with initialDatum := raw }
 
 /-- Fixture request datums: the number a request output carries, decoded. -/
 def requests : List (Nat × RegistrationData) := [
@@ -185,8 +196,8 @@ def decodeConfiguration (raw : Nat) : Option Configuration :=
   (configurations.find? (·.1 == raw)).map (·.2)
 
 def interpretation : Interpretation :=
-  ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, CardanoKeri.ConsumerIdentity.Bytes.code,
-   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, datumHash, decodeConfiguration,
+  ⟨CardanoKeri.ConsumerIdentity.Bytes.hash, approvalCode,
+   CardanoKeri.ConsumerIdentity.Bytes.keyOf, decode, decodeConfiguration,
    CheckpointDatum.decode release, refundTo⟩
 
 def i : Interpretation := interpretation
@@ -220,6 +231,25 @@ structure Case where
   kind : String
   observation : Observation
 
+/-- The cases in which the key of the fixture AID has no inception evidence. -/
+def withoutEvidence : List String :=
+  ["fold-without-inception-evidence", "booking-without-inception-evidence",
+   "return-without-inception-evidence"]
+
+/-- Whether the key of the fixture AID has its inception evidence in a case. -/
+def Case.evidence (c : Case) : Bool := !withoutEvidence.contains c.id
+
+/-- The cases judged under checkpoint parameters whose own floor is lower than
+the registry's: deposit 4, freeze bond 4 and one premium, 13 with the minimum
+ADA. They isolate the registry's floor from the initial state's. -/
+def lowerCheckpointFloor : List String := ["booking-below-registry-floor"]
+
+/-- The checkpoint parameters a case is judged under. -/
+def Case.checkpoint (c : Case) : CardanoKeri.Checkpoint.Params :=
+  if lowerCheckpointFloor.contains c.id then
+    { D := 4, B := 4, P := 1, W := 10, hD := by decide, hB := by decide }
+  else cp
+
 def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
     (interval : Interval := ⟨9, 10⟩) (record : Nat := 8001) : Observation :=
   { assets := view [] [(approvalOf raw, mint)] [release.applicationPolicy],
@@ -236,6 +266,45 @@ def fold (holdingLovelace : Nat) (interval : Interval := ⟨12, 15⟩) (donation
     outputs := [holding holdingLovelace datum address],
     referenceInputs := [⟨50, 0⟩], referenceOutputs := [configuration registry],
     interval, donation, actions := [.foldRegistration ⟨60, 0⟩ 0] }
+
+/-! ## The fold the Singular client builds -/
+
+/-- The fixture's trie commitment. -/
+def commit : TrieCommit := fun trie => trie.length
+
+/-- The public registry before its first fold: its state output at the state
+script, holding the state token and the commitment of the empty trie. -/
+def publicRegistry : PublicRegistry :=
+  { identity := registry, seed,
+    state := ⟨⟨40, 0⟩, release.statePolicy, 2, .root (commit []), [(registry, 1)]⟩, trie := [] }
+
+/-- The folder's own input and the layout of its transaction. -/
+def funding : FoldFunding :=
+  { ordinaryInput := ⟨⟨41, 0⟩, spenderAddress, 5, .empty, []⟩, processorAddress := spenderAddress,
+    transactionId := 71, interval := ⟨12, 15⟩, fee := 1 }
+
+/-- The fold the upstream client builds for the booked request 9001, from the
+public registry and the request alone. -/
+def clientFold : FoldObservation :=
+  buildFold i.hash i.code commit release publicRegistry
+    [.registration (request 9001 18) (dataOf 9001)] funding
+
+/-- The client's fold made to balance with a treasury donation: the folder's
+own output, the last one, gives up the donation. Nothing else differs from
+what the client builds. -/
+def donatingFold (donation : Nat := 2) : FoldObservation :=
+  let last := clientFold.outputs.length - 1
+  { clientFold with
+    outputs := clientFold.outputs.mapIdx fun index output =>
+      if index == last then { output with lovelace := output.lovelace - donation } else output,
+    donation }
+
+/-- That fold as KERI's application observes it, with what the adapter adds:
+the configuration record read by reference and the treasury donation. With a
+donation it is the balanced transaction (`donatingFold`); with none it is the
+fold exactly as the client builds it. -/
+def clientFoldAdapted (donation : Nat := 2) : Observation :=
+  adapted (donatingFold donation) (configuration registry) donation
 
 /-- A transaction of the checkpoint's own lifecycle (an advance, say) spending
 the delivered checkpoint at `address`, with no application action. The
@@ -380,6 +449,8 @@ def cases : List Case := [
     "booking", booking 9002 18⟩,
   ⟨"booking-short-deposit", "a deposit of 13, one below the minimum ADA 4 plus the deposit 10: refused",
     "booking", booking 9003 16⟩,
+  ⟨"booking-below-registry-floor", "the same deposit of 13 under checkpoint parameters whose own floor it covers (deposit 4, freeze bond 4, one premium): one below the registry's minimum ADA 4 plus deposit 10, refused",
+    "booking", booking 9003 16⟩,
   ⟨"booking-one-lovelace-more", "the request holds 19, one more than its exact contents: refused",
     "booking", booking 9001 19⟩,
   ⟨"booking-one-lovelace-less", "the request holds 17, one less than its exact contents: refused",
@@ -422,37 +493,51 @@ def cases : List Case := [
     "fold", foldOnePayloadTwice⟩,
   ⟨"fold-at-application-address", "the holding is delivered to the application address instead of the checkpoint validator: refused",
     "fold", fold 15 (address := release.applicationCredential)⟩,
-  ⟨"fold-at-committed-other-address", "a request committing another address than the checkpoint validator's, folded to that address: refused",
+  ⟨"fold-at-committed-other-address", "a request committing another address than the checkpoint validator's, which no booking mints, folded to that address: the spend compares the holding with the committed address only, accepted",
     "fold", fold 15 (raw := 9004) (address := otherAddress)⟩,
   ⟨"fold-other-commitment-to-checkpoint", "a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused",
     "fold", fold 15 (raw := 9004)⟩,
-  ⟨"fold-advanced-sequence", "the request committed, and the holding carries, a checkpoint datum at sequence number 7: refused",
+  ⟨"fold-committed-datum-not-initial", "a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted",
     "fold", fold 15 (raw := 9011) (datum := advancedRaw)⟩,
-  ⟨"fold-advanced-epoch", "the committed datum is at epoch 3: refused",
-    "fold", fold 15 (raw := 9012) (datum := epochRaw)⟩,
-  ⟨"fold-poisoned", "the committed datum is poisoned: refused",
-    "fold", fold 15 (raw := 9013) (datum := poisonedRaw)⟩,
-  ⟨"fold-frozen", "the committed datum is frozen: refused",
-    "fold", fold 15 (raw := 9014) (datum := frozenRaw)⟩,
-  ⟨"fold-topped-up", "the committed datum is topped up: refused",
-    "fold", fold 15 (raw := 9015) (datum := toppedUpRaw)⟩,
-  ⟨"fold-born-later", "the committed datum is born one slot after the booking bound: refused",
-    "fold", fold 15 (raw := 9016) (datum := bornLaterRaw)⟩,
-  ⟨"fold-other-refund", "the committed datum refunds to another address than the request names: refused",
-    "fold", fold 15 (raw := 9017) (datum := otherRefundRaw)⟩,
-  ⟨"fold-pending-termination", "the committed datum is a pending termination: refused",
-    "fold", fold 15 (raw := 9018) (datum := pendingRaw)⟩,
-  ⟨"fold-other-aid", "the committed datum is the initial datum of another AID: refused",
-    "fold", fold 15 (raw := 9019) (datum := initialRaw aidE2)⟩,
-  ⟨"fold-pool-below-premium", "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
-    "fold", fold 14 (raw := 9007)⟩,
-  ⟨"fold-unrecorded-refund", "a request whose refund address is not an address a checkpoint datum can record: refused",
-    "fold", fold 15 (raw := 9008)⟩,
+  ⟨"fold-built-by-singular-client", "the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated out of the folder's own output: accepted",
+    "fold", clientFoldAdapted⟩,
+  ⟨"fold-built-by-singular-client-no-donation", "the same fold donating nothing, as the client builds it: refused",
+    "fold", clientFoldAdapted 0⟩,
+  ⟨"fold-built-by-singular-client-no-record", "the same fold without the configuration record as a reference input, as the client builds it: refused",
+    "fold", { clientFoldAdapted with referenceInputs := [] }⟩,
+  ⟨"fold-without-inception-evidence", "the fold at the deadline when the key has no inception evidence: a fold reads none, accepted",
+    "fold", fold 15⟩,
+  ⟨"booking-without-inception-evidence", "the booking of a key that has no inception evidence: refused",
+    "booking", booking 9001 18⟩,
+  ⟨"booking-advanced-sequence", "the request commits a checkpoint datum at sequence number 7: refused",
+    "booking", booking 9011 18⟩,
+  ⟨"booking-advanced-epoch", "the committed datum is at epoch 3: refused",
+    "booking", booking 9012 18⟩,
+  ⟨"booking-poisoned", "the committed datum is poisoned: refused",
+    "booking", booking 9013 18⟩,
+  ⟨"booking-frozen", "the committed datum is frozen: refused",
+    "booking", booking 9014 18⟩,
+  ⟨"booking-topped-up", "the committed datum is topped up: refused",
+    "booking", booking 9015 18⟩,
+  ⟨"booking-born-later", "the committed datum is born one slot after the booking bound: refused",
+    "booking", booking 9016 18⟩,
+  ⟨"booking-other-refund", "the committed datum refunds to another address than the request names: refused",
+    "booking", booking 9017 18⟩,
+  ⟨"booking-pending-termination", "the committed datum is a pending termination: refused",
+    "booking", booking 9018 18⟩,
+  ⟨"booking-other-aid", "the committed datum is the initial datum of another AID: refused",
+    "booking", booking 9019 18⟩,
+  ⟨"booking-pool-below-premium", "a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused",
+    "booking", booking 9007 17⟩,
+  ⟨"booking-unrecorded-refund", "a request whose refund address is not an address a checkpoint datum can record: refused",
+    "booking", booking 9008 18⟩,
   ⟨"checkpoint-spent-at-checkpoint-validator", "the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it",
     "checkpoint", checkpointSpend checkpointCredential⟩,
   ⟨"checkpoint-spent-at-application-address", "the same spend of a checkpoint sitting at the application address: no action names it, refused",
     "checkpoint", checkpointSpend release.applicationCredential⟩,
   ⟨"return-at-deadline", "a return starting at the deadline paying the refund address 17, the request less the tip: accepted",
+    "return", return_ 17⟩,
+  ⟨"return-without-inception-evidence", "the same return when the key has no inception evidence: a return reads none, accepted",
     "return", return_ 17⟩,
   ⟨"return-straddling-deadline", "a return whose validity interval starts one slot before the deadline: refused",
     "return", return_ 17 (interval := ⟨14, 20⟩)⟩,
@@ -508,8 +593,8 @@ def cases : List Case := [
 
 def hexOf (n : Nat) : String := toHex (unpack n)
 
-def verdict (o : Observation) : String :=
-  if accepted i env rp cp release o then "accepted" else "refused"
+def verdict (c : Case) : String :=
+  if accepted i ⟨fun _ => c.evidence⟩ rp c.checkpoint release c.observation then "accepted" else "refused"
 
 def intervalJson (x : Interval) : Json :=
   Json.mkObj [("lower", toJson x.lower), ("upper", toJson x.upper)]
@@ -524,13 +609,14 @@ def row (c : Case) : Json :=
     ("inputs", Json.arr (o.inputs.map outputJson).toArray),
     ("outputs", Json.arr (o.outputs.map outputJson).toArray),
     ("referenced", toJson (o.referenceInputs.length)),
-    ("verdict", toJson (verdict o))]
+    ("inceptionEvidence", toJson c.evidence),
+    ("verdict", toJson (verdict c))]
 
 /-- The approval of an AID, with every byte it is derived from. -/
 def approvalRow (id note aid : String) (deposit : Nat) : Json :=
   let raw := initialRaw aid
   let key := aidOfCesr aid
-  let preimage := i.code (.registrationApproval registry key checkpointCredential (datumHash raw) deposit)
+  let preimage := i.code (.registrationApproval registry key checkpointCredential raw deposit)
   Json.mkObj [("id", toJson id), ("note", toJson note),
     ("input", Json.mkObj [("statePolicy", toJson policyHex),
       ("seed", Json.mkObj [("transactionId", toJson txHex), ("outputIndex", toJson seed.index)]),
@@ -540,7 +626,7 @@ def approvalRow (id note aid : String) (deposit : Nat) : Json :=
     ("initialDatumHash", toJson (hexOf (datumHash raw))),
     ("approvalPreimage", toJson (toHex preimage)),
     ("approval", Json.mkObj [("policy", toJson (toHex applicationScript)),
-      ("name", toJson (hexOf (approval i deployment key checkpointCredential (datumHash raw) deposit).name))])]
+      ("name", toJson (hexOf (approval i deployment key checkpointCredential raw deposit).name))])]
 
 def approvals : List Json := [
   approvalRow "approval" "the registration approval of a funded registration of 15 lovelace" aidE 15,
@@ -633,6 +719,23 @@ def table : Json :=
     ("approvals", Json.arr approvals.toArray),
     ("terminationApprovals", Json.arr terminationApprovals.toArray),
     ("releases", Json.arr (releaseCases.map releaseRow).toArray),
+    ("clientFold", Json.mkObj [
+      ("note", toJson ("the fold SingularApplicationHeld.buildFold builds for request 9001 from the public registry and the request. " ++
+        "asBuilt: the public registry's own fold judgement and the balance of the transaction as the client builds it, which donates nothing. " ++
+        "withTheDonation: the same for the transaction of the row fold-built-by-singular-client, where the folder's own output gives up " ++
+        "the donation; it is one transaction, judged by the public registry here and by KERI's application in that row. " ++
+        "Neither judgement reads the balance; the ledger does")),
+      ("asBuilt", Json.mkObj [
+        ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release clientFold)),
+        ("balances", toJson (observedBalance clientFold.spentOutputs clientFold.outputs clientFold.fee clientFold.donation))]),
+      ("withTheDonation", Json.mkObj [
+        ("donation", toJson (donatingFold).donation),
+        ("registryAccepts", toJson (SingularApplicationHeld.fold .none i.hash i.code commit release donatingFold)),
+        ("balances", toJson (observedBalance (donatingFold).spentOutputs (donatingFold).outputs (donatingFold).fee (donatingFold).donation))]),
+      ("holding", match clientFold.outputs[1]? with
+        | some holding => Json.mkObj [("address", toJson (hexOf holding.credential)), ("lovelace", toJson holding.lovelace),
+            ("carriesTheRequestsInitialDatum", toJson (decide (holding.datum = .application (dataOf 9001).initialDatum)))]
+        | none => Json.null)]),
     ("rows", Json.arr (cases.map row).toArray)]
 
 /-! ## Checking a committed table -/

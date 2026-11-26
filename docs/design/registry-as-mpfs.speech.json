@@ -5,7 +5,7 @@
       "pause": 500
     },
     {
-      "text": "As an identity owner, I keep my checkpoint alive — bonds, rotations, unfreezing — until it is convicted; there is no owner exit, no parking and no revival. As a relying party, I see a checkpoint that is either alive or convicted, and I must refuse a termination-pending output. As a folder, I can process a booked request without becoming the identity's controller. At this revision the fold still reads the KERI inception premise, which the constitution assigns to the controller's booking; issue #559 records that conflict and its model-first repair.",
+      "text": "As an identity owner, I keep my checkpoint alive — bonds, rotations, unfreezing — until it is convicted; there is no owner exit, no parking and no revival. As a relying party, I see a checkpoint that is either alive or convicted, and I must refuse a termination-pending output. As a folder, I can process a booked request without becoming the identity's controller. The application mint verifies the KERI inception premise at the booking, as the constitution assigns, through an attestation minted in the same transaction; the fold reads no inception evidence. The evidence is local: no deployed registry runs it yet.",
       "pause": 400
     },
     {
@@ -37,7 +37,7 @@
       "pause": 400
     },
     {
-      "text": "The coarse Registry predicates are inception and duplicity. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
+      "text": "The coarse Registry predicates are inception and duplicity. A registration booking reads inception and no other step does: a fold or a return of a booked request needs no evidence from the identity's controller. They are declared abstractions, not cryptographic verification or a proof that they equal Checkpoint's concrete evidence predicates. In particular, the Registry flow does not summarize the Checkpoint conviction's bond and pool distribution.",
       "pause": 400
     },
     {
@@ -117,11 +117,11 @@
       "pause": 500
     },
     {
-      "text": "As a KERI registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is KERI's application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
+      "text": "As a KERI registration requester, I book a request that the public Singular registry singular_state(A_keri) can fold into my checkpoint, and I know in advance what the fold or a later return does with my money and where my checkpoint will live. The public registry checks only that each folded request carries the registration approval its holding commits to, and that the holding holds at least the committed deposit. Everything else is KERI's application, stated in lean/CardanoKeri/Application.lean against the public model models/singular-application-held at the pin above. This section states the model's rule, which the merged code follows: the validators check the inception and the initial state at the booking, and the fold command supplies no inception. The evidence is local: no deployed registry runs it yet. The Lean revision, the pin, the compiler and the script hashes and sizes of this generation are on the identities of this generation.",
       "pause": 400
     },
     {
-      "text": "The application address holds only configuration records and requests. A delivered checkpoint lives at the checkpoint validator's own address, where its lifecycle (advance, conviction, freeze, top-up in the source tree; the model adds poison, which has no spend arm yet) spends it as the checkpoint and economic models state; the application never spends it. The one exception is the pending output a conviction leaves there: only a termination booking releases it, as the next section shows. The constitution assigns the application's validation of a request, the inception first, to the controller's booking mint, and the fold to the application-ignorant Singular folder. At this revision the model checks the inception and the delivered initial state when the request is spent by the fold (Application.lean 272–282, 318–335); issue #559 records the conflict and the model-first repair, and draft #564 would move the checks and is not accepted main.",
+      "text": "The application address holds only configuration records and requests. A delivered checkpoint lives at the checkpoint validator's own address, where its lifecycle (advance, conviction, freeze, top-up in the source tree; the model adds poison, which has no spend arm yet) spends it as the checkpoint and economic models state; the application never spends it. The one exception is the pending output a conviction leaves there: only a termination booking releases it, as the next section shows. The constitution assigns the application's validation of a request, the inception first, to the controller's booking mint, and the fold to the application-ignorant Singular folder. The application mint verifies the inception and the delivered initial state at the booking, through an attestation minted in the same transaction (Application.bookRegistration); the fold consumes the admitted request and reads no inception evidence. The evidence is local: no deployed registry runs it yet.",
       "pause": 400
     },
     {
@@ -129,7 +129,7 @@
       "pause": 300
     },
     {
-      "text": "Booking. The booking reads the record by reference and mints exactly one registration approval. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
+      "text": "Booking. The booking reads the record by reference and mints exactly one registration approval, and only for a key that has its inception evidence. The approval commits the registry, the AID's key, the checkpoint validator's credential from the record as the holding address (never the application address), the hash of the initial checkpoint datum and the deposit, which is the whole carrier the checkpoint will hold: at least the minimum ADA plus the registry's deposit. The request carries that datum itself and holds exactly the deposit, the registration cost and the minimum tip (booking_inversion, booking_refuses_missing_inception, registration_approval_requires_inception, booking_refuses_foreign_registry, booking_refuses_application_holding, booking_refuses_other_holding, booking_refuses_short_deposit, booking_refuses_inexact_contents).",
       "pause": 300
     },
     {
@@ -137,7 +137,11 @@
       "pause": 300
     },
     {
-      "text": "The initial checkpoint state. The delivered holding's datum is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A fold delivering any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, or a pool below one premium, is refused, so no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state, initialState_is_registration, fold_refuses_other_state, fold_refuses_other_aid, fold_refuses_pool_below_premium, fold_refuses_unrecorded_refund). The key material in the datum is pinned by the committed datum hash, not by this rule. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
+      "text": "What a folder supplies. Nothing of KERI's. A fold or a return reads no inception evidence (only_booking_reads_inception). The fold that Singular's client builds from the registry and one booked request is accepted once KERI's adapter adds three things, all computed from the chain: the configuration record read by reference, the treasury donation of the registration cost, and the application's redeemer naming the request and its new holding (public_fold_accepted, fold_refuses_unread_record).",
+      "pause": 300
+    },
+    {
+      "text": "The initial checkpoint state. The booking is refused unless the initial datum the request carries is exactly the state the checkpoint model's registration step writes for the request: the version 2 Live datum of the AID whose key the request names, at sequence number and epoch 0, neither poisoned, frozen nor topped up, born at the booking's validity upper bound and refunding to the ledger bytes of the refund address the request names; its pool, the deposit less the minimum ADA, the checkpoint deposit and the freeze bond, covers at least one premium. A booking committing any other sequence number, epoch, flag, birth slot, refund address, AID or a pending termination, a refund address no checkpoint can record, or a pool below one premium, is refused (booking_initial_state, booked_initial_state, initialState_is_registration, booking_refuses_other_state, booking_refuses_other_aid, booking_refuses_pool_below_premium, booking_refuses_unrecorded_refund). A fold validates none of this again: it delivers the committed datum, and a holding with another datum or at another address is refused (fold_delivers_committed, fold_refuses_other_datum, fold_refuses_other_address). So the delivered checkpoint is the initial state, and no fold can deliver a checkpoint that skips the juvenility window or claims a key state the KEL never reached (fold_delivers_initial_state, delivered_initial_state). The key material in the datum is pinned by the committed datum hash, not by this rule: the model states the inception evidence as one fact of the key, and the validator must check that the key material is the inception's. One transaction folds at most one registration request in the on-chain realization; that is a declared limit of the realization, not of the model.",
       "pause": 300
     },
     {
@@ -227,6 +231,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "7c21389671ddef7523f6e740c4eaec8ee74f53a2ae752523106c6b7e33f25b21"
+    "sha256": "1d4475756dcd385ec164d849cb895575705757c3333ca42497ad17cea4c4c2cd"
   }
 }

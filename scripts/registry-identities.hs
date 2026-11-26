@@ -53,6 +53,7 @@ main = do
     scripts <- derive (OutputReference (BS.replicate 32 0) 0)
     other <- derive (OutputReference (BS.replicate 32 1) 1)
     let application = scriptsApplication scripts
+        attestation = scriptsAttestation scripts
         checkpoint = scriptsCheckpoint scripts
         applicationHash = scriptHashBytes (artifactScriptHash application)
         checkpointHash = scriptHashBytes (artifactScriptHash checkpoint)
@@ -74,6 +75,8 @@ main = do
     row "Booking width (milliseconds)" (show (bookingWidth parameters))
     row "Checkpoint minimum ADA (lovelace)" (show (registryMinimumAda devnetTerms))
     row "Termination request carrier (lovelace)" (show (registryTerminationCarrier devnetTerms))
+    row "Booking attestation policy hash" (hexOf (scriptHashBytes (artifactScriptHash attestation)))
+    row "Booking attestation program bytes" (show (SBS.length (artifactProgram attestation)))
     row "Application script hash" (hexOf applicationHash)
     row "Application program bytes" (show (SBS.length (artifactProgram application)))
     row "State script hash" (hexOf (scriptsStateHash scripts))

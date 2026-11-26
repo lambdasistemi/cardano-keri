@@ -248,8 +248,8 @@ def registerJoint (i : Interpretation) (c : Context)
     (q : RegistrationInput) : Except String Registered := do
   let created ← createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs
   let (registrationFlow, booked) ← CardanoKeri.Registry.bookRegistration
-    q.registryParams created.economic q.booking
-  let (foldFlow, after) ← CardanoKeri.Registry.fold q.registryParams q.registryEnv
+    q.registryParams q.registryEnv created.economic q.booking
+  let (foldFlow, after) ← CardanoKeri.Registry.fold q.registryParams
     booked booked.gen booked.config.applicationPolicy q.unspent q.economicTx
   if !SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold then
     throw "full-identity-fold-refused"

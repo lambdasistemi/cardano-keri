@@ -354,18 +354,16 @@ terminal. The last two preserve the original arbitrary-Sys domain rather than
 adding Reach merely for proof convenience. Stronger no-carrier/no-pending
 custody consequences appropriately require reachable-state consistency.
 `RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls. -/
-theorem fold_iff (p : Params) (env : Env) (s s' : Sys) (gen plugin : Nat)
+theorem fold_iff (p : Params) (s s' : Sys) (gen plugin : Nat)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (f : Flow) :
-    fold p env s gen plugin u tx = .ok (f, s') ↔
+    fold p s gen plugin u tx = .ok (f, s') ↔
       gen = s.gen ∧ plugin = s.config.applicationPolicy ∧
-      registrationsAuthorized env (Singular.foldMembers s.toWorld tx) = true ∧
       ∃ world, Singular.foldAccepted s.toWorld u tx = .ok world ∧
         foldResult p s tx world = .ok (f, s') := by
   by_cases hg : gen = s.gen
   · by_cases hp : plugin = s.config.applicationPolicy
-    · cases ha : registrationsAuthorized env (Singular.foldMembers s.toWorld tx) <;>
-        cases hw : Singular.foldAccepted s.toWorld u tx <;>
-        simp [fold, hg, hp, ha, hw, bind, Except.bind, pure, Except.pure]
+    · cases hw : Singular.foldAccepted s.toWorld u tx <;>
+        simp [fold, hg, hp, hw, bind, Except.bind, pure, Except.pure]
     · simp [fold, hg, hp, bind, Except.bind, pure, Except.pure]
   · simp [fold, hg, bind, Except.bind]
 
@@ -379,9 +377,9 @@ terminal. The last two preserve the original arbitrary-Sys domain rather than
 adding Reach merely for proof convenience. Stronger no-carrier/no-pending
 custody consequences appropriately require reachable-state consistency.
 `RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls. -/
-theorem fold_stale_refused (p : Params) (env : Env) (s : Sys) (gen plugin : Nat)
+theorem fold_stale_refused (p : Params) (s : Sys) (gen plugin : Nat)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) (hg : gen ≠ s.gen) :
-    (fold p env s gen plugin u tx).toOption = none := by simp [fold, hg, bind, Except.bind, Except.toOption]
+    (fold p s gen plugin u tx).toOption = none := by simp [fold, hg, bind, Except.bind, Except.toOption]
 
 /-- Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with
 only the actual success or exact guard premises stated; when invoking the
@@ -393,10 +391,10 @@ terminal. The last two preserve the original arbitrary-Sys domain rather than
 adding Reach merely for proof convenience. Stronger no-carrier/no-pending
 custody consequences appropriately require reachable-state consistency.
 `RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls. -/
-theorem fold_plugin_swap_refused (p : Params) (env : Env) (s : Sys) (gen plugin : Nat)
+theorem fold_plugin_swap_refused (p : Params) (s : Sys) (gen plugin : Nat)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
     (hp : plugin ≠ s.config.applicationPolicy) :
-    (fold p env s gen plugin u tx).toOption = none := by
+    (fold p s gen plugin u tx).toOption = none := by
   by_cases hg : gen = s.gen <;> simp [fold, hg, hp, bind, Except.bind, pure, Except.pure, Except.toOption]
 
 /-- Given any registry state whose carrier for the identifier is live, that is
@@ -433,19 +431,19 @@ theorem pending_lookup_mem (s : Sys) (ref : Singular.OutRef) (e : TerminationEnt
   exact ⟨List.mem_of_find?_eq_some hp, by simpa using List.find?_some hp⟩
 
 /-- Given every actual fold input and any alternative signer list; when changing
-only that list; then the exact result remains the same. KERI inception and
-prior conviction authorization remain separate guards/history, and generic
+only that list; then the exact result remains the same. KERI inception evidence is a
+booking's guard and prior conviction authorization a separate step's, and generic
 value/tag/custody checks remain unchanged. This is a statement about the
 modeled fold, not authorization to spend arbitrary ordinary ledger inputs.
 `fold_plugin_swap_refused` separately protects the configured application
 policy; `registration_delivery` and `current_sys_fold_accounting` describe
 the actual output and value obligations. -/
-theorem fold_signers_irrelevant (p : Params) (env : Env) (s : Sys)
+theorem fold_signers_irrelevant (p : Params) (s : Sys)
     (gen plugin : Nat) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
     (signers : List Nat) :
-    fold p env s gen plugin u
+    fold p s gen plugin u
       { tx with transaction := { tx.transaction with signers := signers } } =
-    fold p env s gen plugin u tx := by rfl
+    fold p s gen plugin u tx := by rfl
 
 /-- Given the whole WellFormed predicate, including the explicit bindingDomain
 clause, when an arbitrary adapter step succeeds, then the
@@ -505,9 +503,10 @@ theorem recoverRegistrations_sound {s s' : Sys} {world : Singular.World}
 /-- Given the actual full before Sys and actual successful adapter fold; when
 reading its result; then the actual imported fold accepted exactly its full
 projected successor and the exact two pools are filtered by consumed refs.
-Conversely a reachable Sys, preserved KERI registration authorization and
-actual upstream acceptance must reconstruct successfully: a metadata guard
-cannot hide missing adapter behavior. The two custody theorems preserve the
+Conversely a reachable Sys and actual upstream acceptance must reconstruct
+successfully, with no inception evidence shown at the fold: every registration
+a fold can take was booked, and the booking required the evidence. A metadata
+guard cannot hide missing adapter behavior. The two custody theorems preserve the
 entire unselected record and retire/burn/remove only the exact selected one,
 including alias and tag identity observations. These types are universal over
 mixed batches, not just terminal-only lists. Positive witness: registration
@@ -515,22 +514,21 @@ of a fresh AID plus termination of AID11, with AID12 still pending. Negative
 controls isolate wrong root, config/plugin, generation, request/ref, donation,
 carrier, mint, and unselected tail independently. Compile/setup failures do
 not count as semantic kills. -/
-theorem fold_sound (p : Params) (env : Env) {s s' : Sys}
+theorem fold_sound (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo}
     {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s')) :
+    (hs : fold p s gen plugin u tx = .ok (f, s')) :
     gen = s.gen ∧ plugin = s.config.applicationPolicy ∧
-    registrationsAuthorized env (Singular.foldMembers s.toWorld tx) = true ∧
     Singular.foldAccepted s.toWorld u tx = .ok s'.toWorld ∧
     s'.gen = s.gen + 1 ∧
     s'.registrations = s.registrations.filter (fun b =>
       !Singular.inputsContainReference tx.transaction.inputs b.request.reference) ∧
     s'.terminations = s.terminations.filter (fun e =>
       !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference) := by
-  obtain ⟨gen, plugin, auth, world, executed, reconstructed⟩ :=
-    (fold_iff p env s s' gen plugin u tx f).mp hs
+  obtain ⟨gen, plugin, world, executed, reconstructed⟩ :=
+    (fold_iff p s s' gen plugin u tx f).mp hs
   obtain ⟨projected, generation, regs, terms⟩ := foldResult_sound p reconstructed
-  exact ⟨gen, plugin, auth, by simpa [projected] using executed, generation, regs, terms⟩
+  exact ⟨gen, plugin, by simpa [projected] using executed, generation, regs, terms⟩
 
 /-- Given arbitrary inputs for the inversions/refusals/frame and leaf laws, with
 only the actual success or exact guard premises stated; when invoking the
@@ -542,15 +540,15 @@ terminal. The last two preserve the original arbitrary-Sys domain rather than
 adding Reach merely for proof convenience. Stronger no-carrier/no-pending
 custody consequences appropriately require reachable-state consistency.
 `RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls. -/
-theorem generation_cannot_be_reused (p : Params) (env : Env) {s s' : Sys}
+theorem generation_cannot_be_reused (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s'))
     (plugin' : Nat) (u' : Singular.EconomicUtxo) (tx' : Singular.EconomicTransaction) :
-    (fold p env s' gen plugin' u' tx').toOption = none := by
-  have facts := fold_sound p env hs
+    (fold p s' gen plugin' u' tx').toOption = none := by
+  have facts := fold_sound p hs
   apply fold_stale_refused
   have before := facts.1
-  have after := facts.2.2.2.2.1
+  have after := facts.2.2.2.1
   omega
 
 /-- A guard that did not throw held. -/
@@ -604,13 +602,15 @@ theorem return_sound (s s' : Sys) (u : Singular.EconomicUtxo)
                 frames.2.2.2.2.2.1, frames.2.2.2.2.2.2.1, frames.2.2.2.2.2.2.2, rfl⟩
 
 /-- Given an accepted application registration booking, its entire imported
-World, value guard, flow and successor registration pool are determined. -/
-theorem bookRegistration_sound (p : Params) {s s' : Sys}
+World, value guard, flow and successor registration pool are determined, and
+its key has its inception evidence: the booking is the one step that reads it. -/
+theorem bookRegistration_sound (p : Params) {env : Env} {s s' : Sys}
     {b : Singular.RegistrationBooking} {f : Flow}
-    (hs : bookRegistration p s b = .ok (f, s')) :
+    (hs : bookRegistration p env s b = .ok (f, s')) :
     registrationShape p b ∧ Singular.book s.toWorld b = .ok s'.toWorld ∧
     s' = { s with registrations := b :: s.registrations } ∧
-    f = { deposited := b.request.contents.lovelace } := by
+    f = { deposited := b.request.contents.lovelace } ∧
+    env.inception b.request.key = true := by
   unfold bookRegistration at hs
   simp only [bind, Except.bind, pure, Except.pure] at hs
   split at hs
@@ -618,13 +618,16 @@ theorem bookRegistration_sound (p : Params) {s s' : Sys}
   · rename_i shape
     split at hs
     · contradiction
-    · rename_i world booked
+    · rename_i evidence
       split at hs
       · contradiction
-      · rename_i projected
-        cases hs
-        have equal : ({ s with registrations := b :: s.registrations } : Sys).toWorld = world := by simpa using projected
-        exact ⟨by simpa using shape, by simpa [equal] using booked, rfl, rfl⟩
+      · rename_i world booked
+        split at hs
+        · contradiction
+        · rename_i projected
+          cases hs
+          have equal : ({ s with registrations := b :: s.registrations } : Sys).toWorld = world := by simpa using projected
+          exact ⟨by simpa using shape, by simpa [equal] using booked, rfl, rfl, by simpa using evidence⟩
 
 /-- Given the exact inputs and actual success, plus actual Reach history where
 stated; when booking the convicted carrier or inspecting a reachable pending
@@ -744,8 +747,8 @@ theorem config_and_generation_frame (p : Params) (env : Env) {s s' : Sys}
       s'.gen = s.gen ∧ s'.config = s.config ∧ s'.trie = s.trie) := by
   by_cases hf : ∃ gen plugin u tx, action = .fold gen plugin u tx
   · obtain ⟨gen, plugin, u, tx, rfl⟩ := hf
-    have facts := fold_sound p env hs
-    refine ⟨Singular.foldAccepted_config facts.2.2.2.1, Or.inr facts.2.2.2.2.1, ?_⟩
+    have facts := fold_sound p hs
+    refine ⟨Singular.foldAccepted_config facts.2.2.1, Or.inr facts.2.2.2.1, ?_⟩
     intro hn
     exact False.elim (hn gen plugin u tx rfl)
   · have hn : ∀ gen plugin u tx, action ≠ .fold gen plugin u tx := by
@@ -782,15 +785,15 @@ terminal. The last two preserve the original arbitrary-Sys domain rather than
 adding Reach merely for proof convenience. Stronger no-carrier/no-pending
 custody consequences appropriately require reachable-state consistency.
 `RegistryJourneyChecks` executes accepted generations and stale-generation/plugin controls. -/
-theorem fold_empty_refused (p : Params) (env : Env) (s : Sys) (gen plugin : Nat)
+theorem fold_empty_refused (p : Params) (s : Sys) (gen plugin : Nat)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
     (he : Singular.foldMembers s.toWorld tx = []) :
-    (fold p env s gen plugin u tx).toOption = none := by
-  cases success : fold p env s gen plugin u tx with
+    (fold p s gen plugin u tx).toOption = none := by
+  cases success : fold p s gen plugin u tx with
   | error message => rfl
   | ok result =>
     rcases result with ⟨f, after⟩
-    have accepted := (fold_sound p env success).2.2.2.1
+    have accepted := (fold_sound p success).2.2.1
     obtain ⟨_, result, batch, _, _⟩ := Singular.foldAccepted_checks accepted
     have nonempty := (Singular.foldBatch_inv _ _ _ batch).1
     simp [he] at nonempty
@@ -848,7 +851,7 @@ theorem step_worldReachable (p : Params) (env : Env) {s s' : Sys}
       (bookTermination_iff p s s' aid booker fee b f).mp hs
     rw [projected]
     exact .termination hw b booked
-  | fold gen plugin u tx => exact .fold hw u tx (fold_sound p env hs).2.2.2.1
+  | fold gen plugin u tx => exact .fold hw u tx (fold_sound p hs).2.2.1
   | returnRequests u tx => exact .rejection hw u tx (return_sound s s' u tx f hs).2.2.1
 
 /-- The actual initial/step history always projects to imported reachability.
@@ -882,7 +885,7 @@ remain their separately named clauses and premises. -/
 theorem current_sys_fold_accounting (p : Params) (env : Env) (cfg : Singular.Config)
     {s s' : Sys} (hr : Reach p env cfg s) {gen plugin : Nat}
     {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s')) :
+    (hs : fold p s gen plugin u tx = .ok (f, s')) :
     Singular.balanced u.ledger tx.transaction = true ∧
     Singular.foldStateLovelace (Singular.economicSpent u tx) =
       Singular.foldStateLovelace tx.outputs ∧
@@ -897,7 +900,7 @@ theorem current_sys_fold_accounting (p : Params) (env : Env) (cfg : Singular.Con
     s'.treasury = s.treasury + tx.transaction.donation ∧
     Singular.requestTagsBurned u tx = true := by
   exact Singular.Statements.fold_routes_every_amount s.toWorld s'.toWorld
-    (reachable_world p env cfg hr) u tx (fold_sound p env hs).2.2.2.1
+    (reachable_world p env cfg hr) u tx (fold_sound p hs).2.2.1
 
 /-- Given actual imported registration booking success, or an actual selected
 registration in a successful adapter fold; when observing the request and
@@ -905,13 +908,13 @@ real economic output; then the entire declared carrier budget and exact
 unique tagged destination output follow, with unchanged opaque datum and no
 hidden tags/assets. This proves neither a Cardano minimum nor the full changing
 serialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls. -/
-theorem registration_posted_value (p : Params) {s s' : Sys}
+theorem registration_posted_value (p : Params) {env : Env} {s s' : Sys}
     {b : Singular.RegistrationBooking} {f : Flow}
-    (hs : bookRegistration p s b = .ok (f, s')) :
+    (hs : bookRegistration p env s b = .ok (f, s')) :
     p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip ∧
     b.request.contents.lovelace = b.request.registrationCost + p.tip + b.request.carrierAda ∧
     f = { deposited := b.request.contents.lovelace } := by
-  obtain ⟨⟨carrier, tip⟩, booked, _, flow⟩ := bookRegistration_sound p hs
+  obtain ⟨⟨carrier, tip⟩, booked, _, flow, _⟩ := bookRegistration_sound p hs
   have admitted : Singular.registrationBookingRefusal s.config b = none := by
     unfold Singular.book at booked
     split at booked
@@ -939,10 +942,10 @@ real economic output; then the entire declared carrier budget and exact
 unique tagged destination output follow, with unchanged opaque datum and no
 hidden tags/assets. This proves neither a Cardano minimum nor the full changing
 serialized Checkpoint datum. `Examples.registration_folded` supplies the connected registration witness. `RegistryBoundaryDriver` executes complete delivery controls. -/
-theorem registration_delivery (p : Params) (env : Env) {s s' : Sys}
+theorem registration_delivery (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo}
     {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    (hs : fold p s gen plugin u tx = .ok (f, s'))
     (b : Singular.RegistrationBooking)
     (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) :
     ∃ output : Singular.EconomicOutput,
@@ -955,7 +958,7 @@ theorem registration_delivery (p : Params) (env : Env) {s s' : Sys}
       output.output.stateTokens = 0 ∧ output.request = none ∧
       output.contents.trieReadyTags = [] ∧ output.contents.applicationTags = [] ∧
       Singular.foldBareValue output = true := by
-  obtain ⟨_, result, _, routing, _⟩ := Singular.foldAccepted_checks (fold_sound p env hs).2.2.2.1
+  obtain ⟨_, result, _, routing, _⟩ := Singular.foldAccepted_checks (fold_sound p hs).2.2.1
   have checked := (Singular.foldRouting_partitions routing).2.1 (.registration b) selected
   unfold Singular.foldCarrierRefusal at checked
   simp only [bind, pure, Option.bind] at checked
@@ -1067,7 +1070,7 @@ theorem registered_key_permanent (p : Params) (env : Env) {s s' : Sys}
   by_cases hf : ∃ gen plugin u tx, action = .fold gen plugin u tx
   · obtain ⟨gen, plugin, u, tx, rfl⟩ := hf
     obtain ⟨result, accepted, effect⟩ := Singular.economic_fold_registry_correspondence
-      (fold_sound p env hs).2.2.2.1
+      (fold_sound p hs).2.2.1
     have permanent := generic_foldActions_registered _ _ result aid hk
       (Singular.foldBatch_inv _ _ _ accepted).2
     have trie := congrArg Singular.RegistryState.trie effect
@@ -1097,7 +1100,7 @@ theorem terminal_leaf_permanent (p : Params) (env : Env) {s s' : Sys}
   by_cases hf : ∃ gen plugin u tx, action = .fold gen plugin u tx
   · obtain ⟨gen, plugin, u, tx, rfl⟩ := hf
     obtain ⟨result, accepted, effect⟩ := Singular.economic_fold_registry_correspondence
-      (fold_sound p env hs).2.2.2.1
+      (fold_sound p hs).2.2.1
     have permanent := Singular.foldActions_preserves_terminal _ _ result aid hk
       (Singular.foldBatch_inv _ _ _ accepted).2
     have trie := congrArg Singular.RegistryState.trie effect
@@ -1182,19 +1185,19 @@ theorem generic_fold_registered_insert_impossible (s : Singular.RegistryState)
 /-- Given a selected registration for an already active or terminal key; when
 a fold attempts it; then the fold is refused. A duplicate key's request cannot be
 folded, so until its deadline nothing spends it; after it, the return does. -/
-theorem registered_registration_refused (p : Params) (env : Env) (s : Sys)
+theorem registered_registration_refused (p : Params) (s : Sys)
     (gen plugin : Nat) (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction)
     (b : Singular.RegistrationBooking)
     (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx)
     (known : Singular.trieGet s.trie b.request.key = .known .active ∨
       Singular.trieGet s.trie b.request.key = .known .terminal) :
-    (fold p env s gen plugin u tx).toOption = none := by
-  cases success : fold p env s gen plugin u tx with
+    (fold p s gen plugin u tx).toOption = none := by
+  cases success : fold p s gen plugin u tx with
   | error message => rfl
   | ok result =>
     obtain ⟨flow, after⟩ := result
     obtain ⟨_, generic, batch, _, _⟩ := Singular.foldAccepted_checks
-      (fold_sound p env success).2.2.2.1
+      (fold_sound p success).2.2.1
     exact False.elim (generic_fold_registered_insert_impossible _ _ generic
       (Singular.foldLegacyRequest s.config (.registration b))
       (List.mem_map.mpr ⟨.registration b, selected, rfl⟩) rfl known

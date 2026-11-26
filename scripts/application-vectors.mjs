@@ -29,7 +29,7 @@
 //   request datum (Lean: a hash)      -> the initial checkpoint datum itself; the approval
 //                                        commits its BLAKE2b-256
 //   controller 0                      -> 28 zero bytes (no row reads it)
-//   lifecycle observer                -> a stand-in script hash (the Lean has no such input;
+//   booking attestation policy         -> a stand-in script hash (the Lean has no such input;
 //                                        a parameter of the validator)
 //   minimum deposit                   -> minimum ADA plus deposit of the Lean scenario
 //                                        (read from the booking-short-deposit note)
@@ -86,12 +86,20 @@ const generate = () => {
   const appAddr = `d8799fd87a9f581c${appPolicy}ffd87a80ff`;
   const checkpointAddr = cfg.checkpointCredential;
   if (!scriptRe.test(checkpointAddr)) throw new Error('the checkpoint credential is not a script address without a stake credential');
+  // The registry's state input and output of the client fold: the first input and the first output of the Lean row,
+  // at the registry's state script (the Lean writes its credential bare).
+  const registryHex = row('fold-built-by-singular-client').inputs[0].address;
+  if (!/^[0-9a-f]{56}$/.test(registryHex)) throw new Error('the registry of the client fold is not a bare credential');
+  for (const id of ['fold-built-by-singular-client', 'fold-built-by-singular-client-no-donation', 'fold-built-by-singular-client-no-record']) {
+    const r = row(id);
+    if (r.inputs[0].address !== registryHex || r.outputs[0].address !== registryHex || r.inputs[0].lovelace !== 2 || r.outputs[0].lovelace !== 2) throw new Error(`row ${id}: the registry state pair is not the first input and the first output`);
+  }
   const refundAddr = row('return-at-deadline').outputs[0].address;
   const spenderAddr = row('return-at-deadline').outputs[1].address;
   const otherAddr = row('return-refund-redirected').outputs[0].address;
   for (const a of [refundAddr, spenderAddr, otherAddr]) if (!addressRe.test(a)) throw new Error('a payee is not a key address without a stake credential');
   if (new Set([appAddr, checkpointAddr, refundAddr, spenderAddr, otherAddr]).size !== 5) throw new Error('the five addresses of the scenario are not distinct');
-  const roles = { app: appAddr, checkpoint: checkpointAddr, refund: refundAddr, spender: spenderAddr, other: otherAddr };
+  const roles = { app: appAddr, checkpoint: checkpointAddr, refund: refundAddr, spender: spenderAddr, other: otherAddr, registry: registryHex };
 
   // --- the scenario's numbers, read from the Lean rows ---------------------------
   const approvals = byId(data.approvals);
@@ -208,7 +216,16 @@ const generate = () => {
   const B = 'Booking { ..requests.booking(), ';
   const F = 'Fold { ..requests.fold(), ';
   const spec = [];
-  const add = (id, kind, call, shape) => spec.push({ id, kind, call, shape });
+  const add = (id, kind, call, shape) => {
+    // A booking row names its inception evidence in the Lean: the call is derived from the flag, never typed here.
+    if (kind === 'booking' || kind === 'booking-floor') {
+      const without = row(id).inceptionEvidence === false;
+      const typed = call.includes('attested: False');
+      if (without && !typed) call = call === 'requests.booking()' ? 'Booking { ..requests.booking(), attested: False }' : call.replace(/ \}$/, ', attested: False }');
+      if (!without && typed) throw new Error(`row ${id}: the call drops the observation of a row that has inception evidence`);
+    }
+    spec.push({ id, kind, call, shape });
+  };
   const bookShape = (lov, extra = {}) => ({ validity: [9, 10], referenced: 1, donation: 0, inputs: [], outputs: [[lov, 'app']], ...extra });
   add('booking', 'booking', 'requests.booking()', bookShape(18));
   add('booking-foreign-registry', 'booking', `${B}data: rows.request_data(9002) }`, bookShape(18));
@@ -224,8 +241,24 @@ const generate = () => {
   add('booking-one-payload-twice', 'booking', `${B}mint: 2, copies: 2, actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 1 }] }`, bookShape(18, { outputs: [[18, 'app'], [18, 'app']] }));
   add('booking-twice', 'booking', `${B}actions: [BookRegistration { output_index: 0 }, BookRegistration { output_index: 0 }] }`, bookShape(18));
   add('approval-without-booking', 'booking', `${B}actions: [] }`, bookShape(18));
+  add('booking-without-inception-evidence', 'booking', 'requests.booking()', bookShape(18));
+  // The datum a booking commits, one fact at a time (the requests 9011 to 9019, 9007 and 9008).
+  const bookVariant = (id, raw) => add(id, 'booking', `${B}data: rows.request_data(${raw}) }`, bookShape(18));
+  bookVariant('booking-advanced-sequence', 9011);
+  bookVariant('booking-advanced-epoch', 9012);
+  bookVariant('booking-poisoned', 9013);
+  bookVariant('booking-frozen', 9014);
+  bookVariant('booking-topped-up', 9015);
+  bookVariant('booking-born-later', 9016);
+  bookVariant('booking-other-refund', 9017);
+  bookVariant('booking-pending-termination', 9018);
+  bookVariant('booking-other-aid', 9019);
+  add('booking-pool-below-premium', 'booking', `${B}data: rows.request_data(9007), lovelace: 17 }`, bookShape(17));
+  add('booking-unrecorded-refund', 'booking', `${B}data: rows.request_data(9008) }`, bookShape(18));
+  // The deposit 13 covers an initial floor of 13 (Mc + D + B + P of another checkpoint's parameters) and is one
+  // below the registry's minimum deposit: refused by the registry's floor alone.
+  add('booking-below-registry-floor', 'booking-floor', `${B}data: rows.request_data(9003), lovelace: 16 }`, bookShape(16));
   const foldShape = (out, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[18, 'app']], outputs: [out], ...extra });
-  const foldVariant = (id, raw, k) => add(id, 'fold', `${F}data: rows.request_data(${raw}), holding_datum: rows.variant(${k}) }`, foldShape([15, 'checkpoint']));
   add('fold-at-deadline', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
   add('fold-donating-more', 'fold', `${F}donation: 3 }`, foldShape([15, 'checkpoint'], { donation: 3 }));
   add('fold-after-deadline', 'fold', `${F}upper: 16 }`, foldShape([15, 'checkpoint'], { validity: [12, 16] }));
@@ -238,17 +271,14 @@ const generate = () => {
   add('fold-at-application-address', 'fold', `${F}holding_address: requests.app_address() }`, foldShape([15, 'app']));
   add('fold-at-committed-other-address', 'fold', `${F}data: rows.request_data(9004), holding_address: rows.other_address }`, foldShape([15, 'other']));
   add('fold-other-commitment-to-checkpoint', 'fold', `${F}data: rows.request_data(9004) }`, foldShape([15, 'checkpoint']));
-  foldVariant('fold-advanced-sequence', 9011, 1);
-  foldVariant('fold-advanced-epoch', 9012, 2);
-  foldVariant('fold-poisoned', 9013, 3);
-  foldVariant('fold-frozen', 9014, 4);
-  foldVariant('fold-topped-up', 9015, 5);
-  foldVariant('fold-born-later', 9016, 6);
-  foldVariant('fold-other-refund', 9017, 7);
-  foldVariant('fold-pending-termination', 9018, 8);
-  add('fold-other-aid', 'fold', `${F}data: rows.request_data(9019), holding_datum: rows.initial_datum(1) }`, foldShape([15, 'checkpoint']));
-  add('fold-pool-below-premium', 'fold', `${F}data: rows.request_data(9007), request_lovelace: 17, holding_lovelace: 14 }`, foldShape([14, 'checkpoint'], { inputs: [[17, 'app']] }));
-  add('fold-unrecorded-refund', 'fold', `${F}data: rows.request_data(9008) }`, foldShape([15, 'checkpoint']));
+  add('fold-committed-datum-not-initial', 'fold', `${F}data: rows.request_data(9011), holding_datum: rows.variant(1) }`, foldShape([15, 'checkpoint']));
+  add('fold-without-inception-evidence', 'fold', 'requests.fold()', foldShape([15, 'checkpoint']));
+  // The fold the Singular client builds: the folder's own input and output, the holding at index 1, a spender's change.
+  const clientShape = (spenderBack, extra = {}) => ({ validity: [12, 15], referenced: 1, donation: 2, inputs: [[2, 'registry'], [18, 'app'], [5, 'spender']], outputs: [[2, 'registry'], [15, 'checkpoint'], [spenderBack, 'spender']], ...extra });
+  const client = (change, extra) => `${F}redeemer: FoldRegistration { holding_index: 1 }, inputs_before: [requests.state_input(91)], before: [requests.state_successor()], after: [requests.pay(rows.spender_address, ${change})], extra_inputs: [requests.plain_input(92, rows.spender_address, 5)]${extra} }`;
+  add('fold-built-by-singular-client', 'fold', client(5, ''), clientShape(5));
+  add('fold-built-by-singular-client-no-donation', 'fold', client(7, ', donation: 0'), clientShape(7, { donation: 0 }));
+  add('fold-built-by-singular-client-no-record', 'fold', client(5, ', references: False'), clientShape(5, { referenced: 0 }));
   add('checkpoint-spent-at-checkpoint-validator', 'checkpoint', 'requests.checkpoint_spend(requests.checkpoint_address())',
     { validity: [16, 17], referenced: 0, donation: 0, inputs: [[15, 'checkpoint']], outputs: [[15, 'checkpoint']] });
   add('checkpoint-spent-at-application-address', 'checkpoint', 'requests.checkpoint_spend(requests.app_address())',
@@ -256,6 +286,7 @@ const generate = () => {
   const R = 'Return { ..requests.returned(), ';
   const retShape = (outs, extra = {}) => ({ validity: [15, 20], referenced: 1, donation: 0, inputs: [[18, 'app']], outputs: outs, ...extra });
   add('return-at-deadline', 'return', 'requests.returned()', retShape([[17, 'refund'], [1, 'spender']]));
+  add('return-without-inception-evidence', 'return', 'requests.returned()', retShape([[17, 'refund'], [1, 'spender']]));
   add('return-straddling-deadline', 'return', `${R}lower: 14 }`, retShape([[17, 'refund'], [1, 'spender']], { validity: [14, 20] }));
   add('return-refund-reduced', 'return', `${R}pays: [(rows.refund_address, 16), (rows.spender_address, 2)] }`, retShape([[16, 'refund'], [2, 'spender']]));
   add('return-refund-redirected', 'return', `${R}pays: [(rows.other_address, 17), (rows.spender_address, 1)] }`, retShape([[17, 'other'], [1, 'spender']]));
@@ -289,9 +320,22 @@ const generate = () => {
   const configurationIds = ['configuration-created', 'configuration-with-retraction', 'configuration-foreign-registry'];
   if (spec.length + configurationIds.length !== data.rows.length) throw new Error(`the Lean vectors have ${data.rows.length} rows, this script knows ${spec.length + configurationIds.length}`);
 
+  // A fold and a return read no evidence: the row without it is the row with it, verdict and shape.
+  for (const [withEvidence, without] of [['fold-at-deadline', 'fold-without-inception-evidence'], ['return-at-deadline', 'return-without-inception-evidence']]) {
+    const a = row(withEvidence), b = row(without);
+    if (a.inceptionEvidence !== true || b.inceptionEvidence !== false) throw new Error(`rows ${withEvidence} and ${without}: the evidence flags changed`);
+    const strip = ({ id, note, inceptionEvidence, ...rest }) => rest;
+    if (JSON.stringify(strip(a)) !== JSON.stringify(strip(b))) throw new Error(`rows ${withEvidence} and ${without} differ in more than the evidence flag`);
+  }
+  // The client fold: the public registry judges the same transaction the application judges, with the donation of the row.
+  const cf = data.clientFold;
+  const clientRow = row('fold-built-by-singular-client');
+  if (!cf.withTheDonation.registryAccepts || !cf.withTheDonation.balances || cf.withTheDonation.donation !== clientRow.donation) throw new Error('the client fold judgement of the public registry changed');
+  if (clientRow.inceptionEvidence !== true) throw new Error('the client fold row names no inception evidence');
+
   for (const s of spec) {
     const r = row(s.id);
-    if (r.kind !== (s.kind === 'minted' ? 'termination' : s.kind)) throw new Error(`row ${s.id}: kind ${r.kind}`);
+    if (r.kind !== (s.kind === 'minted' ? 'termination' : s.kind === 'booking-floor' ? 'booking' : s.kind)) throw new Error(`row ${s.id}: kind ${r.kind}`);
     const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
     if (!same([r.validity.lower, r.validity.upper], s.shape.validity)) throw new Error(`row ${s.id}: validity`);
     if (r.referenced !== s.shape.referenced || r.donation !== s.shape.donation) throw new Error(`row ${s.id}: references or donation`);
@@ -348,9 +392,9 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/checkpoint/datum.{KeyMaterial, Live, TerminationPending}
 use singular_state/preimage.{RegistryIdentity}
 
-/// The script hash standing for the lifecycle observer (a parameter of the
+/// The policy standing for the booking attestation (a parameter of the
 /// validator; the Lean model has no such input).
-pub const observer_hash: ByteArray = #"${hex(scriptHash(11))}"
+pub const attestation_hash: ByteArray = #"${hex(scriptHash(11))}"
 
 /// What a fold's holding must hold: the registry's minimum ADA, the checkpoint
 /// deposit, the freeze bond and one premium (Lean Mc + D + B + P). The pool is
@@ -382,6 +426,7 @@ pub const minimum_deposit: Int = ${minimumDeposit}
 pub const refund_address: Address = ${keyAddr(refundAddr)}
 
 pub const spender_address: Address = ${keyAddr(spenderAddr)}
+
 
 pub const other_address: Address = ${keyAddr(otherAddr)}
 
@@ -567,6 +612,7 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
   // --- the row tests -------------------------------------------------------------
   const runner = {
     booking: (call) => `accepts(requests.booking_tx(${call}))`,
+    'booking-floor': (call) => `accepts_at(rows.initial_floor - 2, requests.booking_tx(${call}))`,
     fold: (call) => `accepts(requests.fold_tx(${call}))`,
     return: (call) => `accepts(requests.return_tx(${call}))`,
     termination: (call) => `accepts(requests.termination_tx(${call}))`,
@@ -577,6 +623,27 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
   const tests = spec.map((s) => `/// Lean row \`${s.id}\`: ${row(s.id).note}.
 test row_${s.id.replace(/-/g, '_')}() {
   ${runner[s.kind](s.call)} == ${flag(row(s.id).verdict === 'accepted')}
+}
+`);
+  // The client fold keeps the Lean's order and count: the registry's typed successor is output 0 (its state input is
+  // input 0), the holding output 1, the spender's change output 2. A direct check on each generated transaction.
+  const orderTests = spec.filter((x) => x.id.startsWith('fold-built-by-singular-client')).map((x) => `/// The transaction of the Lean row ${x.id} has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
+test order_${x.id.replace(/-/g, '_')}() {
+  let tx = requests.fold_tx(${x.call})
+  and {
+    list.length(tx.outputs) == 3,
+    list.at(tx.outputs, 0) == Some(requests.state_successor()),
+    when list.at(tx.outputs, 1) is {
+      Some(holding) -> holding.address == held.address_of(cfg.checkpoint_credential)
+      None -> False
+    },
+    when list.at(tx.outputs, 2) is {
+      Some(change) -> change.address == rows.spender_address
+      None -> False
+    },
+    list.at(tx.inputs, 0) == Some(requests.state_input(91)),
+    list.length(tx.inputs) == 3,
+  }
 }
 `);
   const approvalTests = leanApprovals.map(({ a }, k) => {
@@ -729,15 +796,21 @@ use singular_state/preimage.{
 }
 
 fn accepts(tx: Transaction) -> Bool {
-  requests.accepts(run_mint, run_spend, tx)
+  accepts_at(rows.initial_floor, tx)
 }
 
-fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
+/// The application with another initial floor (the Lean's checkpoint parameters
+/// of the row \`booking-below-registry-floor\`).
+fn accepts_at(initial_floor: Int, tx: Transaction) -> Bool {
+  requests.accepts(fn(actions, t) { run_mint(initial_floor, actions, t) }, run_spend, tx)
+}
+
+fn run_mint(initial_floor: Int, actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
-    rows.initial_floor,
+    initial_floor,
     rows.network_id,
     rows.checkpoint_minimum_ada,
     rows.termination_carrier,
@@ -754,7 +827,7 @@ fn run_spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -787,6 +860,7 @@ fn lean_request(lean: rows.LeanApproval) -> RegistrationData {
 }
 
 ${tests.join('\n')}
+${orderTests.join('\n')}
 ${approvalTests.join('\n')}
 ${terminationApprovalTests.join('\n')}
 `;

@@ -15,15 +15,15 @@ theorem find_filter_kept {α : Type} (xs : List α) (predicate keep : α → Boo
       simp_all
 
 /-- An unconsumed pending reference retains its complete stored record. -/
-theorem fold_pending_record (p : Params) (env : Env) {s s' : Sys}
+theorem fold_pending_record (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s'))
     {ref : Singular.OutRef} {e : TerminationEntry} (hp : pendingAt s ref = some e)
     (hn : Singular.inputsContainReference tx.transaction.inputs ref = false) :
     pendingAt s' ref = some e := by
   have reference := (pending_lookup_mem s ref e hp).2
   unfold pendingAt
-  rw [(fold_sound p env hs).2.2.2.2.2.2]
+  rw [(fold_sound p hs).2.2.2.2.2]
   exact find_filter_kept _ _ _ e hp (by simp [reference, hn])
 
 /-- Every successful action that does not consume this reference preserves
@@ -41,7 +41,7 @@ theorem pending_record_frame (p : Params) (env : Env) {s s' : Sys}
     exact hp
   | bookTermination aid booker fee b => exact (booking_keeps_prior_pending p hs hp).2.1
   | fold gen plugin u tx =>
-    apply fold_pending_record p env hs hp
+    apply fold_pending_record p hs hp
     cases consumed : Singular.inputsContainReference tx.transaction.inputs ref with
     | false => rfl
     | true => exact False.elim (hn ⟨gen, plugin, u, tx, rfl, consumed⟩)
@@ -88,9 +88,10 @@ theorem terminal_no_custody (p : Params) {s : Sys} (hw : WellFormed p s) (aid : 
 /-- Given the actual full before Sys and actual successful adapter fold; when
 reading its result; then the actual imported fold accepted exactly its full
 projected successor and the exact two pools are filtered by consumed refs.
-Conversely a reachable Sys, preserved KERI registration authorization and
-actual upstream acceptance must reconstruct successfully: a metadata guard
-cannot hide missing adapter behavior. The two custody theorems preserve the
+Conversely a reachable Sys and actual upstream acceptance must reconstruct
+successfully, with no inception evidence shown at the fold: every registration
+a fold can take was booked, and the booking required the evidence. A metadata
+guard cannot hide missing adapter behavior. The two custody theorems preserve the
 entire unselected record and retire/burn/remove only the exact selected one,
 including alias and tag identity observations. These types are universal over
 mixed batches, not just terminal-only lists. Positive witness: registration
@@ -101,7 +102,7 @@ not count as semantic kills. -/
 theorem fold_keeps_unselected (p : Params) (env : Env) (cfg : Singular.Config)
     {s s' : Sys} (hr : Reach p env cfg s) {gen plugin : Nat}
     {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction} {f : Flow}
-    (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    (hs : fold p s gen plugin u tx = .ok (f, s'))
     {ref : Singular.OutRef} {e : TerminationEntry}
     (hp : pendingAt s ref = some e)
     (hn : Singular.inputsContainReference tx.transaction.inputs ref = false) :
@@ -109,8 +110,8 @@ theorem fold_keeps_unselected (p : Params) (env : Env) (cfg : Singular.Config)
     Singular.trieGet s'.trie e.payload.aid = .known .active ∧
     bindingAt s' e.payload.aid = some e.payload.token ∧
     Singular.worldSingularSupply s'.toWorld e.payload.aid = 1 := by
-  have kept := fold_pending_record p env hs hp hn
-  have hw := wellFormed_fold p env (reachable_wellFormed p env cfg hr) hs
+  have kept := fold_pending_record p hs hp hn
+  have hw := wellFormed_fold p (reachable_wellFormed p env cfg hr) hs
   obtain ⟨binding, active, supply⟩ := pending_record_facts p hw ref e kept
   exact ⟨kept, active, binding, supply⟩
 

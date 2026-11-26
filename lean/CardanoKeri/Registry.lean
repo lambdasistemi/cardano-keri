@@ -11,7 +11,8 @@ structure Params where
   hD : 0 < D
   hFund : Mr + tip ≤ Mc
 -- Named opaque premises; no claim of equivalence with Checkpoint's concrete
--- evidence or signature checks.
+-- evidence or signature checks. `inception` is read by a registration booking
+-- and by no other step.
 structure Env where
   inception : Nat → Bool
   duplicity : Nat → Nat → Bool
@@ -103,9 +104,12 @@ instance (p : Params) (b : Singular.RegistrationBooking) :
     Decidable (registrationShape p b) :=
   inferInstanceAs (Decidable (_ ∧ _))
 
-def bookRegistration (p : Params) (s : Sys)
+-- A registration is booked only for a key that has its inception evidence: the
+-- booking is where the evidence is shown. A fold or a return shows none.
+def bookRegistration (p : Params) (env : Env) (s : Sys)
     (b : Singular.RegistrationBooking) : Except String Result := do
   if ¬ registrationShape p b then throw "keri-registration-value-mismatch"
+  if !env.inception b.request.key then throw "keri-inception-refused"
   let world ← Singular.book s.toWorld b
   let after := { s with registrations := b :: s.registrations }
   if after.toWorld ≠ world then throw "keri-registration-reconstruction-mismatch"
@@ -142,13 +146,6 @@ def bookTermination (p : Params) (s : Sys)
   pure ({
     premium := some (booker, p.Mc - p.Mr - p.tip),
     bookingFee := fee, intoRequest := p.Mr + p.tip }, after)
-
--- Inception stays a KERI processing guard, as in the existing coarse model.
--- A generic application approval does not stand in for that premise.
-def registrationsAuthorized (env : Env) (members : List Singular.FoldMember) : Bool :=
-  members.all (fun m => match m with
-    | .registration b => env.inception b.request.key
-    | .termination _ => true)
 
 def installMember (p : Params) (before : Sys) (acc : Sys)
     (member : Singular.FoldMember) : Except String Sys := do
@@ -187,12 +184,12 @@ def foldResult (p : Params) (s : Sys) (tx : Singular.EconomicTransaction)
     | .termination _ => none)
   pure ({ locked := locked }, after)
 
-def fold (p : Params) (env : Env) (s : Sys) (expectedGen expectedPlugin : Nat)
+-- A fold reads no inception evidence. Every registration it folds was booked
+-- (`installMember`), and the booking required the evidence.
+def fold (p : Params) (s : Sys) (expectedGen expectedPlugin : Nat)
     (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) : Except String Result := do
   if expectedGen != s.gen then throw "keri-generation-mismatch"
   if expectedPlugin != s.config.applicationPolicy then throw "keri-plugin-mismatch"
-  let members := Singular.foldMembers s.toWorld tx
-  if !registrationsAuthorized env members then throw "keri-inception-refused"
   let world ← Singular.foldAccepted s.toWorld u tx
   foldResult p s tx world
 
@@ -256,10 +253,10 @@ inductive Action where
 
 def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=
   match action with
-  | .bookRegistration b => bookRegistration p s b
+  | .bookRegistration b => bookRegistration p env s b
   | .convictCkpt aid => convictCkpt env s aid
   | .bookTermination aid booker fee b => bookTermination p s aid booker fee b
-  | .fold gen plugin u tx => fold p env s gen plugin u tx
+  | .fold gen plugin u tx => fold p s gen plugin u tx
   | .returnRequests u tx => returnRequests s u tx
 
 inductive Reach (p : Params) (env : Env) (cfg : Singular.Config) : Sys → Prop where
@@ -332,7 +329,7 @@ structure FoldReceipt (p : Params) (env : Env) (cfg : Singular.Config) where
   transaction : Singular.EconomicTransaction
   flow : Flow
   reachable : Reach p env cfg before
-  executed : fold p env before before.gen before.config.applicationPolicy
+  executed : fold p before before.gen before.config.applicationPolicy
     unspent transaction = .ok (flow, after)
 
 def Completes {p : Params} {env : Env} {cfg : Singular.Config}

@@ -69,6 +69,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV2 (..), liveOfKeyState
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
+import Cardano.KERI.Deployment.RefusalAt (renderEvaluationFailure)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -95,14 +96,12 @@ import Cardano.KERI.Deployment.Script (
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
 import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
-import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Api.Tx (bodyTxL)
 import Cardano.Ledger.Api.Tx.Body (feeTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..))
@@ -172,7 +171,7 @@ data Loaded = Loaded
     { loadedDeployment :: !RegistryDeployment
     , loadedReferences :: !RegistryReferences
     , loadedFoldReferences :: ![(TxIn, TxOut ConwayEra)]
-    -- ^ the registration observer and the hash-proof policy
+    -- ^ what a fold reads by reference besides the registry's own scripts: the hash-proof policy
     }
 
 -- | Where a refusal was made.
@@ -222,7 +221,6 @@ data Refusal
     | RequestIsNotARegistration !TxIn
     | RequestHasNoApproval !TxIn
     | RequestIsForAnotherRegistry !TxIn
-    | RequestIsForAnotherKey !ByteString !ByteString
     deriving stock (Eq, Show)
 
 -- | Why a transaction did not land.
@@ -348,14 +346,14 @@ loadDeployment rt blueprint identity record =
                     [ txInOfReference (scriptOutput (recordApplication record))
                     , txInOfReference (scriptOutput (recordState record))
                     , txInOfReference (recordConfiguration record)
-                    , txInOfReference (scriptOutput (recordRegistration record))
+                    , txInOfReference (scriptOutput (recordAttestation record))
                     , txInOfReference (scriptOutput (recordHashProof record))
                     ]
             found <- rtOutputs rt (Set.fromList named)
             let missing = [ref | ref <- named, not (Map.member ref found)]
                 pick ref = (,) ref <$> Map.lookup ref found
             pure $ case traverse pick named of
-                Just [application, state, configuration, lifecycle, hashProof]
+                Just [application, state, configuration, attestation, hashProof]
                     | null missing ->
                         Right
                             Loaded
@@ -365,8 +363,10 @@ loadDeployment rt blueprint identity record =
                                         { referenceApplication = application
                                         , referenceState = state
                                         , referenceConfiguration = configuration
+                                        , referenceAttestation = attestation
+                                        , referenceHashProof = hashProof
                                         }
-                                , loadedFoldReferences = [lifecycle, hashProof]
+                                , loadedFoldReferences = [hashProof]
                                 }
                 _ -> Left (ReferenceOutputsMissing missing)
 
@@ -576,7 +576,7 @@ transactBudgeted rt payerAddress onAttempt build = runExceptT $ do
         throwE (PurposesDiffer (show (Map.keysSet evaluated)))
     measured <-
         Map.traverseWithKey
-            (\purpose outcome -> either (throwE . EvaluationFailed . ((purposeName purpose <> ": ") <>) . show) pure outcome)
+            (\purpose outcome -> either (throwE . EvaluationFailed . renderEvaluationFailure purpose) pure outcome)
             evaluated
     let budgets = Map.map withMargin measured
         total = foldr addUnits (ExUnits 0 0) (Map.elems budgets)
@@ -586,13 +586,6 @@ transactBudgeted rt payerAddress onAttempt build = runExceptT $ do
     when (finalExpected /= expected) $
         throwE (PurposesDiffer "the purposes changed under the measured budgets")
     settle rt onAttempt final
-
--- | Where in a transaction the node's evaluation failed, in words: the kind of script purpose and its index.
-purposeName :: ConwayPlutusPurpose AsIx ConwayEra -> String
-purposeName = \case
-    ConwayMinting (AsIx index) -> "minting purpose " <> show index
-    ConwaySpending (AsIx index) -> "spending purpose " <> show index
-    other -> show other
 
 transactPlain ::
     RegistryRuntime ->

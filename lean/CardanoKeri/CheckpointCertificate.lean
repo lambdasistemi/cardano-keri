@@ -23,7 +23,7 @@ def replayFold (rp : CardanoKeri.Registry.Params) (re : CardanoKeri.Registry.Env
   match run : CardanoKeri.Registry.replay rp re start certificate.history with
   | .error why => .error why
   | .ok before =>
-    match folded : CardanoKeri.Registry.fold rp re before before.gen before.config.applicationPolicy
+    match folded : CardanoKeri.Registry.fold rp before before.gen before.config.applicationPolicy
         certificate.unspent certificate.transaction with
     | .error why => .error why
     | .ok (flow, after) =>

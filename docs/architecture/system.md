@@ -102,7 +102,7 @@ sequenceDiagram
     L-->>R: a checkpoint born at the booking's upper bound, one incarnation ever
 ```
 
-Folders race on one shared object; the loser wastes work, never safety. The constitution has the controller's booking validate the inception; at this revision the fold does (issue #559). Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps.
+Folders race on one shared object; the loser wastes work, never safety. The controller's booking validates the inception, through an attestation minted in the same transaction; the fold reads no inception evidence. Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps.
 A conviction is a local step of the checkpoint; the termination is then booked and folded. Rotations, poisons, freezes and top-ups never touch the registry.
 
 ## Advance and enforcement — shipped

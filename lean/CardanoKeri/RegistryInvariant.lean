@@ -49,9 +49,9 @@ theorem projected_request_refs {s : Sys} (hw : Singular.WorldReachable s.toWorld
 
 /-- Registration admission preserves the whole application invariant and
 records the declared application carrier budget for the new request. -/
-theorem wellFormed_bookRegistration (p : Params) {s s' : Sys} (hw : WellFormed p s)
+theorem wellFormed_bookRegistration (p : Params) {env : Env} {s s' : Sys} (hw : WellFormed p s)
     {b : Singular.RegistrationBooking} {f : Flow}
-    (hs : bookRegistration p s b = .ok (f, s')) : WellFormed p s' := by
+    (hs : bookRegistration p env s b = .ok (f, s')) : WellFormed p s' := by
   obtain ⟨shape, booked, rfl, _⟩ := bookRegistration_sound p hs
   have world := Singular.WorldReachable.booking hw.worldReachable b booked
   refine { hw with

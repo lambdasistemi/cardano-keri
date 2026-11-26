@@ -352,9 +352,9 @@ theorem registerJoint_sound (i : Interpretation) (c : Context)
     (q : RegistrationInput) (r : Registered)
     (accepted : registerJoint i c abstractRegistry commit q = .ok r) :
     createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok r.created ∧
-    CardanoKeri.Registry.bookRegistration q.registryParams r.created.economic q.booking =
+    CardanoKeri.Registry.bookRegistration q.registryParams q.registryEnv r.created.economic q.booking =
       .ok (r.registrationFlow, r.booked) ∧
-    CardanoKeri.Registry.fold q.registryParams q.registryEnv r.booked r.booked.gen
+    CardanoKeri.Registry.fold q.registryParams r.booked r.booked.gen
       r.booked.config.applicationPolicy q.unspent q.economicTx = .ok (r.foldFlow, r.after) ∧
     SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true ∧
     stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent =
@@ -455,8 +455,8 @@ theorem registerJoint_complete (i : Interpretation) (c : Context)
     (booked after : CardanoKeri.Registry.Sys) (bookFlow foldFlow : CardanoKeri.Registry.Flow)
     (cpFlow : Flow) (st : State) (o : AH.ObservedOutput) (eo : Singular.EconomicOutput) (token : Nat)
     (genesis : createRegistry i c abstractRegistry q.configuration commit q.genesisTx q.genesisOutputs = .ok created)
-    (book : CardanoKeri.Registry.bookRegistration q.registryParams created.economic q.booking = .ok (bookFlow, booked))
-    (fold : CardanoKeri.Registry.fold q.registryParams q.registryEnv booked booked.gen
+    (book : CardanoKeri.Registry.bookRegistration q.registryParams q.registryEnv created.economic q.booking = .ok (bookFlow, booked))
+    (fold : CardanoKeri.Registry.fold q.registryParams booked booked.gen
       booked.config.applicationPolicy q.unspent q.economicTx = .ok (foldFlow, after))
     (fullFold : SingularApplicationHeld.fold .none i.hash i.code commit c.release q.fullFold = true)
     (registration : stepFn q.checkpointParams q.checkpointEnv (.register q.refund q.pool) q.now .absent = some (cpFlow, st))

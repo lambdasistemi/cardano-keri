@@ -272,16 +272,9 @@ runRegistryDeployOver openers settings = do
                         (deployedIdentity deployed)
                         (deployedRecord deployed)
                 either (die' . renderFilesError) pure written
-                forM_ (deployedSkipped deployed) $ \step ->
-                    putStrLn (renderStep step <> ": skipped, the credential is already registered")
                 putStrLn ("release identity: " <> rdReleaseIdentityOut settings)
                 putStrLn ("reference outputs: " <> rdReferenceRecordOut settings)
-                putStrLn $
-                    ( if null (deployedSkipped deployed)
-                        then "registered the registration observer's reward credential"
-                        else "the registration observer's reward credential was already registered and was not registered again"
-                    )
-                        <> "; the advance, enforcement and entitlement observers and the bounty commitment program are not deployed by this command"
+                putStrLn "the advance, enforcement and entitlement observers and the bounty commitment program are not deployed by this command"
   where
     -- flushed at once: whoever collects the ids through a pipe has each as it settles
     printLanded landed = do
@@ -307,12 +300,11 @@ die' message = hPutStrLn stderr ("ckeri: " <> message) >> exitFailure
 renderStep :: Step -> String
 renderStep = \case
     PublishTemplate -> "publish-state-template"
+    PublishAttestation -> "publish-booking-attestation"
     PublishApplication -> "publish-application"
     PublishState -> "publish-state-script"
-    PublishRegistrationObserver -> "publish-registration-observer"
     PublishHashProof -> "publish-hash-proof"
     PublishCheckpoint -> "publish-checkpoint-validator"
-    RegisterObserverCredential -> "register-observer-credential"
     CreateRegistry -> "create-registry"
 
 {- | What a failed deployment tells the person running the command: what landed, where it stopped
@@ -331,7 +323,6 @@ renderFailureFor counterpart failure =
                | Landed{landedStep = step, landedTransaction = txId} <- failureLanded failure
                ]
             <> maybe [] (\step -> ["stopped at: " <> renderStep step]) (failureStoppedAt failure)
-            <> ["skipped: " <> renderStep step | step <- failureSkipped failure]
             <> [ "not landed: " <> renderStep step
                | step <- failureNotLanded failure
                ]

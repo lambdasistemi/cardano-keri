@@ -61,7 +61,7 @@
       "pause": 400
     },
     {
-      "text": "Folders race on one shared object; the loser wastes work, never safety. The constitution has the controller's booking validate the inception; at this revision the fold does (issue #559). Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps. A conviction is a local step of the checkpoint; the termination is then booked and folded. Rotations, poisons, freezes and top-ups never touch the registry.",
+      "text": "Folders race on one shared object; the loser wastes work, never safety. The controller's booking validates the inception, through an attestation minted in the same transaction; the fold reads no inception evidence. Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps. A conviction is a local step of the checkpoint; the termination is then booked and folded. Rotations, poisons, freezes and top-ups never touch the registry.",
       "pause": 400
     }
   ],
@@ -177,6 +177,6 @@
   ],
   "_source": {
     "file": "system.md",
-    "sha256": "d69e4ec646364caf52aa8d0e19d6b3737a4fc7ad3714b175f3dcb81a464c1ae6"
+    "sha256": "1070981ca0483ebfb7a1299548529e463263a3452b1fa1b2f2cb3a2cf5a45246"
   }
 }

@@ -22,6 +22,7 @@ import Cardano.KERI.AID.Application (
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.RegistryBookingChain
+import Cardano.KERI.Deployment.RegistryBookingCommand (renderRegisterFailure)
 import Cardano.KERI.Deployment.RegistryChain
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (
@@ -33,9 +34,9 @@ import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptRefere
 import Cardano.KERI.Deployment.RegistryRegister
 import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
-import Cardano.KERI.Deployment.TransactionRuntime (transactionId)
+import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
 import Cardano.Ledger.Api.Tx (bodyTxL)
-import Cardano.Ledger.Api.Tx.Body (outputsTxBodyL)
+import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, outputsTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (coinTxOutL)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -49,6 +50,7 @@ import Data.Foldable (toList)
 import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.List (isInfixOf)
 import Data.Map.Strict qualified as Map
+import Data.Text qualified as T
 import Lens.Micro ((^.))
 import Test.Hspec
 
@@ -78,16 +80,21 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
             (outcome, seen) <- booked world (registerRequestOf world export)
             result <- either (fail . show) pure outcome
             submitted <- submissionsMade world
-            submitted - submissionsBefore `shouldBe` 1
+            -- the hash proof is preminted first, then the booking spends and burns it
+            submitted - submissionsBefore `shouldBe` 2
             transactions <- accepted world
             let booking = last transactions
+                premint = last (init transactions)
+                proofOutput = TxIn (transactionId premint) (TxIx 0)
                 identity = deployedIdentity (worldDeployed world)
                 outputs = toList (booking ^. bodyTxL . outputsTxBodyL)
                 request = case outputs of
                     first : _ -> first
                     [] -> error "the booking has no output"
                 record = registeredRecord result
+            registeredPremint result `shouldBe` transactionId premint
             registeredTransaction result `shouldBe` transactionId booking
+            toList (booking ^. bodyTxL . inputsTxBodyL) `shouldSatisfy` elem proofOutput
             registeredOutput result `shouldBe` TxIn (transactionId booking) (TxIx 0)
             -- the output the booking names is the request, at the application's address
             request ^. coinTxOutL `shouldBe` Coin 1_010_500_000
@@ -106,17 +113,19 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
             requestProcessDeadline record `shouldBe` upperPosixMs plan + 90_000
             requestReclaimEnd record `shouldBe` requestProcessDeadline record
             -- it reported the window, the time left as the transaction leaves, then the settled booking
-            map fst seen `shouldBe` [submissionsBefore, submissionsBefore, submissionsBefore + 1]
+            map fst seen `shouldBe` [submissionsBefore + 1, submissionsBefore + 1, submissionsBefore + 1, submissionsBefore + 2]
             case map snd seen of
-                [ BookingWindow{eventPlan = reported, eventDeadline = deadline}
+                [ PremintSettledForBooking{eventTransaction = premintId, eventProof = proofIn}
+                    , BookingWindow{eventPlan = reported, eventDeadline = deadline}
                     , BookingSubmitting{eventTransaction = leaving, eventTimeLeftMs = left}
                     , BookingSettled{eventTransaction = txId, eventOutput = out}
                     ] -> do
                         reported `shouldBe` plan
                         deadline `shouldBe` requestProcessDeadline record
-                        -- the clock of the chain moves half a second at each signature, and the
-                        -- booking is signed twice before it leaves: the controller has a second less
-                        left `shouldBe` deadline - (slotStart 1_000 10_000 + 100 + 1_000)
+                        premintId `shouldBe` transactionId premint
+                        proofIn `shouldBe` proofOutput
+                        -- the time left is the deadline less the chain's clock as the booking leaves
+                        left `shouldSatisfy` (\l -> l < deadline - slotStart 1_000 10_000)
                         leaving `shouldBe` transactionId booking
                         txId `shouldBe` transactionId booking
                         out `shouldBe` registeredOutput result
@@ -174,28 +183,43 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
             bookingWindow observed' 5_000 `shouldBe` Nothing
 
     describe "a failed read of the node" $ do
-        it "ends the booking with nothing submitted, as a node failure; a cancellation passes through" $ do
+        it "ends the run with nothing submitted when the first read fails, and with only the premint landed when a later one does, as a node failure; a cancellation passes through" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
             sent0 <- submissionsMade world
-            runtime <- failingObservation 1 (toException ConnectionLost) (runtimeOf noFaults world)
-            outcome <- registerRegistration runtime (\_ -> pure ()) (registerRequestOf world export)
-            outcome `shouldBe` Left (RegisterTransaction (NodeFailed (show ConnectionLost)))
+            -- the first observation is the premint's: nothing of the run has left
+            first' <- failingObservation 1 (toException ConnectionLost) (runtimeOf noFaults world)
+            outcome0 <- registerRegistration first' (\_ -> pure ()) (registerRequestOf world export)
+            outcome0 `shouldBe` Left (RegisterTransaction (NodeFailed (show ConnectionLost)))
             submissionsMade world >>= (`shouldBe` sent0)
-            linked <- withClient (failingObservationBy 1 . connectionEnds) (runtimeOf noFaults world)
+            -- the second is the booking's: the premint settled
+            runtime <- failingObservation 2 (toException ConnectionLost) (runtimeOf noFaults world)
+            outcome <- registerRegistration runtime (\_ -> pure ()) (registerRequestOf world export)
+            case outcome of
+                Left (RegisterAfterPremint _ _ (NodeFailed failure)) -> failure `shouldSatisfy` ("ConnectionLost" `isInfixOf`)
+                other -> expectationFailure ("not a node failure after the premint: " <> show other)
+            submissionsMade world >>= (`shouldBe` (sent0 + 1))
+            linked <- withClient (failingObservationBy 2 . connectionEnds) (runtimeOf noFaults world)
             linkedOutcome <- registerRegistration linked (\_ -> pure ()) (registerRequestOf world export)
             case linkedOutcome of
-                Left (RegisterTransaction (NodeFailed failure)) -> failure `shouldSatisfy` ("ConnectionLost" `isInfixOf`)
+                Left (RegisterAfterPremint _ _ (NodeFailed failure)) -> failure `shouldSatisfy` ("ConnectionLost" `isInfixOf`)
                 other -> expectationFailure ("not a node failure: " <> show other)
-            submissionsMade world >>= (`shouldBe` sent0)
+            submissionsMade world >>= (`shouldBe` (sent0 + 2))
             -- the booking handed to the node whose settlement is lost: uncertain, with its id
-            lost <- withClient (failingSettlementBy 1 . void . connectionEnds) (runtimeOf noFaults world)
+            lost <- withClient (failingSettlementBy 2 . void . connectionEnds) (runtimeOf noFaults world)
             lostOutcome <- registerRegistration lost (\_ -> pure ()) (registerRequestOf world export)
             transactions <- accepted world
             case lostOutcome of
-                Left (RegisterTransaction (NotObserved txId _)) -> txId `shouldBe` transactionId (last transactions)
+                Left failure@(RegisterAfterPremint _ _ (NotObserved txId _)) -> do
+                    txId `shouldBe` transactionId (last transactions)
+                    -- accepted by the node and not seen on chain: custody of the proof is unknown, not spent
+                    let said = renderRegisterFailure failure
+                    said `shouldSatisfy` (not . any ("stays with the controller" `isInfixOf`))
+                    said `shouldSatisfy` any (("is spent if the booking " <> T.unpack (renderTransactionId txId) <> " landed") `isInfixOf`)
+                    said `shouldSatisfy` any ("reconcile it by that transaction's identifier" `isInfixOf`)
+                    said `shouldSatisfy` (not . any ("if it reached the node" `isInfixOf`))
                 other -> expectationFailure ("not an uncertain booking: " <> show other)
-            interrupted <- failingObservation 1 (toException UserInterrupt) (runtimeOf noFaults world)
+            interrupted <- failingObservation 2 (toException UserInterrupt) (runtimeOf noFaults world)
             result <- try @AsyncException (registerRegistration interrupted (\_ -> pure ()) (registerRequestOf world export))
             either show (const "an outcome") result `shouldBe` show UserInterrupt
 
@@ -258,9 +282,10 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
                     (\_ -> pure ())
                     (registerRequestOf world1 export)
             case outcome1 of
-                Left (RegisterTransaction failure) -> submitBoundary failure `shouldBe` NodeEvaluation
+                Left (RegisterAfterPremint _ _ failure) -> submitBoundary failure `shouldBe` NodeEvaluation
                 other -> expectationFailure ("evaluation: " <> show other)
-            submissionsMade world1 >>= (`shouldBe` base1)
+            -- the premint, which runs no script, landed; the booking was never submitted
+            submissionsMade world1 >>= (`shouldBe` (base1 + 1))
             -- the ledger: the node refuses the submission
             world2 <- newWorld 1_000
             base2 <- submissionsMade world2
@@ -283,6 +308,27 @@ spec = describe "#351 booking a registration" $ around_ withinOneMinute $ do
             case outcome3 of
                 Left (RegisterTransaction failure) -> submitBoundary failure `shouldBe` Unsettled
                 other -> expectationFailure ("observation: " <> show other)
+            -- the booking itself refused by the ledger, and the booking not seen to settle: after the premint
+            world4 <- newWorld 1_000
+            base4 <- submissionsMade world4
+            outcome4 <-
+                registerRegistration
+                    (runtimeOf noFaults{rejectSubmissionAt = Just (base4 + 1)} world4)
+                    (\_ -> pure ())
+                    (registerRequestOf world4 export)
+            case outcome4 of
+                Left (RegisterAfterPremint _ _ failure) -> submitBoundary failure `shouldBe` Ledger
+                other -> expectationFailure ("booking submission: " <> show other)
+            world5 <- newWorld 1_000
+            observed5 <- chainObservations <$> readIORef (worldChain world5)
+            outcome5 <-
+                registerRegistration
+                    (runtimeOf noFaults{failObservationAt = Just (observed5 + 1)} world5)
+                    (\_ -> pure ())
+                    (registerRequestOf world5 export)
+            case outcome5 of
+                Left (RegisterAfterPremint _ _ failure) -> submitBoundary failure `shouldBe` Unsettled
+                other -> expectationFailure ("booking observation: " <> show other)
         it "every refusal the command makes is the command's" $ do
             map renderBoundary [Command, NodeEvaluation, Ledger]
                 `shouldBe` [ "the command, before any transaction"

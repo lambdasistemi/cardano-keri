@@ -1502,42 +1502,48 @@
     "v": "c99b6d6193a6"
    }
   ],
-  "proposed-attest-inception-before-requesting-registration": [
+  "the-booking-shows-the-inception-the-fold-shows-nothing": [
    {
     "index": 0,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-00",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-00",
     "pause_ms": 500,
-    "v": "c684ca615e79"
+    "v": "e798034d24d9"
    },
    {
     "index": 1,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-01",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-01",
     "pause_ms": 400,
-    "v": "820f42b03625"
+    "v": "a36e164c2806"
    },
    {
     "index": 2,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-02",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-02",
     "pause_ms": 400,
-    "v": "6ec6541bea98"
+    "v": "ea9109e681e3"
    },
    {
     "index": 3,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-03",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-03",
     "pause_ms": 400,
-    "v": "1b8a6da2ba5c"
+    "v": "a43fd9ed0937"
    },
    {
     "index": 4,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-04",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-04",
     "pause_ms": 400,
-    "v": "17b46d10c12d"
+    "v": "6a9a6bc2717d"
    },
    {
     "index": 5,
-    "name": "docs-architecture-follow-one-identity/proposed-attest-inception-before-requesting-registration-05",
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-05",
     "pause_ms": 400,
-    "v": "a187ca12699d"
+    "v": "0515fdeffd50"
+   },
+   {
+    "index": 6,
+    "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-06",
+    "pause_ms": 400,
+    "v": "89049a94f2d9"
    }
   ],
   "the-parts-alice-depends-on": [
@@ -1609,7 +1615,7 @@
     "index": 2,
     "name": "docs-architecture-follow-one-identity/what-must-enforce-the-guarantee-on-cardano-02",
     "pause_ms": 400,
-    "v": "e1fa23d8e829"
+    "v": "b0e2c5126a5e"
    },
    {
     "index": 3,
@@ -1629,7 +1635,7 @@
     "index": 1,
     "name": "docs-architecture-follow-one-identity/what-registration-guarantees-01",
     "pause_ms": 400,
-    "v": "f2f5b331da74"
+    "v": "7a3a62c6570f"
    },
    {
     "index": 2,
@@ -2077,7 +2083,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "c6e83c81ced2"
+    "v": "6cbd079d3493"
    },
    {
     "index": 2,
@@ -2349,7 +2355,7 @@
     "index": 1,
     "name": "docs-architecture-observer-architecture/registrations-premint-fact-token-01",
     "pause_ms": 400,
-    "v": "44cca41e1044"
+    "v": "1cbcb777379d"
    },
    {
     "index": 2,
@@ -2605,7 +2611,7 @@
     "index": 4,
     "name": "docs-architecture-overview/architecture-overview-04",
     "pause_ms": 400,
-    "v": "7fdc7e09a55e"
+    "v": "bd05b9e97ef2"
    }
   ],
   "current-boundary-and-future-planes": [
@@ -2656,6 +2662,20 @@
     "v": "0566be249822"
    }
   ],
+  "m1-registration-flow": [
+   {
+    "index": 0,
+    "name": "docs-architecture-overview/m1-registration-flow-00",
+    "pause_ms": 500,
+    "v": "feb35cb0a931"
+   },
+   {
+    "index": 1,
+    "name": "docs-architecture-overview/m1-registration-flow-01",
+    "pause_ms": 400,
+    "v": "8d4c7a2ddff8"
+   }
+  ],
   "permissionless-does-not-mean-unauthenticated": [
    {
     "index": 0,
@@ -2686,20 +2706,6 @@
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-04",
     "pause_ms": 400,
     "v": "69a3a47bc515"
-   }
-  ],
-  "proposed-m1-registration-flow": [
-   {
-    "index": 0,
-    "name": "docs-architecture-overview/proposed-m1-registration-flow-00",
-    "pause_ms": 500,
-    "v": "e81072bc95ee"
-   },
-   {
-    "index": 1,
-    "name": "docs-architecture-overview/proposed-m1-registration-flow-01",
-    "pause_ms": 400,
-    "v": "73087e9382e5"
    }
   ],
   "related-pages": [
@@ -2859,7 +2865,7 @@
     "index": 4,
     "name": "docs-architecture-overview/transaction-architecture-04",
     "pause_ms": 400,
-    "v": "668f9af402ec"
+    "v": "ab0a56b92d31"
    }
   ],
   "under-the-accepted-design-the-poison-bit-the-frozen-bit-and-the-age": [
@@ -3101,7 +3107,7 @@
     "index": 2,
     "name": "docs-architecture-system/registration-through-the-registry-designed-02",
     "pause_ms": 400,
-    "v": "0ad2aa18af0e"
+    "v": "c3a7a7ece881"
    }
   ],
   "system-architecture": [
@@ -11748,10 +11754,58 @@
   ],
   "keris-application-on-the-public-registry": [
    {
+    "index": 1,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-01",
+    "pause_ms": 400,
+    "v": "8d920716bf1e"
+   },
+   {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-02",
     "pause_ms": 400,
-    "v": "0c2965cfc8d4"
+    "v": "79a6ee69653a"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04",
+    "pause_ms": 300,
+    "v": "57e9f597f428"
+   },
+   {
+    "index": 6,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-06",
+    "pause_ms": 300,
+    "v": "39338b33e7ee"
+   },
+   {
+    "index": 7,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07",
+    "pause_ms": 300,
+    "v": "904b10f6990a"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-08",
+    "pause_ms": 300,
+    "v": "69bb8c9e2ea1"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-09",
+    "pause_ms": 300,
+    "v": "6f6fa1089070"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-10",
+    "pause_ms": 300,
+    "v": "8674ef1f0685"
+   },
+   {
+    "index": 11,
+    "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-11",
+    "pause_ms": 300,
+    "v": "5990d0ea988e"
    }
   ],
   "pluggability-and-the-permissioning-divergence-cagelean": [
@@ -11911,7 +11965,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-02",
     "pause_ms": 400,
-    "v": "ec8de086c938"
+    "v": "bddb6b70bc36"
    },
    {
     "index": 3,
@@ -11945,7 +11999,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/the-registry-and-retained-identity-outputs-01",
     "pause_ms": 400,
-    "v": "6deed2d319da"
+    "v": "a2196b6aaff8"
    }
   ],
   "the-registry-as-an-mpfs-instance": [

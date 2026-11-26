@@ -56,14 +56,14 @@ theorem consumed_registration_selected {p : Params} {s : Sys} (hw : WellFormed p
 /-- Given a fold that selects a booked registration; when the fold is
 accepted; then its whole validity interval starts no earlier than the booking
 and ends by the request's deadline. -/
-theorem fold_ends_by_deadline (p : Params) (env : Env) {s s' : Sys}
+theorem fold_ends_by_deadline (p : Params) {s s' : Sys}
     {gen plugin : Nat} {u : Singular.EconomicUtxo} {tx : Singular.EconomicTransaction}
-    {f : Flow} (hs : fold p env s gen plugin u tx = .ok (f, s'))
+    {f : Flow} (hs : fold p s gen plugin u tx = .ok (f, s'))
     {b : Singular.RegistrationBooking}
     (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) :
     ∃ interval, tx.transaction.validity = some interval ∧
       b.request.submittedAt ≤ interval.lower ∧ interval.upper ≤ deadline s.config b.request := by
-  have accepted := (fold_sound p env hs).2.2.2.1
+  have accepted := (fold_sound p hs).2.2.1
   obtain ⟨interval, validity, members⟩ :=
     foldPrerequisite_window (Singular.foldAccepted_checks accepted).1
   have refusal := members _ selected
@@ -134,14 +134,14 @@ theorem consumed_registration_spends (p : Params) (env : Env) {s s' : Sys}
       (bookTermination_iff p s s' aid booker fee booking f).mp hs
     exact False.elim (gone hb)
   | fold gen plugin u tx =>
-    have registrations := (fold_sound p env hs).2.2.2.2.2.1
+    have registrations := (fold_sound p hs).2.2.2.2.1
     have consumed : Singular.inputsContainReference tx.transaction.inputs
         b.request.reference = true := by
       apply Classical.byContradiction
       intro kept
       exact gone (registrations ▸ List.mem_filter.mpr ⟨hb, by simpa using kept⟩)
     obtain ⟨interval, validity, _, upper⟩ :=
-      fold_ends_by_deadline p env hs (consumed_registration_selected hw hb consumed)
+      fold_ends_by_deadline p hs (consumed_registration_selected hw hb consumed)
     exact Or.inl ⟨gen, plugin, u, tx, interval, rfl, validity, upper⟩
   | returnRequests u tx =>
     change returnRequests s u tx = .ok (f, s') at hs
@@ -226,14 +226,14 @@ theorem duplicate_returned_after_deadline (p : Params) (env : Env) {s s' : Sys}
   apply window_spend_is_fold p env hw hs hb gone
   intro gen plugin u tx same
   subst same
-  have folded : fold p env s gen plugin u tx = .ok (f, s') := hs
-  have registrations := (fold_sound p env folded).2.2.2.2.2.1
+  have folded : fold p s gen plugin u tx = .ok (f, s') := hs
+  have registrations := (fold_sound p folded).2.2.2.2.1
   have consumed : Singular.inputsContainReference tx.transaction.inputs
       b.request.reference = true := by
     apply Classical.byContradiction
     intro kept
     exact gone (registrations ▸ List.mem_filter.mpr ⟨hb, by simpa using kept⟩)
-  have refused := registered_registration_refused p env s gen plugin u tx b
+  have refused := registered_registration_refused p s gen plugin u tx b
     (consumed_registration_selected hw hb consumed) known
   simp [folded, Except.toOption] at refused
 

@@ -2,6 +2,7 @@ module Main (main) where
 
 import Cardano.KERI.Deployment.AdvancePackageSpec qualified as AdvancePackageSpec
 import Cardano.KERI.Deployment.AdvanceSpec qualified as AdvanceSpec
+import Cardano.KERI.Deployment.AttestationBoundarySpec qualified as AttestationBoundarySpec
 import Cardano.KERI.Deployment.BountyEntitlementSpec qualified as BountyEntitlementSpec
 import Cardano.KERI.Deployment.ChainIndexSpec qualified as ChainIndexSpec
 import Cardano.KERI.Deployment.EndpointBoardSpec qualified as EndpointBoardSpec
@@ -16,16 +17,21 @@ import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
 import Cardano.KERI.Deployment.RegistryBookingCommandSpec qualified as RegistryBookingCommandSpec
+import Cardano.KERI.Deployment.RegistryBookingEvaluationSpec qualified as RegistryBookingEvaluationSpec
+import Cardano.KERI.Deployment.RegistryBookingShapeSpec qualified as RegistryBookingShapeSpec
 import Cardano.KERI.Deployment.RegistryCommandSpec qualified as RegistryCommandSpec
 import Cardano.KERI.Deployment.RegistryDeploySpec qualified as RegistryDeploySpec
 import Cardano.KERI.Deployment.RegistryFilesSpec qualified as RegistryFilesSpec
 import Cardano.KERI.Deployment.RegistryFoldHandoffSpec qualified as RegistryFoldHandoffSpec
 import Cardano.KERI.Deployment.RegistryFoldSpec qualified as RegistryFoldSpec
+import Cardano.KERI.Deployment.RegistryFoldV3Spec qualified as RegistryFoldV3Spec
 import Cardano.KERI.Deployment.RegistryKoiosCommandSpec qualified as RegistryKoiosCommandSpec
 import Cardano.KERI.Deployment.RegistryKoiosRecordedSpec qualified as RegistryKoiosRecordedSpec
 import Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec qualified as RegistryKoiosValidityEndSpec
+import Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec qualified as RegistryLegacyRecordCommandSpec
 import Cardano.KERI.Deployment.RegistryProviderSpec qualified as RegistryProviderSpec
 import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
+import Cardano.KERI.Deployment.RegistryRegisterStagesSpec qualified as RegistryRegisterStagesSpec
 import Cardano.KERI.Deployment.RegistryRequestSpec qualified as RegistryRequestSpec
 import Cardano.KERI.Deployment.RegistryReturnCommandSpec qualified as RegistryReturnCommandSpec
 import Cardano.KERI.Deployment.RegistryReturnSpec qualified as RegistryReturnSpec
@@ -38,6 +44,7 @@ import Cardano.KERI.Deployment.ScriptAritySpec qualified as ScriptAritySpec
 import Cardano.KERI.Deployment.TopUpPackageSpec qualified as TopUpPackageSpec
 import Cardano.KERI.Deployment.TopUpTransactionSpec qualified as TopUpTransactionSpec
 import Cardano.KERI.Deployment.TransactionRuntimeSpec qualified as TransactionRuntimeSpec
+import Cardano.KERI.Deployment.WalletHoldingSpec qualified as WalletHoldingSpec
 import System.Environment (getArgs, lookupEnv)
 import Test.Hspec (hspec)
 
@@ -91,6 +98,7 @@ suite = hspec $ do
     BountyEntitlementSpec.spec
     RegistrationSpec.spec
     RegistryScriptsSpec.spec
+    AttestationBoundarySpec.spec
     RegistryFilesSpec.spec
     RegistryProviderSpec.spec
     RegistryKoiosCommandSpec.spec
@@ -103,12 +111,18 @@ suite = hspec $ do
     RegistryReturnCommandSpec.spec
     RegistryShortDepositSpec.spec
     RegistryRegisterSpec.spec
+    RegistryRegisterStagesSpec.spec
+    WalletHoldingSpec.spec
     RegistryFoldSpec.spec
+    RegistryFoldV3Spec.spec
     RegistryFoldHandoffSpec.spec
     RegistryAttemptSpec.spec
     RegistryBookingCommandSpec.spec
     RegistryCommandSpec.spec
     RegistryTransactionsSpec.spec
+    RegistryBookingShapeSpec.spec
+    RegistryLegacyRecordCommandSpec.spec
+    RegistryBookingEvaluationSpec.spec
     RegistryVaultSpec.spec
     ScriptAritySpec.spec
     TransactionRuntimeSpec.spec

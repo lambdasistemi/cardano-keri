@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 {- |
 Module      : Cardano.KERI.Deployment.RegistryReplay
 Description : The registry's state, rebuilt from the public history of its state token
@@ -7,8 +9,8 @@ given the keys rebuilds them from the public history of the registry's state
 token, through the provider, with public Singular's lineage replay: the
 genesis, then every fold in chain order, each rebuilt root checked against the
 root the chain recorded. Anything missing, partial, inconsistent or refused by
-the provider stops the replay with the reason and the transaction it was found
-at, before anything is paid.
+the provider stops the replay with the failure Singular names, the registry and
+the transaction it was found at, before anything is paid.
 -}
 module Cardano.KERI.Deployment.RegistryReplay (
     RegistryState (..),
@@ -19,13 +21,33 @@ module Cardano.KERI.Deployment.RegistryReplay (
     foldFromHistory,
 ) where
 
-import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime)
-import Cardano.KERI.Deployment.RegistryFold (FoldDone, FoldEvent, FoldInput, FoldStopped, foldBookedRequest)
+import Cardano.KERI.AID.Application qualified as KERI
+import Cardano.KERI.Deployment.Registry (RegistryScripts (..))
+import Cardano.KERI.Deployment.RegistryChain (Loaded (..), Refusal (..), RegistryRuntime, findStateOutput, loadDeployment, tryNode)
+import Cardano.KERI.Deployment.RegistryFold (FoldCause (..), FoldDone, FoldEvent, FoldInput (..), FoldStopped (..), foldBookedRequest)
+import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..))
+import Cardano.KERI.Deployment.RegistryTransactions (RegistryDeployment (..))
+import Cardano.Ledger.Mary.Value (AssetName (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
+import Data.ByteString.Short qualified as SBS
 import Singular.Registry.Evidence (NoWitness)
-import Singular.Registry.LedgerProvider (Session)
-import Singular.Registry.TrieState (RegistryIdentity, TrieFailure)
+import Singular.Registry.Ledger (Root (..))
+import Singular.Registry.LedgerProvider (Session (..))
+import Singular.Registry.Trie.Pure (provesMember, rootFromDb)
+import Singular.Registry.TrieState (
+    Leaf (..),
+    Missing (..),
+    RegistryIdentity (..),
+    StatePoint (..),
+    StatePolicyId (..),
+    TrieFailure (..),
+    TrieSelection (..),
+ )
+import Singular.State.Assemble (inlineDatumOf)
+import Singular.State.Lineage (Replayed (..), replayRegistry)
+import Singular.State.Records (decodeStateDatum)
 
 -- | The registry as the public history of its state token shows it.
 data RegistryState = RegistryState
@@ -43,8 +65,8 @@ data RegistryState = RegistryState
     }
     deriving stock (Eq, Show)
 
-{- | A replay that stopped, with the failure public Singular named: its constructor, the registry and the
-transaction it was found at are all kept.
+{- | A replay that stopped, with the failure public Singular named: its constructor, the
+registry and the transaction it was found at are all kept.
 -}
 newtype ReplayStop = ReplayStop {stoppedBy :: TrieFailure}
     deriving stock (Eq, Show)
@@ -56,23 +78,53 @@ replayRegistryState ::
     TxIn ->
     ByteString ->
     IO (Either ReplayStop RegistryState)
-replayRegistryState _ _ output _ =
-    pure (Right (RegistryState output mempty output (txIdOf output) [] [] []))
+replayRegistryState session identity output root =
+    replayRegistry session selection >>= \case
+        Left failure -> pure (Left (ReplayStop failure))
+        Right (replayed, nodes) -> do
+            let Root rebuilt = rootFromDb nodes
+                classify key
+                    | provesMember nodes rebuilt key activeLeaf = Right (key, Active)
+                    | provesMember nodes rebuilt key terminalLeaf = Right (key, Terminal)
+                    | otherwise = Left (MissingProof identity (NoProofFor key))
+            case traverse classify (replayedKeys replayed) of
+                Left failure -> pure (Left (ReplayStop failure))
+                Right classified ->
+                    pure
+                        ( Right
+                            RegistryState
+                                { replayOutput = output
+                                , replayRebuiltRoot = rebuilt
+                                , replaySeed = replayedSeed replayed
+                                , replayGenesis = replayedGenesis replayed
+                                , replayFolds = replayedFolds replayed
+                                , replayActive = [key | (key, Active) <- classified]
+                                , replayTerminal = [key | (key, Terminal) <- classified]
+                                }
+                        )
   where
-    txIdOf (TxIn tx _) = tx
+    selection =
+        TrieSelection
+            { trieSelectionIdentity = identity
+            , trieSelectionPoint = StatePoint (sessionId session) (sessionBinding session) output
+            , trieSelectionRoot = Root root
+            }
 
--- | The stop as one line: its kind, where it was found, and what was seen.
+-- | The stop as one line, as Singular's failure shows it.
 renderReplayStop :: ReplayStop -> String
-renderReplayStop = show
+renderReplayStop (ReplayStop failure) = show failure
 
 -- | Why a fold from history stopped.
 data FoldFromHistoryStop
-    = HistoryRefused !ReplayStop
+    = -- | the replay stopped; nothing was signed or handed over
+      HistoryRefused !ReplayStop
     | FoldStoppedAfterReplay !FoldStopped
     deriving stock (Eq, Show)
 
-{- | Fold a booked request on the registry's state rebuilt from public history. The replay comes
-first; nothing is signed or handed over when it stops.
+{- | Fold a booked request on the registry's state rebuilt from public history, in place of a
+supplied file. The live state output and its root are read from the node, the history through the
+session; the replay runs first, and nothing is signed or handed over when it stops. The fold then
+checks again, as it always did, that the state it builds on is the one the chain holds.
 -}
 foldFromHistory ::
     Session NoWitness IO ->
@@ -80,5 +132,38 @@ foldFromHistory ::
     (FoldEvent -> IO ()) ->
     FoldInput ->
     IO (Either FoldFromHistoryStop FoldDone)
-foldFromHistory _ runtime report input =
-    either (Left . FoldStoppedAfterReplay) Right <$> foldBookedRequest runtime report input
+foldFromHistory session runtime report input =
+    tryNode (loadDeployment runtime (foldBlueprint input) (foldIdentity input) (foldRecord input)) >>= \case
+        Left failure -> stopped (FoldNodeFailed (show failure))
+        Right (Left refusal) -> stopped (FoldRefused refusal)
+        Right (Right loaded) -> do
+            let deployment = loadedDeployment loaded
+            tryNode (findStateOutput runtime deployment) >>= \case
+                Left failure -> stopped (FoldNodeFailed (show failure))
+                Right Nothing -> stopped (FoldRefused (StaleOrUnavailableRegistryState Nothing))
+                Right (Just (stateIn, stateOut)) -> case inlineDatumOf stateOut >>= decodeStateDatum of
+                    Nothing -> stopped (FoldRefused (StaleOrUnavailableRegistryState Nothing))
+                    Just root ->
+                        replayRegistryState session (singularIdentity (scriptsRegistry (deploymentScripts deployment))) stateIn root >>= \case
+                            Left stop -> pure (Left (HistoryRefused stop))
+                            Right state ->
+                                either (Left . FoldStoppedAfterReplay) Right
+                                    <$> foldBookedRequest runtime report input{foldSnapshot = snapshotOf state}
+  where
+    stopped cause = pure (Left (FoldStoppedAfterReplay (FoldStopped cause Nothing Nothing)))
+    snapshotOf state =
+        Snapshot
+            { snapshotSuppliedBy = "the replay of the state token's public history"
+            , snapshotActive = replayActive state
+            , snapshotTerminal = replayTerminal state
+            }
+
+-- | The registry as Singular names it.
+singularIdentity :: KERI.RegistryIdentity -> RegistryIdentity
+singularIdentity (KERI.RegistryIdentity policy name) =
+    RegistryIdentity (StatePolicyId policy) (AssetName (SBS.toShort name))
+
+-- | What the registry binds a registered key to, and a terminated one, as Singular's leaves are written.
+activeLeaf, terminalLeaf :: ByteString
+activeLeaf = BS.singleton 1
+terminalLeaf = BS.singleton 2

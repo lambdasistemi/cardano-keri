@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "Historical design note",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "This note records a design session of 2026-08-19 about a record tree and cursor that the accepted design has retired. It describes neither the accepted design nor the version 1 programs; its words poison and close are not the accepted design's.",
       "pause": 400
     },
     {
@@ -65,9 +65,9 @@
       "pause": 400
     }
   ],
-  "gap-against-the-current-skeleton-material": [
+  "gap-against-the-skeleton-of-that-date-material": [
     {
-      "text": "Gap against the current skeleton — material.",
+      "text": "Gap against the skeleton of that date — material.",
       "pause": 500
     },
     {
@@ -357,12 +357,12 @@
       "pause": 300
     },
     {
-      "text": "leaf sufficiency — the snapshot must make the cursor computable without off-chain re-reads; not enforced, and today's skeleton violates it.",
+      "text": "leaf sufficiency — the snapshot must make the cursor computable without off-chain re-reads; not enforced, and the skeleton of that date violated it.",
       "pause": 300
     }
   ],
   "_source": {
     "file": "record-cursor-projection-fidelity.md",
-    "sha256": "ea834ec1320c77370b95340f6872ed1cb39b52a59a82ff7faae6cfaff92582f1"
+    "sha256": "1d1760fc1c4f0a8804bed0a21fc18477f95c41373688fb4be081378890e40ebb"
   }
 }

@@ -25,7 +25,7 @@
       "pause": 500
     },
     {
-      "text": "checkpoint_register declares eight applied parameters. deriveV1Scripts applied nine: a leading v1CheckpointVersion left over from the cut feature.",
+      "text": "When the #254 repair was made, checkpoint_register declared eight applied parameters; at this revision the validator declares ten (onchain/validators/checkpoint_register.ak 72–94). deriveV1Scripts applied nine: a leading v1CheckpointVersion left over from the cut feature.",
       "pause": 400
     },
     {
@@ -133,6 +133,6 @@
   ],
   "_source": {
     "file": "checkpoint-version-remnant-audit.md",
-    "sha256": "6e64cb11a1031d95696a4e20f1b6472741ff6ce4d1170db234adc6c8850bb514"
+    "sha256": "754ae1b456411924e46d6a37438b7b54b8ac88a44e3c036caf3d19892b92884d"
   }
 }

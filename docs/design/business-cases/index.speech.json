@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "What was deployed, and the accepted design",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses; the case studies below that cite it say so locally.",
       "pause": 400
     },
     {
@@ -25,7 +25,7 @@
       "pause": 400
     },
     {
-      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever these analyses resolve who may act now — \"verified against the L1 registry\", \"trie_key Active?\", \"cur_pubkey from L1\" — the live authority is an AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). A delta = 0 rotation (seq + 1) consumes that checkpoint UTxO, so any pending authorization is stale and MUST be discarded and re-signed by the AID's current weighted keys over the fully bound action + current sequence — a simple re-reference to the fresh checkpoint is not sufficient (the exact shortcut #92 rejected). Value-bearing protocols carry the explicit Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup lifecycle. Two planes stay distinct: this current-actor authority is not the historical credential/admission plane — the admission cache (trie_key → AdmissionLeaf {aid, credential_saids…}, carrying the verified stable qualified aid from which the sovereign checkpoint asset is derived; trie_key stays a historical-only key), the GLEIF → QVI → LE hierarchy, and all-TELs cascade revocation are preserved as written; KEL/ACDC admission may still gate protocol eligibility, but it never selects the current checkpoint identity. Lifecycle is structural: the checkpoint token moves among role addresses, and a consumer accepts only the current ACTIVE role. ARMED, FROZEN, missing, duplicated, and stale candidates fail closed; there is no separate shared freeze registry. The factored-core \"list-shaped, threshold-capable KeyState\" (item 1) remains the current weighted key state; only its physical store moves from a shared MPF identity registry to the per-AID checkpoint.",
+      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever these analyses resolve who may act now — \"verified against the L1 registry\", \"trie_key Active?\", \"cur_pubkey from L1\" — the live authority is an AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: the registry's representative asset for the AID (in version 1, asset id (checkpoint_policy_id, aid_asset_name)), fixed by the consumer together with the network, release and checkpoint credential, current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). A delta = 0 rotation (a later sequence number) consumes that checkpoint UTxO, so any pending authorization is stale and MUST be discarded and re-signed by the AID's current weighted keys over the fully bound action + current sequence — a simple re-reference to the fresh checkpoint is not sufficient (the exact shortcut #92 rejected). Value-bearing protocols carry the explicit Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup lifecycle. Two planes stay distinct: this current-actor authority is not the historical credential/admission plane — the admission cache (trie_key → AdmissionLeaf {aid, credential_saids…}, carrying the verified stable qualified aid from which the sovereign checkpoint asset is derived; trie_key stays a historical-only key), the GLEIF → QVI → LE hierarchy, and all-TELs cascade revocation are preserved as written; KEL/ACDC admission may still gate protocol eligibility, but it never selects the current checkpoint identity. In version 1 lifecycle was structural: the checkpoint token moved among role addresses, and a consumer accepted only the current ACTIVE role. In the accepted design the consumer accepts only a present, unfrozen, unpoisoned checkpoint at least W old; frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates fail closed. There is no separate shared freeze registry. The factored-core \"list-shaped, threshold-capable KeyState\" (item 1) remains the current weighted key state; only its physical store moves from a shared MPF identity registry to the per-AID checkpoint.",
       "pause": 400
     },
     {
@@ -39,7 +39,7 @@
       "pause": 500
     },
     {
-      "text": "List-shaped, threshold-capable KeyState. Unanimous: every case has organizational actors whose AIDs are k-of-n weighted multisig. The list-shaped, weighted key state is carried in each AID's per-AID CheckpointDatum — the current weighted keys/threshold that the sovereign checkpoint advances (#92) — a single key being the 1-of-1 degenerate case. V1 accepts independent AIDs only and carries no passive delegator / di field: cooperative KERI delegation needs parent-anchor proofs and is a separately versioned extension. The admission trie_key is only a stable historical-cache key into the credential/admission plane; it is never the current-authority schema or lookup, which is the sovereign per-AID checkpoint (asset id (checkpoint_policy_id, aid_asset_name), generic exact-asset lookup). Scope change to #24.",
+      "text": "List-shaped, threshold-capable KeyState. Unanimous: every case has organizational actors whose AIDs are k-of-n weighted multisig. The list-shaped, weighted key state is carried in each AID's per-AID CheckpointDatum — the current weighted keys/threshold that the sovereign checkpoint advances (#92) — a single key being the 1-of-1 degenerate case. V1 accepts independent AIDs only and carries no passive delegator / di field: cooperative KERI delegation needs parent-anchor proofs and is a separately versioned extension. The admission trie_key is only a stable historical-cache key into the credential/admission plane; it is never the current-authority schema or lookup, which is the sovereign per-AID checkpoint (the registry's representative asset for the AID, in version 1 asset id (checkpoint_policy_id, aid_asset_name), generic exact-asset lookup). Scope change to #24.",
       "pause": 300
     },
     {
@@ -47,7 +47,7 @@
       "pause": 300
     },
     {
-      "text": "Layer-3 verifier with both modes. The cases split exactly 2/2: DeFi and security tokens require the admission cache (batch size limits; receiver checks); SPO delegation and institutional contracts afford full per-transaction verification. Ship the full verifier plus a reusable admission-cage component (trie_key → {aid, credential_saids, role_level, admitted_at, not_after} — the leaf carries the verified stable qualified aid, bound at admission, so the sovereign checkpoint asset (checkpoint_policy_id, aid_asset_name) is derived from it; historical trie_key alone cannot select the current checkpoint).",
+      "text": "Layer-3 verifier with both modes. The cases split exactly 2/2: DeFi and security tokens require the admission cache (batch size limits; receiver checks); SPO delegation and institutional contracts afford full per-transaction verification. Ship the full verifier plus a reusable admission-cage component (trie_key → {aid, credential_saids, role_level, admitted_at, not_after} — the leaf carries the verified stable qualified aid, bound at admission, so the sovereign checkpoint's representative asset (in version 1 (checkpoint_policy_id, aid_asset_name)) is derived from it; historical trie_key alone cannot select the current checkpoint).",
       "pause": 300
     },
     {
@@ -113,6 +113,6 @@
   ],
   "_source": {
     "file": "index.md",
-    "sha256": "21c81ef35d6fa5e4fe00a4cfb0dee41dc85feabf60a969f83f3df1fb520b6d3b"
+    "sha256": "f8366675f1268d6c951b89657f73965932a955dc04013c8050a371f562d66975"
   }
 }

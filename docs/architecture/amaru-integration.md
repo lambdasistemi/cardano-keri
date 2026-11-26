@@ -1,16 +1,13 @@
 # Amaru Integration Analysis
 
-!!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
-    identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
-    associated Registry fold makes it **convicted** (terminal); there is no
-    withdraw; a `deposit` rotation is the
-    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
-    lasts one epoch and is cleared by rotation. Play the
+!!! note "Historical analysis"
+    This page analyses a third party's July 2026 proposal against the earlier
+    oracle-mediated identity model, as its warning below says. It describes
+    neither the accepted design nor the version 1 programs. In the accepted
+    design an identity is **active** until it is convicted: there is no owner
+    exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody;
+    its associated Registry fold makes it **convicted** (terminal). Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
 
 
 !!! warning "Written against the earlier oracle-mediated identity model"
@@ -93,7 +90,7 @@ forks.
 
 ## Where cardano-keri fits
 
-Nothing in cardano-keri is shipped runtime infrastructure today. The concrete
+When this analysis was written (July 2026), nothing in cardano-keri was shipped runtime infrastructure. The concrete
 shipped substrate to build on is **MPFS plugin support**: MPFS can host
 domain-specific authorization logic at the cage/plugin layer without changing
 the Cardano node.
@@ -194,7 +191,7 @@ the proposed cardano-keri plugin scope. A full ACDC / vLEI trust chain needs
 three further things anchored, and cardano-keri models none of them as
 first-class:
 
-| Piece | What it is | cardano-keri today | Needed for ACDC |
+| Piece | What it is | cardano-keri when this analysis was written | Needed for ACDC |
 |---|---|---|---|
 | Controller KEL / key-state | `cur_key` + pre-rotation | Proposed plugin scope | yes |
 | **Schemas** | ACDC schema SAIDs (the credential's shape) | ❌ not modeled | yes — `cardano-backer` anchors these |

@@ -9,17 +9,16 @@ is what stops the attacker from taking the identity *forward*. It is not what
 stops them from using it *now*.
 
 !!! abstract "Where this page stands"
-    The exposure described here is **what ships on `main` today**. The M1
+    The exposure described here is that of the earlier deployed design (version 1). The M1
     return changes the answer in two specific places, each marked below: close
     stops answering to the current keys, and the **poison** — the owner's own
     lock on the checkpoint — becomes the owner's
     on-chain instrument. Both are
-    [accepted design](../index.md#the-accepted-design) — proved
-    in the Lean, not built.
+    [accepted design](../index.md#the-accepted-design) — proved in the Lean; no validator implements the poison yet.
 
 ## What the stolen current keys authorize
 
-| Surface | Attacker can | Attacker cannot |
+| Surface (earlier deployed design) | Attacker can | Attacker cannot |
 |---|---|---|
 | KERI KEL | Sign an interaction (`ixn`) event and whatever seals it anchors | Rotate — the `n` commitment names successor keys they do not hold |
 | Cardano checkpoint | Authorize `Close`: burn the token and send the whole escrow to an address of their choice | Advance the checkpoint — an Advance is a rotation, and the dual threshold rejects them |
@@ -27,8 +26,8 @@ stops them from using it *now*.
 
 !!! success "Under the accepted design, the `Close` row goes empty"
     There is no close: the design has no owner exit, no parking and no
-    revival, so the current keys cannot end the identity. A duplicity proof enters
-    pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the
+    revival, so the current keys cannot end the identity. A duplicity proof, revealed under a commitment opened beforehand, enters
+  pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the
     keys of the epoch the rotation opens (ruling D-038). A thief
     holding only the current keys is left with exactly one Cardano
     move — the poison — and that is the owner's instrument, not hers.
@@ -138,7 +137,7 @@ invalid — pending authorization does not silently survive a rotation.
 
 Rotation is **not retroactive**:
 
-- a Cardano transaction that already settled under the older ACTIVE checkpoint
+- a Cardano transaction that already settled under the older checkpoint (in version 1, the ACTIVE one)
   is not reversed;
 - a relying party that already accepted a credential anchored by the superseded
   `ixn` loses it when recovery discards that branch; and
@@ -157,16 +156,11 @@ Rotation is the remedy, but it takes time to assemble, and sometimes it is not
 available at all. The accepted design gives the current keys one power for exactly
 those two cases — and only those two.
 
-**What it is.** The owner's key holders sign, at their own `cur_threshold`, a
-short declaration over a preimage bound to the register policy, the AID and the
-current sequence. Stock `kli sign` produces it, per member; no KERI-side change
-is needed, and no BLAKE3 is computed on chain. Anyone may relay it. It is never
+**What it is.** The owner's current key quorum authorizes it at its own `cur_threshold`; the model does not yet specify the bytes they sign, and no validator implements the poison spend. It is never
 witnessed, because it is a Cardano-side declaration and not a projected KERI
 event.
 
-**What it does.** One bit in the datum. The checkpoint becomes unconsumable
-immediately, and from a poisoned state the only enabled edge is a rotation:
-no close, no second poison, no consumer authorization. So the two moves a
+**What it does.** One bit in the datum. The checkpoint becomes unconsumable immediately. From a poisoned state a rotation with its evidence clears the poison, a top-up while its mark is clear and a conviction with an eligible commitment remain possible, and a second poison and a freeze are refused; there is no close and no consumer authorization. So the two moves a
 current-key thief would otherwise have — using the identity, and cashing it out
 — are both gone for every epoch the owner has poisoned.
 
@@ -187,21 +181,18 @@ KERI-legitimate controller.
 
 | Case | Does the poison help? |
 |---|---|
-| Current keys stolen; the owner still holds the next keys | **Yes** — it covers the window between detection and the rotation, which the owner can always perform |
+| Current keys stolen; the owner still holds the next keys | **Yes** — it covers the window between detection and the rotation, which the owner can perform once its witnessed evidence exists |
 | Current keys stolen; the next keys are lost | **Yes, permanently** — no rotation will ever come, so the poison never clears. This is the case KERI itself cannot express |
 | Next keys stolen too | **No** — the thief's rotation *is* control, and the chain follows KERI. The poison lasts until that rotation and no longer |
 
 The price of the second row is stated rather than hidden: a poisoned identity
-whose next keys are lost is frozen forever, its conviction bond (the stake a
+whose next keys are lost stays poisoned and unconsumable until it is convicted, its conviction bond (the stake a
 duplicity proof would seize) included. The
 size of that bond is a deployment parameter and an economic call.
 
 ### When the fork is real, not merely suspected
 
-If two witnessed rotations exist at one sequence — the same current keys
-revealed, each with receipts from at least `toad` of the witnesses — that is not
-a suspicion, it is duplicity, and anyone holding both can prove it on chain. The
-identity becomes `Convicted`, terminally, and the convictor takes `D_reg`. See
+In the accepted design, if two witnessed rotations of different content exist at one sequence, both valid against the same previous commitments and each with the receipts of its own derived witnesses, that is not a suspicion, it is duplicity. Presented against the live checkpoint whose key state they accuse, together with an open commitment that names this identifier, deployment, key state, evidence and payee and is still inside its slot window, it can be proved on chain. The checkpoint becomes a pending termination and the commitment's payee takes `D_reg`; the booking of the termination and the fold that consumes its request then retire the identity, terminally. See
 [Identity operations](../architecture/identity-ops.md).
 
 The distinction from the poison is exact and worth keeping: a controller

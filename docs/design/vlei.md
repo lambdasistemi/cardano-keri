@@ -1,16 +1,16 @@
 # vLEI Bridge: Legal Entity Identity on Cardano
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the use cases below that cite it say so locally.
 
 
 ## What is vLEI?
@@ -95,14 +95,14 @@ A GLEIF vLEI Legal Entity credential is anchored to a KERI AID managed by the en
 GLEIF vLEI chain (off-chain KERI)
   └─ Legal Entity AID  (the stable identity handle)
        └─ aid_asset_name = deriveAidAssetName(cesr_aid)
-            └─ quantity-one per-AID checkpoint UTxO (checkpoint_policy_id, aid_asset_name)
-                 └─ CheckpointDatumV1 { cur_keys, cur_threshold, next_keys, next_threshold, seq }
+            └─ quantity-one checkpoint output holding the registry's representative asset for the AID (version 1: (checkpoint_policy_id, aid_asset_name))
+                 └─ CheckpointDatum, version 2: { aid, sn, epoch, poisoned, frozen, born_at, refund_to, topped_up, keys { cur_keys, cur_threshold, next_keys, next_threshold, witnesses, toad } }
                       └─ value cages (MPFS)
 ```
 
 The binding needs no digest-agility mandate: the contract is E-native, so the checkpoint datum stores the standard Blake3 KEL `n` entries and the Cardano on-chain commitment equals the KERI KEL commitment byte-for-byte from day one, for unmodified production identities.
 
-Once registered, the legal entity's **qualified KERI AID — and the checkpoint asset name derived from it — is the stable handle** across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by `(checkpoint_policy_id, aid_asset_name)` as a CIP-31 reference input and reads the **current weighted keys/threshold** from its `CheckpointDatumV1`. It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.
+Once registered, the legal entity's **qualified KERI AID — and the checkpoint's representative asset derived from it (in version 1 the asset name derived from the AID) — is the stable handle** across all subsequent key rotations. A Cardano smart contract that authorizes the entity resolves the AID's quantity-one checkpoint UTxO generically by the registry's representative asset for the AID (in version 1 by `(checkpoint_policy_id, aid_asset_name)`) as a CIP-31 reference input and reads the **current weighted keys/threshold** from the datum (`CheckpointDatumV1` in version 1). It keeps working after the entity rotates its signing keys: the checkpoint token name never changes, while the checkpoint it locates advances to the new key-state.
 
 The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains the root of trust for credential issuance. cardano-keri adds Cardano-specific guarantees on top: exact slot ordering, structural duplicity prevention, and smart contract composability.
 
@@ -112,7 +112,7 @@ The bridge does not replace or duplicate the GLEIF infrastructure. GLEIF remains
 
 ### 1. Compliance-gated contracts
 
-A DeFi protocol or securities issuance platform can gate entry to a value cage (an MPFS store: a Merkle Patricia Forestry map behind one validator) by checking the entity's **AID** against a registry of vLEI-verified entities. The cage resolves the entity's current authority from its **quantity-one per-AID checkpoint** via a CIP-31 reference input keyed by `(checkpoint_policy_id, aid_asset_name)`; the credential-admission allowlist is a separate historical cache, never the current-authority lookup. The vLEI credential chain verification and admission are off-chain steps; once an entity's **AID** is admitted, the cage enforces its current checkpoint key-state on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and admitted to the cage's authorization set can interact.
+A DeFi protocol or securities issuance platform can gate entry to a value cage (an MPFS store: a Merkle Patricia Forestry map behind one validator) by checking the entity's **AID** against a registry of vLEI-verified entities. The cage resolves the entity's current authority from its **quantity-one per-AID checkpoint** via a CIP-31 reference input keyed by the registry's representative asset for the AID (in version 1 `(checkpoint_policy_id, aid_asset_name)`); the credential-admission allowlist is a separate historical cache, never the current-authority lookup. The vLEI credential chain verification and admission are off-chain steps; once an entity's **AID** is admitted, the cage enforces its current checkpoint key-state on-chain without further oracle calls. Any entity whose KERI AID has been verified off-chain by the platform and admitted to the cage's authorization set can interact.
 
 **What Cardano adds:** the gate check is atomic with the transaction. There is no race between the allowlist update and the transaction inclusion. The cage either sees the authorized key-state or it does not.
 
@@ -120,15 +120,15 @@ This use case has a dedicated primer — [The Regulated DeFi Gate](defi-gate.md)
 
 ### 2. Non-censorable key history
 
-An entity's complete Cardano key history — inception, every rotation, and every poison declaration — is immutably recorded on-chain in slot order. No operator, including GLEIF or the QVI, can alter or suppress this record. A regulator or auditor can verify the entity's key custody chain from inception to the present without asking the entity or any intermediary.
+The transactions that create and spend an entity's checkpoint — its registration and each accepted rotation, poison, freeze, top-up and conviction — are recorded on chain in slot order; a KERI rotation reaches Cardano only when a transaction presenting it is accepted, and the checkpoint itself holds only the current key state. No operator, including GLEIF or the QVI, can alter an accepted transaction. An auditor reconstructs the entity's custody chain from the transactions it observes; completeness of that observation is the reader's premise (the model's reader answers from the history and holder observations it is given; it answers terminal or never registered from a complete history even when no holder is observed), not a property of the ledger alone.
 
-This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized **projection of current authority** that a [hunter](super-watcher.md) — anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one — **relays and evidences** — not a second, independently sovereign identity history. For a witnessed AID, a private Cardano-first branch is rejected because every advance needs threshold receipts; the checkpoint can still lag, and witnessless/colluding-witness cases are explicitly weaker. A [hunter](super-watcher.md) relays valid anchoring transitions and submits fully receipted duplicity evidence rather than choosing between unsupported rival records.
+This complements the KERI KEL: the on-chain record is a globally ordered, spend-linearized **projection of current authority** that a [hunter](super-watcher.md) — anyone who lands a rotation or freezes a checkpoint that cannot pay for one, the premium or the freeze bond going to the payee the submission names — **relays and evidences** — not a second, independently sovereign identity history. For a witnessed AID, a private Cardano-first branch is rejected because every advance needs threshold receipts; the checkpoint can still lag, and witnessless/colluding-witness cases are explicitly weaker. A [hunter](super-watcher.md) relays valid anchoring transitions ; a convictor, who has opened a commitment beforehand, submits fully receipted duplicity evidence rather than choosing between unsupported rival records.
 
 ### 3. Governance eligibility
 
 On-chain governance protocols (CIP-1694-style or bespoke) can require vLEI-verified legal entity identity as a precondition for voting or proposal submission. The entity's **qualified AID** serves as its governance handle. Voting weight or eligibility thresholds can be encoded in cage leaves authorized by the keys meeting the AID's **current checkpoint threshold**.
 
-Entities can rotate their signing keys (for security) without losing their governance position — the **AID (and its checkpoint asset name) is stable**, while the checkpoint it locates advances to the new keys. A poison declaration by the entity's own current keys, or a proven duplicity, makes the checkpoint unconsumable — so governance rights lapse automatically until the entity rotates, without requiring a council vote.
+Entities can rotate their signing keys (for security) without losing their governance position — the **AID (and its checkpoint asset name) is stable**, while the checkpoint it locates advances to the new keys. An accepted poison makes the checkpoint unconsumable until a rotation clears it, and an accepted conviction makes it a pending termination that the matching fold then retires for good; a consumer that checks eligibility refuses the checkpoint in both cases. What that means for governance rights is the consuming protocol's own policy, not the checkpoint's.
 
 ### 4. ACDC notarization on-chain
 
@@ -141,7 +141,7 @@ ACDC credential hash  →  cage leaf
   ↑ immutable — cage leaf cannot be deleted without a further authorized write
 ```
 
-A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written under the issuer AID's current checkpoint authority; (c) the checkpoint asset resolves to the issuer's KERI AID (`aid_asset_name = deriveAidAssetName(cesr_aid)`). All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.
+A verifier checks: (a) the ACDC self-cert via KERI KEL replay; (b) the on-chain leaf exists and was written under the issuer AID's current checkpoint authority; (c) the checkpoint asset resolves to the issuer's KERI AID (in version 1 `aid_asset_name = deriveAidAssetName(cesr_aid)`; in the accepted design the registry's representative asset for that AID). All three checks are offline or cheap on-chain lookups. No GLEIF API call is needed at verification time.
 
 ---
 
@@ -162,7 +162,7 @@ the cryptographic path exists and the work is scheduled.
 | Seq-0 binding verifiable from KEL | Native: the datum stores the KEL `n` digests byte-for-byte; genesis `blake3(icp) == cesr_aid` is verified trustlessly by the hash-proof minter for events up to one blake3 chunk (1024 B — covers the full V1 target population; only GLEIF-Root-scale 6+-key boards exceed it) |
 | Full on-chain AID self-cert | E-native: hash-proof minter at genesis (spike #88 lane-packed core, ≤1024 B single-tx); rotations pay one single-block blake3 per revealing key (measured 3.6% cpu / 4.5% mem); plain authorizations verify raw keys — zero hashing |
 | Value-write authorization | Dual-root cage landed on devnet; lifecycle completes in M1 |
-| [Hunter](super-watcher.md) (cross-plane relayer / evidence submitter) | A witnessed checkpoint cannot advance without threshold receipts (no signature-only timeout fallback). Designed duties under the accepted design: land witnessed rotations for the premium (the fee the pool pays for landing one), freeze when the owner’s pool of advance funds is short, relay poison declarations, and convict on a proven duplicity — no bounty, no adjudication; police R-TEL; M5 tooling |
+| [Hunter](super-watcher.md) (cross-plane relayer / evidence submitter) | A witnessed checkpoint cannot advance without threshold receipts (no signature-only timeout fallback). Designed duties under the accepted design: land witnessed rotations (the premium, the fee the pool pays to the payee the submitter names, is paid only while the pool covers it), freeze when the owner’s pool of advance funds is short, and land a poison the owner’s current key quorum authorized; a convictor with a commitment opened beforehand convicts on a proven duplicity, and the conviction deposit is paid to that commitment’s payee; police R-TEL; M5 tooling |
 | Cardano-only vLEI resolution | Unblocked by the E-native pivot: existing GLEIF/QVI credentials and AIDs are consumed as-is; large-event genesis (6+-key boards) waits for the chunk-token extension or a native `blake3` builtin CIP |
 
 ---

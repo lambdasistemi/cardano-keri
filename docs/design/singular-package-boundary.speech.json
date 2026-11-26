@@ -13,7 +13,7 @@
       "pause": 400
     },
     {
-      "text": "This is technical preparation. It shows that the libraries meet at the package interface. It does not show that KERI registration, parking or conviction behave as the KERI model says once they run through Singular; that is the application work of #324.",
+      "text": "This is technical preparation. It shows that the libraries meet at the package interface. It does not show that KERI registration and conviction behave as the KERI model says once they run through Singular; that is the application work of #324, part of which has since landed (the registration approval policy, #348, and the termination approvals, #350, both closed).",
       "pause": 400
     },
     {
@@ -59,7 +59,7 @@
       "pause": 500
     },
     {
-      "text": "Reusing the legacy registration predicate is not the redesigned application. The redesign moves registration to a KERI approval policy that Singular's fold consumes; that policy does not exist yet, so no test here can show that KERI and Singular agree on a registration as a whole.",
+      "text": "Reusing the legacy registration predicate is not the redesigned application. When this experiment was run, the approval policy that Singular's fold consumes did not exist, so no test here shows that KERI and Singular agree on a registration as a whole; the application mint of the source tree (onchain/lib/cardano_keri/application/, issues #348 and #350, closed) is that policy. The constitution places the inception check in the controller's booking; the model and the validators still check it at the fold, and issue #559 is the outstanding repair.",
       "pause": 400
     },
     {
@@ -89,7 +89,7 @@
       "pause": 500
     },
     {
-      "text": "The check stops at the package boundary. The production work it leaves, tracked in #324:",
+      "text": "The check stops at the package boundary. The production work it left when it was recorded, tracked in #324 (the approval policy of #348 and the termination approvals of #350 have since landed and are closed):",
       "pause": 400
     },
     {
@@ -115,6 +115,6 @@
   ],
   "_source": {
     "file": "singular-package-boundary.md",
-    "sha256": "447c51cad9717f1caccf86315e5eb1f420182e59ff3532d0f830cdc0f695ddb7"
+    "sha256": "325bef0f079b0216bb7dec7464d64ade218458a9f1b7a820a31cabeff39d8cc6"
   }
 }

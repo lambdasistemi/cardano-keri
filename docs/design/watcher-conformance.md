@@ -17,15 +17,15 @@ When evidence is missing, the application needs to see that limitation rather
 than mistake a quiet checkpoint for a globally uncontested or current KEL.
 
 **Review result, 11 September 2026:** KERI specifies first-seen processing,
-validation, and recovery. Our current predicates cover a narrower checkpoint
+validation, and recovery. At the reviewed commit the predicates covered a narrower checkpoint
 service. The missing work is an explicit contract connecting observation,
 retained history, conflict reporting, consumer policy, and financial actions.
 The checkpoint predicate alone does not establish watcher conformance.
 
 The subsequent double-rotation review also identifies an economic gap: evidence
 can be admissible at one tip and become unusable before an observer can act.
-The model provides no guaranteed challenge interval; both another rotation and
-close can move the target immediately. See [Rapid rotation and the challenge
+At the reviewed commit the model provided no guaranteed challenge interval; both another rotation and
+close could move the target immediately (the accepted design has no close). See [Rapid rotation and the challenge
 interval](#rapid-rotation-and-the-challenge-interval).
 
 This is a design review and proposed acceptance criteria, not a replacement
@@ -60,8 +60,7 @@ delegated identities and interaction conflicts are refused by this profile.
 
 The executable definitions are `Duplicity.duplicityAt` and the computed
 `Checkpoint.Env.duplicityAt` in the [Lean sources][lean-current].
-`convict_requires_concrete_pair` and `parked_convict_requires_concrete_pair`
-connect successful transitions to that evidence. The existing terminality,
+`convict_requires_concrete_pair` connects successful transitions to that evidence. The existing terminality,
 payout and monotonicity theorems remain in force. The simulator replays the
 model's concrete corpus through both its module and the code embedded in its
 page. Its compact evidence selector chooses a documented example pair; it does
@@ -72,8 +71,7 @@ abstract identity after a verified opening. Signature verification, wire
 structure, self-addressing identifiers and prior-link validation are primitive
 results bound to complete event content. The decoder must represent all
 remaining bytes injectively in the event's extension field. The environment
-must authenticate the predecessor and recorded accepted event, including for a
-parked commitment. Byte encoding, cryptographic soundness and that context
+must authenticate the predecessor and recorded accepted event. Byte encoding, cryptographic soundness and that context
 authentication are not proved here. No Aiken conviction path is accepted by
 this model change.
 

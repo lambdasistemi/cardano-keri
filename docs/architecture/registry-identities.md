@@ -38,16 +38,18 @@ The Lean model revision in the table is the latest model. For the commitment a
 conviction reveals, the scripts on this page follow it: the commitment names the
 identifier, the deployment and the key state it accuses, the validators compare
 all three with the checkpoint that settles, a top-up or a freeze of that
-checkpoint leaves the commitment entitled, and a rotation voids it. The
+checkpoint leaves an open commitment entitled inside its window, and a rotation voids it. The
 entitlement reads the identifier and key state of the checkpoint, so a
 checkpoint whose datum is marked poisoned is treated the same, but no
 transaction of these scripts produces one. [Who a
 conviction pays](../design/trust-model.md#who-a-conviction-pays) describes the
 model.
 
-For a registration the scripts do not follow it yet. The model validates a
-registration when it is booked, and a fold delivers what was approved; these
-scripts still prove the inception at the fold.
+For a registration the scripts follow it. The model validates a
+registration when it is booked, and a fold delivers what was approved; the
+application mint of these scripts verifies the inception at the booking, through
+an attestation minted in the same transaction. The evidence is local: no
+deployed registry runs it yet.
 
 <!-- identities:begin -->
 | What | Value |

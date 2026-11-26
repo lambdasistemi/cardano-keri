@@ -1,4 +1,14 @@
 {
+  "plan-bring-the-watcher-and-incentive-design-into-lean": [
+    {
+      "text": "This dated record describes parking, revival and the owner's close as they stood when it was written. The accepted design has since removed them: there is no owner exit, and a checkpoint is alive until it is convicted (#493). The",
+      "pause": 400
+    },
+    {
+      "text": "text below is kept as written, and it also uses other earlier wording, for example that a hunter is paid for landing rotations or for a freeze, a dormant leaf that can be convicted and a reap; the accepted payee is the one the submitter names (lean/CardanoKeri/Checkpoint.lean).",
+      "pause": 400
+    }
+  ],
   "the-stories-this-plan-must-cover": [
     {
       "text": "The stories this plan must cover.",
@@ -215,6 +225,6 @@
   ],
   "_source": {
     "file": "lean-invariants-plan.md",
-    "sha256": "9ea8616e89ea398a873f08f0c1e571b19233c71c8c3fd96c604c5fbe9d14e3a6"
+    "sha256": "ecd663732bdff7b89432b2014ab629189cbe2b0bb3917ba551e3d42cdf8db65f"
   }
 }

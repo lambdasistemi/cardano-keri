@@ -18,6 +18,7 @@ states, a way to prove that an issuer's interaction event was genuine, and a
 per-issuer set of revocations that anyone may fill. Interaction events, the
 bulk of any issuer's log, are never ingested. Work per credential is bounded by
 the issuer's key and witness counts, never by the length of any log.
+Everything on this page belongs to the credential extension design of the Statements model (`lean/CardanoKeri/Statements/`, which declares its own representation boundary). None of it is built: the version 2 checkpoint at this revision does not store the history or consume delegation certificates, and the abstract leave and re-registration gap that the Statements model declares is not part of the checkpoint lifecycle.
 
 The tracker holds the tickets:
 [key-state history](https://github.com/lambdasistemi/cardano-keri/issues/391),
@@ -71,6 +72,7 @@ the latest accepted establishment event. Once it advances, the previous state
 is in a spent output, which no validator can read. The design adds one field: a
 Merkle Patricia Forestry root over every establishment state the checkpoint
 has accepted, keyed by the event's sequence number.
+This field is the extension's; the checkpoint datum of the accepted model (version 2) does not carry it, and no validator writes it.
 
 ```mermaid
 flowchart LR
@@ -98,7 +100,7 @@ provisional, for the reason given under superseding below.
 For delegated identities the latest leaf may have to be replaced rather than
 appended, because KERI lets a delegated rotation supersede the latest-seen
 delegated rotation at the same sequence number when the parent approves it
-later. That is the one case that uses a trie update.
+later, the approval sitting strictly later in the parent's log than the one that installed the leaf. That is the one case that uses a trie update.
 
 ## The seal walk
 
@@ -233,7 +235,7 @@ fields across checkpoints, one reference input per generation, with no
 signature checks. Recording each approval once as its own certificate token,
 minted against the parent's checkpoint as a reference input and consumed by the
 child's advance, removes contention on the parent and moves the expensive step
-out of the advance transaction.
+out of the advance transaction, with the certificate's provisional anchor rechecked against the parent's checkpoint when it is consumed (`Delegation.lean`); the version 2 checkpoint at this revision consumes no such certificate.
 
 ### Delegation does not touch the TEL
 

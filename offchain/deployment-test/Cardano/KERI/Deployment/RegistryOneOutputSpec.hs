@@ -16,15 +16,16 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (RegistrationData (..))
 import Cardano.KERI.Deployment.RegistryBookingChain
 import Cardano.KERI.Deployment.RegistryDeploy (DeployRequest (..), Deployed (..))
-import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), deployOn, loadTestBlueprint, newChain, noFaults, testTerms)
+import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), deployOn, loadTestBlueprint, newChain, noFaults, pricedParameters, testTerms)
 import Cardano.KERI.Deployment.RegistryFold
 import Cardano.KERI.Deployment.RegistryReturn
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..))
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.PParams (ppCollateralPercentageL)
 import Cardano.Ledger.Api.Tx (bodyTxL, txIdTx)
-import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, inputsTxBodyL, outputsTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (coinTxOutL, mkBasicTxOut)
-import Cardano.Ledger.BaseTypes (Inject (..), Network (..), TxIx (..))
+import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, collateralReturnTxBodyL, feeTxBodyL, inputsTxBodyL, outputsTxBodyL, totalCollateralTxBodyL)
+import Cardano.Ledger.Api.Tx.Out (addrTxOutL, coinTxOutL, getMinCoinTxOut, mkBasicTxOut)
+import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeReference (StakeRefNull))
 import Cardano.Ledger.Hashes (KeyHash (..), unsafeMakeSafeHash)
@@ -34,6 +35,7 @@ import Control.Monad (forM_)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.IORef (newIORef, readIORef)
+import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
 import Data.Set qualified as Set
 import Lens.Micro ((^.))
@@ -48,6 +50,22 @@ fundsAndCollateralises :: TxIn -> ConwayTx -> Expectation
 fundsAndCollateralises funding tx = do
     (funding `Set.member` (tx ^. bodyTxL . inputsTxBodyL)) `shouldBe` True
     (tx ^. bodyTxL . collateralInputsTxBodyL) `shouldBe` Set.singleton funding
+
+{- | The collateral names a return at the final fee: the total is 150% of the fee, rounded up, the payer is paid back
+the rest of the collateral input, and the return is an output the ledger accepts.
+-}
+returnsTheExcess :: Integer -> ConwayTx -> Expectation
+returnsTheExcess held tx = do
+    let Coin fee = tx ^. bodyTxL . feeTxBodyL
+        percentage = fromIntegral (pricedParameters ^. ppCollateralPercentageL)
+        total = (fee * percentage + 99) `div` 100
+    (tx ^. bodyTxL . totalCollateralTxBodyL) `shouldBe` SJust (Coin total)
+    case tx ^. bodyTxL . collateralReturnTxBodyL of
+        SNothing -> expectationFailure "the transaction names no collateral return"
+        SJust out -> do
+            (out ^. coinTxOutL) `shouldBe` Coin (held - total)
+            (out ^. addrTxOutL) `shouldBe` lonely
+            (Coin (held - total) >= getMinCoinTxOut pricedParameters out) `shouldBe` True
 
 spec :: Spec
 spec = describe "#558 a wallet of exactly one ada-only output runs every registry command" $ do
@@ -73,6 +91,7 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
         transactions <- accepted world
         length transactions `shouldBe` base + 1
         fundsAndCollateralises funding (last transactions)
+        returnsTheExcess 5_000_000_000 (last transactions)
     it "returns a booked request after its deadline: the one output funds the return and is its collateral" $ do
         world <- newWorld 1_000
         export <- loadExport "kli-export-single.cesr"
@@ -95,6 +114,7 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
         transactions <- accepted world
         length transactions `shouldBe` base + 1
         fundsAndCollateralises funding (last transactions)
+        returnsTheExcess 5_000_000_000 (last transactions)
     it "books a registration: the premint and the booking are each funded and collateralised by one output of the wallet" $ do
         world <- newWorld 1_000
         export <- loadExport "kli-export-single.cesr"
@@ -107,6 +127,12 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
             [a, b] -> pure (a, b)
             other -> fail ("expected two transactions, found " <> show (length other))
         fundsAndCollateralises funding premint
+        -- the premint's output after the proof is what funds and collateralises the booking: the rest of the wallet
+        let changeHeld = case drop 1 (toList (premint ^. bodyTxL . outputsTxBodyL)) of
+                out : _ -> let Coin c = out ^. coinTxOutL in c
+                [] -> 0
+        returnsTheExcess 5_000_000_000 premint
+        returnsTheExcess changeHeld booking
         -- the booking is funded by what the premint left of the wallet, besides the proof output it spends
         Set.size (booking ^. bodyTxL . collateralInputsTxBodyL) `shouldBe` 1
         (booking ^. bodyTxL . collateralInputsTxBodyL) `shouldSatisfy` (`Set.isSubsetOf` (booking ^. bodyTxL . inputsTxBodyL))
@@ -138,3 +164,9 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
         length created `shouldBe` 3
         fmap (\out -> let Coin c = out ^. coinTxOutL in c) (take 1 (drop 1 created)) `shouldBe` [10_000_000]
         (TxIn (txIdTx first) (TxIx 1) `Set.member` (genesis ^. bodyTxL . inputsTxBodyL)) `shouldBe` True
+        -- the genesis names a return at its final fee, from the one collateral input it declares
+        let outputsByRef = Map.fromList [(TxIn (txIdTx tx) (TxIx ix), out) | tx <- landed, (ix, out) <- zip [0 ..] (toList (tx ^. bodyTxL . outputsTxBodyL))]
+        genesisCollateral <- case toList (genesis ^. bodyTxL . collateralInputsTxBodyL) of
+            [ref] -> maybe (fail "the collateral input is not an output of the deployment") pure (Map.lookup ref outputsByRef)
+            other -> fail ("expected one collateral input, found " <> show (length other))
+        returnsTheExcess (let Coin c = genesisCollateral ^. coinTxOutL in c) genesis

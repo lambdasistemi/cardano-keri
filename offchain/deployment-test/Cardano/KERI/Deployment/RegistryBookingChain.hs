@@ -65,6 +65,8 @@ module Cardano.KERI.Deployment.RegistryBookingChain (
     acquiringReads,
     receiptLinesOf,
     bookDirectly,
+    bookFrom,
+    plantWallet,
     worldDeployment,
     worldReferences,
     checkpointAddressOf,
@@ -386,12 +388,16 @@ would: the setup of a fold that does not depend on the command that books. The
 interval is five slots from the tip.
 -}
 bookDirectly :: World -> InceptionExport -> IO (TxIn, RegistrationData)
-bookDirectly world export = do
+bookDirectly world = bookFrom world walletAddress
+
+-- | The same booking, made from the given wallet: it pays the premint and the booking and is the refund address.
+bookFrom :: World -> Addr -> InceptionExport -> IO (TxIn, RegistrationData)
+bookFrom world payerAddress export = do
     deployment <- worldDeployment world
     references <- worldReferences world
     chain <- readIORef (worldChain world)
     tip <- readIORef (worldTip world)
-    let wallet = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chain), out ^. addrTxOutL == walletAddress]
+    let wallet = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chain), out ^. addrTxOutL == payerAddress]
         validity =
             Tx.ValidityPlan
                 { Tx.lowerSlot = SlotNo (fromInteger tip)
@@ -399,7 +405,7 @@ bookDirectly world export = do
                 , Tx.lowerPosixMs = slotStart (worldSlotMs world) tip
                 , Tx.upperPosixMs = slotStart (worldSlotMs world) (tip + 5)
                 }
-        request = Tx.registrationRecord deployment walletAddress (registryInitialFloor testTerms) export validity
+        request = Tx.registrationRecord deployment payerAddress (registryInitialFloor testTerms) export validity
     let transactions = rtTransactions (chainRuntime noFaults (worldChain world))
         submit label tx =
             trSubmit transactions tx >>= \case
@@ -408,14 +414,14 @@ bookDirectly world export = do
     -- the proof of the inception is preminted first, as the command does
     premint <-
         either (fail . show) pure $
-            Tx.mintHashProof pricedParameters deployment (Tx.Payer walletAddress wallet) export validity
+            Tx.mintHashProof pricedParameters deployment (Tx.Payer payerAddress wallet) export validity
     premintId <- submit "the premint" premint
     chainAfter <- readIORef (worldChain world)
     let proofIn = (TxIn premintId (TxIx 0), fromJust (Map.lookup (TxIn premintId (TxIx 0)) (chainOutputs chainAfter)))
-        walletAfter = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chainAfter), out ^. addrTxOutL == walletAddress, ref /= fst proofIn]
+        walletAfter = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chainAfter), out ^. addrTxOutL == payerAddress, ref /= fst proofIn]
     (tx, _) <-
         either (fail . show) pure $
-            Tx.bookRegistrations pricedParameters deployment references (Tx.Payer walletAddress walletAfter) [Tx.BookedRequest request export proofIn] validity 0 Map.empty
+            Tx.bookRegistrations pricedParameters deployment references (Tx.Payer payerAddress walletAfter) [Tx.BookedRequest request export proofIn] validity 0 Map.empty
     txId <- submit "the booking" tx
     pure (TxIn txId (TxIx 0), request)
 
@@ -822,3 +828,13 @@ worldReferences world = do
             , Tx.referenceAttestation = resolved (scriptOutput (recordAttestation record))
             , Tx.referenceHashProof = resolved (scriptOutput (recordHashProof record))
             }
+
+{- | A wallet of exactly one output: the address is funded with one ada-only output of the given
+lovelace and holds nothing else. Returns the output's reference.
+-}
+plantWallet :: World -> Addr -> Integer -> IO TxIn
+plantWallet world address lovelace = do
+    let ref = TxIn (TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0xc7))))) (TxIx 0)
+    modifyIORef' (worldChain world) $ \chain ->
+        chain{chainOutputs = Map.insert ref (mkBasicTxOut address (inject (Coin lovelace))) (chainOutputs chain)}
+    pure ref

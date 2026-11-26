@@ -565,6 +565,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
     Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
+    Cardano.KERI.Deployment.RegistryOneOutputSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec

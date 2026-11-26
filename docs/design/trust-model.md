@@ -176,8 +176,8 @@ Each item below is a theorem of the Lean machine defined in `lean/CardanoKeri/Ch
 | Only conviction is terminal | there is no owner exit: no close, no parking, no revival |
 | `D_reg` is never a fee source | it leaves only at a conviction |
 | The pool never gates a rotation | an unpaid rotation is still a valid rotation; a pool below `P` is what allows a freeze, together with accepted evidence of a later rotation and a checkpoint that is neither frozen nor poisoned; a rotation pays `P` to the payee the submitter names only when the pool covers it; a top-up must add at least `P` whatever the pool holds; and the application's initial state needs a pool of at least `P` while the registry's own floor is `Mc + D` |
-| A relayer cannot unfreeze the owner | a `deposit` is signed by the new epoch's keys |
-| The refund address belongs to whoever paid the registration, for the checkpoint's whole life | it is set at registration and no step changes it |
+| A deposit needs the successor keys' authorization | the successor keys authorize the deposit by signing its bound intent; the submitter, who may be anyone, selects keep or the authorized deposit when the rotation premises hold. The successor threshold must accept the verified signer positions, and a positive signature count follows only when that threshold refuses the empty signer set |
+| A live checkpoint preserves the refund address named at registration | After any sequence of accepted steps from registration to a live checkpoint, conviction sends the freeze bond still held and the entire remaining pool to that address. |
 | A conviction pays only the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | see [Who a conviction pays](#who-a-conviction-pays) |
 | A top-up, a freeze and a poison keep an open commitment; only a rotation voids it | a commitment names the key state, not the output, and only a rotation changes the key state |
 
@@ -254,13 +254,13 @@ valid signatures, receipts, preimages, or conflicts, and they cannot install a k
 Permissionless submission gives other parties the ability to relay the same
 public truth. It does not guarantee inclusion against block-level censorship.
 
-Permissionlessness has one price, and it is stated rather than hidden: because
-the chain cannot tell the controller from a relayer, the **first** registration
-of an AID
-can be made by a stale-key holder who advances only to their own epoch. The
-window is bounded by juvenility and closed by any advance to the tip. The
-attacker's bonds stay the attacker's: the refund address is fixed at
-registration. Removing the residual would mean removing the relayer.
+A retired AID cannot register again in the same registry. A live checkpoint
+can still show an older key state if a later KERI rotation has yet to land.
+The juvenility check opens at the birth slot plus `W`. Eligibility has no
+upper age limit, so age alone cannot tell a relying party whether a newer
+rotation exists. On conviction the remaining freeze bond and pool go to the
+address recorded at registration; the conviction bond `D_reg` goes to the
+payee of the eligible commitment.
 
 ### Who a conviction pays
 

@@ -150,7 +150,6 @@ import Cardano.Ledger.Address (
     serialiseAddr,
  )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PParams (ppCollateralPercentageL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
@@ -158,14 +157,11 @@ import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
     collateralInputsTxBodyL,
-    collateralReturnTxBodyL,
-    feeTxBodyL,
     inputsTxBodyL,
     mintTxBodyL,
     mkBasicTxBody,
     outputsTxBodyL,
     referenceInputsTxBodyL,
-    totalCollateralTxBodyL,
     treasuryDonationTxBodyL,
     vldtTxBodyL,
  )
@@ -201,7 +197,6 @@ import Cardano.Ledger.Mary.Value (
     MultiAsset (..),
     PolicyID (..),
     filterMultiAsset,
-    mapMaybeMultiAsset,
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
@@ -209,10 +204,9 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Provider (SlotNo)
 import Cardano.Tx.Balance (
+    BalanceError (..),
     BalanceResult (..),
     CollateralUtxos (..),
-    FeeLoopError (..),
-    balanceFeeLoop,
     balanceTx,
     balanceTxWith,
     computeScriptIntegrity,
@@ -226,6 +220,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
 import Data.Either (lefts, rights)
+import Data.Foldable (toList)
 import Data.List (elemIndex, sortOn, tails)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -1346,74 +1341,32 @@ balanced ::
     ConwayTx ->
     Either RegistryTransactionError ConwayTx
 balanced parameters resolved spent fixed changeAddress funding template = do
-    tx <- settledAt (Coin 0) (0 :: Int)
-    let Coin fee = tx ^. bodyTxL . feeTxBodyL
-    when (held * 100 < fee * percentage) $
-        Left (NotEnoughFunds "the collateral does not cover the fee")
+    result <-
+        first balanceRefused $
+            balanceTxWith parameters spent (CollateralUtxos []) resolved changeAddress Nothing withOutputs
+    let tx = balancedTx result
+    case reverse (toList (tx ^. bodyTxL . outputsTxBodyL)) of
+        change : _
+            | change ^. coinTxOutL < getMinCoinTxOut parameters change -> Left (FeeRefused insufficient)
+        _ -> pure ()
     let size = fromIntegral (tx ^. sizeTxF) + signatureAllowance
         limit = fromIntegral (parameters ^. ppMaxTxSizeL)
     when (size > limit) $
         Left (TransactionTooLarge size limit)
     pure tx
   where
-    held = coinOf (snd (fundingCollateral funding))
-    percentage = fromIntegral (parameters ^. ppCollateralPercentageL)
-    -- the fee the body ends with names the collateral it needs and what is returned of the rest: the total is
-    -- 150% of that fee rounded up, the payer is paid the remainder when it is an output the ledger accepts, and a
-    -- remainder below that minimum is left in the collateral. The declaration is made at a fee, the body is then
-    -- priced with it, and the declaration is made again at the fee that came out until it covers that fee.
-    settledAt (Coin guess) attempts = do
-        tx <- first feeRefused (balanceFeeLoop parameters outputsFor 1 resolved (declaringReturn guess withInputs))
-        let Coin fee = tx ^. bodyTxL . feeTxBodyL
-            covered = case tx ^. bodyTxL . totalCollateralTxBodyL of
-                SJust (Coin declared) -> declared * 100 >= fee * percentage
-                SNothing -> True
-        if covered
-            then pure tx
-            else
-                if attempts >= 6
-                    then Left (FeeRefused "the collateral return did not settle")
-                    else settledAt (Coin fee) (attempts + 1)
-    declaringReturn guess body
-        | residual >= unCoin (getMinCoinTxOut parameters returned) && total <= held =
-            body
-                & bodyTxL . totalCollateralTxBodyL .~ SJust (Coin total)
-                & bodyTxL . collateralReturnTxBodyL .~ SJust returned
-        | otherwise = body
-      where
-        total = (guess * percentage + 99) `div` 100
-        residual = held - total
-        returned = mkBasicTxOut changeAddress (inject (Coin residual))
-    withInputs =
+    -- the public builder takes the inputs, adds the change, prices the fee with the reference scripts resolved, takes
+    -- the donation out of the change and, at the fee it ends with, declares the total collateral and returns the rest
+    -- of the collateral input to the payer
+    withOutputs =
         template
-            & bodyTxL . inputsTxBodyL .~ Set.fromList (map fst spent)
+            & bodyTxL . outputsTxBodyL .~ StrictSeq.fromList fixed
             & bodyTxL . collateralInputsTxBodyL .~ Set.singleton (fst (fundingCollateral funding))
-    minted = template ^. bodyTxL . mintTxBodyL
-    Coin donation = template ^. bodyTxL . treasuryDonationTxBodyL
-    unspent =
-        filterMultiAsset
-            (\_ _ quantity -> quantity > 0)
-            ( foldMap (assetsOf . snd) spent
-                <> minted
-                <> mapMaybeMultiAsset (\_ _ quantity -> Just (negate quantity)) (foldMap assetsOf fixed)
-            )
-    outputsFor (Coin fee)
-        | change < 0 = Left insufficient
-        | change < unCoin (getMinCoinTxOut parameters changeOut) = Left insufficient
-        | otherwise = Right (StrictSeq.fromList (fixed <> [changeOut]))
-      where
-        change =
-            sum (map (coinOf . snd) spent)
-                - sum (map coinOf fixed)
-                - donation
-                - fee
-        changeOut = mkBasicTxOut changeAddress (MaryValue (Coin change) unspent)
-        insufficient = "the outputs that fund the transaction do not hold its payments, its fee and a change output"
-
-feeRefused :: FeeLoopError -> RegistryTransactionError
-feeRefused = \case
-    FeeDidNotConverge -> FeeRefused "the fee did not settle"
-    OutputError message -> FeeRefused message
+    insufficient = "the outputs that fund the transaction do not hold its payments, its fee and a change output"
+    balanceRefused = \case
+        InsufficientFee{} -> FeeRefused insufficient
+        FeeNotConverged -> FeeRefused "the fee did not settle"
+        CollateralShortfall{} -> NotEnoughFunds "the collateral does not cover the fee"
 
 -- | The name of the hash-proof token of an inception: the hash of its event and its identifier.
 inceptionProofName :: InceptionExport -> ByteString

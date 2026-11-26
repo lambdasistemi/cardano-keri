@@ -32,6 +32,7 @@ import Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec qualified as Regi
 import Cardano.KERI.Deployment.RegistryProviderSpec qualified as RegistryProviderSpec
 import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
 import Cardano.KERI.Deployment.RegistryRegisterStagesSpec qualified as RegistryRegisterStagesSpec
+import Cardano.KERI.Deployment.RegistryReplaySpec qualified as RegistryReplaySpec
 import Cardano.KERI.Deployment.RegistryRequestSpec qualified as RegistryRequestSpec
 import Cardano.KERI.Deployment.RegistryReturnCommandSpec qualified as RegistryReturnCommandSpec
 import Cardano.KERI.Deployment.RegistryReturnSpec qualified as RegistryReturnSpec
@@ -114,6 +115,7 @@ suite = hspec $ do
     RegistryRegisterStagesSpec.spec
     WalletHoldingSpec.spec
     RegistryFoldSpec.spec
+    RegistryReplaySpec.spec
     RegistryFoldV3Spec.spec
     RegistryFoldHandoffSpec.spec
     RegistryAttemptSpec.spec

@@ -225,6 +225,7 @@ library deployment-koios
   build-depends:
     , aeson
     , base                              >=4.18 && <5
+    , bytestring
     , cardano-keri:deployment
     , cardano-ledger-allegra
     , cardano-ledger-api
@@ -245,6 +246,7 @@ library deployment-koios
     Cardano.KERI.Deployment.KoiosRuntime
     Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.KoiosSubmission
+    Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
 
 library indexer
@@ -537,6 +539,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KoiosSubmissionSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
+    Cardano.KERI.Deployment.RecordedHistory
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain
@@ -557,6 +560,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec
+    Cardano.KERI.Deployment.RegistryReplaySpec
     Cardano.KERI.Deployment.RegistryRequestSpec
     Cardano.KERI.Deployment.RegistryReturnCommandSpec
     Cardano.KERI.Deployment.RegistryReturnSpec
@@ -601,6 +605,7 @@ test-suite deployment-tests
     , cardano-tx-tools:tx-build
     , case-insensitive
     , containers
+    , contra-tracer
     , crypton
     , directory
     , filepath

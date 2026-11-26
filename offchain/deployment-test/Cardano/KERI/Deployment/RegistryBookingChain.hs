@@ -22,6 +22,7 @@ module Cardano.KERI.Deployment.RegistryBookingChain (
     runtimeOf,
     runtimeOfUnder,
     folderAddress,
+    folderOutputs,
     originMs,
     slotStart,
     setTip,

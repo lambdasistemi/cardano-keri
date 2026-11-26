@@ -38,16 +38,18 @@ The Lean model revision in the table is the latest model. For the commitment a
 conviction reveals, the scripts on this page follow it: the commitment names the
 identifier, the deployment and the key state it accuses, the validators compare
 all three with the checkpoint that settles, a top-up or a freeze of that
-checkpoint leaves the commitment entitled, and a rotation voids it. The
+checkpoint leaves an open commitment entitled inside its window, and a rotation voids it. The
 entitlement reads the identifier and key state of the checkpoint, so a
 checkpoint whose datum is marked poisoned is treated the same, but no
 transaction of these scripts produces one. [Who a
 conviction pays](../design/trust-model.md#who-a-conviction-pays) describes the
 model.
 
-For a registration the scripts do not follow it yet. The model validates a
-registration when it is booked, and a fold delivers what was approved; these
-scripts still prove the inception at the fold.
+For a registration the scripts follow it. The model validates a
+registration when it is booked, and a fold delivers what was approved; the
+application mint of these scripts verifies the inception at the booking, through
+an attestation minted in the same transaction. The evidence is local: no
+deployed registry runs it yet.
 
 <!-- identities:begin -->
 | What | Value |
@@ -65,12 +67,14 @@ scripts still prove the inception at the fold.
 | Booking width (milliseconds) | `5000` |
 | Checkpoint minimum ADA (lovelace) | `2000000` |
 | Termination request carrier (lovelace) | `1500000` |
-| Application script hash | `1cbb18a164c1d958ef85777e5c4dc158abd2362da1d5006278d595f7` |
-| Application program bytes | `10469` |
-| State script hash | `647d0379b604e0b29f293b5c051a2d1630cb8ea8282af7b34d35dcf1` |
+| Booking attestation policy hash | `58854d37463e29fedf5990994f5e5e988770948d9cd1ca0e53e971ea` |
+| Booking attestation program bytes | `9261` |
+| Application script hash | `ea1b254f1cae4aa9ddaf09bdbb64aac646b8282adec55c822b2e4329` |
+| Application program bytes | `10856` |
+| State script hash | `66cf7ec25e703c46d3f884cf089f70702bcfba0e8685945cce108cf8` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `782098c5fc650f957a089befb4157dc221b3621dbd5b47d850beced4` |
+| Checkpoint validator script hash | `f7cb75d0a4d43cf00cf452acc91cb07e4e0f370efc19ace725694da2` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->
@@ -93,8 +97,9 @@ applied program, which the chain carries and the transaction size limit counts.
 
 ```mermaid
 flowchart LR
-  T[One set of terms] --> O[Observers: proof policy, lifecycle]
-  O --> A[Application validator]
+  T[One set of terms] --> O[Proof policy]
+  O --> B[Booking attestation policy]
+  B --> A[Application validator]
   T --> A
   A --> S[State script]
   S --> C[Checkpoint validator]
@@ -102,7 +107,7 @@ flowchart LR
   T --> C
 ```
 
-The application is applied to the observer and the amounts of the deposit; the
+The booking attestation policy is applied to the hash-proof policy and the registration deposit; the application to that policy and the amounts of the deposit; the
 state script to the application; the checkpoint validator to the state script,
 the registry's name (which the seed fixes) and the same amounts. One set of
 terms feeds all three, so the amounts cannot disagree.

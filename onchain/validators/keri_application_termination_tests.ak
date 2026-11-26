@@ -35,7 +35,7 @@ fn accepts(tx: Transaction) -> Bool {
 fn run_mint(actions: List<Action>, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -54,7 +54,7 @@ fn run_spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,

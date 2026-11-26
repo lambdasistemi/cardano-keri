@@ -1,16 +1,15 @@
 # AID cryptographic model
 
 !!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design. In that design an
+    Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses.
 
 
 A **KERI AID** is an Autonomic Identifier from the Key Event Receipt
@@ -33,8 +32,7 @@ aid_asset_name =
   blake2b_256(CHECKPOINT_ASSET_DOMAIN_TAG || 0x45 || raw_32_byte_aid)
 ```
 
-The checkpoint policy ID plus this asset name identifies the sovereign
-checkpoint UTxO.
+In version 1 the checkpoint policy ID plus this asset name identified the sovereign checkpoint UTxO; in the accepted design the checkpoint holds the representative asset of its registry for the AID (`ConsumerIdentity.lean` 42–56).
 
 ## Genesis byte binding
 
@@ -151,7 +149,7 @@ Independent uses have independent, versioned domains:
 | Checkpoint asset locator | `cardano-keri/checkpoint-asset/v1` |
 | Signed Advance message | `cardano-keri/checkpoint/adv/v1` |
 | Non-ACTIVE role-address derivation | `cardano-keri/checkpoint/role/v1` |
-| Deposit intent (accepted design, not yet on chain) | `cardano-keri/checkpoint/deposit/v1` |
+| Deposit intent (accepted design; implemented in the source tree) | `cardano-keri/checkpoint/deposit/v1` |
 
 The asset derivation also includes the `0x45` E-code byte before the raw AID.
 Changing a domain, constructor index, or field order requires a new protocol
@@ -160,14 +158,7 @@ historical vetting record are not part of the sovereign checkpoint wire.
 
 ## The deposit intent
 
-A hunter froze Alice's checkpoint because its premium pool was short: the hunter
-took the freeze bond `B`, and the checkpoint cannot be consumed until the bond
-is back. Alice restores it with her next witnessed rotation, choosing the
-`deposit` bond option. Anyone may submit the rotation, so the choice of the
-deposit must come from Alice herself: her new current keys, the keys of the
-epoch the rotation opens, sign a deposit intent. Nobody else can choose the
-deposit for her rotation, and her signature cannot be replayed on another
-checkpoint, another rotation, another output or another chain.
+In the accepted design, a freeze paid the freeze bond `B` to the payee it named because the premium pool of Alice's checkpoint was short, and a relying application cannot treat the frozen checkpoint as eligible authority until the bond is back. The frozen output itself can still be spent by a valid lifecycle step: a keep rotation leaves it frozen, and a valid conviction moves it to pending termination without restoring `B`. While the holding remains present, the bond comes back only by a witnessed rotation that carries the `deposit` bond option. Anyone may submit that rotation and select the option, but a deposit is authorized only by Alice's new current keys, the keys of the epoch the rotation opens, which sign a deposit intent; nobody can deposit without that signed intent. Her signature authorizes only the intent it was made over: under the message-binding assumption for the signature scheme and a successor threshold that refuses the empty signer set, it does not authorize a rotation whose intent differs in network, checkpoint policy, spent output reference, AID, new sequence number, new epoch or amount. The intent does not bind the output the rotation produces or the payee.
 
 ```mermaid
 sequenceDiagram
@@ -197,7 +188,7 @@ keys of the epoch the rotation opens signed the deposit"
 (`Evidence.authorizes`, `ReadsDeposit`). The intent is Plutus Data constructor
 0 with eight fields, in this order: the domain tag, the network, the checkpoint
 policy, the spent output reference, the AID, the new sequence number, the new
-epoch and the amount. The table gives each value and the replay it stops.
+epoch and the amount. Under the message-binding assumption for the signature scheme and a successor threshold that refuses the empty signer set, the table gives each value and the replay it stops: a signature authorizes only an identical intent.
 
 | Field | Value | What binding it stops |
 |---|---|---|
@@ -206,7 +197,7 @@ epoch and the amount. The table gives each value and the replay it stops.
 | `checkpoint_policy` | the policy of the checkpoint being advanced | a signature made for another deployment |
 | `spent_ref` | the output reference of the exact checkpoint output being advanced | a signature reused on a duplicate projection of the same AID or a later state of the same lineage |
 | `aid` | the AID the datum carries, its qualified CESR text bytes | a signature reused for another identity |
-| `new_sn` | the sequence number of the rotation event | a signature reused on another rotation |
+| `new_sn` | the sequence number of the rotation event | a signature reused on a rotation with another new sequence number |
 | `new_epoch` | the spent state's epoch plus one | a signature reused on another epoch |
 | `deposit` | `B − bHeld`: `B` when the spent state is frozen, `0` when it is not | a signature over one amount authorizing another |
 
@@ -223,19 +214,15 @@ What the model proves about these bytes (in `CardanoKeri.CheckpointDepositGoals`
 - the amount the intent names is the amount the deposit step brings in, the
   freeze bond when frozen and nothing when not (`intentFor_deposit`,
   `deposit_step_moves_named_amount`);
-- under the concrete reading, every deposit step carries the new keys'
-  signature over exactly the intent for its spent output and amount, and a
-  deposit is enabled whenever that signature and the witnessed rotation are
+- under the concrete reading, every deposit step is authorized by the successor keys: the successor threshold accepts the verified signer positions of the signatures over exactly the intent for its spent output and amount (at least one signer when that threshold refuses the empty signer set), and a
+  deposit is enabled whenever that authorization and the witnessed rotation are
   there, on a frozen or an unfrozen checkpoint (`deposit_step_requires_signed_intent`,
   `deposit_enabled`, `unfrozen_deposit_accepted_for_zero`);
-- signatures made over one intent authorize no other, and signatures that
-  verify under none of the rotation's current keys never count
+- signatures made over one intent authorize no rotation whose required intent differs, provided that the signature scheme binds a signature to one message, that the counted signatures verify over that intent and that the successor threshold refuses the empty signer set; and signatures that verify under none of the rotation's current keys never count
   (`authorization_does_not_transfer`, `signed_for_one_not_another`,
   `only_new_keys_count`).
 
-The Advance is refused when the intent is missing, signed below the new
-threshold, signed by the old keys, or names another AID, rotation, epoch,
-output, policy, network or amount.
+The Advance with the `deposit` option is refused unless the intent carries the successor keys' authorization: the successor threshold must accept the verified signer positions of its signatures, read against the successor key list, over an intent that names this AID, new sequence number, epoch, spent output, policy, network and amount. The model alone does not make that at least one signature, because a count threshold that the empty signer set satisfies is satisfied with no signer; a positive signature count follows only under the further premise that the successor threshold refuses the empty signer set, and the bound Aiken datum check separately requires `1 <= m <= n` for a count threshold. The `keep` option needs no intent.
 
 Four decisions shape the intent. It names the exact output being advanced, not
 only the identity and the rotation, so a freeze that races Alice's signature
@@ -268,8 +255,7 @@ different messages is an assumption stated where it is used; the threshold is
 read as the model's KERI threshold over key positions, and the correspondence
 of the datum's threshold encoding and its evaluation with that reading is not
 claimed here; reading the network, the policy and the spent output from the
-transaction is the validator's obligation. No validator implements the
-deposit option yet.
+transaction is the validator's obligation. The validator in the source tree implements the deposit option.
 
 ## Duplicate-registration residual
 

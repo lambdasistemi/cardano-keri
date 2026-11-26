@@ -398,6 +398,8 @@ bookDirectly world export = do
                 { Tx.referenceApplication = resolved (scriptOutput (recordApplication record))
                 , Tx.referenceState = resolved (scriptOutput (recordState record))
                 , Tx.referenceConfiguration = resolved (recordConfiguration record)
+                , Tx.referenceAttestation = resolved (scriptOutput (recordAttestation record))
+                , Tx.referenceHashProof = resolved (scriptOutput (recordHashProof record))
                 }
         wallet = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chain), out ^. addrTxOutL == walletAddress]
         validity =
@@ -408,14 +410,24 @@ bookDirectly world export = do
                 , Tx.upperPosixMs = slotStart (worldSlotMs world) (tip + 5)
                 }
         request = Tx.registrationRecord deployment walletAddress (registryInitialFloor testTerms) export validity
+    let transactions = rtTransactions (chainRuntime noFaults (worldChain world))
+        submit label tx =
+            trSubmit transactions tx >>= \case
+                Submitted txId -> pure txId
+                Rejected reason -> fail (label <> " was refused: " <> show reason)
+    -- the proof of the inception is preminted first, as the command does
+    premint <-
+        either (fail . show) pure $
+            Tx.mintHashProof pricedParameters deployment (Tx.Payer walletAddress wallet) export validity
+    premintId <- submit "the premint" premint
+    chainAfter <- readIORef (worldChain world)
+    let proofIn = (TxIn premintId (TxIx 0), fromJust (Map.lookup (TxIn premintId (TxIx 0)) (chainOutputs chainAfter)))
+        walletAfter = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chainAfter), out ^. addrTxOutL == walletAddress, ref /= fst proofIn]
     (tx, _) <-
         either (fail . show) pure $
-            Tx.bookRegistration pricedParameters deployment references (Tx.Payer walletAddress wallet) request validity 0 Map.empty
-    let transactions = rtTransactions (chainRuntime noFaults (worldChain world))
-    submitted <- trSubmit transactions tx
-    case submitted of
-        Submitted txId -> pure (TxIn txId (TxIx 0), request)
-        Rejected reason -> fail ("the booking was refused: " <> show reason)
+            Tx.bookRegistrations pricedParameters deployment references (Tx.Payer walletAddress walletAfter) [Tx.BookedRequest request export proofIn] validity 0 Map.empty
+    txId <- submit "the booking" tx
+    pure (TxIn txId (TxIx 0), request)
 
 -- | The output that holds the registry's state: its reference and its value.
 stateAt :: World -> Chain -> Maybe (TxIn, TxOut ConwayEra)

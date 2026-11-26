@@ -29,19 +29,25 @@ import Cardano.KERI.Deployment.Registry (
     registryMinimumDeposit,
  )
 import Cardano.KERI.Deployment.Script (
+    Blueprint (..),
     CheckpointTerms (..),
     Observers (..),
     ScriptArtifact (..),
+    Validator (..),
     applyCheckpointParams,
     applyDataArgs,
+    deriveV1Scripts,
     loadBlueprint,
+    observerArtifacts,
     requireValidator,
     scriptHashBytes,
  )
 import Cardano.KERI.Deployment.Script qualified as Script
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
+import Data.Either (fromLeft)
 import Data.Text (Text)
+import Data.Text qualified as T
 import PlutusCore.Data (Data (..))
 import System.Environment (getEnv)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe)
@@ -120,7 +126,7 @@ spec = describe "a registry's scripts" $ do
         artifactProgram (scriptsApplication scripts)
             `shouldBe` applyDataArgs
                 [ B (blake2b_256 stateTemplate)
-                , B (hashOf (observerLifecycle observers))
+                , B (hashOf (scriptsAttestation scripts))
                 , I 1_007_000_000
                 , I 1_009_000_000
                 , I 0
@@ -142,6 +148,87 @@ spec = describe "a registry's scripts" $ do
                     (hashOf (scriptsApplication scripts))
                 )
                 checkpointProgram
+    it "the booking attestation policy is the hash-proof policy and the deposit, as written out" $ do
+        scripts <- derivedWith connectedTerms (seedOf 0)
+        (_, attestationProgram) <- programOf "booking_attestation.booking_attestation.mint"
+        let observers = scriptsObservers scripts
+            hashOf = scriptHashBytes . artifactScriptHash
+        artifactProgram (scriptsAttestation scripts)
+            `shouldBe` applyDataArgs
+                [B (hashOf (observerHashProof observers)), I 1_000_000_000]
+                attestationProgram
+    it "the application is applied to the hash of that policy, and a substitute policy is another application" $ do
+        base <- derivedWith connectedTerms (seedOf 0)
+        other <- derivedWith (withDeposit 900_000_000 connectedTerms) (seedOf 0)
+        (_, applicationProgram) <- programOf "keri_application.keri_application.mint"
+        let hashOf = scriptHashBytes . artifactScriptHash
+            applicationWith attestation =
+                applyDataArgs
+                    [ B (blake2b_256 stateTemplate)
+                    , B attestation
+                    , I 1_007_000_000
+                    , I 1_009_000_000
+                    , I 0
+                    , I 2_000_000
+                    , I 1_000_000
+                    ]
+                    applicationProgram
+            attestationOf = hashOf . scriptsAttestation
+        artifactProgram (scriptsApplication base)
+            `shouldBe` applicationWith (attestationOf base)
+        -- the application of the other deposit's attestation policy is not this application
+        applicationWith (attestationOf other)
+            `shouldNotBe` artifactProgram (scriptsApplication base)
+        attestationOf base `shouldNotBe` attestationOf other
+        -- the policy the application is applied to is not the registration observer
+        attestationOf base
+            `shouldNotBe` hashOf (observerLifecycle (scriptsObservers base))
+    it "the historical V1 derivation neither needs nor lists the booking attestation policy" $ do
+        scripts <- derivedWith connectedTerms (seedOf 0)
+        path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+        current <- loadBlueprint path >>= either fail pure
+        let legacy =
+                current
+                    { validators =
+                        filter
+                            (not . T.isPrefixOf "booking_attestation." . vTitle)
+                            (validators current)
+                    }
+            application = scriptHashBytes (artifactScriptHash (scriptsApplication scripts))
+            derive = deriveV1Scripts (scriptsRegistry scripts) application
+        -- the control: the legacy blueprint lacks the entry, the current one has it
+        any (T.isPrefixOf "booking_attestation." . vTitle) (validators current) `shouldBe` True
+        any (T.isPrefixOf "booking_attestation." . vTitle) (validators legacy) `shouldBe` False
+        before <- either fail pure (derive legacy)
+        after <- either fail pure (derive current)
+        map artifactName before
+            `shouldBe` [ "hash-proof"
+                       , "observer-lifecycle"
+                       , "observer-advance"
+                       , "observer-enforcement"
+                       , "observer-entitlement"
+                       , "checkpoint-register"
+                       ]
+        -- the entry being available moves nothing of the historical inventory
+        after `shouldBe` before
+        map artifactName (observerArtifacts (scriptsObservers scripts))
+            `shouldBe` take 5 (map artifactName after)
+    it "the new release still requires the policy, and lists it beside the observers" $ do
+        scripts <- derivedWith connectedTerms (seedOf 0)
+        path <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+        current <- loadBlueprint path >>= either fail pure
+        let legacy =
+                current
+                    { validators =
+                        filter
+                            (not . T.isPrefixOf "booking_attestation." . vTitle)
+                            (validators current)
+                    }
+        fromLeft "derived" (deriveRegistryScripts stateTemplate connectedTerms (seedOf 0) legacy)
+            `shouldBe` "booking-attestation compiled code not found in production blueprint"
+        artifactName (scriptsAttestation scripts) `shouldBe` "booking-attestation"
+        ("booking-attestation" `elem` map artifactName (observerArtifacts (scriptsObservers scripts)))
+            `shouldBe` False
     it "the registration observer carries the same deposit" $ do
         base <- derivedWith connectedTerms (seedOf 0)
         other <- derivedWith (withDeposit 900_000_000 connectedTerms) (seedOf 0)

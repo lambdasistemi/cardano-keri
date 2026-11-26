@@ -19,8 +19,8 @@
 //// script up to its parameter (the template), so the hash of this validator
 //// commits to the state script of its registry; the template itself is published
 //// once, in the inline datum of an output a genesis transaction references. The
-//// second is the script hash of the lifecycle observer that attests inception
-//// evidence. The third is the registry's minimum ADA plus its deposit: the least
+//// second is the policy of the booking attestation, whose token in the mint field of
+//// a booking witnesses the inception of its key. The third is the registry's minimum ADA plus its deposit: the least
 //// deposit a booking commits. The fourth is what a fold's holding must hold, the
 //// registry's minimum ADA, the checkpoint deposit, the freeze bond and one
 //// premium; the fifth the network the refund addresses are recorded for. The
@@ -43,7 +43,7 @@ use cardano_keri/application/spend.{application_spend}
 
 validator keri_application(
   state_template_hash: ByteArray,
-  lifecycle_observer: ByteArray,
+  attestation_policy: PolicyId,
   minimum_deposit: Int,
   initial_floor: Int,
   network_id: Int,
@@ -52,6 +52,9 @@ validator keri_application(
 ) {
   mint(redeemer: List<Action>, policy_id: PolicyId, tx: Transaction) {
     application_mint(
+      attestation_policy,
+      initial_floor,
+      network_id,
       state_template_hash,
       minimum_deposit,
       checkpoint_minimum_ada,
@@ -68,14 +71,7 @@ validator keri_application(
     own_reference: OutputReference,
     tx: Transaction,
   ) {
-    application_spend(
-      lifecycle_observer,
-      initial_floor,
-      network_id,
-      redeemer,
-      own_reference,
-      tx,
-    )
+    application_spend(redeemer, own_reference, tx)
   }
 
   else(_) {

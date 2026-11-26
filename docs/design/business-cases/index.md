@@ -1,16 +1,16 @@
 # Business Cases — Comparison and Factored Core
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the case studies below that cite it say so locally.
 
 
 !!! tip "Unfamiliar with the finance vocabulary?"
@@ -25,11 +25,11 @@
     Per `specs/92-checkpoint-contention/DECISION.md`, wherever these analyses resolve **who
     may act now** — "verified against the L1 registry", "`trie_key` Active?", "`cur_pubkey`
     from L1" — the live authority is an AID's **own sovereign, per-AID, quantity-one
-    uniquely-tokenized checkpoint UTxO**: asset id `(checkpoint_policy_id, aid_asset_name)`,
+    uniquely-tokenized checkpoint UTxO**: the registry's representative asset for the AID (in version 1, asset id `(checkpoint_policy_id, aid_asset_name)`), fixed by the consumer together with the network, release and checkpoint credential,
     current weighted keys/threshold in the inline `CheckpointDatum`, read as a **CIP-31
     reference input** and discovered by a **generic exact-asset `(policy_id, asset_name)`
     lookup** (candidate outref for liveness only, re-validated against the ledger). A
-    `delta = 0` rotation (`seq + 1`) **consumes** that checkpoint UTxO, so any pending
+    `delta = 0` rotation (a later sequence number) **consumes** that checkpoint UTxO, so any pending
     authorization is **stale** and MUST be **discarded and re-signed** by the AID's **current
     weighted keys** over the fully bound action + current sequence — a simple re-reference to
     the fresh checkpoint is **not** sufficient (the exact shortcut #92 rejected). Value-bearing
@@ -41,10 +41,7 @@
     derived; `trie_key` stays a historical-only key), the
     **GLEIF → QVI → LE** hierarchy, and all-TELs cascade revocation are preserved as written;
     KEL/ACDC admission may still gate protocol *eligibility*, but it never selects the current
-    checkpoint identity. Lifecycle is structural: the checkpoint token moves
-    among role addresses, and a consumer accepts only the current **ACTIVE**
-    role. ARMED, FROZEN, missing, duplicated, and stale candidates
-    fail closed; there is no separate shared freeze registry. The
+    checkpoint identity. In version 1 lifecycle was structural: the checkpoint token moved among role addresses, and a consumer accepted only the current **ACTIVE** role. In the accepted design the consumer accepts only a present, unfrozen, unpoisoned checkpoint at least `W` old; frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates fail closed. There is no separate shared freeze registry. The
     **factored-core "list-shaped, threshold-capable KeyState" (item 1) remains
     the current weighted key state**; only its physical store moves from a
     shared MPF identity registry to the per-AID checkpoint.
@@ -75,7 +72,7 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
    separately versioned extension. The admission `trie_key` is only a
    **stable historical-cache key** into the credential/admission plane; it is
    **never** the current-authority schema or lookup, which is the sovereign
-   per-AID checkpoint (asset id `(checkpoint_policy_id, aid_asset_name)`,
+   per-AID checkpoint (the registry's representative asset for the AID, in version 1 asset id `(checkpoint_policy_id, aid_asset_name)`,
    generic exact-asset lookup). Scope change to
    [#24](https://github.com/lambdasistemi/cardano-keri/issues/24).
 2. **Hop bound 4, parameterized.** Three of four cases gate on the *role*
@@ -95,7 +92,7 @@ are use-case-invariant**; the business pick only selects a last-mile adapter.
    **admission-cage component**
    (`trie_key → {aid, credential_saids, role_level, admitted_at, not_after}` —
    the leaf carries the verified stable qualified `aid`, bound at admission, so
-   the sovereign checkpoint asset `(checkpoint_policy_id, aid_asset_name)` is
+   the sovereign checkpoint's representative asset (in version 1 `(checkpoint_policy_id, aid_asset_name)`) is
    derived from it; historical `trie_key` alone cannot select the current
    checkpoint).
 4. **Detached witness-set authorization (Option A).** Forced by the DeFi batcher

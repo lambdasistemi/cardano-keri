@@ -24,19 +24,22 @@ import Data.Aeson (Value (..))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 import Data.List (sort)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Word (Word8)
+import Paths_cardano_keri (getDataFileName)
 import System.Directory (createDirectory, doesFileExist, listDirectory)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
 import System.Posix.Files (createSymbolicLink, setFileMode)
 import System.Posix.User (getEffectiveUserID)
-import Test.Hspec (Spec, describe, it, pendingWith, shouldBe, shouldReturn)
+import Test.Hspec (Spec, describe, it, pendingWith, shouldBe, shouldReturn, shouldSatisfy)
 
 -- | A record whose every hash and transaction id is distinct from the next record's.
 recordOf :: Word8 -> ReferenceRecord
@@ -46,12 +49,11 @@ recordOf n =
         , recordTemplate = out 0x10 0
         , recordApplication = script 0x20 1
         , recordState = script 0x30 2
-        , recordRegistration = script 0x40 3
+        , recordAttestation = script 0x40 3
         , recordHashProof = script 0x50 4
         , recordCheckpoint = script 0x60 5
         , recordConfiguration = out 0x70 1
         , recordRegistryState = out 0x70 0
-        , recordCredentialRegistration = Just (BS.replicate 32 (n + 0x80))
         , recordGenesis = BS.replicate 32 (n + 0x90)
         }
   where
@@ -91,7 +93,7 @@ identityOf record =
 schemaLeaves :: [Text]
 schemaLeaves =
     sort $
-        ["schema_version", "network", "credential_registration", "genesis"]
+        ["schema_version", "network", "genesis"]
             <> [ field <> "." <> leaf
                | field <- ["template", "configuration", "registry_state"]
                , leaf <- ["transaction_id", "index"]
@@ -105,7 +107,7 @@ schemaLeaves =
     scripts =
         [ "application"
         , "state"
-        , "registration_observer"
+        , "booking_attestation"
         , "hash_proof"
         , "checkpoint_validator"
         ]
@@ -163,16 +165,22 @@ spec = describe "#351 the reference-output record and the deployment's two files
             mapM_
                 (\n -> leavesOf (documentOf (recordOf n)) `shouldBe` schemaLeaves)
                 [0, 1, 2]
-        it "reads a record whose credential an earlier deployment registered: the registration is null, not missing" $ do
-            let record = (recordOf 2){recordCredentialRegistration = Nothing}
-            valueAt ["credential_registration"] (documentOf record) `shouldBe` Just Null
-            decodeReferenceRecord (encodeReferenceRecord record) `shouldBe` Right record
-            leavesOf (documentOf record) `shouldBe` schemaLeaves
+        it "names the booking attestation policy beside the hash-proof policy, and no registration observer or credential registration" $ do
+            let document = documentOf (recordOf 2)
+            valueAt ["booking_attestation", "script_hash"] document `shouldSatisfy` isJust
+            valueAt ["registration_observer"] document `shouldBe` Nothing
+            valueAt ["credential_registration"] document `shouldBe` Nothing
+            valueAt ["booking_attestation", "script_hash"] document
+                `shouldSatisfy` (/= valueAt ["hash_proof", "script_hash"] document)
         it "carries a schema version, and a reader of another version refuses it by name" $ do
-            valueAt ["schema_version"] (documentOf (recordOf 1)) `shouldBe` Just (Number 1)
+            valueAt ["schema_version"] (documentOf (recordOf 1)) `shouldBe` Just (Number 2)
+            -- version 1 is a record of its own kind, with its own fields: a current document that claims it lacks them
+            decodeStoredRecord
+                (reencode (alter ["schema_version"] (const (Just (Number 1))) (documentOf (recordOf 1))))
+                `shouldBe` Left (RecordMissingField "registration_observer")
             decodeReferenceRecord
-                (reencode (alter ["schema_version"] (const (Just (Number 2))) (documentOf (recordOf 1))))
-                `shouldBe` Left (RecordUnknownSchemaVersion 2)
+                (reencode (alter ["schema_version"] (const (Just (Number 3))) (documentOf (recordOf 1))))
+                `shouldBe` Left (RecordUnknownSchemaVersion 3)
         it "refuses a document that is not JSON, and one that is not an object" $ do
             case decodeReferenceRecord "not json" of
                 Left (RecordNotJson _) -> pure ()
@@ -190,11 +198,10 @@ spec = describe "#351 the reference-output record and the deployment's two files
             let hashes =
                     [ ("application.script_hash", 28)
                     , ("state.script_hash", 28)
-                    , ("registration_observer.script_hash", 28)
+                    , ("booking_attestation.script_hash", 28)
                     , ("hash_proof.script_hash", 28)
                     , ("checkpoint_validator.script_hash", 28)
                     , ("genesis", 32)
-                    , ("credential_registration", 32)
                     , ("template.transaction_id", 32)
                     , ("configuration.transaction_id", 32)
                     , ("registry_state.transaction_id", 32)
@@ -245,6 +252,54 @@ spec = describe "#351 the reference-output record and the deployment's two files
                 `shouldBe` [StateHashDiffers]
             recordMismatches identity record{recordCheckpoint = (recordCheckpoint record){scriptHash = other}}
                 `shouldBe` [CheckpointHashDiffers]
+
+    describe "version 1 records: read from a genuine local deployment, never written" $ do
+        it "reads the record of a local-chain deployment as a legacy record that keeps its observer under its own name" $ do
+            record <- legacyFixture
+            case decodeStoredRecord record of
+                Right (LegacyRecord legacy) -> do
+                    scriptHash (legacyRegistrationObserver legacy)
+                        `shouldBe` hexBytes "ae83b475c9644bac95cb41445635a3e9350ac6e25cf42d7127a01369"
+                    scriptHash (legacyHashProof legacy)
+                        `shouldBe` hexBytes "2f4f20ad4e4362ce8e18848c7a69515a0de5a5efe561cc4ebcdd5221"
+                    legacyCredentialRegistration legacy
+                        `shouldBe` Just (hexBytes "cc1c6f60c0b43852cbdb8e559909386b16e409de189bb869c338cad545121bef")
+                    legacyNetwork legacy `shouldBe` 0
+                other -> fail ("not a legacy record: " <> show other)
+        it "agrees with the release identity of the same deployment, and disagrees with another registry's" $ do
+            record <- legacyFixture
+            identityBytes <- fixtureBytes "release-identity.json"
+            identity <- either (fail . show) pure (decodeReleaseIdentity identityBytes)
+            legacy <- case decodeStoredRecord record of
+                Right (LegacyRecord found) -> pure found
+                other -> fail ("not a legacy record: " <> show other)
+            legacyRecordMismatches identity legacy `shouldBe` []
+            legacyRecordMismatches identity{riNetwork = 1} legacy `shouldBe` [NetworkDiffers]
+            legacyRecordMismatches identity{riCheckpointValidator = BS.replicate 28 0x99} legacy
+                `shouldBe` [CheckpointHashDiffers]
+        it "is refused by the current reader by name, and its observer is never read as the attestation" $ do
+            record <- legacyFixture
+            decodeReferenceRecord record `shouldBe` Left RecordPredatesAttestation
+            -- the same document called version 2 has no booking attestation: the observer is not taken for it
+            let renumbered = reencode (alter ["schema_version"] (const (Just (Number 2))) (jsonOf record))
+            decodeStoredRecord renumbered `shouldBe` Left (RecordMissingField "booking_attestation")
+        it "is a record no function writes: what is written is version 2, and reads back as the current record" $
+            mapM_
+                ( \n -> do
+                    let written = encodeReferenceRecord (recordOf n)
+                    valueAt ["schema_version"] (jsonOf written) `shouldBe` Just (Number 2)
+                    decodeStoredRecord written `shouldBe` Right (CurrentRecord (recordOf n))
+                )
+                [0, 1, 2]
+        it "is read with its identity by the reader of both versions, and refused by name by the reader a command uses" $ do
+            recordPath <- fixturePath "reference-outputs.json"
+            identityPath <- fixturePath "release-identity.json"
+            readStoredDeploymentFiles identityPath recordPath >>= \case
+                Right (_, LegacyRecord _) -> pure ()
+                other -> fail ("not read as a legacy record: " <> show other)
+            readDeploymentFiles identityPath recordPath >>= \case
+                Left (RecordFileInvalid path RecordPredatesAttestation) -> path `shouldBe` recordPath
+                other -> fail ("not refused by name: " <> show other)
 
     describe "the files" $ do
         it "are written, and read back together as the identity and the record" $
@@ -381,3 +436,21 @@ spec = describe "#351 the reference-output record and the deployment's two files
 
 missingNameFor :: Text -> Text
 missingNameFor leaf = leaf
+
+-- | The path of a file of the genuine version 1 deployment the fixtures hold.
+fixturePath :: FilePath -> IO FilePath
+fixturePath name = getDataFileName ("deployment-test/fixtures/registry-v1/" <> name)
+
+fixtureBytes :: FilePath -> IO ByteString
+fixtureBytes name = fixturePath name >>= BS.readFile
+
+-- | The reference-output record a local-chain deployment of the earlier design wrote.
+legacyFixture :: IO ByteString
+legacyFixture = fixtureBytes "reference-outputs.json"
+
+-- | The document of some bytes.
+jsonOf :: ByteString -> Value
+jsonOf bytes = either (error . ("not JSON: " <>)) id (Aeson.eitherDecodeStrict bytes)
+
+hexBytes :: ByteString -> ByteString
+hexBytes text = either (error "not hexadecimal") id (convertFromBase Base16 text)

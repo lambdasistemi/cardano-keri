@@ -8,7 +8,7 @@ A deployment of a registry leaves two files. The release identity is the
 document of "Cardano.KERI.ChainQuery.ReleaseIdentity": everything a program
 needs to follow and read the registry. The reference-output record says where
 the deployment published what its transactions read by reference: the state
-template, the application, the state script, the registration observer, the
+template, the application, the state script, the booking attestation policy, the
 hash-proof policy and the checkpoint validator, and the registry's
 configuration record. It holds only facts a reader can rebuild from the chain:
 output references, script hashes, transaction ids and the network. It names no
@@ -21,13 +21,17 @@ module Cardano.KERI.Deployment.RegistryFiles (
     -- * The reference-output record
     ScriptReference (..),
     ReferenceRecord (..),
+    LegacyReferenceRecord (..),
+    StoredRecord (..),
     ReferenceRecordError (..),
     encodeReferenceRecord,
     decodeReferenceRecord,
+    decodeStoredRecord,
 
     -- * Agreement of the two files
     RecordMismatch (..),
     recordMismatches,
+    legacyRecordMismatches,
 
     -- * The files
     FilesError (..),
@@ -35,6 +39,7 @@ module Cardano.KERI.Deployment.RegistryFiles (
     writeDeploymentFiles,
     writeFileNew,
     readDeploymentFiles,
+    readStoredDeploymentFiles,
     renderIdentity,
 ) where
 
@@ -89,19 +94,41 @@ data ReferenceRecord = ReferenceRecord
     -- ^ the output whose inline datum is the state template
     , recordApplication :: !ScriptReference
     , recordState :: !ScriptReference
-    , recordRegistration :: !ScriptReference
-    -- ^ the registration (lifecycle) observer
+    , recordAttestation :: !ScriptReference
+    -- ^ the booking attestation policy the application is applied to, distinct from the historical registration observer
     , recordHashProof :: !ScriptReference
     , recordCheckpoint :: !ScriptReference
     , recordConfiguration :: !OutputReference
     -- ^ the registry's configuration record
     , recordRegistryState :: !OutputReference
     -- ^ the output the genesis created to hold the registry's state
-    , recordCredentialRegistration :: !(Maybe ByteString)
-    -- ^ the transaction that registered the registration observer's reward credential; absent when an earlier deployment had registered it
     , recordGenesis :: !ByteString
     -- ^ the transaction that created the registry
     }
+    deriving stock (Eq, Show)
+
+{- | A version 1 record, as an earlier deployment wrote it: it names the registration observer and the transaction
+that registered its credential. It is read, never written, and its observer is never a booking attestation.
+-}
+data LegacyReferenceRecord = LegacyReferenceRecord
+    { legacyNetwork :: !Integer
+    , legacyTemplate :: !OutputReference
+    , legacyApplication :: !ScriptReference
+    , legacyState :: !ScriptReference
+    , legacyRegistrationObserver :: !ScriptReference
+    , legacyHashProof :: !ScriptReference
+    , legacyCheckpoint :: !ScriptReference
+    , legacyConfiguration :: !OutputReference
+    , legacyRegistryState :: !OutputReference
+    , legacyCredentialRegistration :: !(Maybe ByteString)
+    , legacyGenesis :: !ByteString
+    }
+    deriving stock (Eq, Show)
+
+-- | A record a file holds, of either version.
+data StoredRecord
+    = CurrentRecord !ReferenceRecord
+    | LegacyRecord !LegacyReferenceRecord
     deriving stock (Eq, Show)
 
 -- | Why a document is not a reference-output record: one constructor per kind of problem.
@@ -116,6 +143,8 @@ data ReferenceRecordError
       RecordWrongType !Text
     | -- | the schema version of the document is not the one this reader knows
       RecordUnknownSchemaVersion !Integer
+    | -- | the document is a version 1 record: it names the registration observer, not the booking attestation policy
+      RecordPredatesAttestation
     | -- | the text at this path is not hexadecimal
       RecordNotHex !Text
     | -- | the hash or transaction id at this path has this many bytes where it needs that many
@@ -127,7 +156,11 @@ data ReferenceRecordError
     deriving stock (Eq, Show)
 
 recordSchemaVersion :: Integer
-recordSchemaVersion = 1
+recordSchemaVersion = 2
+
+-- | The version of the records an earlier design wrote: read, never written.
+legacySchemaVersion :: Integer
+legacySchemaVersion = 1
 
 -- | The document of a record.
 encodeReferenceRecord :: ReferenceRecord -> ByteString
@@ -139,12 +172,11 @@ encodeReferenceRecord record =
             , "template" .= outputValue (recordTemplate record)
             , "application" .= scriptValue (recordApplication record)
             , "state" .= scriptValue (recordState record)
-            , "registration_observer" .= scriptValue (recordRegistration record)
+            , "booking_attestation" .= scriptValue (recordAttestation record)
             , "hash_proof" .= scriptValue (recordHashProof record)
             , "checkpoint_validator" .= scriptValue (recordCheckpoint record)
             , "configuration" .= outputValue (recordConfiguration record)
             , "registry_state" .= outputValue (recordRegistryState record)
-            , "credential_registration" .= fmap hex (recordCredentialRegistration record)
             , "genesis" .= hex (recordGenesis record)
             ]
   where
@@ -159,34 +191,57 @@ encodeReferenceRecord record =
 hex :: ByteString -> Text
 hex = TE.decodeUtf8 . convertToBase Base16
 
--- | The record a document names, or why it names none.
+-- | The current record a document names, or why it names none. A version 1 document is named, not unknown.
 decodeReferenceRecord :: ByteString -> Either ReferenceRecordError ReferenceRecord
-decodeReferenceRecord bytes = do
+decodeReferenceRecord bytes =
+    decodeStoredRecord bytes >>= \case
+        CurrentRecord record -> Right record
+        LegacyRecord _ -> Left RecordPredatesAttestation
+
+-- | The record a document names, of either version, or why it names none.
+decodeStoredRecord :: ByteString -> Either ReferenceRecordError StoredRecord
+decodeStoredRecord bytes = do
     document <- either (Left . RecordNotJson) Right (Aeson.eitherDecodeStrict bytes)
     root <- objectOf "" document
     version <- integerAt [] root "schema_version"
-    unless (version == recordSchemaVersion) $
+    unless (version `elem` [legacySchemaVersion, recordSchemaVersion]) $
         Left (RecordUnknownSchemaVersion version)
     network <- integerAt [] root "network"
     unless (network `elem` [0, 1]) $
         Left (RecordNetworkOutOfRange network)
-    ReferenceRecord network
-        <$> outputAt [] root "template"
-        <*> scriptAt root "application"
-        <*> scriptAt root "state"
-        <*> scriptAt root "registration_observer"
-        <*> scriptAt root "hash_proof"
-        <*> scriptAt root "checkpoint_validator"
-        <*> outputAt [] root "configuration"
-        <*> outputAt [] root "registry_state"
-        <*> optionalHashAt [] root "credential_registration" 32
-        <*> hashAt [] root "genesis" 32
-  where
-    scriptAt fields name = do
-        script <- objectAt [] fields name
-        ScriptReference
-            <$> outputAt [name] script "output"
-            <*> hashAt [name] script "script_hash" 28
+    if version == recordSchemaVersion
+        then
+            fmap CurrentRecord $
+                ReferenceRecord network
+                    <$> outputAt [] root "template"
+                    <*> scriptAt root "application"
+                    <*> scriptAt root "state"
+                    <*> scriptAt root "booking_attestation"
+                    <*> scriptAt root "hash_proof"
+                    <*> scriptAt root "checkpoint_validator"
+                    <*> outputAt [] root "configuration"
+                    <*> outputAt [] root "registry_state"
+                    <*> hashAt [] root "genesis" 32
+        else
+            fmap LegacyRecord $
+                LegacyReferenceRecord network
+                    <$> outputAt [] root "template"
+                    <*> scriptAt root "application"
+                    <*> scriptAt root "state"
+                    <*> scriptAt root "registration_observer"
+                    <*> scriptAt root "hash_proof"
+                    <*> scriptAt root "checkpoint_validator"
+                    <*> outputAt [] root "configuration"
+                    <*> outputAt [] root "registry_state"
+                    <*> optionalHashAt [] root "credential_registration" 32
+                    <*> hashAt [] root "genesis" 32
+
+scriptAt :: Fields -> Text -> Either ReferenceRecordError ScriptReference
+scriptAt fields name = do
+    script <- objectAt [] fields name
+    ScriptReference
+        <$> outputAt [name] script "output"
+        <*> hashAt [name] script "script_hash" 28
 
 type Fields = KeyMap.KeyMap Value
 
@@ -254,6 +309,35 @@ outputAt parents fields name = do
         then Left (RecordNegativeIndex (pathOf at "index"))
         else Right (OutputReference transaction index)
 
+-- | Where a version 1 record and the release identity say different things.
+legacyRecordMismatches :: ReleaseIdentity -> LegacyReferenceRecord -> [RecordMismatch]
+legacyRecordMismatches identity record =
+    agreement
+        identity
+        (legacyNetwork record)
+        (scriptHash (legacyApplication record))
+        (scriptHash (legacyState record))
+        (scriptHash (legacyCheckpoint record))
+
+-- | Both files, the record of either version.
+readStoredDeploymentFiles ::
+    FilePath -> FilePath -> IO (Either FilesError (ReleaseIdentity, StoredRecord))
+readStoredDeploymentFiles identityPath recordPath = do
+    identityBytes <- readOneFile identityPath
+    recordBytes <- readOneFile recordPath
+    pure $ do
+        identityText <- identityBytes
+        recordText <- recordBytes
+        identity <-
+            either (Left . IdentityFileInvalid identityPath) Right (decodeReleaseIdentity identityText)
+        record <-
+            either (Left . RecordFileInvalid recordPath) Right (decodeStoredRecord recordText)
+        let mismatches = case record of
+                CurrentRecord current -> recordMismatches identity current
+                LegacyRecord legacy -> legacyRecordMismatches identity legacy
+        forM_ [() | not (null mismatches)] $ \() -> Left (FilesDisagree mismatches)
+        pure (identity, record)
+
 -- | A fact the two files state differently.
 data RecordMismatch
     = NetworkDiffers
@@ -268,15 +352,22 @@ application, of the state script and of the checkpoint validator.
 -}
 recordMismatches :: ReleaseIdentity -> ReferenceRecord -> [RecordMismatch]
 recordMismatches identity record =
-    [NetworkDiffers | recordNetwork record /= riNetwork identity]
+    agreement
+        identity
+        (recordNetwork record)
+        (scriptHash (recordApplication record))
+        (scriptHash (recordState record))
+        (scriptHash (recordCheckpoint record))
+
+-- | The facts both versions of a record state, against the release identity.
+agreement :: ReleaseIdentity -> Integer -> ByteString -> ByteString -> ByteString -> [RecordMismatch]
+agreement identity network application state checkpoint =
+    [NetworkDiffers | network /= riNetwork identity]
         <> [ ApplicationHashDiffers
-           | scriptHash (recordApplication record) /= rlApplicationPolicy release
-                || scriptHash (recordApplication record) /= rlApplicationCredential release
+           | application /= rlApplicationPolicy release || application /= rlApplicationCredential release
            ]
-        <> [StateHashDiffers | scriptHash (recordState record) /= rlStatePolicy release]
-        <> [ CheckpointHashDiffers
-           | scriptHash (recordCheckpoint record) /= riCheckpointValidator identity
-           ]
+        <> [StateHashDiffers | state /= rlStatePolicy release]
+        <> [CheckpointHashDiffers | checkpoint /= riCheckpointValidator identity]
   where
     release = riRelease identity
 
@@ -406,8 +497,8 @@ the registry.
 readDeploymentFiles ::
     FilePath -> FilePath -> IO (Either FilesError (ReleaseIdentity, ReferenceRecord))
 readDeploymentFiles identityPath recordPath = do
-    identityBytes <- readOne identityPath
-    recordBytes <- readOne recordPath
+    identityBytes <- readOneFile identityPath
+    recordBytes <- readOneFile recordPath
     pure $ do
         identityText <- identityBytes
         recordText <- recordBytes
@@ -418,7 +509,8 @@ readDeploymentFiles identityPath recordPath = do
         let mismatches = recordMismatches identity record
         forM_ [() | not (null mismatches)] $ \() -> Left (FilesDisagree mismatches)
         pure (identity, record)
-  where
-    readOne path = do
-        result <- try @IOException (BS.readFile path)
-        pure (either (Left . FileIo path . show) Right result)
+
+readOneFile :: FilePath -> IO (Either FilesError ByteString)
+readOneFile path = do
+    result <- try @IOException (BS.readFile path)
+    pure (either (Left . FileIo path . show) Right result)

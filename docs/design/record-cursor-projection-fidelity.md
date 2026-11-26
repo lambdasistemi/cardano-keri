@@ -1,16 +1,10 @@
 # DESIGN NOTE 001 — record/cursor data model and projection fidelity
 
-!!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
-    identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
-    associated Registry fold makes it **convicted** (terminal); there is no
-    withdraw; a `deposit` rotation is the
-    unfreeze; and the **poison**, the owner's own lock on the checkpoint,
-    lasts one epoch and is cleared by rotation. Play the
-    [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+!!! note "Historical design note"
+    This note records a design session of 2026-08-19 about a record
+    tree and cursor that the accepted design has retired. It describes neither
+    the accepted design nor the version 1 programs; its words *poison* and
+    *close* are not the accepted design's.
 
 
 **Source:** operator design session for the parked M1.2 milestone, 2026-08-19.
@@ -51,7 +45,7 @@ current keys; the **next-key digests**; the witness set and thresholds.
 Without the next-key digests you cannot check whether a claimed successor was authorized. Without
 the witness set you cannot grade receipts or reason about attestation. **[OPEN: exact schema.]**
 
-### Gap against the current skeleton — material
+### Gap against the skeleton of that date — material
 
 The S0 skeleton (`m12/record.ak`, self-described as "not production schemas") does:
 
@@ -231,4 +225,4 @@ derivation (§4), and the parity-and-abstention oracle (§7).
   enforced**,
   and it needs the resolve-by-slot mutant to be enforceable at all;
 - *leaf sufficiency* — the snapshot must make the cursor computable without off-chain re-reads;
-  **not enforced**, and today's skeleton violates it.
+  **not enforced**, and the skeleton of that date violated it.

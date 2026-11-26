@@ -67,13 +67,12 @@ import Cardano.KERI.Deployment.RegistryChain (
     renderBoundary,
     submitBoundary,
  )
-import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), ReferenceRecord, readDeploymentFiles, writeFileNew)
+import Cardano.KERI.Deployment.RegistryFiles (FilesError (..), ReferenceRecord, StoredRecord (..), readStoredDeploymentFiles, writeFileNew)
 import Cardano.KERI.Deployment.RegistryFold (
     FoldCause (..),
     FoldDone (..),
     FoldEvent (..),
     FoldInput (..),
-    FoldStage (..),
     FoldStopped (..),
     foldBookedRequest,
  )
@@ -172,7 +171,6 @@ data RegistryFoldSettings = RegistryFoldSettings
     , rfTimeoutSeconds :: !Int
     , rfReleaseIdentity :: !FilePath
     , rfReferenceRecord :: !FilePath
-    , rfKliExport :: !FilePath
     , rfRequest :: !Text
     , rfSnapshot :: !FilePath
     , rfSnapshotOut :: !(Maybe FilePath)
@@ -209,7 +207,6 @@ registryFoldSettingsParser = do
     rfTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction on the node (on Koios a transaction is waited for until two minutes after its validity end)"
     rfReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
     rfReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
-    rfKliExport <- stringSetting "kli-export" "The controller's kli export stream"
     rfRequest <- T.pack <$> stringSetting "request" "The booking output to fold, as <transaction id>#<index>"
     rfSnapshot <- stringSetting "snapshot" "The registry's active and terminal keys, as a named party supplies them"
     rfSnapshotOut <-
@@ -288,7 +285,7 @@ runRegistryRegisterOver errLine openers settings = do
     key <- openKey "register" (rgNetworkMagic settings) (rgSigningKeyFile settings) (rgVault settings) (rgPassphraseFd settings)
     when (rgTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rgBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
-    (identity, record) <- readFiles (rgReleaseIdentity settings) (rgReferenceRecord settings)
+    (identity, record) <- readFiles "register" (rgReleaseIdentity settings) (rgReferenceRecord settings)
     export <- readExport (rgKliExport settings)
     putStrLn
         "ckeri: this checks the registry's checkpoint address only: it cannot see a terminal key or another pending booking of this identity; the fold is where a duplicate is stopped"
@@ -314,6 +311,11 @@ runRegistryRegisterOver errLine openers settings = do
 
 printRegisterEvent :: Counterpart -> Integer -> RegisterEvent -> IO ()
 printRegisterEvent counterpart intended = \case
+    PremintSettledForBooking{eventTransaction = txId, eventProof = proof, eventFee = fee} -> do
+        putStrLn ("premint-transaction: " <> T.unpack (renderTransactionId txId))
+        putStrLn ("proof-output: " <> renderTxIn proof)
+        putStrLn ("premint-fee: " <> show fee)
+        hFlush stdout
     BookingWindow{eventPlan = plan, eventDeadline = deadline} -> do
         let slots (SlotNo n) = show n
         putStrLn ("validity-interval-slots: " <> slots (lowerSlot plan) <> ".." <> slots (upperSlot plan))
@@ -341,18 +343,54 @@ renderRegisterFailureFor counterpart =
     map (forCounterpart counterpart) . \case
         RegisterRefused refusal ->
             ["ckeri: registry register " <> phrase Command <> ": " <> renderRefusal refusal, zeroSpend]
-        -- the application's own refusal of the booking, as the node's evaluation reports it: the command did not pre-empt it
+        -- the evaluation of a transaction refused it, at the redeemer purpose the evaluator named: the command did not pre-empt it
         RegisterTransaction (EvaluationFailed message) ->
-            [ "ckeri: registry register stopped, " <> phrase NodeEvaluation <> ": the node's evaluation refused the booking: the application's " <> evidence message
+            [ "ckeri: registry register stopped, " <> phrase NodeEvaluation <> ": the node's evaluation refused the booking: " <> evidence message
             , zeroSpend
             ]
         RegisterTransaction failure@(SettledReportInterrupted _ message) ->
             ["ckeri: registry register settled; the command was cut short after that: " <> evidence message]
                 <> failureRow "booking" failure
         RegisterTransaction failure ->
-            renderSubmitFailure "registry register" False failure
+            renderSubmitFailure "registry register" "premint" False failure
                 <> [zeroSpend | knownNothingSpent failure]
+        -- a refusal of the command after the premint settled: the premint landed, the booking was not built
+        RegisterRefusedAfterPremint premintId proofIn refusal ->
+            premintLanded premintId proofIn StaysWithController
+                <> ["ckeri: registry register stopped, refused by the command before building the booking: " <> renderRefusal refusal, "the booking was not built"]
+        -- the run stopped between the premint and the booking: the report failed, no booking exists
+        RegisterStoppedAfterPremint premintId proofIn message ->
+            ["ckeri: registry register stopped after the premint settled, before the booking was built: " <> evidence message]
+                <> premintLanded premintId proofIn StaysWithController
+                <> ["the booking was not built"]
+        -- the premint of the hash proof settled and the booking stopped: what landed, and what did not
+        RegisterAfterPremint _ _ failure@(SettledReportInterrupted _ message) ->
+            ["ckeri: registry register settled; the command was cut short after that: " <> evidence message]
+                <> failureRow "booking" failure
+        RegisterAfterPremint premintId proofIn failure ->
+            bookingStopped failure
+                <> premintLanded premintId proofIn (maybe StaysWithController MayBeSpent (bookingMayHaveLanded failure))
+                <> ["the booking was not submitted" | knownNothingSpent failure]
   where
+    bookingStopped = \case
+        EvaluationFailed message ->
+            ["ckeri: registry register stopped, " <> phrase NodeEvaluation <> ": the node's evaluation refused the booking: " <> evidence message]
+        failure -> renderSubmitFailure "registry register" "booking" True failure
+    -- the booking was handed over and not seen to settle: the proof output is spent if it landed, which is not known
+    bookingMayHaveLanded = \case
+        HandoffUnconfirmed txId _ -> Just txId
+        NotObserved txId _ -> Just txId
+        _ -> Nothing
+    premintLanded premintId proofIn custody =
+        [ "the premint of the hash proof settled: "
+            <> T.unpack (renderTransactionId premintId)
+            <> "; the proof output "
+            <> renderTxIn proofIn
+            <> case custody of
+                StaysWithController -> " stays with the controller"
+                MayBeSpent bookingId ->
+                    " is spent if the booking " <> T.unpack (renderTransactionId bookingId) <> " landed; whether it landed is not known: reconcile it by that transaction's identifier before using the proof output again"
+        ]
     -- nothing of this command reached the node: it was refused, failed before signing or was signed and never handed over
     knownNothingSpent = \case
         BuildRefused _ -> True
@@ -389,8 +427,7 @@ runRegistryFoldOver errLine openers settings = do
     key <- openKey "fold" (rfNetworkMagic settings) (rfSigningKeyFile settings) (rfVault settings) (rfPassphraseFd settings)
     when (rfTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rfBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
-    (identity, record) <- readFiles (rfReleaseIdentity settings) (rfReferenceRecord settings)
-    export <- readExport (rfKliExport settings)
+    (identity, record) <- readFiles "fold" (rfReleaseIdentity settings) (rfReferenceRecord settings)
     request <- either dieZero pure (parseRequestReference (T.unpack (rfRequest settings)))
     snapshotBytes <-
         try @IOException (BS.readFile (rfSnapshot settings))
@@ -411,7 +448,6 @@ runRegistryFoldOver errLine openers settings = do
                     { foldBlueprint = blueprint
                     , foldIdentity = identity
                     , foldRecord = record
-                    , foldExport = export
                     , foldRequestOutput = request
                     , foldSnapshot = snapshot
                     , foldPayerAddress = payer
@@ -436,34 +472,17 @@ printFoldEvent out = \case
     FoldHandingOff{eventTransaction = txId} -> do
         hPutStrLn out ("handing fold " <> T.unpack (renderTransactionId txId) <> " to the node")
         hFlush out
-    PremintHandingOff{eventTransaction = txId} -> do
-        hPutStrLn out ("handing premint " <> T.unpack (renderTransactionId txId) <> " to the node")
-        hFlush out
-    PremintSettled{eventTransaction = txId, eventProof = proof, eventFee = fee} -> do
-        hPutStrLn out ("premint-transaction: " <> T.unpack (renderTransactionId txId))
-        hPutStrLn out ("proof-output: " <> renderTxIn proof)
-        hPutStrLn out ("premint-fee: " <> show fee)
-        hFlush out
     FoldSettled{eventTransaction = txId, eventHolding = holding, eventFee = fee} -> do
         hPutStrLn out ("fold-transaction: " <> T.unpack (renderTransactionId txId))
         hPutStrLn out ("checkpoint-output: " <> renderTxIn holding)
         hPutStrLn out ("fold-fee: " <> show fee)
         hFlush out
 
-{- | What a fold that stopped tells the person running it: why, what landed, how far each
-transaction it signed got, the registry state the node last confirmed, and that nothing is
-retried.
+{- | What a fold that stopped tells the person running it: why, how far the transaction it signed
+got, the registry state the node last confirmed, and that nothing is retried.
 -}
 renderFoldStopped :: FoldStopped -> [String]
-renderFoldStopped stopped = map (forCounterpart TheNode) (body <> [zeroSpend | nothingSpent])
-  where
-    -- no transaction of this command left it: none was handed to the node, and no premint settled
-    nothingSpent =
-        null (stoppedPremint stopped)
-            && all notHanded (stoppedPremintHandoff stopped)
-            && null (stoppedFoldAttempt stopped)
-    notHanded (Attempt _ status) = status == NotHandedToNode
-    body = renderFoldBody stopped
+renderFoldStopped stopped = map (forCounterpart TheNode) (renderFoldBody stopped <> [zeroSpend | null (stoppedFoldAttempt stopped)])
 
 renderFoldBody :: FoldStopped -> [String]
 renderFoldBody stopped
@@ -476,34 +495,22 @@ renderFoldBody stopped
             FoldRefused refusal
                 | landedNothing
                 , isWindowRow refusal ->
-                    ["ckeri: registry fold " <> phrase Command <> " at the first window check, before the premint: " <> renderRefusal refusal] <> waitHint refusal
+                    ["ckeri: registry fold " <> phrase Command <> " at the window check: " <> renderRefusal refusal] <> waitHint refusal
                 | landedNothing ->
                     ["ckeri: registry fold " <> phrase Command <> ", before any window check: " <> renderRefusal refusal]
-            FoldWindowAfterPremint refusal ->
-                [ "ckeri: registry fold stopped after the premint settled: the fold was not submitted"
-                , "check: second window check, after the premint: " <> renderRefusal refusal
-                ]
-                    <> details
             FoldRefused refusal -> ["ckeri: registry fold stopped, " <> phrase Command <> ": " <> renderRefusal refusal] <> details
-            RegistryMoved ->
-                ["ckeri: registry fold stopped: registry-moved: the registry state changed after the snapshot was checked, so the fold was not built"] <> details
-            FoldNodeFailed BeforePremint message
-                | Just _ <- stoppedPremintHandoff stopped ->
-                    ["ckeri: registry fold stopped at the handoff of the premint to the node: " <> message] <> details
-                | otherwise ->
-                    ["ckeri: registry fold stopped at the first stage, the node could not be read: " <> message]
-            FoldNodeFailed AfterPremint message
+            FoldNodeFailed message
                 | Just _ <- stoppedFoldAttempt stopped -> [foldHandoffStage message] <> details
                 | otherwise ->
-                    ["ckeri: registry fold stopped after the premint settled, the node could not be read: " <> message] <> details
+                    ["ckeri: registry fold stopped, the node could not be read: " <> message]
             FoldTransaction failure
                 | HandoffUnconfirmed _ message <- failure
                 , Just _ <- stoppedFoldAttempt stopped ->
                     [foldHandoffStage message] <> details
                 | otherwise ->
-                    renderSubmitFailure "registry fold" (not (null (stoppedPremint stopped))) failure <> details
+                    renderSubmitFailure "registry fold" "fold" False failure <> details
   where
-    landedNothing = null (stoppedPremint stopped) && null (stoppedFoldAttempt stopped)
+    landedNothing = null (stoppedFoldAttempt stopped)
     isWindowRow = \case
         DeadlineReached{} -> True
         TimeEvidenceConflicts{} -> True
@@ -515,23 +522,16 @@ renderFoldBody stopped
         NoIntervalYet{} -> ["the command can be run again after the next block"]
         _ -> []
     causeText = case stoppedCause stopped of
-        FoldNodeFailed _ message -> message
+        FoldNodeFailed message -> message
         other -> show other
     foldHandoffStage message =
-        "ckeri: registry fold stopped after the premint settled, at the handoff of the fold to the node: " <> message
+        "ckeri: registry fold stopped at the handoff of the fold to the node: " <> message
     details =
-        [ "premint-transaction: " <> T.unpack (renderTransactionId txId) <> "\nproof-output: " <> renderTxIn proof <> maybe "" (\fee -> "\npremint-fee: " <> show fee) (stoppedPremintFee stopped)
-        | Just (txId, proof) <- [stoppedPremint stopped]
-        ]
-            -- a premint that did not settle says how far it got
-            <> [attemptRow "premint" attempt | null (stoppedPremint stopped), Just attempt <- [stoppedPremintHandoff stopped]]
-            <> concat [attemptRows "fold" attempt | Just attempt <- [stoppedFoldAttempt stopped]]
-            -- no fold was signed: there is none to have reached the node
-            <> ["the fold was not submitted" | not (null (stoppedPremint stopped)), null (stoppedFoldAttempt stopped)]
+        concat [attemptRows "fold" attempt | Just attempt <- [stoppedFoldAttempt stopped]]
             <> [ "node-confirmed-state: " <> renderTxIn ref <> maybe "" ((" root " <>) . hex) root
                | Just (ref, root) <- [stoppedConfirmed stopped]
                ]
-            <> ["not retried: the premint is not minted again and no transaction is sent again by this command"]
+            <> ["not retried: no transaction is sent again by this command"]
 
 -- ---------------------------------------------------------------------
 -- Rendering
@@ -586,20 +586,17 @@ failureRow kind = \case
     SettledReportInterrupted settled _ -> attemptRows kind (Attempt (transactionId settled) (SettledOnChain settled))
     _ -> []
 
-renderSubmitFailure :: String -> Bool -> SubmitError -> [String]
-renderSubmitFailure command premintSettled failure =
+renderSubmitFailure :: String -> String -> Bool -> SubmitError -> [String]
+renderSubmitFailure command kind premintSettled failure =
     ["ckeri: " <> command <> " stopped, " <> how <> ": " <> cause]
-        <> failureRow (if premintSettled then "fold" else kindOf command) failure
+        <> failureRow kind failure
   where
-    kindOf = \case
-        "registry register" -> "booking"
-        "registry return" -> "return"
-        _ -> "premint"
+    notSubmitted = "the " <> kind
     -- what is said of where it stopped: after a settled premint nothing is "before any transaction",
     -- and a node that could not be read refused nothing
     how = case (failure, submitBoundary failure) of
         (NodeFailed _, _) -> "the node could not be read"
-        (_, Command) | premintSettled -> "refused by the command after the premint settled: the fold was not submitted"
+        (_, Command) | premintSettled -> "refused by the command after the premint settled: " <> notSubmitted <> " was not submitted"
         (_, boundary) -> phrase boundary
     cause = case failure of
         BuildRefused refusal -> "build-refused: " <> evidence (show refusal)
@@ -646,8 +643,6 @@ renderRefusal = \case
     RequestIsNotARegistration ref -> "request-is-not-a-registration: " <> renderTxIn ref
     RequestHasNoApproval ref -> "request-has-no-approval: " <> renderTxIn ref <> " holds the datum of a request and not the approval the booking minted"
     RequestIsForAnotherRegistry ref -> "request-is-for-another-registry: " <> renderTxIn ref
-    RequestIsForAnotherKey requestKey exportKey ->
-        "request-is-for-another-key: the request is for " <> hex requestKey <> " and the export is of " <> hex exportKey
 
 renderFilesFailure :: FilesError -> String
 renderFilesFailure = \case
@@ -673,9 +668,21 @@ die' message = hPutStrLn stderr ("ckeri: " <> message) >> exitFailure
 -- Inputs
 -- ---------------------------------------------------------------------
 
-readFiles :: FilePath -> FilePath -> IO (ReleaseIdentity, ReferenceRecord)
-readFiles identityPath recordPath =
-    readDeploymentFiles identityPath recordPath >>= either (dieZero . ("deployment-files-invalid: " <>) . show) pure
+{- | Read the two files of a registry, of either version, at the entry point of a command. A record of the
+earlier development form is read and refused here, by name and in plain words, before a provider is opened:
+this version builds no transaction for it.
+-}
+readFiles :: String -> FilePath -> FilePath -> IO (ReleaseIdentity, ReferenceRecord)
+readFiles operation identityPath recordPath =
+    readStoredDeploymentFiles identityPath recordPath >>= \case
+        Left failure -> dieZero ("deployment-files-invalid: " <> show failure)
+        Right (identity, CurrentRecord record) -> pure (identity, record)
+        Right (_, LegacyRecord _) ->
+            dieZero
+                ( "registry-predates-attestation: the record describes a registry of an earlier development form, whose application depends on a program this version does not use; this version cannot build transactions for it, so registry "
+                    <> operation
+                    <> " stops here. The registry must be deployed again with this version."
+                )
 
 readExport :: FilePath -> IO InceptionExport
 readExport path = do
@@ -814,7 +821,7 @@ runRegistryReturnOver errLine openers settings = do
     key <- openKey "return" (rnNetworkMagic settings) (rnSigningKeyFile settings) (rnVault settings) (rnPassphraseFd settings)
     when (rnTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rnBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
-    (identity, record) <- readFiles (rnReleaseIdentity settings) (rnReferenceRecord settings)
+    (identity, record) <- readFiles "return" (rnReleaseIdentity settings) (rnReferenceRecord settings)
     request <- either dieZero pure (parseRequestReference (T.unpack (rnRequest settings)))
     withProvider openers provider (chosenNetworkTime (rnProvider settings)) (rnNetworkMagic settings) (rnFundingAddress settings) key (rnTimeoutSeconds settings) $ \(runtime, payer) -> do
         outcome <-
@@ -906,7 +913,7 @@ renderReturnStoppedFor counterpart stopped = map (forCounterpart counterpart) (b
                     <> maybe [] (\held -> [attemptRow "return" held]) attempt
                     <> notRetried
             ReturnTransaction failure ->
-                renderSubmitFailure "registry return" False failure <> notRetried
+                renderSubmitFailure "registry return" "return" False failure <> notRetried
     causeText = case returnCause stopped of
         ReturnNodeFailed message -> message
         ReturnReportFailed message -> message
@@ -930,3 +937,10 @@ checkKey :: KeySource -> Addr -> IO (Either String ())
 checkKey = \case
     KeyFile path -> checkSigningKey path
     KeyEnvelope envelope -> pure . checkSigningEnvelope envelope
+
+-- | What the report may say of the proof output the premint left, once the booking stopped.
+data ProofCustody
+    = -- | the booking never reached the node, or was refused: the output is unspent
+      StaysWithController
+    | -- | the booking was handed over and not seen to settle: it spends the proof output if it landed
+      MayBeSpent !TxId

@@ -30,6 +30,7 @@ data-files:
   deployment-test/fixtures/koios-recorded/*.json
   deployment-test/fixtures/register-preflight-board-manifest.json
   deployment-test/fixtures/register-preflight-m1-manifest.json
+  deployment-test/fixtures/registry-v1/*.json
   docs/assets/swagger/query-api.json
   indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
@@ -193,6 +194,7 @@ library deployment
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.NodeSocketRuntime
     Cardano.KERI.Deployment.Publisher
+    Cardano.KERI.Deployment.RefusalAt
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Registry
     Cardano.KERI.Deployment.RegistryChain
@@ -208,6 +210,7 @@ library deployment
     Cardano.KERI.Deployment.SigningKeyCheck
     Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
+    Cardano.KERI.Deployment.WalletHolding
 
 -- The Koios instance of the registry runtime: its reads and its settlement.
 -- It alone holds the dependency on Singular's main library, which carries
@@ -520,6 +523,7 @@ test-suite deployment-tests
   other-modules:
     Cardano.KERI.Deployment.AdvancePackageSpec
     Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.AttestationBoundarySpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
@@ -537,17 +541,22 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain
     Cardano.KERI.Deployment.RegistryBookingCommandSpec
+    Cardano.KERI.Deployment.RegistryBookingEvaluationSpec
+    Cardano.KERI.Deployment.RegistryBookingShapeSpec
     Cardano.KERI.Deployment.RegistryCommandSpec
     Cardano.KERI.Deployment.RegistryDeploySpec
     Cardano.KERI.Deployment.RegistryFilesSpec
     Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.RegistryFoldHandoffSpec
     Cardano.KERI.Deployment.RegistryFoldSpec
+    Cardano.KERI.Deployment.RegistryFoldV3Spec
     Cardano.KERI.Deployment.RegistryKoiosCommandSpec
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
+    Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
+    Cardano.KERI.Deployment.RegistryRegisterStagesSpec
     Cardano.KERI.Deployment.RegistryRequestSpec
     Cardano.KERI.Deployment.RegistryReturnCommandSpec
     Cardano.KERI.Deployment.RegistryReturnSpec
@@ -562,6 +571,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.TopUpTransactionSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
+    Cardano.KERI.Deployment.WalletHoldingSpec
     Paths_cardano_keri
 
   build-depends:
@@ -594,18 +604,20 @@ test-suite deployment-tests
     , crypton
     , directory
     , filepath
-    , ghc-lib-parser                    >=9.12.3 && <9.13
+    , ghc-lib-parser                               >=9.12.3 && <9.13
     , hinotify
-    , hspec                             >=2.11   && <2.12
+    , hspec                                        >=2.11   && <2.12
     , http-conduit
     , http-types
-    , memory                            >=0.18   && <0.19
+    , memory                                       >=0.18   && <0.19
     , microlens
+    , mtl
     , network
     , ouroboros-consensus
     , ouroboros-network:protocols
     , plutus-core
     , plutus-ledger-api
+    , plutus-ledger-api:plutus-ledger-api-testlib
     , serialise
     , singular-registry
     , singular-registry:koios-http
@@ -1098,6 +1110,7 @@ test-suite unit-tests
     Cardano.KERI.AID.CESRSpec
     Cardano.KERI.AID.Checkpoint.AdvanceFixturesSpec
     Cardano.KERI.AID.Checkpoint.AdvanceSpec
+    Cardano.KERI.AID.Checkpoint.AttestationVectorsSpec
     Cardano.KERI.AID.Checkpoint.BountyCommitmentSpec
     Cardano.KERI.AID.Checkpoint.DatumSpec
     Cardano.KERI.AID.Checkpoint.DatumV2Spec
@@ -1146,6 +1159,8 @@ executable gen-vectors
     , bytestring
     , cardano-crypto-class
     , cardano-keri
+    , directory
+    , process
 
 executable gen-checkpoint-vectors
   import:           warnings

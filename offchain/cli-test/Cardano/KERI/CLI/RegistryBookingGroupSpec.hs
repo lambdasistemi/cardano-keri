@@ -43,11 +43,10 @@ nodeOptions =
     , ("--timeout-seconds", "77")
     , ("--release-identity", "identity.json")
     , ("--reference-record", "references.json")
-    , ("--kli-export", "export.cesr")
     ]
 
 registerOptions :: [(String, String)]
-registerOptions = nodeOptions <> [("--request-deposit", "1009000005")]
+registerOptions = nodeOptions <> [("--kli-export", "export.cesr"), ("--request-deposit", "1009000005")]
 
 foldOptions :: [(String, String)]
 foldOptions =
@@ -87,7 +86,6 @@ foldSettings =
         , rfTimeoutSeconds = 77
         , rfReleaseIdentity = "identity.json"
         , rfReferenceRecord = "references.json"
-        , rfKliExport = "export.cesr"
         , rfRequest = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3"
         , rfSnapshot = "snapshot.json"
         , rfSnapshotOut = Just "next-snapshot.json"
@@ -132,9 +130,9 @@ argumentsOf options = concat [[name, value] | (name, value) <- options]
 
 -- | The options a command cannot run without.
 requiredRegister, requiredFold :: [String]
-requiredRegister =
-    ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
-requiredFold = requiredRegister <> ["--request", "--snapshot"]
+requiredFold =
+    ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--request", "--snapshot"]
+requiredRegister = ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
 
 spec :: Spec
 spec = describe "#351 ckeri registry register and ckeri registry fold: the command surface" $ do
@@ -150,7 +148,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
             , ("neither", without ["--node-socket"] nodeOptions, chosen Nothing Nothing Nothing)
             ]
             $ \(label, options, expected) -> do
-                registered <- parseWith [] (["registry", "register"] <> argumentsOf (without [] options <> [("--request-deposit", "1009000005")]))
+                registered <- parseWith [] (["registry", "register"] <> argumentsOf (without [] options <> [("--kli-export", "export.cesr"), ("--request-deposit", "1009000005")]))
                 case registered of
                     Right (RegistryRegister settings) -> (label, rgProvider settings) `shouldBe` (label, expected)
                     other -> expectationFailure (label <> ": not parsed: " <> showResult other)
@@ -218,7 +216,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
             other -> expectationFailure ("not parsed: " <> showResult other)
     it "leaves the optional settings out: the request deposit, the next snapshot, the network magic and the timeout take their defaults" $ do
         let without names = [o | o@(name, _) <- nodeOptions, name `notElem` names]
-        registered <- parseWith [] (["registry", "register"] <> argumentsOf (without ["--network-magic", "--timeout-seconds"]))
+        registered <- parseWith [] (["registry", "register"] <> argumentsOf (without ["--network-magic", "--timeout-seconds"] <> [("--kli-export", "export.cesr")]))
         case registered of
             Right (RegistryRegister settings) -> do
                 rgDeposit settings `shouldBe` Nothing
@@ -281,6 +279,9 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
     it "offers a deposit to the request of register only, and a snapshot to fold only" $ do
         unrecognisedArgs (["registry", "fold"] <> argumentsOf foldOptions <> ["--request-deposit", "1"])
             >>= (`shouldBe` ["--request-deposit", "1"])
+        -- the booking attested the inception: fold takes no export, from an option or the environment
+        unrecognisedArgs (["registry", "fold"] <> argumentsOf foldOptions <> ["--kli-export", "export.cesr"])
+            >>= (`shouldBe` ["--kli-export", "export.cesr"])
         unrecognisedArgs (["registry", "register"] <> argumentsOf registerOptions <> ["--snapshot", "s.json"])
             >>= (`shouldBe` ["--snapshot", "s.json"])
     it "parses every option of return to its own setting" $ do

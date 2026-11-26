@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "What was deployed, and the accepted design",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.",
       "pause": 400
     },
     {
@@ -21,7 +21,7 @@
       "pause": 400
     },
     {
-      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever this case resolves whether a party may act now — the \"admitted + Active + unrevoked trie_key\" check on sender and receiver (§3), the mermaid \"admitted? Active? unrevoked?\" step, and the per-tx \"Active + TEL non-revocation for both parties\" (§4) — the Active/current-authority half is that party AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). \"Active\" means exactly one current checkpoint at the ACTIVE role address. ARMED, FROZEN, missing, duplicated, and stale candidates fail closed; there is no separate shared freeze registry. A delta = 0 rotation (seq + 1) consumes the checkpoint UTxO, so any authorization pre-signed under the prior sequence is stale and MUST be re-signed by the current weighted keys over the fully bound transfer + current sequence, never merely re-pointed at the fresh checkpoint (Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup). Preserved as written: the admission cache (trie_key → {aid, credential_saids…}, carrying the verified stable qualified aid from which the checkpoint asset is derived; trie_key stays historical-only), the GLEIF → QVI → LE hierarchy, all-TELs cascade, and the scoped, issuer-AID-signed freeze/seize override — the historical credential/admission and issuer-override planes, which gate eligibility but never select the current checkpoint identity.",
+      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever this case resolves whether a party may act now — the \"admitted + Active + unrevoked trie_key\" check on sender and receiver (§3), the mermaid \"admitted? Active? unrevoked?\" step, and the per-tx \"Active + TEL non-revocation for both parties\" (§4) — the Active/current-authority half is that party AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: the registry's representative asset for the AID (in version 1, asset id (checkpoint_policy_id, aid_asset_name)), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). \"Active\" means exactly one current eligible checkpoint (in version 1, at the ACTIVE role address). Frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates fail closed (in version 1, ARMED and FROZEN); there is no separate shared freeze registry. A delta = 0 rotation (a later sequence number) consumes the checkpoint UTxO, so any authorization pre-signed under the prior sequence is stale and MUST be re-signed by the current weighted keys over the fully bound transfer + current sequence, never merely re-pointed at the fresh checkpoint (Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup). Preserved as written: the admission cache (trie_key → {aid, credential_saids…}, carrying the verified stable qualified aid from which the checkpoint asset is derived; trie_key stays historical-only), the GLEIF → QVI → LE hierarchy, all-TELs cascade, and the scoped, issuer-AID-signed freeze/seize override — the historical credential/admission and issuer-override planes, which gate eligibility but never select the current checkpoint identity.",
       "pause": 400
     },
     {
@@ -39,7 +39,7 @@
       "pause": 500
     },
     {
-      "text": "Issuer — the legal entity issuing the security (or its tokenization platform). Must itself be vLEI-identified (LE credential). Issuance and the freeze/seize authority are exercised by the issuer / authorized transfer-agent acting AID, which authorizes by a witness set meeting its sovereign per-AID checkpoint's current weighted threshold (asset id (checkpoint_policy_id, aid_asset_name)); a separate OOR/TEL role link ties that acting AID to the issuer LE and its authority. It also runs its own L2 TEL if it issues holder credentials.",
+      "text": "Issuer — the legal entity issuing the security (or its tokenization platform). Must itself be vLEI-identified (LE credential). Issuance and the freeze/seize authority are exercised by the issuer / authorized transfer-agent acting AID, which authorizes by a witness set meeting its sovereign per-AID checkpoint's current weighted threshold (the registry's representative asset for the AID; in version 1 asset id (checkpoint_policy_id, aid_asset_name)), which must be an eligible holding (present, unfrozen, unpoisoned, at least W old); a separate OOR/TEL role link ties that acting AID to the issuer LE and its authority. It also runs its own L2 TEL if it issues holder credentials.",
       "pause": 300
     },
     {
@@ -115,11 +115,11 @@
       "pause": 500
     },
     {
-      "text": "Common base, on two distinct planes: current authority = each AID's sovereign per-AID checkpoint (AID-derived, quantity-one checkpoint asset (checkpoint_policy_id, aid_asset_name), generic exact-asset lookup, current weighted keys/threshold; #92); admission / credential status = the L2 TEL + admission-cache credential plane (trie_key → {aid, credential_saids, expiry} — historical issuance + non-revocation, carrying the stable qualified aid so the sovereign checkpoint can be selected), preserved as the legitimate separate plane. Plus the L3 verifier and L4 proof builder.",
+      "text": "Common base, on two distinct planes: current authority = each AID's sovereign per-AID checkpoint (AID-derived, quantity-one checkpoint asset: the registry's representative asset for the AID, in version 1 (checkpoint_policy_id, aid_asset_name), generic exact-asset lookup, current weighted keys/threshold, usable only while the holding is eligible (present, unfrozen, unpoisoned, at least W old); #92); admission / credential status = the L2 TEL + admission-cache credential plane (trie_key → {aid, credential_saids, expiry} — historical issuance + non-revocation, carrying the stable qualified aid so the sovereign checkpoint can be selected), preserved as the legitimate separate plane. Plus the L3 verifier and L4 proof builder.",
       "pause": 400
     },
     {
-      "text": "Variant (a) — CIP-113 substandard \"vLEI-transfer\". cardano-keri ships a substandard replacing trusted-entity signatures with registry proofs: the transfer validator takes the admission cache + L2 TELs as CIP-31 reference inputs. For both the spending stake credential and every receiving stake credential it runs the eligibility check — an admitted trie_key (admission mapping stake_credential ↔ {trie_key, aid} established once, on-chain — carrying the party's stable qualified AID so the current checkpoint can be selected; trie_key alone, a historical-cache key, cannot), exactly one current checkpoint for that AID in the ACTIVE role, and an unrevoked credential chain (L2 TEL). But only the acting/authorizing AID(s) must produce witnesses: normally the sender (plus the issuer/agent on a freeze/seize override) supplies a witness set meeting its checkpoint's current weighted threshold over the transfer + current sequence — read from its sovereign per-AID checkpoint, asset id (checkpoint_policy_id, aid_asset_name). The receiver is checked for eligibility, not required to sign, unless recipient consent is an explicit venue policy. Freeze-and-seize composes as a second substandard under the issuer's AID. Pros: rides an emerging standard; the wallet/DEX integration story is CIP-113's problem, not ours; distribution channel into every CIP-113 deployment. Cons: standard not final; the shared-address model imports its ecosystem-integration frictions; per-transfer ex-units for receiver+sender checks × multiple UTxOs.",
+      "text": "Variant (a) — CIP-113 substandard \"vLEI-transfer\". cardano-keri would provide a substandard (a design, not built) replacing trusted-entity signatures with registry proofs: the transfer validator takes the admission cache + L2 TELs as CIP-31 reference inputs. For both the spending stake credential and every receiving stake credential it runs the eligibility check — an admitted trie_key (admission mapping stake_credential ↔ {trie_key, aid} established once, on-chain — carrying the party's stable qualified AID so the current checkpoint can be selected; trie_key alone, a historical-cache key, cannot), exactly one current eligible checkpoint for that AID (in version 1, in the ACTIVE role), and an unrevoked credential chain (L2 TEL). But only the acting/authorizing AID(s) must produce witnesses: normally the sender (plus the issuer/agent on a freeze/seize override) supplies a witness set meeting its checkpoint's current weighted threshold over the transfer + current sequence — read from its sovereign per-AID checkpoint, the registry's representative asset for the AID (in version 1, asset id (checkpoint_policy_id, aid_asset_name)). The receiver is checked for eligibility, not required to sign, unless recipient consent is an explicit venue policy. Freeze-and-seize composes as a second substandard under the issuer's AID. Pros: rides an emerging standard; the wallet/DEX integration story is CIP-113's problem, not ours; distribution channel into every CIP-113 deployment. Cons: standard not final; the shared-address model imports its ecosystem-integration frictions; per-transfer ex-units for receiver+sender checks × multiple UTxOs.",
       "pause": 400
     },
     {
@@ -137,7 +137,7 @@
       "pause": 500
     },
     {
-      "text": "Admission vs per-tx: decisive here — the receiver must be checked, and a receiver cannot assemble a 3-hop proof for someone else's incoming transfer at spend time. The admission cache is effectively mandatory; per-tx reduces to a per-AID sovereign checkpoint read (current authority live in each party's own checkpoint; #92) + TEL non-revocation for both parties.",
+      "text": "Admission vs per-tx: decisive here — the receiver must be checked, and a receiver cannot assemble a 3-hop proof for someone else's incoming transfer at spend time. The admission cache is effectively mandatory; per-tx reduces to a per-AID sovereign checkpoint read (current authority: each party's own checkpoint, as an eligible holding; #92) + TEL non-revocation for both parties.",
       "pause": 300
     },
     {
@@ -235,6 +235,6 @@
   ],
   "_source": {
     "file": "security-tokens.md",
-    "sha256": "f8ad8dc2d239b8a818e6e0880a762c7e991a7d02bf50d8a9fd59f5cc2c92fa86"
+    "sha256": "574284233bd75fd4e46d97d1d91e72e337d5369fe623e8f889327c3e8ba1cba1"
   }
 }

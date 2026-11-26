@@ -8,7 +8,7 @@ Description : The transactions that create a registry and register an identity i
 The transactions of the registry's application, as pure builders a command can
 call on any network with any funded wallet: publish the state template and the
 two reference scripts, create the registry's configuration and state
-('createConfiguration'), book a registration ('bookRegistration'), premint the
+('createConfiguration'), book a registration ('bookRegistrations'), premint the
 hash proof the fold burns ('mintHashProof'), fold a booked request into the
 registry ('foldRegistration') and return an unfolded one after its deadline
 ('returnRequests').
@@ -46,7 +46,10 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     publishReferenceScript,
     endOnly,
     createConfiguration,
-    bookRegistration,
+    BookedRequest (..),
+    bookRegistrations,
+    burnAttestations,
+    returnRequestsBurning,
     mintHashProof,
     FoldPlan (..),
     foldRegistration,
@@ -54,6 +57,8 @@ module Cardano.KERI.Deployment.RegistryTransactions (
 
     -- * The names a deployment fixes
     applicationPolicyId,
+    attestationPolicyId,
+    attestationName,
     statePolicyId,
     applicationAddress,
     stateAddress,
@@ -73,6 +78,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     plutusAddressOf,
     scriptExUnits,
     hashProofBurnExUnits,
+    hashProofBurnRedeemer,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
@@ -115,7 +121,9 @@ import Cardano.KERI.AID.Checkpoint.Registration (
  )
 import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
-    registerObserverRedeemerData,
+    bookingAttestationBurnData,
+    bookingAttestationIssueData,
+    bookingAttestationName,
  )
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
@@ -134,10 +142,7 @@ import Cardano.KERI.Deployment.Script (
     scriptHashBytes,
  )
 import Cardano.Ledger.Address (
-    AccountAddress (..),
-    AccountId (..),
     Addr (..),
-    Withdrawals (..),
     serialiseAddr,
  )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -157,7 +162,6 @@ import Cardano.Ledger.Api.Tx.Body (
     referenceInputsTxBodyL,
     treasuryDonationTxBodyL,
     vldtTxBodyL,
-    withdrawalsTxBodyL,
  )
 import Cardano.Ledger.Api.Tx.Out (
     TxOut,
@@ -209,14 +213,14 @@ import Cardano.Tx.Balance (
     spendingIndex,
  )
 import Control.Applicative ((<|>))
-import Control.Monad (when)
+import Control.Monad (forM_, unless, when)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
 import Data.Either (lefts, rights)
-import Data.List (elemIndex, sortOn)
+import Data.List (elemIndex, sortOn, tails)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
@@ -244,6 +248,10 @@ data RegistryReferences = RegistryReferences
     -- ^ the state script, published
     , referenceConfiguration :: !(TxIn, TxOut ConwayEra)
     -- ^ the registry's configuration record
+    , referenceAttestation :: !(TxIn, TxOut ConwayEra)
+    -- ^ the booking attestation policy, published
+    , referenceHashProof :: !(TxIn, TxOut ConwayEra)
+    -- ^ the hash-proof policy, published
     }
 
 -- | Who pays a transaction: the address that receives the change and the outputs that fund it.
@@ -286,7 +294,24 @@ data RegistryTransactionError
       SeedIsNotTheRegistrys
     | -- | the transaction, with the outputs that fund it, exceeds the largest size a transaction may have: its size and that limit
       TransactionTooLarge !Integer !Integer
+    | -- | a booking of no request
+      NothingToBook
+    | -- | the output given as the hash proof of a request does not hold the one token the request's inception names
+      ProofIsNotTheInceptions !TxIn
+    | -- | two requests of one transaction name the exact same output as their hash proof: one output is spent once
+      ProofOutputReused !TxIn
+    | -- | a burn of no attestation
+      NothingToBurn
     deriving stock (Eq, Show)
+
+{- | One request a booking transaction books: the record it commits, the inception it is booked for and the output of the
+earlier premint that holds the hash proof of that inception.
+-}
+data BookedRequest = BookedRequest
+    { bookedRecord :: !RegistrationData
+    , bookedInception :: !InceptionExport
+    , bookedProof :: !(TxIn, TxOut ConwayEra)
+    }
 
 -- | A booked request: its output and the record it carries.
 data Booking = Booking
@@ -308,10 +333,6 @@ stateHash = computeScriptHash . scriptsStateProgram . deploymentScripts
 checkpointHash :: RegistryDeployment -> ScriptHash
 checkpointHash = artifactScriptHash . scriptsCheckpoint . deploymentScripts
 
-lifecycleHash :: RegistryDeployment -> ScriptHash
-lifecycleHash =
-    artifactScriptHash . observerLifecycle . scriptsObservers . deploymentScripts
-
 hashProofArtifact :: RegistryDeployment -> ScriptArtifact
 hashProofArtifact = observerHashProof . scriptsObservers . deploymentScripts
 
@@ -331,6 +352,19 @@ scriptAddress deployment hash =
 -- | The policy of the registry's application.
 applicationPolicyId :: RegistryDeployment -> PolicyID
 applicationPolicyId = PolicyID . applicationHash
+
+-- | The policy of the booking attestation the application is applied to.
+attestationPolicyId :: RegistryDeployment -> PolicyID
+attestationPolicyId = PolicyID . artifactScriptHash . scriptsAttestation . deploymentScripts
+
+-- | The name of the attestation of the request booked at the given zero-based output index of a transaction.
+attestationName :: RegistryDeployment -> Integer -> RegistrationData -> ByteString
+attestationName deployment position record =
+    bookingAttestationName
+        (scriptHashBytes (applicationHash deployment))
+        position
+        (requestInitialDatum record)
+        (requestDeposit record)
 
 -- | The policy of the registry's state script.
 statePolicyId :: RegistryDeployment -> PolicyID
@@ -585,42 +619,94 @@ createConfiguration end parameters deployment references payer seedUtxo configur
                 )
         pure (built, purposeSet purposes)
 
-{- | The booking transaction of a request over a validity interval. The request
-holds the lovelace the registry requires, moved by the given difference: zero
-is the booking the application accepts.
+{- | The booking transaction of requests over a validity interval: it spends and burns the
+hash proof each request's earlier premint left, mints each approval and the attestation
+of each request (named for the real position of its output), and returns the attestations
+in the ordinary change. Each request holds the lovelace the registry requires, moved by
+the given difference: zero is the booking the application accepts.
 -}
-bookRegistration ::
+bookRegistrations ::
     PParams ConwayEra ->
     RegistryDeployment ->
     RegistryReferences ->
     Payer ->
-    RegistrationData ->
+    [BookedRequest] ->
     ValidityPlan ->
-    -- | the lovelace the request holds beyond 'requestLovelace'
+    -- | the lovelace each request holds beyond 'requestLovelace'
     Integer ->
     Budgets ->
     Either RegistryTransactionError BuiltTransaction
-bookRegistration parameters deployment references payer record validity difference budgets =
-    firstFunded budgets (fundings [] (payerFunds payer)) attempt
+bookRegistrations parameters deployment references payer requests validity difference budgets = do
+    when (null requests) $ Left NothingToBook
+    case [ref | (ref : later) <- tails (map (fst . bookedProof) requests), ref `elem` later] of
+        reused : _ -> Left (ProofOutputReused reused)
+        [] -> pure ()
+    forM_ requests $ \request ->
+        unless (holdsProof request) $
+            Left (ProofIsNotTheInceptions (fst (bookedProof request)))
+    firstFunded budgets (fundings (map (fst . bookedProof) requests) (payerFunds payer)) attempt
   where
-    minted = tokenValue (applicationPolicyId deployment) (approval record) 1
-    held = requestLovelace (parametersOf deployment) record + difference
-    requestOut =
+    indexed = zip [0 ..] requests
+    hashProofPolicy = PolicyID (artifactScriptHash (hashProofArtifact deployment))
+    holdsProof request =
+        assetsOf (snd (bookedProof request))
+            == tokenValue hashProofPolicy (inceptionProofName (bookedInception request)) 1
+                <> remainder (bookedProof request)
+    -- what else the proof output holds is not the booking's concern
+    remainder (_, out) =
+        filterMultiAsset (\policy _ _ -> policy /= hashProofPolicy) (assetsOf out)
+    minted =
+        foldMap
+            ( \(position, BookedRequest{bookedRecord = record, bookedInception = export}) ->
+                tokenValue (applicationPolicyId deployment) (approval record) 1
+                    <> tokenValue (attestationPolicyId deployment) (attestationName deployment position record) 1
+                    <> tokenValue hashProofPolicy (inceptionProofName export) (-1)
+            )
+            indexed
+    requestOut BookedRequest{bookedRecord = record} =
         mkBasicTxOut
             (applicationAddress deployment)
-            (MaryValue (Coin held) minted)
+            ( MaryValue
+                (Coin (requestLovelace (parametersOf deployment) record + difference))
+                (tokenValue (applicationPolicyId deployment) (approval record) 1)
+            )
             & datumTxOutL .~ mkInlineDatum (heldDatumData (Registration record))
-    purposes =
-        [(ConwayMinting (AsIx 0), List [actionData (BookRegistration 0)], scriptExUnits)]
-    resolved = [referenceConfiguration references, referenceApplication references]
+    resolved =
+        [ referenceConfiguration references
+        , referenceApplication references
+        , referenceAttestation references
+        , referenceHashProof references
+        ]
     attempt chosen funding = do
-        let redeemers = redeemerMap chosen purposes
+        let mintIx policy = fromIntegral (mintingIndex policy minted)
+            purposes =
+                [
+                    ( ConwayMinting (AsIx (mintIx (applicationPolicyId deployment)))
+                    , List [actionData (BookRegistration position) | (position, _) <- indexed]
+                    , scriptExUnits
+                    )
+                ,
+                    ( ConwayMinting (AsIx (mintIx (attestationPolicyId deployment)))
+                    , bookingAttestationIssueData
+                        (scriptHashBytes (applicationHash deployment))
+                        [ (position, inceptionEvidence (bookedInception request))
+                        | (position, request) <- indexed
+                        ]
+                    , scriptExUnits
+                    )
+                ,
+                    ( ConwayMinting (AsIx (mintIx hashProofPolicy))
+                    , hashProofBurnRedeemer
+                    , hashProofBurnExUnits
+                    )
+                ]
+            redeemers = redeemerMap chosen purposes
         built <-
             balanced
                 parameters
                 resolved
-                (fundingInputs funding)
-                [requestOut]
+                (map bookedProof requests <> fundingInputs funding)
+                (map requestOut requests)
                 (payerAddress payer)
                 funding
                 ( mkBasicTx
@@ -628,6 +714,50 @@ bookRegistration parameters deployment references payer record validity differen
                         & mintTxBodyL .~ minted
                         & referenceInputsTxBodyL .~ Set.fromList (map fst resolved)
                         & vldtTxBodyL .~ validityOf validity
+                        & scriptIntegrityHashTxBodyL
+                            .~ computeScriptIntegrity (Set.singleton PlutusV3) parameters redeemers (TxDats mempty)
+                    )
+                    & witsTxL . rdmrsTxWitsL .~ redeemers
+                )
+        pure (built, purposeSet purposes)
+
+{- | The burn of attestations the payer holds: nothing is minted, no evidence is shown and
+the attestation policy's Burn redeemer is the only redeemer.
+-}
+burnAttestations ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    RegistryReferences ->
+    Payer ->
+    -- | the outputs that hold the attestations to burn
+    [(TxIn, TxOut ConwayEra)] ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+burnAttestations parameters deployment references payer held budgets = do
+    when (Map.null burning) $ Left NothingToBurn
+    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
+  where
+    policy = attestationPolicyId deployment
+    burning = attestationsHeld deployment held
+    minted =
+        MultiAsset . Map.singleton policy $
+            Map.map negate burning
+    resolved = [referenceAttestation references]
+    purposes = [(ConwayMinting (AsIx 0), bookingAttestationBurnData, scriptExUnits)]
+    attempt chosen funding = do
+        let redeemers = redeemerMap chosen purposes
+        built <-
+            balanced
+                parameters
+                resolved
+                (held <> fundingInputs funding)
+                []
+                (payerAddress payer)
+                funding
+                ( mkBasicTx
+                    ( mkBasicTxBody
+                        & mintTxBodyL .~ minted
+                        & referenceInputsTxBodyL .~ Set.fromList (map fst resolved)
                         & scriptIntegrityHashTxBodyL
                             .~ computeScriptIntegrity (Set.singleton PlutusV3) parameters redeemers (TxDats mempty)
                     )
@@ -704,21 +834,17 @@ mintHashProof parameters deployment payer export validity = do
                     )
                 )
 
-{- | The fold of a booked request into the registry by a party: the registration
-observer attests the inception, the state script inserts the key, the
-application burns the approval and the holding is delivered to the checkpoint
-address.
+{- | The fold of a booked request into the registry by a party: the state script inserts
+the key, the application burns the approval and the holding is delivered to the
+checkpoint address with the committed datum and exactly the committed deposit. The
+fold shows no evidence, spends no hash proof and withdraws nothing: the booking
+has already attested the inception.
 -}
 data FoldPlan = FoldPlan
     { foldRequest :: !(TxIn, TxOut ConwayEra)
     -- ^ the booked request the fold spends
     , foldBooked :: !RegistrationData
     -- ^ the record the request holds
-    , foldInception :: !InceptionExport
-    , foldProof :: !(TxIn, TxOut ConwayEra)
-    -- ^ the hash-proof output the fold burns
-    , foldReferences :: ![(TxIn, TxOut ConwayEra)]
-    -- ^ the references of the lifecycle observer and the hash-proof policy
     , foldRegistered :: ![ByteString]
     -- ^ the keys the registry already holds as active
     , foldTerminated :: ![ByteString]
@@ -742,20 +868,16 @@ foldRegistration ::
     Either RegistryTransactionError BuiltTransaction
 foldRegistration parameters deployment references plan budgets = do
     foldGuard (foldRegistered plan) (foldTerminated plan) key (snd (foldState plan))
-    firstFunded budgets (fundings [proofIn] (payerFunds (foldPayer plan))) attempt
+    firstFunded budgets (fundings [] (payerFunds (foldPayer plan))) attempt
   where
     (requestIn, _) = foldRequest plan
     record = foldBooked plan
-    (proofIn, _) = foldProof plan
     (stateIn, stateOutBefore) = foldState plan
     key = requestKey record
-    proofName = inceptionProofName (foldInception plan)
-    hashProofPolicy = PolicyID (artifactScriptHash (hashProofArtifact deployment))
     active = activeTokenName (registryOf deployment) key
     minted =
         tokenValue (applicationPolicyId deployment) (approval record) (-1)
             <> tokenValue (statePolicyId deployment) active 1
-            <> tokenValue hashProofPolicy proofName (-1)
     stateOut =
         mkBasicTxOut
             (stateAddress deployment)
@@ -771,10 +893,10 @@ foldRegistration parameters deployment references plan budgets = do
         , referenceApplication references
         , referenceState references
         ]
-            <> foldReferences plan
+
     attempt chosen funding = do
         let spent =
-                [foldRequest plan, foldState plan, foldProof plan]
+                [foldRequest plan, foldState plan]
                     <> fundingInputs funding
             inputs = Set.fromList (map fst spent)
             mintIx policy = fromIntegral (mintingIndex policy minted)
@@ -800,18 +922,6 @@ foldRegistration parameters deployment references plan budgets = do
                     )
                 , (ConwayMinting (AsIx (mintIx (applicationPolicyId deployment))), List [], scriptExUnits)
                 , (ConwayMinting (AsIx (mintIx (statePolicyId deployment))), stateMintData Folded, scriptExUnits)
-                ,
-                    ( ConwayMinting (AsIx (mintIx hashProofPolicy))
-                    , hashProofBurnRedeemer
-                    , hashProofBurnExUnits
-                    )
-                ,
-                    ( ConwayRewarding (AsIx 0)
-                    , registerObserverRedeemerData
-                        (scriptHashBytes (checkpointHash deployment))
-                        (inceptionEvidence (foldInception plan))
-                    , scriptExUnits
-                    )
                 ]
             redeemers = redeemerMap chosen purposes
         built <-
@@ -825,15 +935,6 @@ foldRegistration parameters deployment references plan budgets = do
                 ( mkBasicTx
                     ( mkBasicTxBody
                         & mintTxBodyL .~ minted
-                        & withdrawalsTxBodyL
-                            .~ Withdrawals
-                                ( Map.singleton
-                                    ( AccountAddress
-                                        (deploymentNetwork deployment)
-                                        (AccountId (ScriptHashObj (lifecycleHash deployment)))
-                                    )
-                                    (Coin 0)
-                                )
                         & treasuryDonationTxBodyL .~ Coin cost
                         & referenceInputsTxBodyL .~ Set.fromList (map fst resolved)
                         & vldtTxBodyL .~ validityOf (foldValidity plan)
@@ -876,16 +977,44 @@ returnRequests ::
     Addr ->
     Budgets ->
     Either RegistryTransactionError BuiltTransaction
-returnRequests parameters deployment references payer booking validity refundTo budgets =
-    firstFunded budgets (fundings [] (payerFunds payer)) attempt
+returnRequests parameters deployment references payer booking validity refundTo =
+    returnRequestsBurning parameters deployment references payer booking validity refundTo []
+
+{- | The return of a booked request, composed with the controller's burn of the attestations
+the payer holds: the return as it is, and the attestation policy's Burn redeemer beside the
+application's, each at its own place among the minting purposes. With nothing held the
+return is 'returnRequests'; held outputs that carry no attestation are no burn.
+-}
+returnRequestsBurning ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    RegistryReferences ->
+    Payer ->
+    Booking ->
+    ValidityPlan ->
+    -- | where the refund goes
+    Addr ->
+    -- | the outputs that hold the attestations to burn
+    [(TxIn, TxOut ConwayEra)] ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+returnRequestsBurning parameters deployment references payer booking validity refundTo held budgets = do
+    when (not (null held) && Map.null burning) $ Left NothingToBurn
+    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
   where
     Booking{bookingOutput = (requestIn, requestOut), bookingRecord = record} = booking
     tip = minimumTip (parametersOf deployment)
-    minted = tokenValue (applicationPolicyId deployment) (approval record) (-1)
+    burning = attestationsHeld deployment held
+    minted =
+        tokenValue (applicationPolicyId deployment) (approval record) (-1)
+            <> if Map.null burning then mempty else MultiAsset (Map.singleton (attestationPolicyId deployment) (Map.map negate burning))
+    mintPurpose policy = ConwayMinting (AsIx (mintingIndex policy minted))
     refundOut = mkBasicTxOut refundTo (inject (Coin (unCoin (requestOut ^. coinTxOutL) - tip)))
-    resolved = [referenceConfiguration references, referenceApplication references]
+    resolved =
+        [referenceConfiguration references, referenceApplication references]
+            <> [referenceAttestation references | not (null held)]
     attempt chosen funding = do
-        let spent = bookingOutput booking : fundingInputs funding
+        let spent = bookingOutput booking : held <> fundingInputs funding
             inputs = Set.fromList (map fst spent)
             purposes =
                 [
@@ -893,8 +1022,9 @@ returnRequests parameters deployment references payer booking validity refundTo 
                     , spendActionData ReturnRegistration
                     , scriptExUnits
                     )
-                , (ConwayMinting (AsIx 0), List [], scriptExUnits)
+                , (mintPurpose (applicationPolicyId deployment), List [], scriptExUnits)
                 ]
+                    <> [(mintPurpose (attestationPolicyId deployment), bookingAttestationBurnData, scriptExUnits) | not (null held)]
             redeemers = redeemerMap chosen purposes
         built <-
             balanced
@@ -915,6 +1045,17 @@ returnRequests parameters deployment references payer booking validity refundTo 
                     & witsTxL . rdmrsTxWitsL .~ redeemers
                 )
         pure (built, purposeSet purposes)
+
+-- | The attestations the outputs hold, by name: what a burn of them burns.
+attestationsHeld :: RegistryDeployment -> [(TxIn, TxOut ConwayEra)] -> Map.Map AssetName Integer
+attestationsHeld deployment held =
+    Map.unionsWith
+        (+)
+        [ names
+        | (_, out) <- held
+        , let MultiAsset assets = assetsOf out
+        , Just names <- [Map.lookup (attestationPolicyId deployment) assets]
+        ]
 
 -- ---------------------------------------------------------------------
 -- The registry's keys

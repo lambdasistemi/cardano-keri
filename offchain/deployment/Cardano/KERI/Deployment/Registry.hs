@@ -38,6 +38,7 @@ import Cardano.KERI.Deployment.Script (
     Observers (..),
     ScriptArtifact (..),
     computeScriptHash,
+    deriveAttestationScript,
     deriveCheckpointScript,
     deriveObserverScripts,
     mkAppliedArtifact,
@@ -72,6 +73,8 @@ data RegistryTerms = RegistryTerms
 -- | The scripts of one registry and the facts they are derived from.
 data RegistryScripts = RegistryScripts
     { scriptsObservers :: !Observers
+    , scriptsAttestation :: !ScriptArtifact
+    -- ^ the booking attestation policy the application is applied to
     , scriptsApplication :: !ScriptArtifact
     , scriptsTemplate :: !ByteString
     -- ^ the state script up to its parameter, published at genesis
@@ -130,6 +133,7 @@ deriveRegistryScripts template terms seed blueprint = do
     unless (registryTerminationCarrier terms >= 0 && registryTerminationCarrier terms + minimumTip (registryParameters terms) <= registryMinimumAda terms) $
         Left "the termination carrier and the tip exceed the minimum ADA: a booking would leave the booker a negative premium"
     observers <- deriveObserverScripts checkpointTerms blueprint
+    attestation <- deriveAttestationScript checkpointTerms observers blueprint
     (applicationValidator, applicationProgram) <-
         requireValidator
             blueprint
@@ -141,7 +145,7 @@ deriveRegistryScripts template terms seed blueprint = do
             "validator-and-minting-policy"
             applicationValidator
             [ B (digest (Proxy @Blake2b_256) template)
-            , B (scriptHashBytes (artifactScriptHash (observerLifecycle observers)))
+            , B (scriptHashBytes (artifactScriptHash attestation))
             , I (registryMinimumDeposit terms)
             , I (registryInitialFloor terms)
             , I (termsNetwork checkpointTerms)
@@ -164,6 +168,7 @@ deriveRegistryScripts template terms seed blueprint = do
     pure
         RegistryScripts
             { scriptsObservers = observers
+            , scriptsAttestation = attestation
             , scriptsApplication = application
             , scriptsTemplate = template
             , scriptsStateProgram = program

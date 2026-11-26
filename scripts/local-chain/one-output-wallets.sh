@@ -21,7 +21,7 @@ done
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES="$HERE/../../offchain/deployment-test/fixtures"
 ENACT_PV11="${ENACT_PV11:-$HERE/enact-pv11.sh}"
-mkdir -p "$WORK"
+mkdir -p "$WORK"; : >"$WORK/settled.list"
 log() { printf '%s\n' "$*" | tee -a "$WORK/outputs.log"; }
 fail() { log "FAIL: $*"; exit 1; }
 export SINGULAR_PASSPHRASE="$PASSPHRASE"
@@ -72,10 +72,10 @@ cd "$WORK"
 payer_utxos() { # payer_utxos <label> <address>: the wallet's outputs, as the facade holds them, right now
     log "payer-utxos $1: $(curl -s -X POST "$URL/address_utxos" -H 'content-type: application/json' -d "{\"_addresses\":[\"$2\"]}" | jq -c '[.[] | {ref: (.tx_hash + "#" + (.tx_index | tostring)), lovelace: .value, assets: (.asset_list | length), referenceScript: (.reference_script != null), datum: (.inline_datum != null)}]')"
 }
-settled() { # settled <label> <outfile>: each transaction the command reported, as the chain holds it
+settled() { # settled <label> <outfile>: remember each transaction the command reported, to read it from its bytes at the end
     local id
     for id in $(sed -n -E 's/^(premint|booking|fold|return)-transaction: ([0-9a-f]{64})$/\2/p; s/^(publish-[a-z-]+|create-registry): ([0-9a-f]{64}) fee=.*/\2/p' "$WORK/$2.out"); do
-        log "settled $1 $id: $(curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$id\"]}" | jq -c '.[0] | {fee: (.fee | tonumber), inputs: [.inputs[] | .tx_hash + "#" + (.tx_index | tostring)], collateralInputs: [.collateral_inputs[]? | .tx_hash + "#" + (.tx_index | tostring)], collateralLovelace: ([.collateral_inputs[]? | .value | tonumber] | add), collateralReturn: (.collateral_output != null), totalCollateral: .total_collateral, outputs: [.outputs[] | {ref: (.tx_index | tostring), lovelace: .value}]}')"
+        echo "$1 $id" >>"$WORK/settled.list"
     done
 }
 attempt() { # attempt <label> <outfile> <payer-address> <command...>: record the payer's outputs, the command's outcome and its transactions
@@ -121,4 +121,20 @@ attempt "fold (named, public history, facade) from one output" one-fold-named "$
 sleep 100
 attempt "return from one output" one-return "$RETURNER" "$CKERI" registry return "${common[@]}" "${provider[@]}" --funding-address "$RETURNER" --vault "$WORK/returner.vault" \
     --release-identity "$WORK/identity.json" --reference-record "$WORK/records.json" --request "$REQ_RETURN"
+
+# what each settled transaction paid, funded and collateralised with, read from its bytes as the chain holds them
+mkdir -p "$WORK/txs"
+PERCENT=$(curl -s "$URL/epoch_params?_epoch_no=$(curl -s "$URL/tip" | jq -r '.[0].epoch_no')" | jq -r '.[0].collateral_percent')
+value_of() { # value_of <txid#ix>: the lovelace of an output, from the transaction that created it
+    curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"${1%#*}\"]}" | jq -r ".[0].outputs[${1#*#}].value"
+}
+while read -r label id; do
+    curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$id\"]}" | jq -r '.[0].cbor' >"$WORK/txs/$id.hex"
+    ( source "$NODE_ENV"; "${INSPECT:-$HERE/inspect-tx.sh}" "$WORK/txs/$id.hex" ) >"$WORK/txs/$id.inspect" 2>"$WORK/txs/$id.inspect.err" || fail "transaction $id could not be decoded"
+    fee=$(sed -n 's/^fee //p' "$WORK/txs/$id.inspect")
+    coll=$(sed -n 's/^collateral-refs //p' "$WORK/txs/$id.inspect")
+    lov=0
+    for ref in $(jq -r '.[]' <<<"${coll//\\/}" 2>/dev/null || true); do lov=$((lov + $(value_of "$ref"))); done
+    log "transaction $label $id: fee $fee; inputs $(sed -n 's/^input-refs //p' "$WORK/txs/$id.inspect"); collateral inputs $coll holding $lov lovelace; required $(( (fee * PERCENT + 99) / 100 )) (collateral percentage $PERCENT of the final fee); collateral return $(sed -n 's/^collateral-return //p' "$WORK/txs/$id.inspect"); total collateral $(sed -n 's/^total-collateral //p' "$WORK/txs/$id.inspect"); output lovelace $(sed -n 's/^output-lovelace //p' "$WORK/txs/$id.inspect")"
+done <"$WORK/settled.list"
 log "done (mode $MODE)"

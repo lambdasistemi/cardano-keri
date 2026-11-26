@@ -10,7 +10,9 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.Binary (decodeFullAnnotator, decCBOR, serialize')
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..), extractHash)
+import Cardano.Ledger.TxIn (TxIn (..), TxId (..))
+import Cardano.Ledger.BaseTypes (TxIx (..), strictMaybeToMaybe)
 import Cardano.Crypto.Hash (hashToBytes)
 import Data.ByteString.Short qualified as SBS
 import Cardano.Ledger.Conway (ConwayEra)
@@ -41,6 +43,11 @@ main = do
     putStrLn ("inputs " <> show (Set.size (body ^. inputsTxBodyL)))
     putStrLn ("reference-inputs " <> show (Set.size (body ^. referenceInputsTxBodyL)))
     putStrLn ("collateral-inputs " <> show (Set.size (body ^. collateralInputsTxBodyL)))
+    putStrLn ("input-refs " <> show (map renderRef (toList (body ^. inputsTxBodyL))))
+    putStrLn ("collateral-refs " <> show (map renderRef (toList (body ^. collateralInputsTxBodyL))))
+    putStrLn ("collateral-return " <> show (fmap (\o -> let Coin c = o ^. coinTxOutL in c) (strictMaybeToMaybe (body ^. collateralReturnTxBodyL))))
+    putStrLn ("total-collateral " <> show (fmap (\(Coin c) -> c) (strictMaybeToMaybe (body ^. totalCollateralTxBodyL))))
+    putStrLn ("output-lovelace " <> show [c | o <- outs, let Coin c = o ^. coinTxOutL])
     putStrLn ("outputs " <> show (length outs) <> " lovelace " <> show (sum [c | o <- outs, let Coin c = o ^. coinTxOutL]))
     putStrLn ("redeemers " <> show [ (show purpose, mem, steps) | (purpose, (_, ExUnits mem steps)) <- Map.toList declared ])
     putStrLn ("total-ex-units " <> show (sum [m | (_, (_, ExUnits m _)) <- Map.toList declared], sum [s | (_, (_, ExUnits _ s)) <- Map.toList declared]))
@@ -51,6 +58,9 @@ main = do
     let Coin donation = body ^. treasuryDonationTxBodyL
     putStrLn ("treasury-donation " <> show donation)
     putStrLn ("validity " <> show (body ^. vldtTxBodyL))
+
+renderRef :: TxIn -> String
+renderRef (TxIn (TxId h) (TxIx i)) = hexOfBytes (hashToBytes (extractHash h)) <> "#" <> show i
 
 unhex :: String -> Maybe BS.ByteString
 unhex = fmap BS.pack . go
@@ -63,3 +73,8 @@ unhex = fmap BS.pack . go
         | c >= 'a' && c <= 'f' = Just (fromEnum c - fromEnum 'a' + 10)
         | c >= 'A' && c <= 'F' = Just (fromEnum c - fromEnum 'A' + 10)
         | otherwise = Nothing
+
+hexOfBytes :: BS.ByteString -> String
+hexOfBytes = concatMap (\w -> [digits !! fromIntegral (w `div` 16), digits !! fromIntegral (w `mod` 16)]) . BS.unpack
+  where
+    digits = "0123456789abcdef"

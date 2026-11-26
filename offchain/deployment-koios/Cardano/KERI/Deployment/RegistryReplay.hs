@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.RegistryReplay
@@ -90,7 +91,7 @@ replayRegistryState session identity output root =
     classify snapshot = case trieLineage snapshot of
         Nothing -> pure (Left (HistoryIncomplete identity Nothing MissingTransaction))
         Just lineage -> do
-            leaves <- traverse (\key -> fmap ((,) key) <$> leafAt snapshot key) (lineageKeys lineage)
+            leaves <- traverse (\key -> fmap (key,) <$> leafAt snapshot key) (lineageKeys lineage)
             pure $ case sequence leaves of
                 Left failure -> Left failure
                 Right classified ->

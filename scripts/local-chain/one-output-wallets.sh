@@ -21,6 +21,7 @@ done
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES="$HERE/../../offchain/deployment-test/fixtures"
 ENACT_PV11="${ENACT_PV11:-$HERE/enact-pv11.sh}"
+INSPECT="${INSPECT:-$HERE/inspect-tx.sh}"
 mkdir -p "$WORK"; : >"$WORK/settled.list"
 log() { printf '%s\n' "$*" | tee -a "$WORK/outputs.log"; }
 fail() { log "FAIL: $*"; exit 1; }
@@ -54,6 +55,7 @@ for waited in $(seq 1 300); do
 done
 [[ "$(jq -r .protocolMajor "$TIME_DIR/time-manifest.json")" == 11 ]] || fail "the facade's network time did not reach protocol 11"
 log "binding: argv: $0 $*; ckeri $CKERI sha256 $(sha256sum "$CKERI" | cut -c1-64); this script sha256 $(sha256sum "${BASH_SOURCE[0]}" | cut -c1-64), source revision $(git -C "$HERE" rev-parse HEAD 2>/dev/null || echo unknown) with $(git -C "$HERE" status --short 2>/dev/null | wc -l) changed files"
+source "$HERE/bind-helpers.sh"; bind_helpers
 log "local fixture at protocol version 11 (preprod's, epoch 327 snapshot); facade $URL"
 
 outputs_of() { # how many outputs a wallet holds, from the facade

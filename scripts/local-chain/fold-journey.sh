@@ -57,6 +57,7 @@ log "binding: argv: $0 $*"
 log "binding: ckeri $CKERI sha256 $(sha256sum "$CKERI" | cut -c1-64)"
 log "binding: this script $HERE/$(basename "${BASH_SOURCE[0]}") sha256 $(sha256sum "${BASH_SOURCE[0]}" | cut -c1-64); source revision $(git -C "$HERE" rev-parse HEAD 2>/dev/null || echo unknown) with $(git -C "$HERE" status --short 2>/dev/null | wc -l) changed files in the tree"
 log "binding: blueprint $BLUEPRINT sha256 $(sha256sum "$BLUEPRINT" | cut -c1-64); singular $(sha256sum "$SINGULAR" | cut -c1-64); devnet $(sha256sum "$DEVNET" | cut -c1-64)"
+source "$HERE/bind-helpers.sh"; bind_helpers
 if [[ -n "${CANDIDATE_BINDING:-}" ]]; then log "binding: candidate record $CANDIDATE_BINDING"; sed 's/^/binding:   /' "$CANDIDATE_BINDING" | while IFS= read -r line; do log "$line"; done; fi
 
 # ---- the fixture ---------------------------------------------------------------------------------

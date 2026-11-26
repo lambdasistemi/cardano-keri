@@ -254,13 +254,13 @@ valid signatures, receipts, preimages, or conflicts, and they cannot install a k
 Permissionless submission gives other parties the ability to relay the same
 public truth. It does not guarantee inclusion against block-level censorship.
 
-Permissionlessness has one price, and it is stated rather than hidden: because
-the chain cannot tell the controller from a relayer, the **first** registration
-of an AID
-can be made by a stale-key holder who advances only to their own epoch. The
-window is bounded by juvenility and closed by any advance to the tip. The
-attacker's bonds stay the attacker's: the refund address is fixed at
-registration. Removing the residual would mean removing the relayer.
+A retired AID cannot register again in the same registry. A live checkpoint
+can still show an older key state if a later KERI rotation has yet to land.
+The juvenility check opens at the birth slot plus `W`. Eligibility has no
+upper age limit, so age alone cannot tell a relying party whether a newer
+rotation exists. On conviction the remaining freeze bond and pool go to the
+address recorded at registration; the conviction bond `D_reg` goes to the
+payee of the eligible commitment.
 
 ### Who a conviction pays
 

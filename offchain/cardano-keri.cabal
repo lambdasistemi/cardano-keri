@@ -248,6 +248,7 @@ library deployment-koios
     Cardano.KERI.Deployment.KoiosRuntime
     Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.KoiosSubmission
+    Cardano.KERI.Deployment.RegistryApplication
     Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
 
@@ -543,6 +544,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RecordedHistory
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.RegistryApplicationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain
     Cardano.KERI.Deployment.RegistryBookingCommandSpec

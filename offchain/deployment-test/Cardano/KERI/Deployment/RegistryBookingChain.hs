@@ -65,6 +65,9 @@ module Cardano.KERI.Deployment.RegistryBookingChain (
     acquiringReads,
     receiptLinesOf,
     bookDirectly,
+    worldDeployment,
+    worldReferences,
+    checkpointAddressOf,
     setRegistryRoot,
     moveRegistryRoot,
     copyChain,
@@ -384,25 +387,11 @@ interval is five slots from the tip.
 -}
 bookDirectly :: World -> InceptionExport -> IO (TxIn, RegistrationData)
 bookDirectly world export = do
-    let identity = deployedIdentity (worldDeployed world)
-        record = deployedRecord (worldDeployed world)
-    scripts <-
-        either fail pure $
-            deriveRegistryScripts stateTemplate testTerms (riSeed identity) (worldBlueprint world)
-    let deployment = Tx.RegistryDeployment Testnet testTerms scripts
+    deployment <- worldDeployment world
+    references <- worldReferences world
     chain <- readIORef (worldChain world)
     tip <- readIORef (worldTip world)
-    let outputAt ref = fromJust (Map.lookup (txInOfReference ref) (chainOutputs chain))
-        resolved ref = (txInOfReference ref, outputAt ref)
-        references =
-            Tx.RegistryReferences
-                { Tx.referenceApplication = resolved (scriptOutput (recordApplication record))
-                , Tx.referenceState = resolved (scriptOutput (recordState record))
-                , Tx.referenceConfiguration = resolved (recordConfiguration record)
-                , Tx.referenceAttestation = resolved (scriptOutput (recordAttestation record))
-                , Tx.referenceHashProof = resolved (scriptOutput (recordHashProof record))
-                }
-        wallet = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chain), out ^. addrTxOutL == walletAddress]
+    let wallet = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chain), out ^. addrTxOutL == walletAddress]
         validity =
             Tx.ValidityPlan
                 { Tx.lowerSlot = SlotNo (fromInteger tip)
@@ -809,3 +798,27 @@ receiptLinesOf premintTx proof =
     , "proof-output: " <> maybe "" (\(TxIn txId (TxIx ix)) -> T.unpack (renderTransactionId txId) <> "#" <> show ix) proof
     , "premint-fee: " <> show (feeOf premintTx)
     ]
+
+-- | The registry the world deployed, as the builders take it.
+worldDeployment :: World -> IO Tx.RegistryDeployment
+worldDeployment world = do
+    scripts <-
+        either fail pure $
+            deriveRegistryScripts stateTemplate testTerms (riSeed (deployedIdentity (worldDeployed world))) (worldBlueprint world)
+    pure (Tx.RegistryDeployment Testnet testTerms scripts)
+
+-- | The outputs the registry's transactions read by reference, as the chain holds them now.
+worldReferences :: World -> IO Tx.RegistryReferences
+worldReferences world = do
+    chain <- readIORef (worldChain world)
+    let record = deployedRecord (worldDeployed world)
+        outputAt ref = fromJust (Map.lookup (txInOfReference ref) (chainOutputs chain))
+        resolved ref = (txInOfReference ref, outputAt ref)
+    pure
+        Tx.RegistryReferences
+            { Tx.referenceApplication = resolved (scriptOutput (recordApplication record))
+            , Tx.referenceState = resolved (scriptOutput (recordState record))
+            , Tx.referenceConfiguration = resolved (recordConfiguration record)
+            , Tx.referenceAttestation = resolved (scriptOutput (recordAttestation record))
+            , Tx.referenceHashProof = resolved (scriptOutput (recordHashProof record))
+            }

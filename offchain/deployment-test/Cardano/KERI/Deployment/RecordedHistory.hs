@@ -23,6 +23,7 @@ module Cardano.KERI.Deployment.RecordedHistory (
     failingSession,
     countingHistory,
     deliveringRegardless,
+    outputsSession,
     singularIdentityOf,
     touchesToken,
     withFoldRedeemer,
@@ -38,7 +39,7 @@ import Cardano.Ledger.Api.Scripts.Data (getPlutusData)
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (bodyTxL, isValidTxL, mkBasicTx, txIdTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mintTxBodyL, mkBasicTxBody, outputsTxBodyL, referenceInputsTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (TxOut, datumTxOutL, valueTxOutL)
+import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, datumTxOutL, valueTxOutL)
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary (serialize)
@@ -64,7 +65,7 @@ import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
-import Singular.Registry.Evidence (NoWitness, SessionBinding (..), SessionId (..))
+import Singular.Registry.Evidence (Evidenced (..), NoWitness, SessionBinding (..), SessionId (..))
 import Singular.Registry.LedgerProvider
 import Singular.Registry.TrieState qualified as Singular
 import Singular.State.Records (Change (..), decodeFoldRedeemer, foldRedeemer, stateDatum)
@@ -233,3 +234,25 @@ deliveringRegardless blocks = do
             [] -> HistoryStream (pure (Right Nothing))
             b : more -> HistoryStream (modifyIORef' delivered (+ 1) >> pure (Right (Just (b, serve more))))
     pure (refusing{history = \_ _ -> pure (Right (serve blocks))}, readIORef delivered)
+
+{- | A session that answers output queries from the outputs it is given, as a provider answers them
+from its live set: by policy, by asset, by address and by reference. Nothing else is served.
+-}
+outputsSession :: Map TxIn (TxOut ConwayEra) -> Session NoWitness IO
+outputsSession live = refusing{outputs = \query -> pure (Right (Evidenced (select query) Nothing))}
+  where
+    select = \case
+        HoldingPolicy policy -> [held | held@(_, out) <- Map.toList live, holdsUnder policy out]
+        HoldingAsset (policy, name) -> [held | held@(_, out) <- Map.toList live, holdsAsset policy name out]
+        AtAddress address -> [held | held@(_, out) <- Map.toList live, out ^. addrTxOutL == address]
+        AtTxIn ref -> [held | held@(r, _) <- Map.toList live, r == ref]
+        AnyOf queries -> dedupe (concatMap select (NE.toList queries))
+        AllOf queries -> case map select (NE.toList queries) of
+            [] -> []
+            first' : rest -> [held | held <- first', all (held `elem`) rest]
+        CarryingReferenceScript _ -> []
+    holdsUnder policy out = let MaryValue _ (MultiAsset assets) = out ^. valueTxOutL in Map.member policy assets
+    holdsAsset policy name out =
+        let MaryValue _ (MultiAsset assets) = out ^. valueTxOutL
+         in maybe False ((> 0) . Map.findWithDefault 0 name) (Map.lookup policy assets)
+    dedupe = Map.toList . Map.fromList

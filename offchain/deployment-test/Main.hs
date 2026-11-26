@@ -15,6 +15,7 @@ import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementS
 import Cardano.KERI.Deployment.KoiosSubmissionSpec qualified as KoiosSubmissionSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
+import Cardano.KERI.Deployment.RegistryApplicationSpec qualified as RegistryApplicationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
 import Cardano.KERI.Deployment.RegistryBookingCommandSpec qualified as RegistryBookingCommandSpec
 import Cardano.KERI.Deployment.RegistryBookingEvaluationSpec qualified as RegistryBookingEvaluationSpec
@@ -116,6 +117,7 @@ suite = hspec $ do
     WalletHoldingSpec.spec
     RegistryFoldSpec.spec
     RegistryReplaySpec.spec
+    RegistryApplicationSpec.spec
     RegistryFoldV3Spec.spec
     RegistryFoldHandoffSpec.spec
     RegistryAttemptSpec.spec

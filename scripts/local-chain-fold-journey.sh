@@ -55,7 +55,17 @@ log "booker $BOOKER"; log "folder $FOLDER"
     --fund-address "$BOOKER:6:5000000000" --fund-address "$FOLDER:4:500000000" ) \
     >"$WORK/fixture.out" 2>"$WORK/fixture.err" &
 FIXTURE_PID=$!
-trap 'kill "$FIXTURE_PID" 2>/dev/null || true' EXIT
+# what the chain holds of every transaction the commands made is kept for comparison between builds, whatever the run came to
+keep_chain() {
+    [[ -n "${URL:-}" ]] || return 0
+    mkdir -p "$WORK/txinfo"
+    local id
+    for id in $(grep -hoE '[0-9a-f]{64}' "$WORK"/deploy.out "$WORK"/register-*.out "$WORK"/fold-1.out "$WORK"/fold-2.out 2>/dev/null | sort -u); do
+        curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' \
+            -d "{\"_tx_hashes\":[\"$id\"],\"_inputs\":true,\"_assets\":true,\"_scripts\":true}" >"$WORK/txinfo/$id.json" || true
+    done
+}
+trap 'keep_chain; kill "$FIXTURE_PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 120); do
     [[ -s "$WORK/fixture.out" ]] && grep -q providerUrl "$WORK/fixture.out" && break
     sleep 1

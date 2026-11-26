@@ -21,17 +21,21 @@
 #   CKERI=<ckeri binary>                 the command under test
 #   SINGULAR=<singular binary>           public Singular's command line, for the wallet vaults only
 #   DEVNET=<singular devnet binary>      public Singular's local-chain fixture
-#   ENACT_PV11=<command>                 enacts protocol version 11 on a node socket given as its argument
+#   ENACT_PV11=<command>                 optional: enacts protocol version 11 on a node socket given as its argument (default: enact-pv11.sh next to this file)
+#   INSPECT=<command>                    optional: prints a transaction from its CBOR hex (default: inspect-tx.sh next to this file)
 #   NODE_ENV=<file>                      shell file that puts cardano-node on PATH and sets E2E_GENESIS_DIR, then enters its directory
 #   BLUEPRINT=<plutus.json>              the release's blueprint
 #   WORK=<empty directory>               where the fixture, the wallets, the files and the log go
 #   PASSPHRASE=<text>                    the development passphrase of the two throwaway vaults
 set -euo pipefail
 
-for name in CKERI SINGULAR DEVNET ENACT_PV11 NODE_ENV BLUEPRINT WORK PASSPHRASE; do
+for name in CKERI SINGULAR DEVNET NODE_ENV BLUEPRINT WORK PASSPHRASE; do
     [[ -n "${!name:-}" ]] || { echo "local-chain-fold-journey: $name is not set" >&2; exit 2; }
 done
-FIXTURES="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/offchain/deployment-test/fixtures"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FIXTURES="$HERE/../../offchain/deployment-test/fixtures"
+ENACT_PV11="${ENACT_PV11:-$HERE/enact-pv11.sh}"
+INSPECT="${INSPECT:-$HERE/inspect-tx.sh}"
 mkdir -p "$WORK"
 log() { printf '%s\n' "$*" | tee -a "$WORK/journey.log"; }
 fail() { log "FAIL: $*"; exit 1; }
@@ -161,6 +165,14 @@ APP_POLICY=$(jq -r .release.application_policy "$WORK/release-identity.json")
 REQ_B_TX=${REQUEST_B%%#*}
 echo "$INFO" >"$WORK/fold-2.tx_info.json"
 jq -e --arg tx "$REQ_B_TX" '.[0].inputs | any(.tx_hash==$tx)' "$WORK/fold-2.tx_info.json" >/dev/null || fail "the second fold did not spend its booking"
-jq -e --arg p "$APP_POLICY" '[.[0].assets_minted[]? | select(.policy_id==$p and .quantity=="-1")] | length == 1' "$WORK/fold-2.tx_info.json" >/dev/null || fail "the second fold did not burn its approval once"
-log "ok: the second fold spent its booking and burned its approval"
+# the facade's account does not carry what a transaction mints or donates: read it from the transaction's own bytes
+mkdir -p "$WORK/txinfo"
+curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$FOLD2\"]}" | jq -r '.[0].cbor' >"$WORK/fold-2.hex"
+( source "$NODE_ENV"; $INSPECT "$WORK/fold-2.hex" ) >"$WORK/fold-2.inspect" 2>"$WORK/fold-2.inspect.err" || fail "the second fold could not be decoded (fold-2.inspect.err)"
+grep -q "(\"$APP_POLICY\",\"[0-9a-f]*\",-1)" "$WORK/fold-2.inspect" || fail "the second fold did not burn an approval"
+[[ "$(grep -o "(\"$APP_POLICY\"" "$WORK/fold-2.inspect" | wc -l)" == 1 ]] || fail "the second fold mints or burns more than one application asset"
+grep -q "(\"$STATE_POLICY\",\"[0-9a-f]*\",1)" "$WORK/fold-2.inspect" || fail "the second fold did not mint the key's active token"
+grep -q "^treasury-donation 1000000$" "$WORK/fold-2.inspect" || fail "the second fold did not pay the treasury the registration cost"
+grep -q "^collateral-inputs 1$" "$WORK/fold-2.inspect" || fail "the second fold has no single collateral input"
+log "ok: the second fold spent its booking, burned its approval once, minted its key's token and paid the treasury the registration cost"
 log "journey complete: fold 1 $FOLD1, fold 2 $FOLD2"

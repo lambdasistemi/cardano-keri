@@ -15,6 +15,7 @@ in-memory chain that runs no script: that the node accepts the batch is the conn
 -}
 module Cardano.KERI.Deployment.RegistryApplicationSpec (spec) where
 
+import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (
     ApplicationParameters (..),
     RegistrationData (..),
@@ -34,12 +35,13 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     applicationAddress,
     applicationPolicyId,
  )
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (getPlutusData)
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mintTxBodyL, referenceInputsTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, referenceScriptTxOutL)
+import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, referenceScriptTxOutL, valueTxOutL)
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -47,11 +49,14 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (treasuryDonationTxBodyL)
 import Cardano.Ledger.Core (Script, hashScript)
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Hashes (KeyHash (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.TxInfo (transAddr)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Tx.Build (draft)
 import Control.Monad (forM_)
+import Data.ByteString qualified as BS
 import Data.IORef (readIORef)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
@@ -139,6 +144,26 @@ spec = describe "#558 the KERI application read by Singular's fold" $ do
                 let moved = out & addrTxOutL .~ wrongCredential
                 rawInlineData moved `shouldBe` rawInlineData out
                 appDecode application singular [] moved `shouldBe` Nothing
+        it "reads a request at the application's payment credential whatever its stake reference, with the datum and the value unchanged" $ do
+            Booked world requests <- booked
+            deployment <- worldDeployment world
+            references <- worldReferences world
+            found <- rtOutputs (runtimeOf noFaults world) (Set.fromList (map fst requests))
+            let application = keriApplication deployment references
+                singular = singularIdentityOf (registryOf world)
+                stake = StakeRefBase (KeyHashObj (KeyHash (fromJust (hashFromBytes (BS.replicate 28 0x5a)))))
+                staked = case applicationAddress deployment of
+                    Addr network payment _ -> Addr network payment stake
+                    other -> other
+            -- the address differs from the application's only by its stake reference
+            staked `shouldNotBe` applicationAddress deployment
+            forM_ requests $ \(ref, record) -> do
+                out <- maybe (fail ("the booking output " <> show ref <> " is not on the chain")) pure (Map.lookup ref found)
+                let moved = out & addrTxOutL .~ staked
+                moved ^. valueTxOutL `shouldBe` out ^. valueTxOutL
+                rawInlineData moved `shouldBe` rawInlineData out
+                appDecode application singular [] moved
+                    `shouldBe` Just (RegistrationRequest (expectedRegistration world record))
         it "resolves the application's code and the registry's configuration as the exact outputs the chain holds" $ do
             Booked world _ <- booked
             deployment <- worldDeployment world

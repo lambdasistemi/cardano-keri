@@ -36,6 +36,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FIXTURES="$HERE/../../offchain/deployment-test/fixtures"
 ENACT_PV11="${ENACT_PV11:-$HERE/enact-pv11.sh}"
 INSPECT="${INSPECT:-$HERE/inspect-tx.sh}"
+MUTATE="${MUTATE:-$HERE/mutate-tx.sh}"
 mkdir -p "$WORK"
 log() { printf '%s\n' "$*" | tee -a "$WORK/journey.log"; }
 fail() { log "FAIL: $*"; exit 1; }
@@ -52,6 +53,11 @@ MAGIC=42
 BOOKER=$("$SINGULAR" wallet address --vault "$WORK/booker.vault" --network-magic $MAGIC | tail -1)
 FOLDER=$("$SINGULAR" wallet address --vault "$WORK/folder.vault" --network-magic $MAGIC | tail -1)
 log "booker $BOOKER"; log "folder $FOLDER"
+log "binding: argv: $0 $*"
+log "binding: ckeri $CKERI sha256 $(sha256sum "$CKERI" | cut -c1-64)"
+log "binding: this script $HERE/$(basename "${BASH_SOURCE[0]}") sha256 $(sha256sum "${BASH_SOURCE[0]}" | cut -c1-64); source revision $(git -C "$HERE" rev-parse HEAD 2>/dev/null || echo unknown) with $(git -C "$HERE" status --short 2>/dev/null | wc -l) changed files in the tree"
+log "binding: blueprint $BLUEPRINT sha256 $(sha256sum "$BLUEPRINT" | cut -c1-64); singular $(sha256sum "$SINGULAR" | cut -c1-64); devnet $(sha256sum "$DEVNET" | cut -c1-64)"
+if [[ -n "${CANDIDATE_BINDING:-}" ]]; then log "binding: candidate record $CANDIDATE_BINDING"; sed 's/^/binding:   /' "$CANDIDATE_BINDING" | while IFS= read -r line; do log "$line"; done; fi
 
 # ---- the fixture ---------------------------------------------------------------------------------
 # shellcheck disable=SC1090
@@ -67,7 +73,7 @@ keep_chain() {
     epoch=$(curl -s "$URL/tip" | jq -r '.[0].epoch_no' 2>/dev/null || true)
     curl -s "$URL/epoch_params?_epoch_no=$epoch" >"$WORK/txinfo/epoch_params.json" || true
     local id
-    for id in $(grep -hoE '[0-9a-f]{64}' "$WORK"/deploy.out "$WORK"/register-*.out "$WORK"/fold-1.out "$WORK"/fold-2.out 2>/dev/null | sort -u); do
+    for id in $(grep -hoE '[0-9a-f]{64}' "$WORK"/deploy.out "$WORK"/register-*.out "$WORK"/deploy-2.out "$WORK"/fold-1.out "$WORK"/fold-2.out "$WORK"/return.out 2>/dev/null | sort -u); do
         curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' \
             -d "{\"_tx_hashes\":[\"$id\"],\"_inputs\":true,\"_assets\":true,\"_scripts\":true}" >"$WORK/txinfo/$id.json" || true
         curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$id\"]}" >"$WORK/txinfo/$id.cbor.json" || true
@@ -152,13 +158,23 @@ set +e
     --pending "$REQUEST_B" >"$WORK/fold-2.out" 2>"$WORK/fold-2.err"
 fold2_status=$?
 set -e
+if [[ "${CANDIDATE_KIND:-complete}" == before-donation ]]; then
+    # the build before the treasury donation can be expressed: Singular's batch is built and its script evaluation refuses it
+    [[ $fold2_status == 1 ]] || fail "the build before the donation was expected to refuse the named fold, and exited $fold2_status"
+    grep -q "BuildFailed.*EvalFailure" "$WORK/fold-2.err" || fail "the refusal is not a script evaluation failure (fold-2.err)"
+    grep -q "nothing was submitted; nothing was spent" "$WORK/fold-2.err" || fail "the refused fold does not say it spent nothing"
+    FOLD2=""
+    log "ok: before the donation: the named fold is refused at script evaluation, nothing submitted (fold-2.err)"
+else
 [[ $fold2_status == 0 ]] || { cat "$WORK/fold-2.err" >&2; fail "the named fold on the facade exited $fold2_status (see fold-2.err)"; }
 FOLD2=$(sed -n 's/^fold-transaction: //p' "$WORK/fold-2.out")
 [[ -n "$FOLD2" ]] || fail "the named fold reported no transaction"
 grep -q "^folded: $REQUEST_B registration" "$WORK/fold-2.out" || fail "the named fold did not report folding $REQUEST_B"
 log "ok: second fold $FOLD2, named, on the facade, no state file"
+fi
 
 # ---- 4. read back ---------------------------------------------------------------------------------
+if [[ -n "$FOLD2" ]]; then
 for _ in $(seq 1 30); do history | grep -q "$FOLD2" && break; sleep 1; done
 [[ "$(history | tr '\n' ' ')" == "$GENESIS $FOLD1 $FOLD2 " ]] || fail "the history after the second fold is not genesis, first fold, second fold: $(history | tr '\n' ' ')"
 log "ok: the public history is the genesis and both folds, in order"
@@ -177,4 +193,57 @@ grep -q "(\"$STATE_POLICY\",\"[0-9a-f]*\",1)" "$WORK/fold-2.inspect" || fail "th
 grep -q "^treasury-donation 1000000$" "$WORK/fold-2.inspect" || fail "the second fold did not pay the treasury the registration cost"
 grep -q "^collateral-inputs 1$" "$WORK/fold-2.inspect" || fail "the second fold has no single collateral input"
 log "ok: the second fold spent its booking, burned its approval once, minted its key's token and paid the treasury the registration cost"
-log "journey complete: fold 1 $FOLD1, fold 2 $FOLD2"
+fi
+
+# ---- the exclusion control ----------------------------------------------------------------------------
+# A transaction the node refuses, that touches the registry's state token, must not appear in its public history.
+# The mutant is the second fold with its validity end moved by one slot: another body, so another identifier, under
+# the signature of the first; it spends inputs the second fold already spent. Submitted to the node through the
+# facade's own submission route, it is refused, and the history is as it was.
+HISTORY_BEFORE=$(history | tr '\n' ' ')
+MUTATED=$FOLD2
+if [[ -z "$MUTATED" ]]; then MUTATED=$FOLD1; curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$FOLD1\"]}" | jq -r '.[0].cbor' >"$WORK/fold-1.hex"; fi
+MUTANT=$( ( source "$NODE_ENV"; $MUTATE "$WORK/$([[ $MUTATED == "$FOLD2" ]] && echo fold-2 || echo fold-1).hex" "$WORK/mutant.hex" ) 2>"$WORK/mutant.err" | grep -oE '[0-9a-f]{64}' | tail -1 ) || fail "the refused transaction could not be made (mutant.err)"
+[[ "$MUTANT" =~ ^[0-9a-f]{64}$ && "$MUTANT" != "$MUTATED" ]] || fail "the refused transaction has no identifier of its own: $MUTANT"
+printf '%s' "$(cat "$WORK/mutant.hex")" | xxd -r -p >"$WORK/mutant.cbor"
+refusal=$(curl -s -o "$WORK/mutant.response" -w '%{http_code}' -X POST "$URL/submittx" -H 'content-type: application/cbor' --data-binary @"$WORK/mutant.cbor" || true)
+[[ "$refusal" =~ ^[45] ]] || fail "the node did not refuse the transaction (HTTP $refusal): $(cat "$WORK/mutant.response")"
+log "ok: the node refused the mutant $MUTANT (HTTP $refusal)"
+sleep 5
+[[ "$(history | tr '\n' ' ')" == "$HISTORY_BEFORE" ]] || fail "the history changed after the refused submission: $(history | tr '\n' ' ')"
+history | grep -q "$MUTANT" && fail "the refused transaction is in the public history"
+log "ok: exclusion control: a transaction the node refused is not in the public history"
+
+# ---- the closed window, and the return --------------------------------------------------------------
+# A request whose deadline has passed is out of time: the named fold refuses it from the provider's tip alone,
+# before anything is signed, and the return, which is for exactly that case, pays the refund. A registry of its own
+# holds the request, so that no key of the first registry stands in the way of the window being what refuses it.
+"$CKERI" registry deploy "${common[@]}" "${provider[@]}" --funding-address "$BOOKER" --vault "$WORK/booker.vault" \
+    --release-identity-out "$WORK/release-identity-2.json" --reference-record-out "$WORK/reference-outputs-2.json" \
+    --registration-cost 1000000 --minimum-tip 500000 --process-time 90000 --booking-width 5000 \
+    --deposit 1000000000 --freeze-bond 5000000 --premium 2000000 --minimum-ada 2000000 --termination-carrier 1500000 \
+    >"$WORK/deploy-2.out" 2>"$WORK/deploy-2.err" || fail "the second registry's deploy (deploy-2.err)"
+"$CKERI" registry register "${common[@]}" "${provider[@]}" --funding-address "$BOOKER" --vault "$WORK/booker.vault" \
+    --release-identity "$WORK/release-identity-2.json" --reference-record "$WORK/reference-outputs-2.json" \
+    --kli-export "$FIXTURES/kli-export-single.cesr" >"$WORK/register-closed.out" 2>"$WORK/register-closed.err" || fail "the booking of the request that will be out of time (register-closed.err)"
+REQUEST_C=$(sed -n 's/^booking-output: //p' "$WORK/register-closed.out")
+[[ -n "$REQUEST_C" ]] || fail "register reported no booking output for the request to be returned"
+log "ok: booked $REQUEST_C in a second registry; its deadline is ninety seconds on"
+sleep 110
+set +e
+"$CKERI" registry fold "${common[@]}" "${provider[@]}" --funding-address "$FOLDER" --vault "$WORK/folder.vault" \
+    --release-identity "$WORK/release-identity-2.json" --reference-record "$WORK/reference-outputs-2.json" \
+    --pending "$REQUEST_C" >"$WORK/fold-closed.out" 2>"$WORK/fold-closed.err"
+closed_status=$?
+set -e
+[[ $closed_status == 1 ]] || fail "the named fold of a request past its deadline exited $closed_status, not 1"
+grep -q "ProcessingWindowClosed" "$WORK/fold-closed.err" || fail "the refusal does not name the closed window (fold-closed.err)"
+grep -q "nothing was submitted; nothing was spent" "$WORK/fold-closed.err" || fail "the refused fold does not say it spent nothing"
+log "ok: closed window: the named fold of a request past its deadline is refused (ProcessingWindowClosed), nothing submitted"
+"$CKERI" registry return "${common[@]}" "${provider[@]}" --funding-address "$FOLDER" --vault "$WORK/folder.vault" \
+    --release-identity "$WORK/release-identity-2.json" --reference-record "$WORK/reference-outputs-2.json" \
+    --request "$REQUEST_C" >"$WORK/return.out" 2>"$WORK/return.err" || fail "the return of the closed request (return.err)"
+RETURN=$(sed -n 's/^return-transaction: //p' "$WORK/return.out")
+[[ -n "$RETURN" ]] || fail "the return reported no transaction"
+log "ok: the request past its deadline is returned: $RETURN, fee $(sed -n 's/^return-fee: //p' "$WORK/return.out")"
+log "journey complete (${CANDIDATE_KIND:-complete}): fold 1 $FOLD1, fold 2 ${FOLD2:-refused}, refused mutant $MUTANT, return $RETURN"

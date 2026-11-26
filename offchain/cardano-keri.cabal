@@ -575,6 +575,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryScriptsSpec
     Cardano.KERI.Deployment.RegistryShortDepositSpec
     Cardano.KERI.Deployment.RegistrySnapshotSpec
+    Cardano.KERI.Deployment.RegistryTransactionDumpSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
     Cardano.KERI.Deployment.RegistryVaultSpec
     Cardano.KERI.Deployment.ScriptAritySpec

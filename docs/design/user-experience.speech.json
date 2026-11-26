@@ -13,7 +13,7 @@
       "pause": 400
     },
     {
-      "text": "The register, rotate and close journeys are shipped on main today and exercised on preprod. The states a UI must distinguish, the three sums of money, and the poison journey are the accepted design. The interface itself is neither: the repository has settled transactions and a test harness, not an end-user product.",
+      "text": "The register, rotate and close journeys of the earlier deployed design (version 1, published on preprod on 2026-07-28) settled on preprod; the accepted design has no close (the owner exit was removed from the model and the source tree). The states a UI must distinguish, the three sums of money, and the poison journey are the accepted design. The interface itself is neither: the repository has settled transactions and a test harness, not an end-user product.",
       "pause": 400
     }
   ],
@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "Alice rotates her keys in KERI. On Cardano, the controller books registration with the signed inception and its witness receipts. The Singular folder processes the booked request. A hunter can present a later witnessed rotation to advance the checkpoint or, when the freeze conditions hold, to freeze it.",
+      "text": "The accepted design assumes the identity owner rotates her keys with kli. On Cardano the controller books the registration with the signed inception and its witness receipts (constitution, principle XII) and the registry's folder processes the booked request; beyond that the owner puts money in and authorizes what her keys alone can authorize. A hunter can present a later witnessed rotation to advance the checkpoint; when the pool covers the premium, the premium goes to the payee the hunter names, and otherwise the rotation lands unpaid. When the freeze conditions hold, a hunter can freeze the checkpoint, and the freeze bond goes to the payee the freeze names. Anyone may top the pool up with at least one premium while the checkpoint carries no top-up mark.",
       "pause": 400
     },
     {
@@ -71,7 +71,7 @@
       "pause": 400
     },
     {
-      "text": "\"Fail closed\" should be visible. A freeze sets only the datum’s frozen bit and pays the freeze bond B to the address named in the freeze. The UI can show the frozen checkpoint with its old keys and explain where the bond went.",
+      "text": "\"Fail closed\" should be visible. A freeze sets only the datum's frozen bit and pays the freeze bond B to the payee the freeze names. The UI can show the frozen checkpoint with its old keys and explain where the bond went.",
       "pause": 400
     }
   ],
@@ -97,7 +97,7 @@
       "pause": 300
     },
     {
-      "text": "wait for settlement.",
+      "text": "wait for settlement. In the accepted design the controller books the registration and the registry's folder processes the booked request; the steps above that belong to version 1 (the premint and the Register transaction) are replaced by that booking and that fold.",
       "pause": 300
     },
     {
@@ -105,7 +105,7 @@
       "pause": 400
     },
     {
-      "text": "The UI should show the AID; the controller threshold; the witness threshold; the expected checkpoint policy and asset; each of the three sums; the premint and Register transaction IDs; and the confirmation depth. Under the accepted design it should also show that the checkpoint is juvenile and for how long.",
+      "text": "The UI should show the AID; the controller threshold; the witness threshold; the expected checkpoint policy and asset; each of the three sums; the transaction IDs of the registration (in version 1 the premint and the Register transaction; in the accepted design the booking and the fold); and the confirmation depth. Under the accepted design it should also show that the checkpoint is juvenile until the slot born_at + W, where born_at is the booking's validity upper bound and can precede the fold; at that slot the checkpoint stops being juvenile.",
       "pause": 400
     }
   ],
@@ -141,7 +141,7 @@
       "pause": 400
     },
     {
-      "text": "Alice's current keys are stolen. Before she can assemble a rotation, her key holders sign a short declaration — with stock kli sign, over a preimage bound to the policy, her AID and her current sequence — and anyone lands it. The checkpoint is immediately unconsumable, and the thief can do nothing with it: no close, no second poison, no consumer authorization. The only way out is a rotation, which clears the poison because the poison belonged to the keys the rotation retires.",
+      "text": "Alice's current keys are stolen. Before she can assemble a rotation, her key holders authorize a poison with the current key quorum, and a poison spend would let anyone land it; the model requires only that the current quorum authorized it, and neither the bytes they sign nor the poison spend are specified or built yet. The checkpoint is immediately unconsumable, and the thief can do nothing with it: no close, no second poison, no consumer authorization. The way out of a poison is a witnessed rotation, which clears it because the poison belonged to the keys the rotation retires; a conviction or a termination follows its own rules.",
       "pause": 400
     },
     {
@@ -159,7 +159,7 @@
       "pause": 400
     },
     {
-      "text": "Deposit is the unfreeze: a rotation that refills B after a hunter took it. It is a no-op on full bonds, still signed by the new keys.",
+      "text": "Deposit is the unfreeze: a rotation that refills B after a freeze paid it to the payee the freeze named. When the bond is full it adds nothing to the bond (an authorized deposit on an unfrozen holding moves zero) and the rotation still happens; it is still signed by the new keys.",
       "pause": 300
     },
     {
@@ -167,7 +167,7 @@
       "pause": 300
     },
     {
-      "text": "Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze (the freeze bond, to a hunter) and conviction. Parking was removed because it left unsettled who holds the deposit while parked and how a sponsor is tracked; it may return only with an economic model that settles both.",
+      "text": "Whether an owner who stops maintaining a checkpoint should recover its bonds and pool is an open economic question: today they leave a live checkpoint only through rotation premiums, a freeze (the freeze bond, to the payee the freeze names) and conviction. Parking was removed because it left unsettled who holds the deposit while parked and how a sponsor is tracked; it may return only with an economic model that settles both.",
       "pause": 400
     },
     {
@@ -185,15 +185,15 @@
       "pause": 400
     },
     {
-      "text": "The pool pays the premium P to the address named in the rotation when it holds at least P. A rotation with a smaller pool pays no premium.",
+      "text": "The pool funds the premium P. When it covers the premium P, a landed rotation pays P to the payee the submitter names; a rotation lands unpaid when the pool is short. Anyone may top it up, at least P once between two rotations, and a pool below P is what allows a freeze.",
       "pause": 300
     },
     {
-      "text": "The freeze bond B is held while the checkpoint is unfrozen. A successful freeze pays B to the address the submitter names. A depositing rotation restores the bond and clears the frozen bit.",
+      "text": "The freeze bond B is what a freeze pays to the payee it names when the pool cannot pay. Its absence accompanies the frozen bit in the datum. A depositing rotation restores the bond and clears the bit.",
       "pause": 300
     },
     {
-      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. Conviction pays it to the payee named in the eligible commitment and sends the remaining freeze bond and pool to the checkpoint’s fixed refund address.",
+      "text": "The conviction bond D_reg is the stake a duplicity proof seizes. Conviction pays it to the payee of the eligible commitment and sends the freeze bond still held and the remaining pool to the checkpoint’s fixed refund address.",
       "pause": 300
     },
     {
@@ -231,7 +231,7 @@
       "pause": 300
     },
     {
-      "text": "the poison, bond and registry paths built at all (epics #322–#325 on the roadmap);",
+      "text": "the poison spend, which no validator implements yet, and the deployment of the bond and registry paths that the source tree already implements (epics #322–#325 on the roadmap);",
       "pause": 300
     },
     {
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "022887a61c6f71cbf7db6813cc8043ab569c41834dd2408880e5747077b18185"
+    "sha256": "3edda5bc52459cebadcc0bbf6fdbfee8ad4bae917256454d9ec42804babeb291"
   }
 }

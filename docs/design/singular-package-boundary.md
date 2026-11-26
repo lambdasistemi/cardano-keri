@@ -23,7 +23,7 @@ This is technical preparation. It shows that the libraries meet at the
 package interface. It does not show that KERI registration and
 conviction behave as the KERI model says once they run through Singular; that
 is the application work of
-[#324](https://github.com/lambdasistemi/cardano-keri/issues/324).
+[#324](https://github.com/lambdasistemi/cardano-keri/issues/324), part of which has since landed (the registration approval policy, #348, and the termination approvals, #350, both closed).
 
 !!! warning "Not for mainnet"
     The consumer package and the contracts it compiles are not for mainnet.
@@ -111,10 +111,7 @@ registration and its approval.
 | Fifteen compatibility tests | New tests importing KERI and Singular together, over the generated KERI registration vectors | The published interface accepts real KERI values and commits to every field of the registration approval |
 | Sixty-four retained registration tests | The existing KERI registration tests, run unchanged inside the consumer | The legacy KERI registration predicate still compiles and holds next to the Singular package |
 
-Reusing the legacy registration predicate is not the redesigned
-application. The redesign moves registration to a KERI approval policy that
-Singular's fold consumes; that policy does not exist yet, so no test here can
-show that KERI and Singular agree on a registration as a whole.
+Reusing the legacy registration predicate is not the redesigned application. When this experiment was run, the approval policy that Singular's fold consumes did not exist, so no test here shows that KERI and Singular agree on a registration as a whole; the application mint of the source tree (`onchain/lib/cardano_keri/application/`, issues #348 and #350, closed) is that policy. The constitution places the inception check in the controller's booking; the model and the validators still check it at the fold, and issue #559 is the outstanding repair.
 
 The 12 October 2026 local probe passed two compatibility tests and the same
 sixty-four registration tests. Those two probe tests were never committed and
@@ -147,8 +144,7 @@ or the check fails.
 
 ## Remaining production work
 
-The check stops at the package boundary. The production work it leaves,
-tracked in [#324](https://github.com/lambdasistemi/cardano-keri/issues/324):
+The check stops at the package boundary. The production work it left when it was recorded, tracked in [#324](https://github.com/lambdasistemi/cardano-keri/issues/324) (the approval policy of #348 and the termination approvals of #350 have since landed and are closed):
 
 - the KERI approval policy that checks the inception evidence, signatures,
   receipts, refund binding, bond amounts and initial checkpoint datum at

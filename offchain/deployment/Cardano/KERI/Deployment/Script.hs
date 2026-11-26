@@ -25,6 +25,7 @@ module Cardano.KERI.Deployment.Script (
     applyCheckpointParams,
     applyPredecessorParam,
     applyLifecycleParams,
+    applyAttestationParams,
     applyAdvanceParams,
     applyCommitmentParams,
     applyDataArgs,
@@ -44,6 +45,7 @@ module Cardano.KERI.Deployment.Script (
     deployedCheckpointTerms,
     Observers (..),
     deriveObserverScripts,
+    deriveAttestationScript,
     deriveCheckpointScript,
     observerArtifacts,
     deriveV1Scripts,
@@ -310,6 +312,13 @@ applyLifecycleParams :: Integer -> ByteString -> Integer -> [Data]
 applyLifecycleParams version proofPolicy registrationBond =
     [I version, B proofPolicy, I registrationBond]
 
+{- | The parameters of the booking attestation policy: the hash-proof policy
+and the registration bond its registration predicate asks of a deposit.
+-}
+applyAttestationParams :: ByteString -> Integer -> [Data]
+applyAttestationParams proofPolicy registrationBond =
+    [B proofPolicy, I registrationBond]
+
 applyAdvanceParams :: Integer -> [Data]
 applyAdvanceParams version =
     [I version]
@@ -508,6 +517,29 @@ requireValidator blueprint title name =
         (Left $ T.unpack name <> " compiled code not found in production blueprint")
         Right
         (extractValidatorExact title blueprint)
+
+{- | The booking attestation policy of a release that books through it: applied
+to the hash-proof policy and the registration deposit of the terms. It is no part
+of the historical observers ('deriveObserverScripts', 'deriveV1Scripts'), which a
+blueprint compiled before the policy existed still derives.
+-}
+deriveAttestationScript ::
+    CheckpointTerms -> Observers -> Blueprint -> Either String ScriptArtifact
+deriveAttestationScript terms observers blueprint = do
+    (attestationValidator, attestationProgram) <-
+        requireValidator
+            blueprint
+            "booking_attestation.booking_attestation.mint"
+            "booking-attestation"
+    mkAppliedArtifact
+        "booking-attestation"
+        "minting-policy"
+        attestationValidator
+        ( applyAttestationParams
+            (scriptHashBytes (artifactScriptHash (observerHashProof observers)))
+            (termsDeposit terms)
+        )
+        attestationProgram
 
 -- | Apply the registration proof policy and the observers to the terms.
 deriveObserverScripts ::

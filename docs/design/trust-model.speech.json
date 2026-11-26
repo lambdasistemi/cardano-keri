@@ -13,7 +13,7 @@
       "pause": 400
     },
     {
-      "text": "Two sections describe what ships on main today: what the current validators guarantee, and the residuals that follow from it. The rest describes the accepted design — the Lean machine of lean/CardanoKeri/Checkpoint.lean — and each such section says so. For settled transaction IDs and dates, see the story ladder.",
+      "text": "Two sections describe the earlier deployed design (version 1, published on preprod on 2026-07-28; its validators are no longer in the source tree): what its validators guarantee, and the residuals that follow from it. The rest describes the accepted design — the Lean machine of lean/CardanoKeri/Checkpoint.lean — and each such section says so. For settled transaction IDs and dates, see the story ladder.",
       "pause": 400
     }
   ],
@@ -39,9 +39,9 @@
       "pause": 300
     }
   ],
-  "what-the-current-validators-guarantee-shipped-today": [
+  "what-the-earlier-deployed-validators-guarantee": [
     {
-      "text": "What the current validators guarantee — shipped today.",
+      "text": "What the earlier deployed validators guarantee.",
       "pause": 500
     }
   ],
@@ -137,7 +137,7 @@
       "pause": 500
     },
     {
-      "text": "Close requires the current controller threshold today. Its signed evidence binds the network, checkpoint policy, exact input reference, AID, sequence, and refund address. The transaction burns the checkpoint token and refunds the complete checkpoint value only to that address.",
+      "text": "In the earlier deployed design, Close required the current controller threshold. Its signed evidence binds the network, checkpoint policy, exact input reference, AID, sequence, and refund address. The transaction burns the checkpoint token and refunds the complete checkpoint value only to that address.",
       "pause": 400
     },
     {
@@ -149,9 +149,9 @@
       "pause": 400
     }
   ],
-  "residuals-of-what-ships-today": [
+  "residuals-of-the-earlier-deployed-design": [
     {
-      "text": "Residuals of what ships today.",
+      "text": "Residuals of the earlier deployed design.",
       "pause": 500
     }
   ],
@@ -183,11 +183,11 @@
       "pause": 400
     },
     {
-      "text": "It does not stop them from using the identity now. Until a rotation settles, the stolen keys are the current authority, and no validator can tell them from the owner. Worse, on main today Close is a current-controller operation, so a thief can burn the checkpoint and send the escrow to an address the signed message names.",
+      "text": "It does not stop them from using the identity now. Until a rotation settles, the stolen keys are the current authority, and no validator can tell them from the owner. Worse, in the earlier deployed design Close was a current-controller operation, so a thief could burn the checkpoint and send the escrow to an address the signed message names.",
       "pause": 400
     },
     {
-      "text": "The accepted design closes both halves of that, and Compromise of the current keys works the case through in full.",
+      "text": "The accepted design has no close, and its current key quorum can poison the checkpoint so that consumers refuse it until a rotation clears it; that does not prevent a use of the stolen keys that lands before the poison. Compromise of the current keys works the case through in full.",
       "pause": 400
     }
   ],
@@ -207,7 +207,7 @@
       "pause": 500
     },
     {
-      "text": "Cardano cannot react to a KERI event nobody has submitted. Between KERI publication and a settled advance, an application may still see the old checkpoint. High-value applications must state how they monitor KERI and how fresh a checkpoint must be. The accepted design turns that from advice into two mechanisms: the pool of advance funds that pays a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the juvenility window (the age a checkpoint must reach before a consumer trusts it) W that a consumer enforces.",
+      "text": "Cardano cannot react to a KERI event nobody has submitted. Between KERI publication and a settled advance, an application may still see the old checkpoint. High-value applications must state how they monitor KERI and how fresh a checkpoint must be. The accepted design turns that from advice into two mechanisms: the pool of advance funds that pays the payee a hunter names (a hunter being anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) to be prompt, and the juvenility window (the age a checkpoint must reach before a consumer trusts it) W that a consumer enforces.",
       "pause": 400
     }
   ],
@@ -227,7 +227,7 @@
       "pause": 500
     },
     {
-      "text": "Each item below is a theorem in lean/CardanoKeri/Checkpoint.lean, playable in the checkpoint simulator, and unbuilt on chain.",
+      "text": "Each item below is a theorem of the Lean machine defined in lean/CardanoKeri/Checkpoint.lean and proved in CheckpointGoals.lean and CheckpointCommitmentGoals.lean, and is playable in the checkpoint simulator. The source tree implements part of it (there is no poison spend); this page makes no claim about what is deployed.",
       "pause": 400
     }
   ],
@@ -277,7 +277,11 @@
       "pause": 400
     },
     {
-      "text": "A colluding witness quorum can receipt two rotations at one sequence. When the checkpoint is spent for conviction, the mint checks the rival’s signing threshold, the previous next-key threshold and receipts from witnesses derived by applying the rival’s cuts and additions. The whole event must differ from the authenticated writer, including seals. At inception Lean refuses the comparison because there is no previous establishment. Validator evidence for that refusal remains outstanding. The pending output records the checkpoint spend. The termination booker consumes that output and the fold processes the booked request.",
+      "text": "A colluding quorum at or above toad can receipt two rotations at one native sequence. KERI duplicity requires different content and two rotations valid against the same previous commitments, each with its own signing threshold and receipts from its derived witnesses. The exposure is bounded by D_reg and by the witness set the controller chose.",
+      "pause": 400
+    },
+    {
+      "text": "At the checkpoint spend the mint checks the rival’s signing threshold, the previous next-key threshold and receipts from witnesses derived by applying the rival’s cuts and additions. The whole event must differ from the authenticated writer, including seals. At inception Lean refuses the comparison because there is no previous establishment. Validator evidence for that refusal remains outstanding. The termination booker spends the pending output, and the folder processes the booked request.",
       "pause": 400
     },
     {
@@ -295,7 +299,7 @@
       "pause": 500
     },
     {
-      "text": "Relayers and hunters are untrusted submitters. They may censor their own service, delay submission, or pay fees strategically. They cannot fabricate valid signatures, receipts, preimages, or conflicts, and they cannot choose a different valid successor. See the hunter.",
+      "text": "Relayers and hunters are untrusted submitters. They may censor their own service, delay submission, or pay fees strategically. They cannot fabricate valid signatures, receipts, preimages, or conflicts, and they cannot install a key state other than the one their evidence establishes. See the hunter.",
       "pause": 400
     },
     {
@@ -303,7 +307,7 @@
       "pause": 400
     },
     {
-      "text": "A retired AID cannot register again in the same registry. A live checkpoint can still show an older key state if a later KERI rotation has yet to land. The juvenility check opens at the birth slot plus W. Eligibility has no upper age limit, so age alone cannot tell a relying party whether a newer rotation exists. On conviction the remaining freeze bond and pool go to the address recorded at registration.",
+      "text": "A retired AID cannot register again in the same registry. A live checkpoint can still show an older key state if a later KERI rotation has yet to land. The juvenility check opens at the birth slot plus W. Eligibility has no upper age limit, so age alone cannot tell a relying party whether a newer rotation exists. On conviction the remaining freeze bond and pool go to the address recorded at registration; the conviction bond D_reg goes to the payee of the eligible commitment.",
       "pause": 400
     }
   ],
@@ -313,7 +317,7 @@
       "pause": 500
     },
     {
-      "text": "As Cora, a hunter who has found two receipted rotations at one sequence, I want the conviction deposit D_reg paid to me and not to whoever copies my evidence, so that looking for duplicity is worth doing.",
+      "text": "As Cora, a convictor who has found two receipted rotations at one sequence, I want the conviction deposit D_reg paid to me and not to whoever copies my evidence, so that looking for duplicity is worth doing.",
       "pause": 400
     },
     {
@@ -353,7 +357,7 @@
       "pause": 400
     },
     {
-      "text": "The validators on main still bind a commitment to the checkpoint output and do not compare its deployment with the one that settles. They follow this model in a later change; until then a top-up voids a commitment on chain.",
+      "text": "The validators on main bind a commitment to the identifier, the deployment and the key state, as this model does; a top-up or a freeze keeps it entitled, and a rotation voids it.",
       "pause": 400
     },
     {
@@ -415,12 +419,12 @@
       "pause": 500
     },
     {
-      "text": "The Result column marks whether the response ships today or is designed.",
+      "text": "The State column marks whether the response is that of the earlier deployed design (shipped) or of the accepted design (designed).",
       "pause": 400
     }
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "ab523d79690ce4d0d754973e2d61a934f7c59e3de616cd3ef5ce7ad961766a05"
+    "sha256": "2405ae81e3f8e3f286e2a83a1e78ad7c5c399f574dc93797373c10ccde298d4d"
   }
 }

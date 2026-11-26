@@ -13,7 +13,7 @@
       "pause": 400
     },
     {
-      "text": "The layer table below is the honest status of each layer. The flows marked shipped settle on a real ledger; the flows marked designed are the Lean machine of the accepted design, proved and playable, not built.",
+      "text": "The layer table below is the honest status of each layer. The flows marked shipped are those of the earlier deployed design (version 1): register, advance and close settled on preprod, the freeze and response story on a development network. The flows marked designed are the Lean machine of the accepted design, proved and playable; the source tree implements part of it (there is no poison spend yet), and this page makes no claim about what is deployed.",
       "pause": 400
     }
   ],
@@ -47,7 +47,7 @@
       "pause": 400
     },
     {
-      "text": "The proof token only separates expensive hash work from state creation. It adds no oracle and no privileged registrar. It also does not make registration unique: nothing today prevents a second checkpoint for the same AID.",
+      "text": "The proof token only separates expensive hash work from state creation. It adds no oracle and no privileged registrar. It also does not make registration unique: nothing in the version 1 flow prevents a second checkpoint for the same AID.",
       "pause": 400
     }
   ],
@@ -61,7 +61,7 @@
       "pause": 400
     },
     {
-      "text": "Appliers race on one shared object; the loser wastes work, never safety. Until its deadline a request can only be applied; after it, anyone may return it to its refund address, less the tip the returner keeps. Conviction travels the same way as a leaf update. Rotations, poisons, freezes and top-ups never touch the registry.",
+      "text": "Folders race on one shared object; the loser wastes work, never safety. The controller's booking validates the inception, through an attestation minted in the same transaction; the fold reads no inception evidence. Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps. A conviction is a local step of the checkpoint; the termination is then booked and folded. Rotations, poisons, freezes and top-ups never touch the registry.",
       "pause": 400
     }
   ],
@@ -119,7 +119,7 @@
       "pause": 300
     },
     {
-      "text": "apply the consumer predicate. The shipped version requires the bare ACTIVE role address. The accepted design checks the authenticated context, the output credential, the representative asset quantity of one and the decoded AID and lifecycle. The checkpoint must be present, unfrozen and unpoisoned, and its age must be at least the juvenility window.",
+      "text": "apply the consumer predicate. The version 1 design requires the bare ACTIVE role address. The accepted design checks the authenticated context, the output credential, the representative asset quantity of one and the decoded AID and lifecycle. The checkpoint must be present, unfrozen and unpoisoned, and its age must be at least the juvenility window (the age a checkpoint must reach before a consumer trusts it);",
       "pause": 300
     },
     {
@@ -177,6 +177,6 @@
   ],
   "_source": {
     "file": "system.md",
-    "sha256": "123f86cf966ef869dea46938bde2d1a86c8e53d79cba435540048f0853cd2d0e"
+    "sha256": "693369606db8e19a412d9a3042a7da0cc4b2705bacf1c834a058ce7952b0321f"
   }
 }

@@ -6,17 +6,15 @@ credential verification, value authorization, wallet integration — remains
 later work.
 
 !!! abstract "Where this page stands"
-    The layer table below is the honest status of each layer. The flows marked
-    **shipped** settle on a real ledger; the flows marked **designed** are the
-    Lean machine of the accepted design, proved and playable, not built.
+    The layer table below is the honest status of each layer. The flows marked **shipped** are those of the earlier deployed design (version 1): register, advance and close settled on preprod, the freeze and response story on a development network. The flows marked **designed** are the Lean machine of the accepted design, proved and playable; the source tree implements part of it (there is no poison spend yet), and this page makes no claim about what is deployed.
 
 ## Layer status
 
 | Layer | Purpose | Status |
 |---|---|---|
-| Identity checkpoint | Project a KERI AID's current keys, thresholds, witnesses and sequence into a sovereign Cardano UTxO | Register, close and advance settled on preprod; the enforcement economy settled on a devnet only |
-| The accepted design's machine | Poison (the owner's own lock on the checkpoint), three value components, the premium (the fee the pool pays whoever lands a rotation) and freeze of the hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one), terminal conviction, no owner exit | Proved in Lean, playable in the simulator, no on-chain code — epics #322–#323 |
-| Registry | One incarnation per AID, ever | Designed; the permissionless cage (an MPFS store, a Merkle Patricia Forestry map behind one validator) runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
+| Identity checkpoint | Project a KERI AID's current keys, thresholds, witnesses and sequence into a sovereign Cardano UTxO | Register, close and advance of the earlier deployed design (version 1) settled on preprod; the enforcement economy settled on a devnet only |
+| The accepted design's machine | Poison (the owner's own lock on the checkpoint), three value components, the premium (what a rotation pays from the pool to the payee the submitter names, when the pool holds at least that much) and the freeze (the bond goes to the payee the freeze names), terminal conviction, no owner exit | Proved in Lean, playable in the simulator; the source tree implements part of it (no poison spend yet) — epics #322–#323 |
+| Registry | One incarnation per AID, ever | Modeled in Lean, with the application's booking and termination paths in the source tree; the permissionless cage (an MPFS store, a Merkle Patricia Forestry map behind one validator) runs on a development network in [singular](https://github.com/lambdasistemi/singular) (release v0.3.0); the keri leaf map and the registration policy are epic #324 |
 | Credential verification | Verify ACDC credential chains and TEL revocation state | Designed and prototyped; no settled vertical story |
 | Value authorization | Let an application gate a state change on a consumable checkpoint and credentials | Designed; not a shipped service |
 | Wallet bridge | Let KERI/Veridian software authorize Cardano actions | Planned; nobody's deliverable yet |
@@ -85,7 +83,7 @@ sequenceDiagram
 
 The proof token only separates expensive hash work from state creation. It adds
 no oracle and no privileged registrar. It also does not make registration
-unique: nothing today prevents a second checkpoint for the same AID.
+unique: nothing in the version 1 flow prevents a second checkpoint for the same AID.
 
 ## Registration through the registry — designed
 
@@ -96,19 +94,16 @@ the checkpoint token can ever be minted:
 sequenceDiagram
     participant R as Registrant
     participant Q as Registry (a request UTxO)
-    participant A as Applier — anyone
+    participant A as Folder — a role of the registry
     participant L as Ledger
 
-    R->>Q: request: inception, bonds, refund address
-    A->>L: apply a batch: absence proof, insert the leaf, mint the checkpoint
-    L-->>R: a juvenile checkpoint, one incarnation ever
+    R->>Q: book the request: initial datum, bonds, refund address
+    A->>L: fold the booked requests: insert the leaf, deliver the checkpoint
+    L-->>R: a checkpoint born at the booking's upper bound, one incarnation ever
 ```
 
-Appliers race on one shared object; the loser wastes work, never safety. Until its deadline
-a request can only be applied; after it, anyone may return it to its refund
-address, less the tip the returner keeps.
-Conviction travels the same way as a leaf update. Rotations, poisons,
-freezes and top-ups never touch the registry.
+Folders race on one shared object; the loser wastes work, never safety. The controller's booking validates the inception, through an attestation minted in the same transaction; the fold reads no inception evidence. Until its deadline a request can only be folded; from the deadline anyone may return a booked registration to its refund address, less the tip the returner keeps.
+A conviction is a local step of the checkpoint; the termination is then booked and folded. Rotations, poisons, freezes and top-ups never touch the registry.
 
 ## Advance and enforcement — shipped
 
@@ -153,8 +148,8 @@ flowchart LR
     FRZ["freeze: set only the frozen bit to true,<br/>B to named payee"]
 
     EV --> P
-    P -->|"advance"| ADV
-    P -->|"pool < P"| FRZ
+    P -->|"advance attestation, any pool"| ADV
+    P -->|"freeze attestation, pool < P, clean and unfrozen"| FRZ
 ```
 
 Two of the six checkpoint actions cross the boundary of the present state.
@@ -173,11 +168,12 @@ The application must:
 
 1. resolve the candidate checkpoint for the AID;
 2. validate the quantity-one token, script lineage, version, AID and datum;
-3. apply the consumer predicate. The shipped version requires the bare ACTIVE
+3. apply the consumer predicate. The version 1 design requires the bare ACTIVE
    role address. The accepted design checks the authenticated context, the
    output credential, the representative asset quantity of one and the
    decoded AID and lifecycle. The checkpoint must be present, unfrozen and
-   unpoisoned, and its age must be at least the juvenility window.
+   unpoisoned, and its age must be at least the juvenility window (the age a checkpoint
+   must reach before a consumer trusts it);
 4. verify its operation-specific controller authorization; and
 5. when credentials matter, verify the required ACDC/TEL evidence.
 

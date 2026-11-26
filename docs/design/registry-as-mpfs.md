@@ -3,8 +3,7 @@
 As an identity owner, I keep my checkpoint alive — bonds, rotations,
 unfreezing — until it is convicted; there is no owner exit, no parking and no
 revival. As a relying party, I see a checkpoint that is either alive or
-convicted, and I must refuse a termination-pending output. As a folder, I can
-process an admitted request without becoming the identity's controller.
+convicted, and I must refuse a termination-pending output. As a folder, I can process a booked request without becoming the identity's controller. The application mint verifies the KERI inception premise at the booking, as the constitution assigns, through an attestation minted in the same transaction; the fold reads no inception evidence. The evidence is local: no deployed registry runs it yet.
 
 These are model guarantees under their stated premises. The simulators execute
 model transactions; they do not establish Aiken, builder or deployed conformance.
@@ -24,8 +23,7 @@ The pinned sources define the imported generic booking, economic fold and
 rejection judgments. KERI owns its request lifecycle: until a request's
 deadline only a fold spends it; from the deadline anyone returns it through
 `Registry.returnRequests`, which refines the imported rejection with the
-deadline, registration-only and balance guards. The KERI registry is deployed
-with `retractTime = 0`, so no retraction window exists. Public upstream requirements include
+deadline, registration-only and balance guards. The KERI application accepts only a registry configured with `retractTime = 0` (`configuration_refuses_retraction`), so no retraction window exists. Public upstream requirements include
 [registration](https://github.com/lambdasistemi/singular/issues/742),
 [termination](https://github.com/lambdasistemi/singular/issues/743),
 [reading](https://github.com/lambdasistemi/singular/issues/744) and
@@ -100,22 +98,38 @@ A second successful first-registration cannot replace an active or retired
 key. There is no park and no revival, so no local step mints a new
 incarnation. These guarantees are scoped to one model registry.
 
-`RegistryReach.lean` proves reachable well-formedness. `RegistryCustody.lean`
-and `RegistryBurns.lean` prove custody and the fold-only retirement boundary.
-`RegistryMetadata.lean`, `RegistryFold.lean` and `RegistryCompleteness.lean`
-prove reconstruction and completeness under the complete premises.
-`RegistryAuthorization.lean` proves the local authorization consequences.
-The numbered public consequences and inversions remain in `RegistryGoals.lean`.
+`RegistryReach.lean` proves that every reachable state is well-formed.
+`RegistryCustody.lean` proves custody: a successful action that does not
+consume a pending request leaves its stored record unchanged; in a well-formed
+state a pending request has its token binding, an active leaf and exactly one
+token, and a retired key has no carrier and no pending request; in a reachable
+state an active key is held in exactly one place. `RegistryBurns.lean` proves
+what a fold that consumes a pending request does: the entry is removed, the key
+is retired, one unit of its Singular tag is burned and no output carries that
+tag. That only a fold changes a leaf is proved in `RegistryGoals.lean`.
+`RegistryMetadata.lean` separates the application-owned clauses of
+well-formedness and recovers the whole invariant from them when the imported
+world is reachable, the trie keys are unique and the alias and leaf domain is
+exact; `RegistryFold.lean` proves that a successful fold of a well-formed state
+yields a well-formed state, that domain included. `RegistryCompleteness.lean`
+proves that a fold of a reachable state whose registrations are authorized and
+which the imported registry accepts, at the current generation and application
+policy, is accepted by the adapter with exactly the projected successor.
+`RegistryAuthorization.lean` proves that every pending request of a reachable
+state retains an earlier conviction at its key under the coarse duplicity
+premise. The numbered public consequences and inversions remain in
+`RegistryGoals.lean`.
 
 An active key is not a consumer authorization. The reader must inspect the
-application output and enforce the consumer contract. Exact token bytes,
-canonical registry selection and transaction validity extensions remain in
-[consumer authentication](https://github.com/lambdasistemi/cardano-keri/issues/439).
+application output and enforce the consumer contract. The model fixes the token bytes (`ConsumerBytes.lean`) and the canonical registry selection by the consumer's own context (`ConsumerIdentity.lean`; [consumer authentication](https://github.com/lambdasistemi/cardano-keri/issues/439), closed). What a named release provider and a reader's exact chain point supply is not settled by the model.
 
 ## Checkpoint and the associated system
 
-`Checkpoint.lean` owns the funded local lifecycle, including the spent-tip comparison,
-rotation and signed intent, conviction/freeze bonds, pool, refund address,
+`Checkpoint.lean` owns the funded local lifecycle. At conviction the observer
+compares the rival with the spent tip. `Duplicity.lean` defines KERI duplicity
+for the two events the environment supplies. The lifecycle also covers rotation,
+the signed deposit intent (an environment premise whose bytes are in
+`CheckpointDeposit.lean`), conviction and freeze bonds, pool, refund address,
 poison, freeze and juvenility. There is no `close` and no `reopen`: a
 checkpoint leaves the live states only by conviction. The proved
 `consumableStateB` mirror refuses pending and convicted states.
@@ -168,18 +182,19 @@ carries the registration approval its holding commits to, and that the holding
 holds at least the committed deposit. Everything else is KERI's application,
 stated in `lean/CardanoKeri/Application.lean` against the public model
 `models/singular-application-held` at the pin above.
-This section states the model's rule. On `main` the validators still check the
-inception and the initial state at the fold, and the fold command still
-supplies the inception, until the code follows the model.
+This section states the model's rule, which the merged code follows: the validators check the
+inception and the initial state at the booking, and the fold command supplies no
+inception. The evidence is local: no deployed registry runs it yet.
 The Lean revision, the pin, the compiler and the script hashes and sizes of this
 generation are on [the identities of this generation](../architecture/registry-identities.md).
 
 The application address holds only configuration records and requests. A
 delivered checkpoint lives at the checkpoint validator's own address, where its
-lifecycle (advance, conviction, freeze, top-up) spends it as the
+lifecycle (advance, conviction, freeze, top-up in the source tree; the model adds poison, which has no spend arm yet) spends it as the
 checkpoint and economic models state; the application never spends it. The one
 exception is the pending output a conviction leaves there: only a termination
 booking releases it, as the next section shows.
+The constitution assigns the application's validation of a request, the inception first, to the controller's booking mint, and the fold to the application-ignorant Singular folder. The application mint verifies the inception and the delivered initial state at the booking, through an attestation minted in the same transaction (`Application.bookRegistration`); the fold consumes the admitted request and reads no inception evidence. The evidence is local: no deployed registry runs it yet.
 
 - **The configuration record.** Each registry's genesis transaction mints one
   configuration record at the application address, holding the registration
@@ -281,7 +296,7 @@ flowchart LR
   Book -->|by the deadline| Fold[Fold: delivers the committed holding, exactly the deposit; donation covers the registration cost]
   Book -->|from the deadline| Return[Return: refund address paid all but the tip]
   Fold --> Checkpoint[Genuine checkpoint at the checkpoint validator]
-  Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up by the checkpoint validator]
+  Checkpoint --> Lifecycle[Advance, conviction, freeze, top-up by the checkpoint validator; poison is modelled, no spend arm yet]
 ```
 
 ### Retiring a convicted identity
@@ -289,9 +304,7 @@ flowchart LR
 As a relying party, I want an identity convicted under KERI's duplicity rule to
 become permanently terminal in its registry, so that no checkpoint for its key
 can ever be served again, and I want nobody to be able to end an identity that
-was not convicted. As anyone watching the chain, I can carry a conviction
-through to the registry myself, without anyone's signature, and keep what the
-booking frees as my premium.
+was not convicted. As anyone watching the chain, I can carry a convicted checkpoint's termination through the booking and the fold myself, without anyone's signature, and keep what the booking frees as my premium.
 
 Retirement takes three transactions. A conviction, on the checkpoint
 validator, pays the convictor and the refund address and leaves a pending
@@ -324,7 +337,7 @@ sequenceDiagram
   Registry-->>Registry: burns the approval and the active token, the key becomes terminal
 ```
 
-The guarantees, each a theorem of `lean/CardanoKeri/ApplicationGoals.lean`:
+The guarantees, each a theorem of `lean/CardanoKeri/ApplicationGoals.lean`, under the premises of its statement: an accepted application observation; that no other preimage hashes to the termination approval's name, where the approval is read; a checkpoint state realized as reachable, where the conviction is read; and an accepted step of the public registry's history with the finite encoding and collision-freedom premises for the key's active role, where retirement and permanence are read:
 
 - **No termination without a conviction.** A termination approval is minted
   only by a booking of exactly that registry and key, which spends, once, an
@@ -341,13 +354,13 @@ The guarantees, each a theorem of `lean/CardanoKeri/ApplicationGoals.lean`:
   Its one spend of a pending output requires exactly one termination approval
   of its key to be minted, which the application mints only in a booking
   (`pending_released_only_into_booking`).
-- **The request is what the fold consumes.** The booking places exactly the
-  output the terminating fold accepts, holding the economic carrier plus the
-  minimum tip (`termination_booking_inversion`).
+- **The request is what the fold consumes.** The booking places an output of exactly the
+  shape the spend of a termination request requires, holding the economic carrier plus the
+  minimum tip (`termination_booking_inversion`); a later fold spends it only when it also reads the configuration record by reference, burns the termination approval and the active token and runs the state policy (`spendTermination`).
 - **The money is the economic model's.** The request holds what the economic
   booking puts into the request and the booker keeps the economic premium
-  (`termination_booking_matches_reap`); the fold's donation is the economic
-  termination donation, the carrier (`termination_donation_matches_economic`).
+  (`termination_booking_matches_reap`, when the registry's economic tip is the configuration record's minimum tip); the fold's donation is the economic
+  termination donation, the carrier, for a booking whose request holds exactly the termination lovelace and declares the minimum tip (`termination_donation_matches_economic`).
 - **The key retires for good.** A terminating fold that is a step of the public
   registry's history makes the key terminal (`termination_fold_retires_key`);
   no later transaction, whatever it is, makes it anything else or mints its

@@ -13,14 +13,16 @@
 use aiken/builtin
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/crypto.{blake2b_256}
 use aiken/interval.{Finite, Interval, IntervalBound}
+use aiken/primitive/bytearray
 use cardano/address.{Address, Credential, Script, from_script}
 use cardano/assets.{
   AssetName, PolicyId, Value, add, from_lovelace, tokens, zero,
 }
 use cardano/transaction.{
   InlineDatum, Input, Mint, NoDatum, Output, OutputReference, ScriptPurpose,
-  Spend, Transaction, Withdraw, placeholder,
+  Spend, Transaction, placeholder,
 }
 use cardano_keri/application/action.{
   Action, BookRegistration, BookTermination, FoldRegistration, FoldTermination,
@@ -33,9 +35,6 @@ use cardano_keri/application/held.{
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum as checkpoint_datum
 use cardano_keri/checkpoint/datum.{TerminationPending}
-use cardano_keri/checkpoint/observer.{
-  ObserverClaim, ObserverEnvelope, observe_register,
-}
 use singular_state/preimage.{
   RegistryIdentity, active_token_name, approval_name, configuration_token_name,
   initial_datum_hash, registration_preimage, termination_preimage,
@@ -270,9 +269,57 @@ pub fn donation_of(amount: Int) -> Option<Int> {
   }
 }
 
-pub fn envelope(claim: ObserverClaim, payload: Data) -> Data {
-  let value: Data = ObserverEnvelope { claim, payload }
-  value
+// ---- the attestation of a booking ---------------------------------------------
+
+/// The action of the claim of a booking.
+pub const claim_tag: ByteArray = "cardano-keri/book-registration/v1"
+
+/// The policy of the booking attestation of the deployment these tests run in.
+pub fn attestation_policy() -> PolicyId {
+  rows.attestation_hash
+}
+
+/// The claim of a booking, built as raw Plutus Data (constructor 0 holding the
+/// action, the application policy, the zero-based output index, the exact initial
+/// datum of the request and the deposit it commits), never with the types of the
+/// code under test, so a change of the code's own idea of the shape is a change
+/// of the transaction these tests build.
+pub fn claim_of(
+  application_policy: PolicyId,
+  index: Int,
+  initial_datum: Data,
+  deposit: Int,
+) -> Data {
+  builtin.constr_data(
+    0,
+    [
+      builtin.b_data(claim_tag),
+      builtin.b_data(application_policy),
+      builtin.i_data(index),
+      initial_datum,
+      builtin.i_data(deposit),
+    ],
+  )
+}
+
+/// The name of the attestation of a booking: the digest of its serialised claim.
+pub fn attestation_of(
+  application_policy: PolicyId,
+  index: Int,
+  initial_datum: Data,
+  deposit: Int,
+) -> AssetName {
+  blake2b_256(
+    builtin.serialise_data(
+      claim_of(application_policy, index, initial_datum, deposit),
+    ),
+  )
+}
+
+/// The name of the attestation of the request `data` booked at output `index` of
+/// a transaction of the application.
+pub fn name_for(data: RegistrationData, index: Int) -> AssetName {
+  attestation_of(application(), index, data.initial_datum, data.deposit)
 }
 
 // ---- booking ------------------------------------------------------------------
@@ -288,6 +335,8 @@ pub type Booking {
   actions: List<Action>,
   /// How many identical request outputs the transaction creates.
   copies: Int,
+  /// Whether the transaction mints the attestation of each request it books.
+  attested: Bool,
 }
 
 /// Lean row `booking`: a perfect booking.
@@ -302,6 +351,7 @@ pub fn booking() -> Booking {
     checkpoint: cfg.checkpoint_credential,
     actions: [BookRegistration { output_index: 0 }],
     copies: 1,
+    attested: True,
   }
 }
 
@@ -309,7 +359,27 @@ pub fn booking_tx(b: Booking) -> Transaction {
   Transaction {
     ..placeholder,
     outputs: list.repeat(request_output(b.data, b.lovelace), b.copies),
-    mint: mint_of([(application(), approval_of(b.data), b.mint)]),
+    mint: mint_of(
+      list.concat(
+        [(application(), approval_of(b.data), b.mint)],
+        if b.attested {
+          list.filter_map(
+            b.actions,
+            fn(action) {
+              when action is {
+                BookRegistration { output_index } ->
+                  Some(
+                    (attestation_policy(), name_for(b.data, output_index), 1),
+                  )
+                _ -> None
+              }
+            },
+          )
+        } else {
+          []
+        },
+      ),
+    ),
     // No record of another registry exists under this application: a record is
     // created only for a registry whose state policy was checked at its genesis.
     reference_inputs: if b.references {
@@ -336,30 +406,23 @@ pub type Fold {
   lower: Int,
   upper: Int,
   donation: Int,
-  /// The claim of the registration observer's withdrawal; None leaves the
-  /// withdrawal out.
-  claim: Option<ObserverClaim>,
-  withdrawn: Int,
   redeemer: SpendAction,
   /// A second request input at the application address, with its redeemer.
   second: Option<(RegistrationData, Option<SpendAction>)>,
-  /// The payload of the observer envelope (the evidence the observer reads).
-  payload: Data,
   /// Inputs and mint items beside the fold's own (a hash-proof token and
-  /// its burn, for a transaction the real observer runs over).
+  /// its burn, for a transaction the real policy runs over).
   extra_inputs: List<Input>,
   extra_mint: List<(PolicyId, AssetName, Int)>,
+  /// Outputs a client puts before and after the holding (the folder's own change).
+  before: List<Output>,
+  after: List<Output>,
+  /// Whether the configuration record is a reference input.
+  references: Bool,
+  /// Inputs a client puts before the request (the registry's state input).
+  inputs_before: List<Input>,
 }
 
-pub fn attestation() -> ObserverClaim {
-  ObserverClaim {
-    action: observe_register,
-    checkpoint_policy: checkpoint_hash(),
-    own_ref: None,
-  }
-}
-
-/// Lean row `fold-at-deadline`: a perfect fold.
+/// Lean row `fold-at-deadline`: a perfect fold: it shows no evidence.
 pub fn fold() -> Fold {
   let data = rows.request_data(9001)
   Fold {
@@ -374,14 +437,62 @@ pub fn fold() -> Fold {
     lower: 12,
     upper: 15,
     donation: 2,
-    claim: Some(attestation()),
-    withdrawn: 0,
     redeemer: FoldRegistration { holding_index: 0 },
     second: None,
-    payload: builtin.i_data(0),
     extra_inputs: [],
     extra_mint: [],
+    before: [],
+    after: [],
+    references: True,
+    inputs_before: [],
   }
+}
+
+/// The registry's state script address: its policy is the state script's hash.
+pub fn state_address() -> Address {
+  from_script(registry().policy)
+}
+
+/// The registry's state output holding the registry's token and the root `root`
+/// of its tree (as a datum of one byte string of 32 bytes).
+pub fn state_output(root: Int) -> Output {
+  Output {
+    address: state_address(),
+    value: with_lovelace(2, token(registry().policy, registry().name, 1)),
+    datum: InlineDatum(
+      builtin.constr_data(
+        0,
+        [builtin.b_data(bytearray.from_int_big_endian(root, 32))],
+      ),
+    ),
+    reference_script: None,
+  }
+}
+
+/// The registry's state input the fold spends: the state output of the root
+/// before the fold.
+pub fn state_input(index: Int) -> Input {
+  Input { output_reference: reference(index), output: state_output(1) }
+}
+
+/// The registry's state output the fold creates: the root after the fold.
+pub fn state_successor() -> Output {
+  state_output(2)
+}
+
+/// A plain output paying `lovelace` to `address`.
+pub fn pay(address: Address, lovelace: Int) -> Output {
+  Output {
+    address,
+    value: from_lovelace(lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
+/// A plain input holding `lovelace` at `address`.
+pub fn plain_input(index: Int, address: Address, lovelace: Int) -> Input {
+  Input { output_reference: reference(index), output: pay(address, lovelace) }
 }
 
 pub fn holding_output(f: Fold) -> Output {
@@ -418,15 +529,6 @@ pub fn fold_tx(f: Fold) -> Transaction {
       list.concat(second_approval, f.extra_mint),
     ),
   )
-  let withdrawals = when f.claim is {
-    Some(_) -> [Pair(Script(rows.observer_hash), f.withdrawn)]
-    None -> []
-  }
-  let observer = when f.claim is {
-    Some(claim) ->
-      [Pair(Withdraw(Script(rows.observer_hash)), envelope(claim, f.payload))]
-    None -> []
-  }
   let burn_redeemer = if f.burn == 0 {
     []
   } else {
@@ -436,23 +538,27 @@ pub fn fold_tx(f: Fold) -> Transaction {
   Transaction {
     ..placeholder,
     inputs: list.concat(
-      [request_input(0, f.data, f.request_lovelace), ..second_inputs],
-      f.extra_inputs,
+      f.inputs_before,
+      list.concat(
+        [request_input(0, f.data, f.request_lovelace), ..second_inputs],
+        f.extra_inputs,
+      ),
     ),
-    outputs: [holding_output(f)],
+    outputs: list.concat(f.before, [holding_output(f), ..f.after]),
     mint: burns,
-    reference_inputs: [
-      config_input(50, f.data.registry, cfg.checkpoint_credential),
-    ],
+    reference_inputs: if f.references {
+      [config_input(50, f.data.registry, cfg.checkpoint_credential)]
+    } else {
+      []
+    },
     validity_range: range(f.lower, f.upper),
     treasury_donation: donation_of(f.donation),
-    withdrawals,
     redeemers: list.concat(
       list.concat(
         [Pair(Spend(reference(60)), as_data(f.redeemer))],
         second_redeemers,
       ),
-      list.concat(burn_redeemer, observer),
+      burn_redeemer,
     ),
   }
 }

@@ -1,16 +1,16 @@
 # The Regulated DeFi Gate
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the gate below that cites it says so locally.
 
 
 A primer on the flagship use case: what a compliance gate is, why the current
@@ -20,8 +20,7 @@ solves. Companion to the [vLEI Bridge](vlei.md) use-case analysis.
 !!! warning "The gate is a target consumer"
     The settled small-identity stories prove checkpoint registration and
     lifecycle moves. They do not yet ship this DeFi application. The boundary
-    below follows the current sovereign checkpoint model: only an **ACTIVE**
-    checkpoint may authorize a gated action. See
+    below follows the accepted checkpoint model: only an eligible checkpoint holding — present, unfrozen, unpoisoned and at least `W` old — may authorize a gated action (in version 1, only an **ACTIVE** checkpoint). See
     [Value authorization](../architecture/value-auth.md) for the complete
     fail-closed consumer checklist.
 
@@ -107,13 +106,12 @@ trusting whoever runs that server. That is the hole cardano-keri fills.
 The layers of the
 [on-chain architecture](../architecture/overview.md)
 (tracked in [#21](https://github.com/lambdasistemi/cardano-keri/issues/21),
-internal) put the moving parts of vLEI verification on-chain — the acting
+internal) are designed to put the moving parts of vLEI verification on-chain — the acting
 entity's **current authority** as its sovereign per-AID checkpoint (read via a
 CIP-31 reference input), and the credential chain's **issuance evidence and
-revocation status** as KEL-anchored seals and MPF-rooted TEL registries — and
-provide the Aiken verifier that walks the chain. The steps span two planes:
+revocation status** as KEL-anchored seals and MPF-rooted TEL registries — and to provide the Aiken verifier that would walk the chain; credential verification is designed and prototyped, with no settled vertical story (see the layer table in [System architecture](../architecture/system.md)). The steps span two planes:
 
-| vLEI verification step | Off-chain world | With cardano-keri |
+| vLEI verification step | Off-chain world | With cardano-keri (design) |
 |---|---|---|
 | Historical issuance authority (*issued then*) | KERI KEL replay via witnesses | Issuer's **signature or seal on the SAID** (MUST on the most-compact form; SHOULD on other variants) + a **KEL-anchored issuance-proof seal at the issuer's historical key state** — **rotation does not invalidate it** |
 | Current non-revocation (*unrevoked now*) | Query issuer's TEL | **Layer 2** [revocation mirror](credential-verification.md#the-revocation-mirror): a per-registry set of revoked SAIDs anyone may fill with the issuer's own sealed `rev`; the gate proves absence, one proof per link |
@@ -134,16 +132,13 @@ provide the Aiken verifier that walks the chain. The steps span two planes:
       preserved unchanged.
     - **Current-actor plane (the acting entity, now).** The entity submitting the new action is
       authorized by **its own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint
-      UTxO** — asset id `(checkpoint_policy_id, aid_asset_name)`, current weighted keys/threshold
+      UTxO** — the registry's representative asset for the AID (in version 1, asset id `(checkpoint_policy_id, aid_asset_name)`), fixed by the application with the network, release and checkpoint credential beforehand, current weighted keys/threshold
       in the inline `CheckpointDatum`, read as a CIP-31 reference input and discovered by a
       generic `(policy_id, asset_name)` asset lookup (candidate outref for liveness only,
       revalidated by the consuming tx).
 
     **Lifecycle / freeze are not caller-supplied flags.** The
-    `CheckpointDatum` carries the AID/sequence binding and current weighted key
-    state. The token's role address carries the lifecycle. A consumer accepts
-    only the current **ACTIVE** checkpoint; ARMED, FROZEN, missing,
-    duplicated, or stale candidates all reject. There is no separate shared
+    `CheckpointDatum` carries the AID/sequence binding, the poison and freeze bits and the current weighted key state, and only the validated steps change them (in version 1 the token's role address carried the lifecycle). A consumer accepts only a present, unfrozen, unpoisoned checkpoint at least `W` old (in version 1, only the current **ACTIVE** checkpoint); pending-termination, convicted, missing, duplicated, or stale candidates all reject. There is no separate shared
     freeze registry.
 
 ### Gate flow
@@ -170,7 +165,7 @@ sequenceDiagram
 
     Note over LE,Chk: Gated action (direct-signing venues) —<br/>every swap / borrow / transfer
     LE->>Cage: action tx, signed with the acting AID's current key(s)
-    Cage->>Chk: exactly one sovereign per-AID checkpoint (ref input): current, accepted lineage, ACTIVE role, signer(s) meet current weighted threshold?
+    Cage->>Chk: exactly one sovereign per-AID checkpoint (ref input): current, accepted lineage, eligible state (in version 1, ACTIVE role), signer(s) meet current weighted threshold?
     Cage->>Cred: still unrevoked (absence proofs against the revocation mirrors)?
     Cage-->>LE: trade executes — identity check atomic with it
 ```
@@ -183,10 +178,10 @@ no admission committee, and **without consulting any issuer's current
 checkpoint**. Every subsequent gated action then checks, atomically with the
 trade: the **acting entity's** signature(s) meeting the weighted threshold of the
 current keys in its **sovereign per-AID checkpoint** (read as a CIP-31 reference
-input); that exactly one referenced checkpoint is the **current ACTIVE UTxO in
-the accepted lineage**; and non-revocation across the credential chain's issuer
-TELs. ARMED, FROZEN, missing, duplicated, or stale candidates fail
-closed. Lifecycle is enforced by the checkpoint's role address and lineage,
+input); that exactly one referenced checkpoint is the **current eligible UTxO in
+the accepted lineage** (in version 1, the ACTIVE one); and non-revocation across the credential chain's issuer
+TELs. Frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, or stale candidates fail
+closed (in version 1, ARMED and FROZEN). Lifecycle is enforced by the checkpoint's datum and the registry's token (in version 1, by its role address and lineage),
 not by a separate shared registry.
 
 !!! danger "Correction from the case analysis"
@@ -234,9 +229,9 @@ not by a separate shared registry.
   venue.
 - **Rotation-proof references, with universal re-authorization.** The protocol
   references the AID's stable identity — its **sovereign per-AID checkpoint**
-  `(checkpoint_policy_id, aid_asset_name)` — so the entity rotates keys without
+  the registry's representative asset for the AID (in version 1 `(checkpoint_policy_id, aid_asset_name)`) — so the entity rotates keys without
   re-onboarding. But rotation is **not** transparent to pending actions: a
-  `delta = 0` rotation (`seq + 1`) **consumes** the referenced checkpoint UTxO,
+  `delta = 0` rotation (a later sequence number) **consumes** the referenced checkpoint UTxO,
   so the spent checkpoint is **no longer available as a CIP-31 reference input**
   and any in-flight authorization made under the prior key state is **stale by
   construction** — changing the reference input alone cannot revive an old
@@ -247,8 +242,8 @@ not by a separate shared registry.
   UTxOs need a **current-AID reclaim path**. This does **not** touch historical
   credential evidence — ACDC issuance / TEL seals remain historical evidence
   through issuer rotation until revoked, and are not pending dApp actions.
-- **Cryptographic revocation.** The QVI flips one TEL entry; every gate on the
-  chain sees it at the next root update, with no per-protocol operational
+- **Cryptographic revocation.** The QVI anchors the revocation in its TEL; once anyone pushes it into the
+  revocation mirror, every gate on the chain sees it at the next root update, with no per-protocol operational
   step.
 
 ## cardano-keri's role, precisely bounded
@@ -300,6 +295,6 @@ rationale.
 
 ## One-line summary
 
-cardano-keri makes "verify a vLEI" something a Plutus validator can do, so
+cardano-keri is designed to make "verify a vLEI" something a Plutus validator can do, so
 identity gating inherits the trust profile of the chain plus GLEIF — instead
 of the trust profile of whoever runs the allowlist.

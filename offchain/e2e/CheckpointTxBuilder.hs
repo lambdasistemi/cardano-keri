@@ -27,6 +27,7 @@ module CheckpointTxBuilder (
     rejectionIsOldCostPlominBoundary,
     rejectionReachedProductionScript,
     productionRegisterScenario,
+    bookingSettlementsJourney,
     registryJourney,
     DeployTiming (..),
     stagedBareDevnet,
@@ -207,6 +208,7 @@ import Cardano.KERI.AID.E2E.Script (
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Cardano.KERI.AID.Release qualified as Rel
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
+import Cardano.KERI.Deployment.RefusalAt (evaluationRefusedAt, purposeName, requireRefusedAt)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -229,6 +231,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
  )
 import Cardano.KERI.Deployment.RegistryTransactions qualified as Tx
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..))
+import Cardano.KERI.Deployment.WalletHolding (requireNoneHeld)
 import Cardano.Ledger.Address (
     AccountAddress (..),
     AccountId (..),
@@ -284,6 +287,7 @@ import Cardano.Ledger.Core (
     Script,
     bodyTxL,
     eraProtVerLow,
+    hashScript,
     ppKeyDepositL,
     ppMaxTxSizeL,
  )
@@ -342,7 +346,7 @@ import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Exception (finally, throwIO, try)
-import Control.Monad (forM_, unless, when)
+import Control.Monad (forM, forM_, unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KeyMap
@@ -353,11 +357,12 @@ import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 import Data.Char (isDigit)
+import Data.Either (fromRight)
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
 import Data.List (elemIndex, find, isInfixOf, isPrefixOf, sort, sortOn, stripPrefix)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe, isJust, isNothing, listToMaybe)
+import Data.Maybe (fromMaybe, isJust, listToMaybe)
 import Data.Ord (Down (..))
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
@@ -427,10 +432,13 @@ data CheckpointEnv = CheckpointEnv
     , envApplicationScript :: !(Script ConwayEra)
     , envApplicationHash :: !ScriptHash
     , envStateScript :: !(Script ConwayEra)
+    , envAttestationScript :: !(Script ConwayEra)
     , envStateHash :: !ScriptHash
     , envTemplateOutput :: !(Maybe (TxIn, TxOut ConwayEra))
     , envApplicationReference :: !(Maybe (TxIn, TxOut ConwayEra))
     , envStateReference :: !(Maybe (TxIn, TxOut ConwayEra))
+    , envAttestationReference :: !(Maybe (TxIn, TxOut ConwayEra))
+    , envHashProofReference :: !(Maybe (TxIn, TxOut ConwayEra))
     , envConfiguration :: !(Maybe (TxIn, TxOut ConwayEra))
     -- ^ the registry's configuration record, once its genesis has settled
     , envProvider :: !(Provider IO)
@@ -681,10 +689,13 @@ mkCheckpointEnvWith registryTerms blueprintPath lsq ltxs seed = do
             , envApplicationScript = mkCageScript (artifactProgram (scriptsApplication registry))
             , envApplicationHash = artifactScriptHash (scriptsApplication registry)
             , envStateScript = mkCageScript (scriptsStateProgram registry)
+            , envAttestationScript = mkCageScript (artifactProgram (scriptsAttestation registry))
             , envStateHash = computeScriptHash (scriptsStateProgram registry)
             , envTemplateOutput = Nothing
             , envApplicationReference = Nothing
             , envStateReference = Nothing
+            , envAttestationReference = Nothing
+            , envHashProofReference = Nothing
             , envConfiguration = Nothing
             , envProvider = mkN2CProvider lsq
             , envSubmitter = mkN2CSubmitter ltxs
@@ -2917,6 +2928,17 @@ submitTwoPassWith ::
     IO TxId
 submitTwoPassWith env = submitTwoPassBy (ownerParty env) env
 
+-- | What a submitted transaction left: its identifier, its serialized size and the units each purpose used.
+data Submission = Submission
+    { submissionId :: !TxId
+    , submissionBytes :: !Int
+    , submissionUnits :: !(Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits)
+    , submissionTx :: !ConwayTx
+    -- ^ the signed transaction submitted
+    , submissionCbor :: !BSL.ByteString
+    -- ^ its serialization, the bytes the node was given
+    }
+
 submitTwoPassBy ::
     Party ->
     CheckpointEnv ->
@@ -2925,7 +2947,18 @@ submitTwoPassBy ::
       IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
     ) ->
     IO TxId
-submitTwoPassBy party env label build = do
+submitTwoPassBy party env label build = submissionId <$> submitTwoPassReported party env label build
+
+-- | The same, and what the transaction was: the signed bytes it was submitted as, and the units its scripts used.
+submitTwoPassReported ::
+    Party ->
+    CheckpointEnv ->
+    String ->
+    ( Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+      IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+    ) ->
+    IO Submission
+submitTwoPassReported party env label build = do
     (discovery, expected) <-
         withinSecs 90 (label <> ": build discovery binding") $
             build Map.empty
@@ -2983,7 +3016,15 @@ submitTwoPassBy party env label build = do
         withinSecs 60 ("submit unchanged " <> label) $
             submitTx (envSubmitter env) signedFinal
     case result of
-        Submitted txId -> pure txId
+        Submitted txId ->
+            pure
+                Submission
+                    { submissionId = txId
+                    , submissionBytes = fromIntegral (BSL.length finalBytes)
+                    , submissionUnits = finalUnits
+                    , submissionTx = signedFinal
+                    , submissionCbor = finalBytes
+                    }
         Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
 
 deterministicMargin :: ExUnits -> ExUnits
@@ -4856,6 +4897,16 @@ genesisRegistry env = do
             env
             "singular_state reference deployment"
             (envStateScript env)
+    attestationRef <-
+        deployReferenceScript
+            env
+            "booking_attestation reference deployment"
+            (envAttestationScript env)
+    hashProofRef <-
+        deployReferenceScript
+            env
+            "hash_proof reference deployment (registry)"
+            (envHashProofScript env)
     payer <- payerOf env (ownerParty env)
     seedUtxo <-
         withinSecs 30 (label <> ": query seed") (queryUTxOs (envProvider env) (seedAddress (envOwner env)))
@@ -4911,6 +4962,8 @@ genesisRegistry env = do
             { envTemplateOutput = Just templateOut
             , envApplicationReference = Just applicationRef
             , envStateReference = Just stateRef
+            , envAttestationReference = Just attestationRef
+            , envHashProofReference = Just hashProofRef
             , envConfiguration = Just configUtxo
             }
 
@@ -4947,6 +5000,8 @@ registryReferences env =
         <$> applicationReferenceOf env
         <*> stateReferenceOf env
         <*> configurationOf env
+        <*> attestationReferenceOf env
+        <*> hashProofReferenceOf env
 
 {- | The record a request commits for an identity, booked over the validity
 interval: the devnet owner refunds and controls it, and the deposit is the
@@ -4970,46 +5025,71 @@ stateReferenceOf :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
 stateReferenceOf env =
     requireJust "the state reference script is absent" (envStateReference env)
 
-{- | Book a registration: the identity owner pays the request, which holds the
-deposit, the registration cost and the tip, and the application mints its
-approval.
+attestationReferenceOf :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
+attestationReferenceOf env =
+    requireJust "the booking attestation reference script is absent" (envAttestationReference env)
+
+hashProofReferenceOf :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
+hashProofReferenceOf env =
+    requireJust "the hash-proof reference script is absent" (envHashProofReference env)
+
+{- | Book a registration: the identity owner premints the hash proof of the inception,
+then pays the request, which holds the deposit, the registration cost and the tip;
+the booking spends and burns the proof, the application mints its approval and the
+attestation policy mints the attestation, which returns in change.
 -}
 bookRegistration :: CheckpointEnv -> InceptionExport -> IO Booking
 bookRegistration env fixture = do
     let label = "registration booking"
+    proof <- mintHashProof env (ownerParty env) fixture
     validity <- tipValidity env label
     let record = registrationRecord env fixture validity
         approval = Tx.approval record
-    txId <- submitTwoPassBy (ownerParty env) env label (bookingTx env record validity 0)
+    txId <- submitTwoPassBy (ownerParty env) env label (bookingTx env fixture proof record validity 0)
     booked <-
         pollOutput (envProvider env) txId [0] (hasAsset (applicationPolicy env) approval)
             >>= requireJust (label <> ": the request did not settle")
     pure Booking{bookingOutput = booked, bookingRecord = record, bookingValidity = validity}
 
-{- | The booking transaction of a request over a validity interval. The request holds
-the lovelace the registry requires, moved by the given difference: zero is the
-booking the application accepts.
+{- | The booking transaction of a request over a validity interval, spending the proof
+the inception's premint left. The request holds the lovelace the registry requires,
+moved by the given difference: zero is the booking the application accepts.
 -}
 bookingTx ::
     CheckpointEnv ->
+    InceptionExport ->
+    (TxIn, TxOut ConwayEra) ->
     RegistrationData ->
     ValidityPlan ->
     Integer ->
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
-bookingTx env record validity difference budgets = do
+bookingTx env fixture proof record = bookingsTx env [(fixture, proof, record)]
+
+{- | The booking transaction of several requests, each with the proof its inception's
+premint left: the requests are the first outputs in the order given, and the attestations
+return in the change.
+-}
+bookingsTx ::
+    CheckpointEnv ->
+    [(InceptionExport, (TxIn, TxOut ConwayEra), RegistrationData)] ->
+    ValidityPlan ->
+    Integer ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+bookingsTx env requests validity difference budgets = do
     params <-
         withinSecs 30 "registration booking: query parameters" $
             queryProtocolParams (envProvider env)
     payer <- payerOf env (ownerParty env)
     references <- registryReferences env
     unwrapBuild
-        ( Tx.bookRegistration
+        ( Tx.bookRegistrations
             params
             (deploymentOf env)
             references
             payer
-            record
+            [Tx.BookedRequest{Tx.bookedRecord = record, Tx.bookedInception = fixture, Tx.bookedProof = proof} | (fixture, proof, record) <- requests]
             validity
             difference
             budgets
@@ -5021,17 +5101,13 @@ simpleFee = 3_000_000
 foldFee :: Integer
 foldFee = 4_000_000
 
-{- | What a journey asks of a fold: the booking, its inception, the proof it
-burns and the party that pays. The builder resolves the registry state output
-when none is given, and the party's outputs, from the chain.
+{- | What a journey asks of a fold: the booking and the party that pays. The booking
+attested the inception, so the fold needs no inception, no proof and no observer. The
+builder resolves the registry state output when none is given, and the party's
+outputs, from the chain.
 -}
 data FoldRequest = FoldRequest
     { foldBooking :: !Booking
-    , foldFixture :: !InceptionExport
-    , foldProof :: !(TxIn, TxOut ConwayEra)
-    -- ^ the hash-proof output the fold burns
-    , foldReferences :: ![(TxIn, TxOut ConwayEra)]
-    -- ^ the references of the lifecycle observer and the hash-proof policy
     , foldRegistered :: ![ByteString]
     -- ^ the keys the registry already holds as active
     , foldTerminated :: ![ByteString]
@@ -5062,9 +5138,6 @@ buildFoldTx env request budgets = do
             Tx.FoldPlan
                 { Tx.foldRequest = bookingOutput (foldBooking request)
                 , Tx.foldBooked = bookingRecord (foldBooking request)
-                , Tx.foldInception = foldFixture request
-                , Tx.foldProof = foldProof request
-                , Tx.foldReferences = foldReferences request
                 , Tx.foldRegistered = foldRegistered request
                 , Tx.foldTerminated = foldTerminated request
                 , Tx.foldState = stateUtxo
@@ -5113,20 +5186,14 @@ mintHashProof env party fixture = do
 -- | Fold a booked request into the registry; the party pays and signs.
 foldRegistration ::
     CheckpointEnv ->
-    [(TxIn, TxOut ConwayEra)] ->
     Party ->
-    InceptionExport ->
     Booking ->
-    (TxIn, TxOut ConwayEra) ->
     IO (TxId, ValidityPlan)
-foldRegistration env references party fixture booking proof = do
+foldRegistration env party booking = do
     validity <- tipValidity env "registration fold"
     let plan =
             FoldRequest
                 { foldBooking = booking
-                , foldFixture = fixture
-                , foldProof = proof
-                , foldReferences = references
                 , foldRegistered = []
                 , foldTerminated = []
                 , foldState = Nothing
@@ -5147,14 +5214,28 @@ buildReturnTx ::
     Addr ->
     Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
     IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
-buildReturnTx env party booking validity refundTo budgets = do
+buildReturnTx env party booking validity refundTo = buildReturnBurningTx env party booking validity refundTo []
+
+{- | The same return, composed with the burn of the attestations the party holds in the given
+outputs: the one transaction returns the request and retires what its booking attested.
+-}
+buildReturnBurningTx ::
+    CheckpointEnv ->
+    Party ->
+    Booking ->
+    ValidityPlan ->
+    Addr ->
+    [(TxIn, TxOut ConwayEra)] ->
+    Map.Map (ConwayPlutusPurpose AsIx ConwayEra) ExUnits ->
+    IO (ConwayTx, Set.Set (ConwayPlutusPurpose AsIx ConwayEra))
+buildReturnBurningTx env party booking validity refundTo held budgets = do
     params <-
         withinSecs 30 "registration return: query parameters" $
             queryProtocolParams (envProvider env)
     payer <- payerOf env party
     references <- registryReferences env
     unwrapBuild
-        ( Tx.returnRequests
+        ( Tx.returnRequestsBurning
             params
             (deploymentOf env)
             references
@@ -5162,12 +5243,13 @@ buildReturnTx env party booking validity refundTo budgets = do
             booking
             validity
             refundTo
+            held
             budgets
         )
 
 {- | Whether the node's evaluation of a transaction fails in the script of the
-purpose and in no other way: the refusal of the application, not a setup
-failure.
+purpose and in no other way: the executed script's typed refusal, not a
+failure to set the script up and not a failure at another purpose.
 -}
 refusedAt ::
     CheckpointEnv ->
@@ -5180,13 +5262,10 @@ refusedAt env label party purpose tx = do
     observed <-
         withinSecs 120 (label <> ": evaluate") $
             evaluateTx (envProvider env) (addKeyWitness (partyKey party) tx)
-    case Map.lookup purpose observed of
-        Just (Left failure) ->
-            dbg (label <> ": refused as expected: " <> oneLine (show failure))
-        Just (Right units) ->
-            fail (label <> ": the validator accepted a transaction that must be refused: " <> show units)
-        Nothing ->
-            fail (label <> ": the evaluation did not cover " <> show purpose)
+    -- only the typed failure of a script that ran counts: a set-up failure at the purpose, an acceptance, a failure
+    -- at another purpose and a purpose the evaluation did not cover each fail the assertion
+    requireRefusedAt label observed purpose
+    dbg (label <> ": refused by an executed script at " <> show purpose <> ": " <> take 200 (oneLine (show (Map.lookup purpose observed))))
 
 -- | The spend purpose of a booked request in a transaction that spends it.
 requestSpendPurpose ::
@@ -5213,10 +5292,11 @@ registryJourney env = do
     (fixture, _) <- loadLifecycleFixture
     other <- rsRegistration <$> loadRotateStoryFixture
     references <- deployRegisterReferences env
+    shortProof <- mintHashProof env (ownerParty env) fixture
     shortValidity <- tipValidity env "booking one lovelace short"
-    (shortTx, _) <-
-        bookingTx env (registrationRecord env fixture shortValidity) shortValidity (-1) Map.empty
-    refusedAt env "booking one lovelace short" (ownerParty env) (ConwayMinting (AsIx 0)) shortTx
+    let shortRecord = registrationRecord env fixture shortValidity
+    (shortTx, _) <- bookingTx env fixture shortProof shortRecord shortValidity (-1) Map.empty
+    refusedAt env "booking one lovelace short" (ownerParty env) (ConwayMinting (AsIx (bookingApplicationIx env fixture shortRecord))) shortTx
     (checkpoint, _) <- productionRegisterScenarioUsingReferences env references fixture
     let (checkpointIn, checkpointOut) = checkpointUtxo checkpoint
         key = checkpointKey env fixture
@@ -5234,15 +5314,11 @@ registryJourney env = do
     dbg ("delivered checkpoint " <> show checkpointIn)
     -- a second identity, booked and left unfolded
     second <- bookRegistration env other
-    proof <- mintHashProof env folderParty other
     let foldOf validity =
             buildFoldTx
                 env
                 FoldRequest
                     { foldBooking = second
-                    , foldFixture = other
-                    , foldProof = proof
-                    , foldReferences = drop 1 references
                     , foldRegistered = [key]
                     , foldTerminated = []
                     , foldState = Nothing
@@ -5272,12 +5348,15 @@ registryJourney env = do
         folderParty
         (requestSpendPurpose second strayTx)
         strayTx
+    -- the controller returns its own request after the deadline and, in the same transaction, burns the
+    -- attestation its booking left in its change: the return composed with the burn
+    attestationHeld <- heldAttestation env (ownerParty env) second
     returnTxId <-
         submitTwoPassBy
-            folderParty
+            (ownerParty env)
             env
-            "registration return"
-            (buildReturnTx env folderParty second returnValidity (envOwner env))
+            "registration return composed with the burn of its attestation"
+            (buildReturnBurningTx env (ownerParty env) second returnValidity (envOwner env) [attestationHeld])
     refunded <-
         pollOutput
             (envProvider env)
@@ -5290,7 +5369,16 @@ registryJourney env = do
             )
     unless (isJust refunded) $
         fail "the return did not pay the refund address everything but the tip"
-    duplicateRegistrationJourney env references (checkpointUtxo checkpoint) key other
+    -- the node is asked, and answers, and the wallet holds none of the attestation: a failed query fails the journey
+    requireNoneHeld
+        "the attestation of the returned booking, after its burn"
+        ( fmap (map snd) $
+            withinSecs 30 "query the wallet after the return" $
+                queryUTxOs (envProvider env) (partyAddr (ownerParty env))
+        )
+        (Tx.attestationPolicyId (deploymentOf env))
+        (Tx.attestationName (deploymentOf env) 0 (bookingRecord second))
+    duplicateRegistrationJourney env (checkpointUtxo checkpoint) key other
 
 {- | A second registration of a registered AID cannot be folded. A new identity
 is booked twice and the registry, which holds one key, is the state both folds
@@ -5303,20 +5391,16 @@ checkpoint or the registry's root.
 -}
 duplicateRegistrationJourney ::
     CheckpointEnv ->
-    [(TxIn, TxOut ConwayEra)] ->
     (TxIn, TxOut ConwayEra) ->
     ByteString ->
     InceptionExport ->
     IO ()
-duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = do
+duplicateRegistrationJourney env (heldIn, heldOut) heldKey fixture = do
     let newKey = checkpointKey env fixture
         secondParty = ownerParty env
-        planFor booking proof party registered state validity =
+        planFor booking party registered state validity =
             FoldRequest
                 { foldBooking = booking
-                , foldFixture = fixture
-                , foldProof = proof
-                , foldReferences = drop 1 references
                 , foldRegistered = registered
                 , foldTerminated = []
                 , foldState = state
@@ -5325,10 +5409,8 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
                 }
     firstBooking <- bookRegistration env fixture
     secondBooking <- bookRegistration env fixture
-    firstProof <- mintHashProof env folderParty fixture
-    secondProof <- mintHashProof env secondParty fixture
     preFold <- currentState env
-    let secondPlan = planFor secondBooking secondProof secondParty
+    let secondPlan = planFor secondBooking secondParty
         secondFold registered state validity = buildFoldTx env (secondPlan registered state validity)
     -- the second fold, built against the registry as it stands, is accepted by the scripts
     built <- tipValidity env "second fold, built before the first lands"
@@ -5345,7 +5427,7 @@ duplicateRegistrationJourney env references (heldIn, heldOut) heldKey fixture = 
             folderParty
             env
             "first fold"
-            (buildFoldTx env (planFor firstBooking firstProof folderParty [heldKey] Nothing firstValidity))
+            (buildFoldTx env (planFor firstBooking folderParty [heldKey] Nothing firstValidity))
     (deliveredIn, deliveredOut) <-
         pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (inceptionDatum fixture))
             >>= requireJust "the delivered checkpoint of the first fold did not settle"
@@ -5438,10 +5520,8 @@ productionRegisterScenarioUsingReferences ::
     IO (CheckpointInput, (TxIn, TxOut ConwayEra))
 productionRegisterScenarioUsingReferences env references fixture = do
     checkpointRef <- requireJust "checkpoint_register reference is absent" (listToMaybe references)
-    proof <- mintHashProof env folderParty fixture
     booking <- bookRegistration env fixture
-    (foldTxId, validity) <-
-        foldRegistration env (drop 1 references) folderParty fixture booking proof
+    (foldTxId, validity) <- foldRegistration env folderParty booking
     let facts = registeredFacts env fixture (bookingValidity booking)
     delivered <-
         pollOutput
@@ -6201,11 +6281,6 @@ terminalKeyJourney ::
 terminalKeyJourney env references fixture key = do
     shot <- chainShot env
     again <- bookRegistration env fixture
-    placeholder <- do
-        wallet <-
-            withinSecs 30 "query the wallet" $
-                queryUTxOs (envProvider env) (partyAddr folderParty)
-        requireJust "the folder holds no output" (listToMaybe wallet)
     now <- tipValidity env "fold of a terminal key"
     refused <-
         try
@@ -6213,9 +6288,6 @@ terminalKeyJourney env references fixture key = do
                 env
                 FoldRequest
                     { foldBooking = again
-                    , foldFixture = fixture
-                    , foldProof = placeholder
-                    , foldReferences = drop 1 references
                     , foldRegistered = []
                     , foldTerminated = [key]
                     , foldState = Nothing
@@ -6452,8 +6524,8 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     -- every transaction the command made carries a finite end, as the command reports it from the signed bodies
     forM_ timeDirectory $ \_ -> do
         let ends = [takeWhile (/= ' ') rest | line <- lines out, Just rest <- [afterMarker " valid-until-slot=" line]]
-        unless (length ends == 8 && all (\e -> not (null e) && all isDigit e) ends) $
-            fail ("the first deployment's report names no finite end for each of its eight transactions: " <> show ends)
+        unless (length ends == 7 && all (\e -> not (null e) && all isDigit e) ends) $
+            fail ("the first deployment's report names no finite end for each of its seven transactions: " <> show ends)
     listing <- sort <$> Dir.listDirectory workDir
     decoysAfter <- directoryTree (workDir </> "deploy")
     unless (decoysAfter == decoysBefore) $
@@ -6501,7 +6573,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     templateOut <- resolve "template" (Files.recordTemplate record)
     applicationRef <- scriptReference "application" (Files.recordApplication record)
     stateRef <- scriptReference "state" (Files.recordState record)
-    lifecycleRef <- scriptReference "registration observer" (Files.recordRegistration record)
+    attestationRef <- scriptReference "booking attestation" (Files.recordAttestation record)
     hashProofRef <- scriptReference "hash proof" (Files.recordHashProof record)
     checkpointRef <- scriptReference "checkpoint validator" (Files.recordCheckpoint record)
     configurationOut <- resolve "configuration" (Files.recordConfiguration record)
@@ -6511,7 +6583,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     forM_
         [ ("application", applicationRef, envApplicationScript env0)
         , ("state", stateRef, envStateScript env0)
-        , ("registration observer", lifecycleRef, envLifecycleScript env0)
+        , ("booking attestation", attestationRef, envAttestationScript env0)
         , ("hash proof", hashProofRef, envHashProofScript env0)
         , ("checkpoint validator", checkpointRef, envCheckpointScript env0)
         ]
@@ -6527,9 +6599,11 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
                 { envTemplateOutput = Just templateOut
                 , envApplicationReference = Just applicationRef
                 , envStateReference = Just stateRef
+                , envAttestationReference = Just attestationRef
+                , envHashProofReference = Just hashProofRef
                 , envConfiguration = Just configurationOut
                 }
-    -- a second registry on the same chain: the observer's credential is registered already
+    -- a second registry on the same chain: no credential is registered by either deployment
     let secondDir = scratch </> "second"
     Dir.createDirectory secondDir
     (secondCode, secondOut, secondErr) <- runCkeri secondDir
@@ -6537,28 +6611,31 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     dbg ("second deployment stderr:\n" <> secondErr)
     unless (secondCode == ExitSuccess) $
         fail ("the second ckeri registry deploy failed: " <> show secondCode)
-    unless ("register-observer-credential: skipped" `isInfixOf` secondOut) $
-        fail "the second deployment did not say it skipped the credential"
-    when ("registered the registration observer's reward credential;" `isInfixOf` secondOut) $
-        fail "the second deployment claims it registered the credential"
-    unless ("registered the registration observer's reward credential;" `isInfixOf` out) $
-        fail "the first deployment does not say it registered the credential"
-    (secondIdentity, secondRecord) <-
+    when (any ("reward credential" `isInfixOf`) [out, secondOut]) $
+        fail "a deployment speaks of a reward credential: the attestation policy has none to register"
+    (secondIdentity, _secondRecord) <-
         Files.readDeploymentFiles (secondDir </> "release-identity.json") (secondDir </> "reference-outputs.json")
             >>= either (fail . show) pure
-    unless (isNothing (Files.recordCredentialRegistration secondRecord)) $
-        fail "the second record names a registration of the credential"
     unless (Rel.riSeed secondIdentity /= Rel.riSeed identity) $
         fail "the second registry was created from the first one's seed"
     -- the payer wallet books, a distinct wallet folds
     (fixture, _) <- loadLifecycleFixture
+    -- the premint of the hash proof comes first: the booking spends it
+    proofStarted <- nowMs
+    proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env (ownerParty env) fixture)
+    proofId <- submitSettlingBy env (ownerParty env) "hash-proof mint" proofTx
+    proofSubmitted <- nowMs
+    proof <-
+        pollOutput (envProvider env) proofId [0, 1] (hasAsset (envHashProofPolicy env) (Tx.inceptionProofName fixture))
+            >>= requireJust "the hash-proof output did not settle"
+    proofSettled <- nowMs
     bookValidity <- tipValidityWith slots env "booking"
     let bookRecord = registrationRecord env fixture bookValidity
         approval' = Tx.approval bookRecord
     -- the same transaction, evaluated by the node and by the local evaluation the Koios commands use: the
     -- units are the same for every purpose (the hosted timing only: the genesis is the devnet's own)
     forM_ startedAt $ \startMs -> when (timing == HostedTiming) $ do
-        (discovery, expected) <- bookingTx env bookRecord bookValidity 0 Map.empty
+        (discovery, expected) <- bookingTx env fixture proof bookRecord bookValidity 0 Map.empty
         gDir <- genesisDir
         (nodeSays, localSays) <- evaluationsOf provider gDir startMs (addKeyWitness (partyKey (ownerParty env)) discovery)
         nodeUnits <- requireExactAllRight "evaluation parity: node" expected nodeSays
@@ -6568,7 +6645,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
         dbg ("evaluation parity: " <> show (Map.size nodeUnits) <> " purposes, the same units from both: " <> show nodeUnits)
     bookStarted <- nowMs
     bookId <-
-        submitTwoPassBy (ownerParty env) env "registration booking" (bookingTx env bookRecord bookValidity 0)
+        submitTwoPassBy (ownerParty env) env "registration booking" (bookingTx env fixture proof bookRecord bookValidity 0)
     bookSubmitted <- nowMs
     bookedOut <-
         pollOutput (envProvider env) bookId [0] (hasAsset (applicationPolicy env) approval')
@@ -6576,22 +6653,11 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     bookSettled <- nowMs
     let booking = Booking{bookingOutput = bookedOut, bookingRecord = bookRecord, bookingValidity = bookValidity}
     deployerBooked <- walletLovelace provider genesisAddr
-    proofStarted <- nowMs
-    proofTx <- withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env folderParty fixture)
-    proofId <- submitSettlingBy env folderParty "hash-proof mint" proofTx
-    proofSubmitted <- nowMs
-    proof <-
-        pollOutput (envProvider env) proofId [0, 1] (hasAsset (envHashProofPolicy env) (Tx.inceptionProofName fixture))
-            >>= requireJust "the hash-proof output did not settle"
-    proofSettled <- nowMs
     foldValidity' <- tipValidityWith slots env "registration fold"
     let key = checkpointKey env fixture
         plan =
             FoldRequest
                 { foldBooking = booking
-                , foldFixture = fixture
-                , foldProof = proof
-                , foldReferences = [lifecycleRef, hashProofRef]
                 , foldRegistered = []
                 , foldTerminated = []
                 , foldState = Nothing
@@ -6621,10 +6687,11 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     deployerFolded <- walletLovelace provider genesisAddr
     folderAfter <- walletLovelace provider folderAddress
     -- a second booking of the same identity: the price of a duplicate
+    duplicateProof <- mintHashProof env (ownerParty env) fixture
     duplicateValidity <- tipValidityWith slots env "duplicate booking"
     let duplicateRecord = registrationRecord env fixture duplicateValidity
     duplicateId <-
-        submitTwoPassBy (ownerParty env) env "duplicate booking" (bookingTx env duplicateRecord duplicateValidity 0)
+        submitTwoPassBy (ownerParty env) env "duplicate booking" (bookingTx env fixture duplicateProof duplicateRecord duplicateValidity 0)
     _ <-
         pollOutput (envProvider env) duplicateId [0] (hasAsset (applicationPolicy env) (Tx.approval duplicateRecord))
             >>= requireJust "the duplicate booking did not settle"
@@ -6771,7 +6838,7 @@ registryBookingJourney foldKey startMs socket lsq ltxs = do
                 <> term "--premium" (termsPremium (registryCheckpointTerms terms))
                 <> term "--minimum-ada" (registryMinimumAda terms)
                 <> term "--termination-carrier" (registryTerminationCarrier terms)
-        files = ["--release-identity", identityFile, "--reference-record", recordFile, "--kli-export", exportPath]
+        files = ["--release-identity", identityFile, "--reference-record", recordFile]
         registerArgsFor export_ = ["registry", "register"] <> node <> ["--funding-address", payerText, "--signing-key-file", payerKeyFile, "--release-identity", identityFile, "--reference-record", recordFile, "--kli-export", export_]
         registerArgs = registerArgsFor exportPath
         returnArgs request =
@@ -6808,11 +6875,29 @@ registryBookingJourney foldKey startMs socket lsq ltxs = do
                 unless (needle `isInfixOf` err) $ fail (label <> ": the refusal does not say " <> show needle <> ": " <> err)
             after <- (,,) <$> walletLovelace provider genesisAddr <*> walletLovelace provider folderAddress <*> walletLovelace provider terminationFolderAddress
             unless (before == after) $ fail (label <> " spent lovelace although the command refused it")
+        -- a refusal after the premint settled: the premint is the one transaction that landed, and its fee is all that was spent
+        refusedAfterPremint label args purpose needles = do
+            before <- walletLovelace provider genesisAddr
+            (code, out, err) <- runCkeri label args
+            unless (code == ExitFailure 1) $ fail (label <> " did not refuse: " <> show code)
+            forM_ needles $ \needle ->
+                unless (needle `isInfixOf` err) $ fail (label <> ": the refusal does not say " <> show needle <> ": " <> err)
+            -- the executed script's typed failure, at the purpose of the booking application of these deployed terms
+            unless (evaluationRefusedAt purpose err) $
+                fail (label <> ": the refusal is not the failure of a script that ran at " <> purposeName purpose <> ": " <> err)
+            premintFee <- lineValue "premint-fee" out & requireJust (label <> ": the premint printed no fee")
+            after <- walletLovelace provider genesisAddr
+            unless (before - after == read premintFee) $ fail (label <> " spent more than the premint fee although the booking was refused")
     _ <- succeeds "ckeri registry deploy" deployArgs
     (identity, _) <-
         Files.readDeploymentFiles identityFile recordFile >>= either (fail . show) pure
     env0 <- mkCheckpointEnvWith terms blueprintPath lsq ltxs (txInOfReference (Rel.riSeed identity))
-    let key = checkpointKey env0 export
+    -- the registry the installed commands deployed is the one the library derives: the application the bookings run
+    -- is the application of these deployed terms
+    unless (Consumer.rlApplicationPolicy (Rel.riRelease identity) == scriptHashBytes (envApplicationHash env0)) $
+        fail "the release identity does not name the application the library derives from its seed"
+    let applicationPurpose = ConwayMinting (AsIx (bookingMintIndex env0 (applicationPolicy env0)))
+        key = checkpointKey env0 export
         read' ref = do
             found <- withinSecs 30 "query output" (queryUTxOByTxIn provider (Set.singleton ref))
             requireJust "the node holds no such output" (Map.lookup ref found)
@@ -6881,21 +6966,29 @@ registryBookingJourney foldKey startMs socket lsq ltxs = do
         "return of the second booking before its deadline"
         (returnArgs secondRef)
         ["deadline-not-reached", "can be returned from", "refused by the command, before any transaction", "nothing was submitted; nothing was spent"]
-    -- a booking with a deposit below the application's minimum deposit (the floor of a booking: the registry's
-    -- minimum ADA, checkpoint deposit and freeze bond; the initial floor adds a premium and is the fold's) is not pre-empted by the command: the node's
-    -- evaluation of the application's minting purpose refuses it, and nothing is spent. Another identity
-    -- is booked, as the first identity is registered by now.
-    refused
-        "booking with a deposit one lovelace below the floor"
-        (registerArgsFor multiExportPath <> ["--request-deposit", show (registryMinimumDeposit terms - 1)])
-        ["the node's evaluation refused the booking", "the application's minting purpose", "nothing was submitted; nothing was spent"]
-    -- the control: the same booking at the floor is accepted by the node
+    -- a booking whose deposit does not cover the initial floor is not pre-empted by the command: the node's
+    -- evaluation refuses it at a minting purpose, after the premint settled, and only the premint's fee is spent.
+    -- The initial floor is the registry's minimum ADA, checkpoint deposit, freeze bond and one premium: the initial
+    -- state of the request is not defined below it, and below the carrier floor (without the premium) the
+    -- application refuses the booking outright. Another identity is booked, as the first identity is registered by now.
+    forM_
+        [ ("one lovelace below the carrier floor", registryMinimumDeposit terms - 1)
+        , ("at the carrier floor, which leaves no premium in the pool", registryMinimumDeposit terms)
+        , ("one lovelace below the initial floor", registryInitialFloor terms - 1)
+        ]
+        $ \(what, deposit) ->
+            refusedAfterPremint
+                ("booking with a deposit " <> what)
+                (registerArgsFor multiExportPath <> ["--request-deposit", show deposit])
+                applicationPurpose
+                ["the node's evaluation refused the booking", "the premint of the hash proof settled", "the booking was not submitted"]
+    -- the control: the same booking at the initial floor is accepted by the node
     controlOut <-
-        succeeds "booking at the floor, the control of the short deposit" (registerArgsFor multiExportPath <> ["--request-deposit", show (registryMinimumDeposit terms)])
+        succeeds "booking at the initial floor, the control of the short deposit" (registerArgsFor multiExportPath <> ["--request-deposit", show (registryInitialFloor terms)])
     controlRef <- lineValue "booking-output" controlOut & requireJust "the control booking printed no output" >>= outputReferenceText
     controlOutput <- read' controlRef
     controlBooking <- requireJust "the control booking is not a request" (registrationOfOutput controlOutput)
-    unless (requestDeposit controlBooking == registryMinimumDeposit terms) $ fail "the control booking does not commit the floor deposit"
+    unless (requestDeposit controlBooking == registryInitialFloor terms) $ fail "the control booking does not commit the initial floor deposit"
     -- after the deadline of the second booking a third wallet returns it: the refund address the request
     -- names receives everything but the tip, the returner keeps the tip
     secondOutput <- read' secondRef
@@ -6982,3 +7075,257 @@ journeyTimeSource scratch provider startMs = do
     parameters <- queryProtocolParams provider
     writeDevnetTimeSource gDir startMs (getVersion (pvMajor (parameters ^. ppProtocolVersionL))) directory
     pure directory
+
+{- | The index of the application's minting purpose in a booking of a request: the
+application, the attestation and the hash-proof policies all mint, in the order of
+their policy identifiers.
+-}
+bookingApplicationIx :: CheckpointEnv -> InceptionExport -> RegistrationData -> Word32
+bookingApplicationIx env fixture record =
+    mintingIndex (applicationPolicy env) (bookingMinted env [(fixture, record)])
+
+{- | What the booking of requests mints, the requests in the order of their output positions: each
+approval and attestation once, and each proof burned.
+-}
+bookingMinted :: CheckpointEnv -> [(InceptionExport, RegistrationData)] -> MultiAsset
+bookingMinted env requests =
+    mconcat
+        [ tokenValue (applicationPolicy env) (Tx.approval record) 1
+            <> tokenValue (Tx.attestationPolicyId (deploymentOf env)) (Tx.attestationName (deploymentOf env) position record) 1
+            <> tokenValue (envHashProofPolicy env) (Tx.inceptionProofName fixture) (-1)
+        | (position, (fixture, record)) <- zip [0 ..] requests
+        ]
+
+{- | The output of a party's wallet that holds the attestation of a request booked alone: the
+attestation named for its first output.
+-}
+heldAttestation :: CheckpointEnv -> Party -> Booking -> IO (TxIn, TxOut ConwayEra)
+heldAttestation env party booking = do
+    outputs <-
+        withinSecs 30 "query the wallet for the attestation" $
+            queryUTxOs (envProvider env) (partyAddr party)
+    requireJust
+        "no output of the wallet holds the attestation of the booking"
+        ( find
+            ( hasAsset
+                (Tx.attestationPolicyId (deploymentOf env))
+                (Tx.attestationName (deploymentOf env) 0 (bookingRecord booking))
+                . snd
+            )
+            outputs
+        )
+
+{- | The lines that report a submitted transaction: its identifier, its serialized size in bytes and
+the units each purpose used, the purposes of a booking named for the policy that runs.
+-}
+settlementReport :: CheckpointEnv -> String -> [(InceptionExport, RegistrationData)] -> Submission -> [String]
+settlementReport env label requests submission =
+    ("settlement " <> label <> ": transaction " <> show (submissionId submission) <> " serialized-bytes " <> show (submissionBytes submission))
+        : [ "settlement " <> label <> ": redeemer " <> role purpose <> " memory " <> show memory <> " steps " <> show steps
+          | (purpose, ExUnits memory steps) <- Map.toList (submissionUnits submission)
+          ]
+  where
+    minted = bookingMinted env requests
+    roles =
+        [ (ConwayMinting (AsIx (mintingIndex (applicationPolicy env) minted)), "application mint")
+        , (ConwayMinting (AsIx (mintingIndex (Tx.attestationPolicyId (deploymentOf env)) minted)), "attestation mint")
+        , (ConwayMinting (AsIx (mintingIndex (envHashProofPolicy env) minted)), "hash-proof mint")
+        ]
+    role purpose = maybe (show purpose) (\name -> name <> " " <> show purpose) (lookup purpose roles)
+
+{- | A booking of one request and a booking of two requests in one transaction, each settled on
+the devnet: the identity, deposit and output position of each request differ, and the report
+carries each transaction's signed identifier, its serialized size and the units each redeemer used.
+-}
+bookingSettlementsJourney :: CheckpointEnv -> IO ()
+bookingSettlementsJourney env = do
+    (single, _) <- loadLifecycleFixture
+    rotated <- rsRegistration <$> loadRotateStoryFixture
+    multiPath <- getDataFileName "deployment-test/fixtures/kli-export-2-of-5.cesr"
+    multi <- BS.readFile multiPath >>= either fail pure . parseInceptionExport
+    params <-
+        withinSecs 30 "settlements: query parameters" $
+            queryProtocolParams (envProvider env)
+    let terms = registryParameters (envTerms env)
+        lovelaceOf record = requestDeposit record + registrationCost terms + minimumTip terms
+        attestationPolicy = Tx.attestationPolicyId (deploymentOf env)
+        held position record = hasAsset attestationPolicy (Tx.attestationName (deploymentOf env) position record)
+    dbg ("settlement chain: protocol version " <> show (pvMajor (params ^. ppProtocolVersionL)))
+    -- the application's purpose index the installed assertions bind to is the index of the real booking's mint map
+    oneForIndex <- do
+        validity <- tipValidity env "settlement: index control"
+        pure (registrationRecord env single validity)
+    unless (bookingMintIndex env (applicationPolicy env) == mintingIndex (applicationPolicy env) (bookingMinted env [(single, oneForIndex)])) $
+        fail "settlement: the application's purpose index of a booking is not its position among the booking's policies"
+    -- one booking, its request at output 0 and the attestation in the change at output 1
+    oneProof <- mintHashProof env (ownerParty env) single
+    oneValidity <- tipValidity env "settlement: one booking"
+    let oneRecord = registrationRecord env single oneValidity
+    oneSubmission <-
+        submitTwoPassReported (ownerParty env) env "settlement: one booking" (bookingTx env single oneProof oneRecord oneValidity 0)
+    requestOne <-
+        pollOutput (envProvider env) (submissionId oneSubmission) [0] (hasAsset (applicationPolicy env) (Tx.approval oneRecord))
+            >>= requireJust "settlement: the single request did not settle"
+    changeOne <-
+        pollOutput (envProvider env) (submissionId oneSubmission) [1] (held 0 oneRecord)
+            >>= requireJust "settlement: the attestation of the single booking is not in the change"
+    unless (unCoin (snd requestOne ^. coinTxOutL) == lovelaceOf oneRecord) $
+        fail "settlement: the single request does not hold its deposit, its cost and the tip"
+    dbg ("settlement one booking: request " <> show (fst requestOne) <> " attestation held in " <> show (fst changeOne))
+    mapM_ (dbg . ("  " <>)) (settlementReport env "one booking" [(single, oneRecord)] oneSubmission)
+    evidence <- evidenceDirectory
+    forM_ evidence $ \directory -> do
+        writeSettlementEvidence env directory "one-booking" oneSubmission
+        writeRunningParameters env directory
+    -- two bookings in one transaction: requests at outputs 0 and 1, both attestations in the change at output 2
+    firstProof <- mintHashProof env (ownerParty env) rotated
+    secondProof <- mintHashProof env (ownerParty env) multi
+    twoValidity <- tipValidity env "settlement: two bookings"
+    let firstRecord = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env) rotated twoValidity
+        secondRecord = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env + 1_000_000) multi twoValidity
+    unless (requestDeposit firstRecord /= requestDeposit secondRecord && requestKey firstRecord /= requestKey secondRecord) $
+        fail "settlement: the two requests do not differ in deposit and identity"
+    twoSubmission <-
+        submitTwoPassReported
+            (ownerParty env)
+            env
+            "settlement: two bookings"
+            (bookingsTx env [(rotated, firstProof, firstRecord), (multi, secondProof, secondRecord)] twoValidity 0)
+    requestFirst <-
+        pollOutput (envProvider env) (submissionId twoSubmission) [0] (hasAsset (applicationPolicy env) (Tx.approval firstRecord))
+            >>= requireJust "settlement: the first of two requests did not settle"
+    requestSecond <-
+        pollOutput (envProvider env) (submissionId twoSubmission) [1] (hasAsset (applicationPolicy env) (Tx.approval secondRecord))
+            >>= requireJust "settlement: the second of two requests did not settle"
+    changeTwo <-
+        pollOutput (envProvider env) (submissionId twoSubmission) [2] (\out -> held 0 firstRecord out && held 1 secondRecord out)
+            >>= requireJust "settlement: the attestations of the two bookings are not both in the change, named for their real positions"
+    unless (unCoin (snd requestFirst ^. coinTxOutL) == lovelaceOf firstRecord && unCoin (snd requestSecond ^. coinTxOutL) == lovelaceOf secondRecord) $
+        fail "settlement: a request of the double booking does not hold its own deposit, its cost and the tip"
+    dbg ("settlement two bookings: requests " <> show (fst requestFirst) <> " " <> show (fst requestSecond) <> " attestations held in " <> show (fst changeTwo))
+    mapM_ (dbg . ("  " <>)) (settlementReport env "two bookings" [(rotated, firstRecord), (multi, secondRecord)] twoSubmission)
+    forM_ evidence $ \directory -> writeSettlementEvidence env directory "two-bookings" twoSubmission
+
+{- | Where a run keeps the public artifacts of its settlements, when it is asked to: a directory
+named by @KERI_EVIDENCE_DIR@. Nothing secret is written: the signed transactions, what the node
+reads back of their reference outputs and of their own outputs, and the running parameters.
+-}
+evidenceDirectory :: IO (Maybe FilePath)
+evidenceDirectory = lookupEnv "KERI_EVIDENCE_DIR"
+
+{- | The public artifacts of a settled booking transaction: the signed bytes the node was given, its
+identifier and length, the outputs the chain holds for it, and for each of its minting purposes the policy that ran, the
+output referenced for its script and the script hash that output holds, read back from the node and
+compared with the program the production derivation gives the registry.
+-}
+writeSettlementEvidence :: CheckpointEnv -> FilePath -> String -> Submission -> IO ()
+writeSettlementEvidence env directory label submission = do
+    Dir.createDirectoryIfMissing True directory
+    let tx = submissionTx submission
+        body = tx ^. bodyTxL
+        bodyId = txIdTx tx
+        MultiAsset policies = body ^. mintTxBodyL
+        references = body ^. referenceInputsTxBodyL
+        outputCount = length (body ^. outputsTxBodyL)
+        roles =
+            [ (PolicyID (envHashProofHash env), "hash-proof")
+            , (Tx.attestationPolicyId (deploymentOf env), "booking-attestation")
+            , (applicationPolicy env, "application")
+            ]
+    unless (bodyId == submissionId submission) $
+        fail (label <> ": the body of the signed transaction does not hash to the identifier the node gave")
+    BSL.writeFile (directory </> label <> ".tx.cbor") (submissionCbor submission)
+    readBack <-
+        withinSecs 30 (label <> ": read back the reference outputs") $
+            queryUTxOByTxIn (envProvider env) references
+    onChain <-
+        withinSecs 30 (label <> ": read back the outputs of the transaction") $
+            queryUTxOByTxIn
+                (envProvider env)
+                (Set.fromList [TxIn (submissionId submission) (TxIx (fromIntegral position)) | position <- [0 .. outputCount - 1]])
+    purposeLines <-
+        forM (zip [0 :: Int ..] (Map.keys policies)) $ \(position, policy@(PolicyID hash)) -> do
+            role <- requireJust (label <> ": mint purpose " <> show position <> " is no policy of the registry") (lookup policy roles)
+            let carriers =
+                    [ (ref, hashScript script)
+                    | (ref, out) <- Map.toList readBack
+                    , SJust script <- [out ^. referenceScriptTxOutL]
+                    , hashScript script == hash
+                    ]
+            (ref, embedded) <- case carriers of
+                [carrier] -> pure carrier
+                _ -> fail (label <> ": mint purpose " <> show position <> " has " <> show (length carriers) <> " referenced outputs that hold its script")
+            pure
+                ( unwords
+                    [ "mint-purpose"
+                    , show position
+                    , "role"
+                    , role
+                    , "policy"
+                    , hexOf (scriptHashBytes hash)
+                    , "reference-input"
+                    , requestText ref
+                    , "embedded-script-hash"
+                    , hexOf (scriptHashBytes embedded)
+                    , "production-derived-hash"
+                    , hexOf (scriptHashBytes hash)
+                    ]
+                )
+    let outputLine (TxIn _ (TxIx position), out) =
+            unwords
+                [ "output"
+                , show position
+                , "address"
+                , fromRight "?" (testAddressText (out ^. addrTxOutL))
+                , "lovelace"
+                , show (unCoin (out ^. coinTxOutL))
+                , "assets"
+                , assetsText (out ^. valueTxOutL)
+                ]
+        assetsText (MaryValue _ (MultiAsset assets)) =
+            show [(hexOf (scriptHashBytes policyHash), hexOf (SBS.fromShort name), quantity) | (PolicyID policyHash, names) <- Map.toList assets, (AssetName name, quantity) <- Map.toList names]
+    blueprint <- lookupEnv "KERI_CHECKPOINT_BLUEPRINT"
+    writeFile
+        (directory </> label <> ".txt")
+        ( unlines $
+            [ "label " <> label
+            , "node-transaction-id " <> show (submissionId submission)
+            , "body-hash-transaction-id " <> show bodyId
+            , "signed-cbor-bytes " <> show (BSL.length (submissionCbor submission))
+            , "serialized-bytes-reported " <> show (submissionBytes submission)
+            , "blueprint " <> fromMaybe "unset" blueprint
+            ]
+                <> purposeLines
+                <> map outputLine (Map.toList onChain)
+        )
+
+-- | The running cost models and the parameters the transaction limits come from, as the node reports them.
+writeRunningParameters :: CheckpointEnv -> FilePath -> IO ()
+writeRunningParameters env directory = do
+    Dir.createDirectoryIfMissing True directory
+    params <- withinSecs 30 "evidence: query the running parameters" (queryProtocolParams (envProvider env))
+    let models = params ^. ppCostModelsL
+        coefficients = maybe [] getCostModelParams (Map.lookup PlutusV3 (costModelsValid models))
+    writeFile (directory </> "cost-model-plutus-v3.txt") (unlines (map show coefficients))
+    BSL.writeFile (directory </> "cost-models.cbor") (serialize (eraProtVerLow @ConwayEra) models)
+    writeFile
+        (directory </> "protocol.txt")
+        ( unlines
+            [ "protocol-version " <> show (pvMajor (params ^. ppProtocolVersionL))
+            , "plutus-v3-coefficients " <> show (length coefficients)
+            , "max-tx-ex-units " <> show (params ^. ppMaxTxExUnitsL)
+            , "max-tx-size " <> show (params ^. ppMaxTxSizeL)
+            ]
+        )
+
+{- | The policies a booking mints under: the hash proof it burns, the attestation it issues and the
+application's approvals.
+-}
+bookingPolicies :: CheckpointEnv -> [PolicyID]
+bookingPolicies env = [envHashProofPolicy env, Tx.attestationPolicyId (deploymentOf env), applicationPolicy env]
+
+{- | The index of a policy's minting purpose in a booking: its position among the policies the booking mints
+under, in the order of their identifiers.
+-}
+bookingMintIndex :: CheckpointEnv -> PolicyID -> Word32
+bookingMintIndex env policy = fromIntegral (length (filter (< policy) (bookingPolicies env)))

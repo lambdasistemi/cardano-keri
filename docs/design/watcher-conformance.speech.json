@@ -23,11 +23,11 @@
       "pause": 400
     },
     {
-      "text": "Review result, 11 September 2026: KERI specifies first-seen processing, validation, and recovery. Our current predicates cover a narrower checkpoint service. The missing work is an explicit contract connecting observation, retained history, conflict reporting, consumer policy, and financial actions. The checkpoint predicate alone does not establish watcher conformance.",
+      "text": "Review result, 11 September 2026: KERI specifies first-seen processing, validation, and recovery. At the reviewed commit the predicates covered a narrower checkpoint service. The missing work is an explicit contract connecting observation, retained history, conflict reporting, consumer policy, and financial actions. The checkpoint predicate alone does not establish watcher conformance.",
       "pause": 400
     },
     {
-      "text": "The subsequent double-rotation review also identifies an economic gap: evidence can be admissible at one tip and become unusable before an observer can act. The model provides no guaranteed challenge interval; both another rotation and close can move the target immediately. See Rapid rotation and the challenge interval.",
+      "text": "The subsequent double-rotation review also identifies an economic gap: evidence can be admissible at one tip and become unusable before an observer can act. At the reviewed commit the model provided no guaranteed challenge interval; both another rotation and close could move the target immediately (the accepted design has no close). See Rapid rotation and the challenge interval.",
       "pause": 400
     },
     {
@@ -49,11 +49,15 @@
       "pause": 400
     },
     {
-      "text": "The executable definitions are Duplicity.duplicityAt and the computed Checkpoint.Env.duplicityAt in the Lean sources. convict_requires_concrete_pair and parked_convict_requires_concrete_pair connect successful transitions to that evidence. The existing terminality, payout and monotonicity theorems remain in force. The simulator replays the model's concrete corpus through both its module and the code embedded in its page. Its compact evidence selector chooses a documented example pair; it does not verify real signatures.",
+      "text": "The executable definitions are Duplicity.duplicityAt and the computed Checkpoint.Env.duplicityAt in the Lean sources. convict_requires_concrete_pair connects successful transitions to that evidence. The existing terminality, payout and monotonicity theorems remain in force. The simulator replays the model's concrete corpus through both its module and the code embedded in its page. Its compact evidence selector chooses a documented example pair; it does not verify real signatures.",
       "pause": 400
     },
     {
-      "text": "The controller’s booking or the submitter’s advance must bind the installed writer digest to its signed bytes. The convictor must open the rival’s digest on its signed bytes against the authenticated predecessor. The comparison assumes the digest has no collision on this pair. Keys and their commitments share an identity after verification. The model takes wire structure, prior links, signatures and receipts as verified inputs. Implementing these checks in the decoder and validators remains open.",
+      "text": "The controller at booking or the submitter at advance must bind the installed writer digest to its signed bytes. At conviction, the policy reads the writer digest from the spent checkpoint and checks the convictor’s opening of the rival digest against the rival’s signed bytes. The predecessor must be authenticated. Comparing the digests assumes collision resistance for this pair of signed bodies.",
+      "pause": 400
+    },
+    {
+      "text": "Keys and their commitments share an identity after a verified opening. The model takes wire structure, prior links, signatures and receipts as verified inputs. Implementing these bindings in the decoder and validators remains open. The earlier decoded-content comparison agrees with the digest test when its decoding distinguishes the two signed bodies, including their extension bytes.",
       "pause": 400
     },
     {
@@ -329,6 +333,6 @@
   ],
   "_source": {
     "file": "watcher-conformance.md",
-    "sha256": "6963a9c56677ea31f3bd71d85124808e2ee18f0a277f270d0b59334fe033bcbc"
+    "sha256": "8357946f7fe6f0e611fe3f60f6b96df42ab392fc38091df9f47b953ef5cc347d"
   }
 }

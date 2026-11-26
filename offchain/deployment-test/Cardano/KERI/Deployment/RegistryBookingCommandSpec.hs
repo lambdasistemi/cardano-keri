@@ -18,14 +18,14 @@ import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
 import Cardano.KERI.Deployment.NodeSocketRuntime
 import Cardano.KERI.Deployment.RegistryBookingChain
 import Cardano.KERI.Deployment.RegistryBookingCommand
-import Cardano.KERI.Deployment.RegistryChain (Observation (..), Refusal (..), RegistryRuntime (..), feeOf, foldWindow, whileConnected)
+import Cardano.KERI.Deployment.RegistryChain (Observation (..), Refusal (..), RegistryRuntime (..), foldWindow, whileConnected)
 import Cardano.KERI.Deployment.RegistryCommandSpec (capturing, capturingLive)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (Faults (..), noFaults, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
 import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, encodeSnapshot)
-import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..), registryRootOf)
+import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
 import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningKey)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
@@ -43,7 +43,7 @@ import Control.Exception (AsyncException (..), ErrorCall (..), SomeException, br
 import Control.Monad (forM_, join, unless, void, when)
 import Data.Aeson (Value, encode, object, (.=))
 import Data.Bifunctor qualified as Bi
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
+import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Lazy qualified as BL
@@ -116,7 +116,6 @@ withSetup world action = withSystemTempDirectory "registry-booking-command" $ \s
                     , rfTimeoutSeconds = 5
                     , rfReleaseIdentity = identityFile
                     , rfReferenceRecord = recordFile
-                    , rfKliExport = export
                     , rfRequest = ""
                     , rfSnapshot = scratch </> "snapshot.json"
                     , rfSnapshotOut = Nothing
@@ -154,17 +153,23 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 code `shouldBe` ExitSuccess
                 transactions <- accepted world
                 let booking = last transactions
+                    premint = last (init transactions)
                     txText = T.unpack (renderTransactionId (transactionId booking))
+                    premintText = T.unpack (renderTransactionId (transactionId premint))
                     linesOut = lines out
                     position needle = length (takeWhile (not . (needle `isInfixOf`)) linesOut)
                 -- spelled values: tip slot 10000 of one-second slots from the origin; five slots wide; 90 s to process
                 out `shouldSatisfy` ("validity-interval-slots: 10000..10005" `isInfixOf`)
                 out `shouldSatisfy` ("validity-interval-ms: 1800010000000..1800010005000" `isInfixOf`)
                 out `shouldSatisfy` ("deadline-ms: 1800010095000" `isInfixOf`)
-                out `shouldSatisfy` ("time-left-ms: 93900" `isInfixOf`)
+                -- the premint is signed first: half a second of the chain's clock less is left than for a booking alone
+                out `shouldSatisfy` ("time-left-ms: 93400" `isInfixOf`)
+                out `shouldSatisfy` (("premint-transaction: " <> premintText) `isInfixOf`)
+                out `shouldSatisfy` (("proof-output: " <> premintText <> "#0") `isInfixOf`)
                 out `shouldSatisfy` (("booking-transaction: " <> txText) `isInfixOf`)
                 out `shouldSatisfy` (("booking-output: " <> txText <> "#0") `isInfixOf`)
                 -- in the order the transactions happen
+                (position "premint-transaction" < position "validity-interval-ms") `shouldBe` True
                 (position "validity-interval-ms" < position "booking-transaction") `shouldBe` True
                 (position "deadline-ms" < position "booking-transaction") `shouldBe` True
                 (position "booking-transaction" < position "booking-output") `shouldBe` True
@@ -341,16 +346,16 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                             }
                 (code, out, _) <- runCaptured (runRegistryFoldWith opener settings)
                 code `shouldBe` ExitSuccess
-                [premint, foldTx] <- reverse . take 2 . reverse <$> accepted world
+                [foldTx] <- reverse . take 1 . reverse <$> accepted world
                 let text txId = T.unpack (renderTransactionId (transactionId txId))
                     linesOut = lines out
                     position needle = length (takeWhile (not . (needle `isInfixOf`)) linesOut)
                 out `shouldSatisfy` ("snapshot-supplied-by: the deployer" `isInfixOf`)
-                out `shouldSatisfy` (("premint-transaction: " <> text premint) `isInfixOf`)
                 out `shouldSatisfy` (("fold-transaction: " <> text foldTx) `isInfixOf`)
                 out `shouldSatisfy` (("checkpoint-output: " <> text foldTx <> "#0") `isInfixOf`)
-                (position "snapshot-supplied-by" < position "premint-transaction") `shouldBe` True
-                (position "premint-transaction" < position "fold-transaction") `shouldBe` True
+                (position "snapshot-supplied-by" < position "fold-transaction") `shouldBe` True
+                -- the booking attested the inception: no premint is made, none is reported
+                out `shouldSatisfy` (not . ("premint" `isInfixOf`))
                 out `shouldSatisfy` ("snapshot-written: " `isInfixOf`)
                 out `shouldSatisfy` ("an input the next fold checks again" `isInfixOf`)
                 written <- BS.readFile (setupDirectory setup </> "after.json")
@@ -396,28 +401,6 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 code `shouldBe` ExitFailure 1
                 err `shouldSatisfy` ("deadline-reached: the timing condition for a return can be met from 1800010095000" `isInfixOf`)
                 submissionsMade world >>= (`shouldBe` sent0)
-        it "stops when the registry moved after the check and prints the premint, the proof output, what the node last confirmed, and that nothing is retried" $ do
-            world <- newWorld 1_000
-            export <- loadExport "kli-export-single.cesr"
-            multi <- loadExport "kli-export-2-of-5.cesr"
-            (request, _) <- bookDirectly world export
-            base <- length <$> accepted world
-            withSetup world $ \setup -> do
-                BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
-                let faults = noFaults{afterAccepted = \n chain -> if n == base then moveRegistryRoot world [keyOf multi] chain else chain}
-                (opener, _) <- openerOver faults world folderAddress
-                (code, _, err) <-
-                    runCaptured (runRegistryFoldWith opener (setupFold setup){rfRequest = T.pack (requestText request)})
-                code `shouldBe` ExitFailure 1
-                [premint] <- drop base <$> accepted world
-                Just proof <- pure (proofOutputOf world premint)
-                Just (movedRef, _) <- stateOutputOf world
-                err `shouldSatisfy` (("premint-transaction: " <> T.unpack (renderTransactionId (transactionId premint))) `isInfixOf`)
-                err `shouldSatisfy` ((("proof-output: " <>) . requestText) proof `isInfixOf`)
-                err `shouldSatisfy` ((("node-confirmed-state: " <>) . requestText) movedRef `isInfixOf`)
-                err `shouldSatisfy` (("root " <> hexOf (registryRootOf [keyOf multi] [])) `isInfixOf`)
-                err `shouldSatisfy` ("not retried: the premint is not minted again and no transaction is sent again by this command" `isInfixOf`)
-                err `shouldSatisfy` (not . ("fold-transaction" `isInfixOf`))
         it "says each fold-window row in its own words: the deadline reached, the clock in conflict, no slot remains, and never a deadline passed where only a slot is missing" $ do
             let run slotMs tipOf elapsed = do
                     world <- newWorld slotMs
@@ -433,7 +416,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                         pure err
             w1 <- run 1_000 (\d -> (d - originMs) `div` 1_000) 0
             w1 `shouldSatisfy` ("deadline-reached: the timing condition for a return can be met from 1800010095000 ms [W1]" `isInfixOf`)
-            w1 `shouldSatisfy` ("first window check, before the premint" `isInfixOf`)
+            w1 `shouldSatisfy` ("at the window check" `isInfixOf`)
             w1 `shouldSatisfy` (not . ("passed" `isInfixOf`))
             w2 <- run 1_000 (\d -> (d - originMs) `div` 1_000 - 2) 3_000
             w2 `shouldSatisfy` ("time-evidence-conflicts [W2]" `isInfixOf`)
@@ -461,33 +444,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 err `shouldSatisfy` ("nothing was submitted; nothing was spent" `isInfixOf`)
                 err `shouldSatisfy` (not . ("deadline has passed" `isInfixOf`))
                 submissionsMade world >>= (`shouldBe` sent0)
-        it "after the premint settled, names the premint and that the fold was not submitted, and never says to run again" $ do
-            world <- newWorld 1_000
-            export <- loadExport "kli-export-single.cesr"
-            (request, _) <- bookDirectly world export
-            setHorizon world 3
-            base <- length <$> accepted world
-            withSetup world $ \setup -> do
-                BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
-                (opener0, _) <- openerOver noFaults world folderAddress
-                let opener access use =
-                        opener0 access $ \(runtime, payer) ->
-                            use
-                                ( runtime{rtTransactions = (rtTransactions runtime){trObserve = \txId -> trObserve (rtTransactions runtime) txId >> advanceClock world 4_000}}
-                                , payer
-                                )
-                (code, _, err) <- runCaptured (runRegistryFoldWith opener (setupFold setup){rfRequest = T.pack (requestText request)})
-                code `shouldBe` ExitFailure 1
-                [premint] <- drop base <$> accepted world
-                err `shouldSatisfy` ("the fold was not submitted" `isInfixOf`)
-                err `shouldSatisfy` ("check: second window check, after the premint" `isInfixOf`)
-                err `shouldSatisfy` (not . ("before any transaction" `isInfixOf`))
-                err `shouldSatisfy` (not . ("nothing was spent" `isInfixOf`))
-                err `shouldSatisfy` ("premint-fee: " `isInfixOf`)
-                err `shouldSatisfy` (("premint-transaction: " <> T.unpack (renderTransactionId (transactionId premint))) `isInfixOf`)
-                err `shouldSatisfy` (not . ("run again" `isInfixOf`))
-                err `shouldSatisfy` (not . ("try again" `isInfixOf`))
-        it "says a node that could not be read at the first stage is not a retryable window: nothing submitted, no run-again hint; at the second stage it names the one settled premint, its fee, proof output and last state, and that the fold was not submitted" $ do
+        it "says a node that could not be read is not a retryable window: nothing submitted, no run-again hint" $ do
             let failing = toException (LocalStateQueryTimeout 1_000_000)
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
@@ -498,26 +455,12 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 sent0 <- submissionsMade world
                 (code1, _, first) <- runCaptured (runRegistryFoldWith (openerChanged (failingObservation 1 failing) world folderAddress) settings)
                 code1 `shouldBe` ExitFailure 1
-                first `shouldSatisfy` ("stopped at the first stage, the node could not be read" `isInfixOf`)
+                first `shouldSatisfy` ("registry fold stopped, the node could not be read" `isInfixOf`)
                 first `shouldSatisfy` ("nothing was submitted; nothing was spent" `isInfixOf`)
                 first `shouldSatisfy` (not . ("run again" `isInfixOf`))
                 first `shouldSatisfy` (not . ("[W4]" `isInfixOf`))
                 submissionsMade world >>= (`shouldBe` sent0)
-                base <- length <$> accepted world
-                Just (stateRef, _) <- stateOutputOf world
-                (code2, _, second) <- runCaptured (runRegistryFoldWith (openerChanged (failingObservation 2 failing) world folderAddress) settings)
-                code2 `shouldBe` ExitFailure 1
-                [premint] <- drop base <$> accepted world
-                Just proof <- pure (proofOutputOf world premint)
-                second `shouldSatisfy` ("stopped after the premint settled, the node could not be read" `isInfixOf`)
-                second `shouldSatisfy` (("premint-transaction: " <> T.unpack (renderTransactionId (transactionId premint))) `isInfixOf`)
-                second `shouldSatisfy` (("premint-fee: " <> show (feeOf premint)) `isInfixOf`)
-                second `shouldSatisfy` (("proof-output: " <> requestText proof) `isInfixOf`)
-                second `shouldSatisfy` (("node-confirmed-state: " <> requestText stateRef) `isInfixOf`)
-                second `shouldSatisfy` ("the fold was not submitted" `isInfixOf`)
-                second `shouldSatisfy` (not . ("submitted again" `isInfixOf`))
-                submissionsMade world >>= (`shouldBe` sent0 + 1)
-        it "keeps the flushed settlement receipt: what a reader of the pipe has before the premint settles and, when the next read of the node begins, after it" $ do
+        it "keeps the flushed handoff line: what a reader of the pipe has before the node is first read and, when the settlement of the fold is awaited, after it was handed over" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
             (request, _) <- bookDirectly world export
@@ -535,21 +478,26 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                                             modifyIORef' calls (+ 1)
                                             n <- readIORef calls
                                             seen <- readLive
-                                            modifyIORef' (if n == 1 then pipeEarly else pipeLate) (const seen)
+                                            when (n == 1) (modifyIORef' pipeEarly (const seen))
                                             rtObserve runtime
+                                        , rtTransactions =
+                                            (rtTransactions runtime)
+                                                { trObserve = \txId -> do
+                                                    seen <- readLive
+                                                    modifyIORef' pipeLate (const seen)
+                                                    trObserve (rtTransactions runtime) txId
+                                                }
                                         }
                         _ <- try @ExitCode (runRegistryFoldWith (openerChanged watching world folderAddress) (setupFold setup){rfRequest = T.pack (requestText request)})
                         pure ()
-                [premint, _] <- reverse . take 2 . reverse <$> accepted world
+                [foldTx] <- reverse . take 1 . reverse <$> accepted world
                 pipeBefore <- readIORef pipeEarly
                 pipeAfter <- readIORef pipeLate
-                -- before the receipt: the supplier, not the premint; after it: id, fee and proof output
+                -- before the node is read: the supplier, no transaction; once the fold awaits settlement: its id, already flushed
                 pipeBefore `shouldSatisfy` ("snapshot-supplied-by:" `isInfixOf`)
-                pipeBefore `shouldSatisfy` (not . ("premint-transaction" `isInfixOf`))
-                pipeAfter `shouldSatisfy` (("premint-transaction: " <> T.unpack (renderTransactionId (transactionId premint))) `isInfixOf`)
-                pipeAfter `shouldSatisfy` ("premint-fee: " `isInfixOf`)
-                pipeAfter `shouldSatisfy` ("proof-output: " `isInfixOf`)
-        it "tells a fold that may have reached the node from one that did not: the attempted id, the uncertainty and the last confirmed state; and a node client that ends at each stage" $ do
+                pipeBefore `shouldSatisfy` (not . ("handing fold" `isInfixOf`))
+                pipeAfter `shouldSatisfy` (("handing fold " <> T.unpack (renderTransactionId (transactionId foldTx)) <> " to the node") `isInfixOf`)
+        it "tells a fold that may have reached the node from one that did not: the attempted id, the uncertainty and the last confirmed state; and a node client that ends before and after the fold is signed" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
             (request, _) <- bookDirectly world export
@@ -559,29 +507,20 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 sent0 <- submissionsMade world
                 -- (a) before any submission
                 (_, _, a) <- runCaptured (runRegistryFoldWith (openerChanged (withClient (failingObservationBy 1 . connectionEnds)) world folderAddress) settings)
-                a `shouldSatisfy` ("stopped at the first stage, the node could not be read" `isInfixOf`)
+                a `shouldSatisfy` ("registry fold stopped, the node could not be read" `isInfixOf`)
                 a `shouldSatisfy` ("nothing was submitted; nothing was spent" `isInfixOf`)
                 submissionsMade world >>= (`shouldBe` sent0)
-                -- (b) after the premint, before any fold: the fold was not submitted
-                base <- length <$> accepted world
-                (_, _, b) <- runCaptured (runRegistryFoldWith (openerChanged (withClient (failingObservationBy 2 . connectionEnds)) world folderAddress) settings)
-                [premint] <- drop base <$> accepted world
-                b `shouldSatisfy` ("stopped after the premint settled, the node could not be read" `isInfixOf`)
-                b `shouldSatisfy` (("premint-transaction: " <> T.unpack (renderTransactionId (transactionId premint))) `isInfixOf`)
-                b `shouldSatisfy` ("the fold was not submitted" `isInfixOf`)
-                b `shouldSatisfy` ("node-confirmed-state: " `isInfixOf`)
-            -- (c) a fold that may already have reached the node
+            -- (b) a fold that may already have reached the node
             world2 <- newWorld 1_000
             (request2, _) <- bookDirectly world2 export
             withSetup world2 $ \setup -> do
                 BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
-                (_, _, c) <-
-                    runCaptured (runRegistryFoldWith (openerChanged (withClient (failingSettlementBy 2 . void . connectionEnds)) world2 folderAddress) (setupFold setup){rfRequest = T.pack (requestText request2)})
-                [premintTx, foldTx] <- reverse . take 2 . reverse <$> accepted world2
-                forM_ (receiptLinesOf premintTx (proofOutputOf world2 premintTx)) $ \needle -> lines c `shouldSatisfy` (needle `elem`)
-                c `shouldSatisfy` (("fold " <> T.unpack (renderTransactionId (transactionId foldTx)) <> " was accepted by the node and is not seen on chain; check it before spending again") `isInfixOf`)
-                c `shouldSatisfy` ("node-confirmed-state: " `isInfixOf`)
-                c `shouldSatisfy` (not . ("the fold was not submitted" `isInfixOf`))
+                (_, _, b) <-
+                    runCaptured (runRegistryFoldWith (openerChanged (withClient (failingSettlementBy 1 . void . connectionEnds)) world2 folderAddress) (setupFold setup){rfRequest = T.pack (requestText request2)})
+                [foldTx] <- reverse . take 1 . reverse <$> accepted world2
+                b `shouldSatisfy` (("fold " <> T.unpack (renderTransactionId (transactionId foldTx)) <> " was accepted by the node and is not seen on chain; check it before spending again") `isInfixOf`)
+                b `shouldSatisfy` ("node-confirmed-state: " `isInfixOf`)
+                b `shouldSatisfy` (not . ("premint" `isInfixOf`))
         it "says the same of a booking whose node cannot be read: nothing submitted, a node failure" $ do
             world <- newWorld 1_000
             withSetup world $ \setup -> do
@@ -600,7 +539,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
             submissionsBefore <- submissionsMade world
             withSetup world $ \setup -> do
                 BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
-                (opener, _) <- openerOver noFaults{rejectSubmissionAt = Just (submissionsBefore + 1)} world folderAddress
+                (opener, _) <- openerOver noFaults{rejectSubmissionAt = Just submissionsBefore} world folderAddress
                 (code, _, err) <-
                     runCaptured (runRegistryFoldWith opener (setupFold setup){rfRequest = T.pack (requestText request)})
                 code `shouldBe` ExitFailure 1
@@ -617,7 +556,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 (opener, callsMade) <- openerEnding 0 False world0 folderAddress
                 _ <- runCaptured (runRegistryFoldWith opener (setupFold setup){rfRequest = T.pack (requestText request0)})
                 callsMade
-            length calls `shouldSatisfy` (> 10)
+            length calls `shouldSatisfy` (> 5)
             forM_ [(i, late) | i <- [1 .. length calls], late <- if calls !! (i - 1) == ReadCall then [False] else [False, True]] $ \(i, late) -> do
                 world <- newWorld 1_000
                 export <- loadExport "kli-export-single.cesr"
@@ -625,29 +564,20 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                 withSetup world $ \setup -> do
                     BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
                     (opener, _) <- openerEnding i late world folderAddress
-                    base <- length <$> accepted world
                     let label = (i, calls !! (i - 1), late)
-                        -- what has already happened in the run: the premint is the first submission and the first settlement
-                        stage = length (filter (== (if calls !! (i - 1) == SubmitCall then SubmitCall else ObserveCall)) (take (i - 1) calls))
                     ran <- timeout 20_000_000 (runCaptured (runRegistryFoldWith opener (setupFold setup){rfRequest = T.pack (requestText request)}))
                     (code, _, err) <- maybe (expectationFailure (show label <> ": the command did not end within twenty seconds") >> fail "no end") pure ran
                     (label, code) `shouldBe` (label, ExitFailure 1)
                     let said = lines err
-                        wanted = case (calls !! (i - 1), stage) of
-                            (ReadCall, 0) -> ["the node could not be read", zeroLine]
-                            (ReadCall, _) -> ["the node could not be read", "premint-transaction: ", "the fold was not submitted", "not retried"]
-                            (SubmitCall, 0) -> ["premint ", " may or may not have reached the node; check it before spending again", "not retried"]
-                            (ObserveCall, 0) -> ["premint ", " was accepted by the node and is not seen on chain; check it before spending again", "not retried"]
-                            (SubmitCall, _) -> ["premint-transaction: ", "fold ", " may or may not have reached the node; check it before spending again", "not retried"]
-                            (ObserveCall, _) -> ["premint-transaction: ", "fold ", " was accepted by the node and is not seen on chain; check it before spending again", "not retried"]
+                        wanted = case calls !! (i - 1) of
+                            ReadCall -> ["the node could not be read", zeroLine]
+                            SubmitCall -> ["fold ", " may or may not have reached the node; check it before spending again", "not retried"]
+                            ObserveCall -> ["fold ", " was accepted by the node and is not seen on chain; check it before spending again", "not retried"]
                     forM_ wanted $ \needle -> (label, err) `shouldSatisfy` (\(_, text) -> needle `isInfixOf` text)
                     -- a report that was whole ends where a report ends
                     (label, last said) `shouldSatisfy` (\(_, final) -> final == zeroLine || "not retried" `isPrefixOf` final)
-                    -- after a premint settled the report carries its complete receipt: id, fee and proof output
-                    when (stage > 0 || (calls !! (i - 1) == ReadCall && ObserveCall `elem` take (i - 1) calls)) $ do
-                        premintTx <- (!! base) <$> accepted world
-                        forM_ (receiptLinesOf premintTx (proofOutputOf world premintTx)) $ \needle ->
-                            (label, said) `shouldSatisfy` (\(_, text) -> needle `elem` text)
+                    -- no premint exists in a fold to be named
+                    (label, err) `shouldSatisfy` (\(_, text) -> not ("premint" `isInfixOf` text))
         it "gives the whole stop report of a fold to a working reader when the node client ends after the library has returned and between the lines of the report" $ do
             let run endAt = do
                     world <- newWorld 1_000
@@ -667,14 +597,13 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                             runCaptured $
                                 runRegistryFoldReporting
                                     writer
-                                    (openerClient client noFaults{rejectSubmissionAt = Just (sent0 + 1)} world folderAddress)
+                                    (openerClient client noFaults{rejectSubmissionAt = Just sent0} world folderAddress)
                                     (setupFold setup){rfRequest = T.pack (requestText request)}
                         pure (lines err)
             baseline <- run Nothing
             length baseline `shouldSatisfy` (> 3)
-            -- the report the others are compared with is itself whole: the premint's complete receipt, the fold's refusal, the state last confirmed and that nothing is retried
-            forM_ ["premint-transaction: ", "proof-output: ", "premint-fee: ", "node-confirmed-state: "] $ \prefix ->
-                baseline `shouldSatisfy` any (prefix `isPrefixOf`)
+            -- the report the others are compared with is itself whole: the fold's refusal, the state last confirmed and that nothing is retried
+            baseline `shouldSatisfy` any ("node-confirmed-state: " `isPrefixOf`)
             baseline `shouldSatisfy` any (" was refused by the node" `isInfixOf`)
             baseline `shouldSatisfy` (("not retried" `isPrefixOf`) . last)
             forM_ [0 .. length baseline - 1] $ \at -> do
@@ -696,7 +625,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                             runCaptured $
                                 runRegistryRegisterReporting
                                     writer
-                                    (openerClient client noFaults{rejectSubmissionAt = Just sent0} world walletAddress)
+                                    (openerClient client noFaults{rejectSubmissionAt = Just (sent0 + 1)} world walletAddress)
                                     (setupRegister setup)
                         pure (lines err)
             baseline <- run Nothing
@@ -721,11 +650,20 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                     ran <- timeout 20_000_000 (runCaptured (runRegistryRegisterWith opener (setupRegister setup)))
                     (code, _, err) <- maybe (expectationFailure (show label <> ": the command did not end within twenty seconds") >> fail "no end") pure ran
                     (label, code) `shouldBe` (label, ExitFailure 1)
-                    let wanted = case calls !! (i - 1) of
-                            ReadCall -> ["the node could not be read", zeroLine]
-                            SubmitCall -> ["booking ", " may or may not have reached the node; check it before spending again"]
-                            ObserveCall -> ["booking ", " was accepted by the node and is not seen on chain; check it before spending again"]
-                    forM_ wanted $ \needle -> (label, err) `shouldSatisfy` (\(_, text) -> needle `isInfixOf` text)
+                    -- the call is the premint's or the booking's: a stop before the premint settled has spent nothing, and one
+                    -- after it says what landed
+                    let premintLanded = "the premint of the hash proof settled" `isInfixOf` err
+                        said needle = (label, err) `shouldSatisfy` (\(_, text) -> needle `isInfixOf` text)
+                    case calls !! (i - 1) of
+                        ReadCall -> do
+                            said "the node could not be read"
+                            (label, premintLanded, zeroLine `isInfixOf` err) `shouldBe` (label, premintLanded, not premintLanded)
+                        SubmitCall -> do
+                            said " may or may not have reached the node; check it before spending again"
+                            (label, "booking " `isInfixOf` err || "premint " `isInfixOf` err) `shouldBe` (label, True)
+                        ObserveCall -> do
+                            said " was accepted by the node and is not seen on chain; check it before spending again"
+                            (label, "booking " `isInfixOf` err || "premint " `isInfixOf` err) `shouldBe` (label, True)
         it "ends a fold as a cancellation when the person running it interrupts while its report cannot be written" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
@@ -733,7 +671,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
             sent0 <- submissionsMade world
             withSetup world $ \setup -> do
                 BS.writeFile (rfSnapshot (setupFold setup)) (encodeSnapshot (Snapshot "x" [] []))
-                (opener, _) <- openerOver noFaults{rejectSubmissionAt = Just (sent0 + 1)} world folderAddress
+                (opener, _) <- openerOver noFaults{rejectSubmissionAt = Just sent0} world folderAddress
                 outcome <-
                     interruptedWhileReporting $ \writer ->
                         runRegistryFoldReporting writer opener (setupFold setup){rfRequest = T.pack (requestText request)}
@@ -1023,7 +961,6 @@ spec = describe "#351 ckeri registry register and ckeri registry fold" $ around_
                         err `shouldSatisfy` (not . ("signing-key-" `isInfixOf`))
   where
     writeSeen ref text = modifyIORef' ref (const text)
-    hexOf = B8.unpack . convertToBase Base16
 
 {- | What the pinned client raises for an instant past the node's forecast: a plain error
 call from the interpreter's refusal (N2C/Provider.hs, queryWallclockToSlot).

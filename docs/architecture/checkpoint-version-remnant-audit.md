@@ -16,7 +16,7 @@ rule.
 
 ## What the arity defect actually was
 
-`checkpoint_register` declares eight applied parameters. `deriveV1Scripts`
+When the #254 repair was made, `checkpoint_register` declared eight applied parameters; at this revision the validator declares ten (`onchain/validators/checkpoint_register.ak` 72–94). `deriveV1Scripts`
 applied nine: a leading `v1CheckpointVersion` left over from the cut feature.
 
 A ninth argument applied to an eight-parameter program does not partially

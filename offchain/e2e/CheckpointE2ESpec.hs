@@ -15,6 +15,7 @@ module CheckpointE2ESpec (spec) where
 import Test.Hspec
 
 import CheckpointTxBuilder (
+    bookingSettlementsJourney,
     productionFrozenTopUpScenario,
     productionRegisterAdvanceScenario,
     productionRegisterConvictScenario,
@@ -28,8 +29,13 @@ spec :: Spec
 spec = describe "#136 register a small identity end to end" $ do
     around stagedCheckpointDevnet $ do
         it
-            "books a registration, folds it with another party into a checkpoint holding the deposit, refuses a late fold and a return to another address, and returns an unfolded request after its deadline"
+            "books a registration, folds it with another party into a checkpoint holding the deposit, refuses a late fold and a return to another address, and returns an unfolded request after its deadline, composing the return with the burn of its attestation"
             registryJourney
+
+    around stagedCheckpointDevnet $ do
+        it
+            "#559 settles one booking and one transaction of two bookings, each reported with its signed identifier, serialized size and the units each redeemer used"
+            bookingSettlementsJourney
 
     around stagedCheckpointDevnet $ do
         it

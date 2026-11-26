@@ -17,15 +17,15 @@ When evidence is missing, the application needs to see that limitation rather
 than mistake a quiet checkpoint for a globally uncontested or current KEL.
 
 **Review result, 11 September 2026:** KERI specifies first-seen processing,
-validation, and recovery. Our current predicates cover a narrower checkpoint
+validation, and recovery. At the reviewed commit the predicates covered a narrower checkpoint
 service. The missing work is an explicit contract connecting observation,
 retained history, conflict reporting, consumer policy, and financial actions.
 The checkpoint predicate alone does not establish watcher conformance.
 
 The subsequent double-rotation review also identifies an economic gap: evidence
 can be admissible at one tip and become unusable before an observer can act.
-The model provides no guaranteed challenge interval; both another rotation and
-close can move the target immediately. See [Rapid rotation and the challenge
+At the reviewed commit the model provided no guaranteed challenge interval; both another rotation and
+close could move the target immediately (the accepted design has no close). See [Rapid rotation and the challenge
 interval](#rapid-rotation-and-the-challenge-interval).
 
 This is a design review and proposed acceptance criteria, not a replacement
@@ -63,20 +63,25 @@ identities and interaction conflicts from this profile.
 
 The executable definitions are `Duplicity.duplicityAt` and the computed
 `Checkpoint.Env.duplicityAt` in the [Lean sources][lean-current].
-`convict_requires_concrete_pair` and `parked_convict_requires_concrete_pair`
-connect successful transitions to that evidence. The existing terminality,
+`convict_requires_concrete_pair` connects successful transitions to that evidence. The existing terminality,
 payout and monotonicity theorems remain in force. The simulator replays the
 model's concrete corpus through both its module and the code embedded in its
 page. Its compact evidence selector chooses a documented example pair; it does
 not verify real signatures.
 
-The controller’s booking or the submitter’s advance must bind the installed
-writer digest to its signed bytes. The convictor must open the rival’s digest
-on its signed bytes against the authenticated predecessor. The comparison
-assumes the digest has no collision on this pair. Keys and their commitments
-share an identity after verification. The model takes wire structure, prior
-links, signatures and receipts as verified inputs. Implementing these checks
-in the decoder and validators remains open.
+The controller at booking or the submitter at advance must bind the installed
+writer digest to its signed bytes. At conviction, the policy reads the writer
+digest from the spent checkpoint and checks the convictor’s opening of the
+rival digest against the rival’s signed bytes. The predecessor must be
+authenticated. Comparing the digests assumes collision resistance for this
+pair of signed bodies.
+
+Keys and their commitments share an identity after a verified opening. The
+model takes wire structure, prior links, signatures and receipts as verified
+inputs. Implementing these bindings in the decoder and validators remains
+open. The earlier decoded-content comparison agrees with the digest test
+when its decoding distinguishes the two signed bodies, including their
+extension bytes.
 
 The [concrete replay adapter](watcher-conformance/replay-concrete.mjs) runs
 scratch adaptations of the original twelve rapid-rotation probes and eight

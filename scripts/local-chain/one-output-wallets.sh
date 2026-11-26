@@ -75,7 +75,7 @@ payer_utxos() { # payer_utxos <label> <address>: the wallet's outputs, as the fa
 settled() { # settled <label> <outfile>: remember each transaction the command reported, to read it from its bytes at the end
     local id
     for id in $(sed -n -E 's/^(premint|booking|fold|return)-transaction: ([0-9a-f]{64})$/\2/p; s/^(publish-[a-z-]+|create-registry): ([0-9a-f]{64}) fee=.*/\2/p' "$WORK/$2.out"); do
-        echo "$1 $id" >>"$WORK/settled.list"
+        echo "$id $1" >>"$WORK/settled.list"
     done
 }
 attempt() { # attempt <label> <outfile> <payer-address> <command...>: record the payer's outputs, the command's outcome and its transactions
@@ -128,7 +128,7 @@ PERCENT=$(curl -s "$URL/epoch_params?_epoch_no=$(curl -s "$URL/tip" | jq -r '.[0
 value_of() { # value_of <txid#ix>: the lovelace of an output, from the transaction that created it
     curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"${1%#*}\"]}" | jq -r ".[0].outputs[${1#*#}].value"
 }
-while read -r label id; do
+while read -r id label; do
     curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$id\"]}" | jq -r '.[0].cbor' >"$WORK/txs/$id.hex"
     ( source "$NODE_ENV"; "${INSPECT:-$HERE/inspect-tx.sh}" "$WORK/txs/$id.hex" ) >"$WORK/txs/$id.inspect" 2>"$WORK/txs/$id.inspect.err" || fail "transaction $id could not be decoded"
     fee=$(sed -n 's/^fee //p' "$WORK/txs/$id.inspect")

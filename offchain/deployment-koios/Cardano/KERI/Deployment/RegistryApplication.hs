@@ -17,12 +17,13 @@ module Cardano.KERI.Deployment.RegistryApplication (
 ) where
 
 import Cardano.KERI.AID.Application (
+    ApplicationParameters (..),
     RegistrationData (..),
     SpendAction (..),
     configurationTokenName,
     spendActionData,
  )
-import Cardano.KERI.Deployment.Registry (RegistryScripts (..))
+import Cardano.KERI.Deployment.Registry (RegistryScripts (..), RegistryTerms (..))
 import Cardano.KERI.Deployment.RegistryReplay (singularIdentity)
 import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
 import Cardano.KERI.Deployment.RegistryTransactions (
@@ -100,3 +101,5 @@ keriApplication deployment references =
         Tx.mint policy (Map.fromListWith (+) [(foldedApproval request, -1) | request <- folded]) (BuiltinData (List []))
         Tx.reference (fst (referenceApplication references))
         Tx.reference (fst (referenceConfiguration references))
+        -- the treasury is paid the registration cost of each folded request
+        Tx.donateToTreasury (Coin (fromIntegral (length folded) * registrationCost (registryParameters (deploymentTerms deployment))))

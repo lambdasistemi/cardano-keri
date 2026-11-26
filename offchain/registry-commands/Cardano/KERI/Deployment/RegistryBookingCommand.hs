@@ -44,6 +44,7 @@ module Cardano.KERI.Deployment.RegistryBookingCommand (
     openRegistryNode,
     openRegistryNodeBetween,
     openRegistryKoios,
+    openRegistryKoiosFold,
     shippedOpeners,
     dieChoice,
     openKey,
@@ -54,7 +55,7 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (ApplicationParameters (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
-import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..), openKoiosRuntime, renderKoiosStartFailure)
+import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..), openKoios, openKoiosRuntime, renderKoiosStartFailure)
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
 import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), KeySource (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.RegistryChain (
@@ -76,9 +77,11 @@ import Cardano.KERI.Deployment.RegistryFold (
     FoldStopped (..),
     foldBookedRequest,
  )
+import Cardano.KERI.Deployment.RegistryFoldNamed (FoldedRequest (..), NamedFoldDone (..), NamedFoldInput (..), NamedFoldStop (..), foldNamed)
 import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, renderKeySourceRefusal, resolveKeySource, signingKeyFileSetting, vaultSetting)
 import Cardano.KERI.Deployment.RegistryProvider (
     Counterpart (..),
+    KoiosFoldOpener,
     KoiosOpener,
     Openers (..),
     Provider (..),
@@ -90,10 +93,8 @@ import Cardano.KERI.Deployment.RegistryProvider (
     nodeOnly,
     printHandoffReport,
     providerChoiceParser,
-    providerChoiceWithoutTimeParser,
     reasonText,
     renderProviderRefusal,
-    resolveNodeProvider,
     resolveProvider,
     transliterateReports,
     withProvider,
@@ -123,13 +124,14 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Provider (SlotNo (..))
 import Codec.Binary.Bech32 qualified as Bech32
 import Control.Exception (IOException, try)
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, unless, when)
 import Data.ByteArray.Encoding (Base (Base16), convertFromBase, convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.Char (toUpper)
 import Data.IORef (newIORef, readIORef, writeIORef)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import OptEnvConf qualified as Opt
@@ -174,6 +176,7 @@ data RegistryFoldSettings = RegistryFoldSettings
     , rfRequest :: !Text
     , rfSnapshot :: !FilePath
     , rfSnapshotOut :: !(Maybe FilePath)
+    , rfPending :: ![Text]
     }
     deriving stock (Show, Eq)
 
@@ -199,7 +202,7 @@ registryFoldSettingsParser :: Opt.Parser RegistryFoldSettings
 registryFoldSettingsParser = do
     rfNetworkMagic <- intSetting "network-magic" (Just 1) "Cardano testnet network magic"
     rfBlueprint <- stringSetting "blueprint" "Immutable Aiken plutus.json"
-    rfProvider <- providerChoiceWithoutTimeParser
+    rfProvider <- providerChoiceParser
     rfFundingAddress <- T.pack <$> stringSetting "funding-address" "Bech32 payment address that pays the fold: not the controller's"
     rfSigningKeyFile <- signingKeyFileSetting
     rfVault <- vaultSetting
@@ -207,11 +210,12 @@ registryFoldSettingsParser = do
     rfTimeoutSeconds <- intSetting "timeout-seconds" (Just 600) "Settlement timeout per transaction on the node (on Koios a transaction is waited for until two minutes after its validity end)"
     rfReleaseIdentity <- stringSetting "release-identity" "The release identity file registry deploy wrote"
     rfReferenceRecord <- stringSetting "reference-record" "The reference-output record registry deploy wrote"
-    rfRequest <- T.pack <$> stringSetting "request" "The booking output to fold, as <transaction id>#<index>"
-    rfSnapshot <- stringSetting "snapshot" "The registry's active and terminal keys, as a named party supplies them"
+    rfRequest <- T.pack <$> Opt.withDefault "" (stringSetting "request" "On a node socket: the booking output to fold, as <transaction id>#<index>")
+    rfSnapshot <- Opt.withDefault "" (stringSetting "snapshot" "On a node socket: the registry's active and terminal keys, as a named party supplies them")
     rfSnapshotOut <-
         Opt.optional $
-            stringSetting "snapshot-out" "Where the registry as it stands after the fold is written for the next folder (must not exist)"
+            stringSetting "snapshot-out" "On a node socket: where the registry as it stands after the fold is written for the next folder (must not exist)"
+    rfPending <- map T.pack <$> Opt.many pendingSetting
     pure RegistryFoldSettings{..}
 
 stringSetting :: String -> String -> Opt.Parser String
@@ -423,7 +427,18 @@ runRegistryFoldReporting errLine = runRegistryFoldOver errLine . nodeOnly
 runRegistryFoldOver :: (String -> IO ()) -> Openers -> RegistryFoldSettings -> IO ()
 runRegistryFoldOver errLine openers settings = do
     hPutStrLn stderr "ckeri: not for mainnet"
-    socket <- either dieChoice pure (resolveNodeProvider (rfProvider settings))
+    provider <- either dieChoice pure (resolveProvider (rfProvider settings))
+    case provider of
+        OnKoios url token -> runFoldFromHistory errLine openers settings url token
+        OnNode socket -> runFoldOnSuppliedState errLine openers settings socket
+
+{- | The fold on a node socket, on the registry's keys a named party supplied: the registry state is checked
+against the chain and the request is the one named.
+-}
+runFoldOnSuppliedState :: (String -> IO ()) -> Openers -> RegistryFoldSettings -> FilePath -> IO ()
+runFoldOnSuppliedState errLine openers settings socket = do
+    unless (null (rfPending settings)) $
+        dieZero "pending-needs-a-provider: --pending names requests for a provider that serves public history (--koios-url); on a node socket give --request and --snapshot"
     key <- openKey "fold" (rfNetworkMagic settings) (rfSigningKeyFile settings) (rfVault settings) (rfPassphraseFd settings)
     when (rfTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
     blueprint <- loadBlueprint (rfBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
@@ -757,7 +772,7 @@ openRegistryKoios access use = do
 
 -- | The openers of the commands that run on the node unlinked: the node's and Koios's.
 shippedOpeners :: Openers
-shippedOpeners = Openers{openersNode = openRegistryNode, openersKoios = openRegistryKoios}
+shippedOpeners = Openers{openersNode = openRegistryNode, openersKoios = openRegistryKoios, openersKoiosFold = openRegistryKoiosFold}
 
 -- | Stop with the refusal of a provider choice: nothing was read, so nothing was submitted.
 dieChoice :: ProviderRefusal -> IO a
@@ -944,3 +959,121 @@ data ProofCustody
       StaysWithController
     | -- | the booking was handed over and not seen to settle: it spends the proof output if it landed
       MayBeSpent !TxId
+
+-- | @--pending@, repeatable: a booked request to fold, as <transaction id>#<index>.
+pendingSetting :: Opt.Parser String
+pendingSetting =
+    Opt.setting
+        [ Opt.reader Opt.str
+        , Opt.option
+        , Opt.long "pending"
+        , Opt.metavar "REF"
+        , Opt.help "On a provider (--koios-url): a booked request to fold, as <transaction id>#<index>; repeat it to fold several in one transaction. The registry's state is rebuilt from public history"
+        ]
+
+-- ---------------------------------------------------------------------
+-- fold from public history
+-- ---------------------------------------------------------------------
+
+-- | The opener the fold ships for Koios: the key is checked against the paying address, then the runtime and the session.
+openRegistryKoiosFold :: KoiosFoldOpener
+openRegistryKoiosFold access use = do
+    payer <- either dieZero pure (decodePaymentAddress (koiosFundingAddress access))
+    checkKey (koiosSigningKey access) payer >>= either dieZero pure
+    opened <- openKoios printHandoffReport access
+    session <- either (dieZero . renderKoiosStartFailure) pure opened
+    use session payer
+
+{- | The fold on a provider that serves public history: the registry's state is rebuilt from that
+history, never supplied; the booked requests named with @--pending@ are read and authenticated from their
+public outputs; the batch, its validity window and its balance are public Singular's. A provider
+that cannot give the whole history stops the command before anything is signed.
+-}
+runFoldFromHistory :: (String -> IO ()) -> Openers -> RegistryFoldSettings -> Text -> Maybe FilePath -> IO ()
+runFoldFromHistory errLine openers settings url token = do
+    when (not (T.null (rfRequest settings)) || not (null (rfSnapshot settings)) || isJust (rfSnapshotOut settings)) $
+        dieZero "supplied-state-not-used: on a provider the registry's state is rebuilt from public history; --request, --snapshot and --snapshot-out are for a node socket"
+    when (null (rfPending settings)) $
+        dieZero "pending-missing: name at least one booked request with --pending <transaction id>#<index>"
+    pendings <- either dieZero pure (traverse (parseRequestReference . T.unpack) (rfPending settings))
+    key <- openKey "fold" (rfNetworkMagic settings) (rfSigningKeyFile settings) (rfVault settings) (rfPassphraseFd settings)
+    when (rfTimeoutSeconds settings <= 0) $ dieZero "timeout-seconds must be positive"
+    blueprint <- loadBlueprint (rfBlueprint settings) >>= either (dieZero . ("blueprint-invalid: " <>)) pure
+    (identity, record) <- readFiles "fold" (rfReleaseIdentity settings) (rfReferenceRecord settings)
+    let access =
+            KoiosAccess
+                { koiosUrl = url
+                , koiosTokenFile = token
+                , koiosNetworkMagic = rfNetworkMagic settings
+                , koiosFundingAddress = rfFundingAddress settings
+                , koiosSigningKey = key
+                , koiosNetworkTime = chosenNetworkTime (rfProvider settings)
+                }
+    putStrLn ("registry-state: rebuilt from the public history of its state token; requests named: " <> show (length pendings))
+    hFlush stdout
+    announced <- newIORef Nothing
+    openersKoiosFold openers access $ \opened payer -> do
+        outcome <-
+            foldNamed
+                opened
+                (announceAttempt announced)
+                NamedFoldInput
+                    { namedBlueprint = blueprint
+                    , namedIdentity = identity
+                    , namedRecord = record
+                    , namedPending = pendings
+                    , namedPayer = payer
+                    }
+        case outcome of
+            Left stop -> do
+                mapM_ errLine (renderNamedStop stop)
+                exitFailure
+            Right done -> printNamedDone done
+  where
+    -- a signed transaction is announced to the person running the command once, before it is handed over
+    announceAttempt announced = \case
+        Attempt txId NotHandedToNode -> do
+            before <- readIORef announced
+            when (before /= Just txId) $ do
+                writeIORef announced (Just txId)
+                putStrLn ("handing fold " <> T.unpack (renderTransactionId txId) <> " to the provider")
+                hFlush stdout
+        _ -> pure ()
+
+-- | What a settled fold says: the transaction, what it paid, what it folded, and what it left.
+printNamedDone :: NamedFoldDone -> IO ()
+printNamedDone done = do
+    let tx = doneTransaction done
+    putStrLn ("fold-transaction: " <> T.unpack (renderTransactionId (transactionId tx)))
+    putStrLn ("fold-fee: " <> show (feeOf tx))
+    forM_ (doneFolded done) $ \folded ->
+        putStrLn ("folded: " <> renderTxIn (foldedRef folded) <> " " <> foldedKind folded <> " key " <> hex (foldedKeyBytes folded))
+    forM_ (doneSkipped done) $ \(ref, reason) ->
+        putStrLn ("skipped: " <> renderTxIn ref <> " " <> reason)
+    putStrLn ("left: " <> show (doneLeft done))
+    hFlush stdout
+
+{- | What a fold that stopped tells the person running it: why, how far the transaction it signed
+got, and that nothing is retried.
+-}
+renderNamedStop :: NamedFoldStop -> [String]
+renderNamedStop =
+    map (forCounterpart TheProvider) . \case
+        NamedFilesRefused refusal ->
+            ["ckeri: registry fold " <> phrase Command <> ", before anything was read of the registry: " <> renderRefusal refusal, zeroSpend]
+        NamedReadFailed message ->
+            ["ckeri: registry fold stopped, the node could not be read: " <> message, zeroSpend]
+        NamedNotAcquired message ->
+            ["ckeri: registry fold stopped, the chain could not be read as one session: " <> message, zeroSpend]
+        NamedFoldRefused reason observed ->
+            ["ckeri: registry fold refused before anything was submitted: " <> reason]
+                <> [ "skipped: " <> renderTxIn ref <> " " <> why
+                   | (ref, why) <- maybe [] fst observed
+                   ]
+                <> ["left: " <> show left | Just (_, left) <- [observed]]
+                <> [zeroSpend]
+        NamedTransaction failure attempt ->
+            renderSubmitFailure "registry fold" "fold" False failure
+                <> concat [attemptRows "fold" a | Just a <- [attempt]]
+                <> ["not retried: no transaction is sent again by this command"]
+                <> [zeroSpend | null attempt]

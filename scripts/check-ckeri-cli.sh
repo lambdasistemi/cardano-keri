@@ -241,17 +241,10 @@ for verb in deploy register fold return; do
   has_option node-socket <<<"$provider_help"
   has_option koios-url <<<"$provider_help"
   has_option koios-token-file <<<"$provider_help"
-  # the network time directory is public Singular's: its option and its own variable, not a CKERI_ one; the fold
-  # reads no network time, so its help does not offer it
-  if [[ "$verb" == fold ]]; then
-    if grep -qE -- "--network-time|SINGULAR_NETWORK_TIME" <<<"$provider_help"; then
-      printf 'registry fold help offers a network time it does not read\n' >&2
-      exit 1
-    fi
-  else
-    grep -qE -- "--network-time([^a-z-]|\$)" <<<"$provider_help"
-    grep -qE "SINGULAR_NETWORK_TIME" <<<"$provider_help"
-  fi
+  # the network time directory is public Singular's: its option and its own variable, not a CKERI_ one; every
+  # command that runs on a provider reads it, the fold included
+  grep -qE -- "--network-time([^a-z-]|\$)" <<<"$provider_help"
+  grep -qE "SINGULAR_NETWORK_TIME" <<<"$provider_help"
   if grep -qE -- "--koios-token([^a-z-]|\$)|CKERI_KOIOS_TOKEN([^A-Z_]|\$)" <<<"$provider_help"; then
     printf 'registry %s help offers a Koios token by value (#546: the transport reads the token from its file)\n' "$verb" >&2
     exit 1
@@ -345,14 +338,15 @@ for verb in register return; do
   registry_provider_refusal "$verb" koios-token-file-without-koios-url --node-socket absent.socket --koios-token-file "$unreadable/key"
 done
 # an empty network time directory is refused by name, before any file is read
-for verb in register return; do
+for verb in register return fold; do
   registry_provider_refusal "$verb" "needs a nonempty value" --node-socket absent.socket --network-time ""
 done
 registry_provider_refusal fold provider-none-given
-# an exported empty network time does not touch the fold, which reads none
-SINGULAR_NETWORK_TIME="" registry_provider_refusal fold provider-none-given
-registry_provider_refusal fold fold-runs-on-the-node-only --koios-url http://koios.invalid/api/v1
-registry_provider_refusal fold fold-runs-on-the-node-only --node-socket absent.socket --koios-url http://koios.invalid/api/v1
+# an exported empty network time is refused for the fold as for the other commands: it reads the network time on a provider
+SINGULAR_NETWORK_TIME="" registry_provider_refusal fold "needs a nonempty value" --node-socket absent.socket
+# on a provider the registry's state is rebuilt from public history: a supplied request or snapshot is refused by name before any file is read
+registry_provider_refusal fold supplied-state-not-used --koios-url http://koios.invalid/api/v1
+registry_provider_refusal fold provider-both-given --node-socket absent.socket --koios-url http://koios.invalid/api/v1
 # the check can fail: a valid provider choice with the same pipes reads the blueprint and waits, which `timeout`
 # ends with status 124, and that is what the refusals above must never do
 provider_wait=3 provider_expect_hang=1 registry_provider_refusal register provider-none-given --node-socket absent.socket

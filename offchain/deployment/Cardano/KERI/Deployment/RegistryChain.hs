@@ -55,6 +55,7 @@ module Cardano.KERI.Deployment.RegistryChain (
     -- * Transactions
     transactBudgeted,
     transactPlain,
+    transactBuilt,
 
     -- * Measured budgets
     withMargin,
@@ -663,3 +664,9 @@ whileConnected status runtime =
         forM_ gone (throwIO . NodeConnectionEnded True . show)
         race (atomically (status >>= maybe retry pure)) call
             >>= either (throwIO . NodeConnectionEnded False . show) pure
+
+{- | Sign, hand over and observe a transaction that was built elsewhere, balanced and evaluated: the
+steps after the build of 'transactBudgeted', with the same attempt reports and the same stops.
+-}
+transactBuilt :: RegistryRuntime -> (Attempt -> IO ()) -> ConwayTx -> IO (Either SubmitError ConwayTx)
+transactBuilt rt onAttempt = runExceptT . settle rt onAttempt

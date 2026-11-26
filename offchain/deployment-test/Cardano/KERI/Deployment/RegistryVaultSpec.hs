@@ -292,6 +292,7 @@ runners =
                     , rfRequest = ""
                     , rfSnapshot = unreadable directory "snapshot"
                     , rfSnapshotOut = Nothing
+                    , rfPending = []
                     }
     returned directory given =
         runIn directory $ \opener ->

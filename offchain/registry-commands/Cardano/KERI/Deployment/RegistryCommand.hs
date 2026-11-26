@@ -31,7 +31,7 @@ import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
 import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
-import Cardano.KERI.Deployment.RegistryBookingCommand (openKey, openRegistryKoios)
+import Cardano.KERI.Deployment.RegistryBookingCommand (openKey, openRegistryKoios, openRegistryKoiosFold)
 import Cardano.KERI.Deployment.RegistryDeploy (
     DeployError (..),
     DeployFailure (..),
@@ -227,7 +227,7 @@ integerSetting optionName environmentName configName description defaultValue =
 -- ---------------------------------------------------------------------
 
 runRegistryDeploy :: RegistryDeploySettings -> IO ()
-runRegistryDeploy = runRegistryDeployOver Openers{openersNode = openNode, openersKoios = openRegistryKoios}
+runRegistryDeploy = runRegistryDeployOver Openers{openersNode = openNode, openersKoios = openRegistryKoios, openersKoiosFold = openRegistryKoiosFold}
 
 {- | Deploy a registry through the node the opener reaches, write the two files
 and print what landed.

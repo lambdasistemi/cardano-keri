@@ -1,5 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.KoiosRegistryRuntime
@@ -23,11 +24,13 @@ module Cardano.KERI.Deployment.KoiosRegistryRuntime (
     KoiosParts (..),
     koiosRegistryRuntime,
     openKoiosRuntime,
+    KoiosOpened (..),
+    openKoios,
     HandoffUncertain (..),
     ObservationFailed (..),
 ) where
 
-import Cardano.KERI.Deployment.KoiosRuntime (KoiosReads (..), koiosReads)
+import Cardano.KERI.Deployment.KoiosRuntime (KoiosReads (..), koiosReads, wholeAnswers)
 import Cardano.KERI.Deployment.KoiosSettlement (
     Refusal,
     Settlement (..),
@@ -61,8 +64,11 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Lens.Micro ((^.))
 import Singular.Provider.Koios.Client (FailureReason (..), Koios (..), defaultClientConfig)
 import Singular.Provider.Koios.Http (HttpConfig (..), defaultHttpConfig, newHttpTransport)
+import Singular.Provider.Koios.Provider (koiosProvider)
+import Singular.Provider.Koios.Runtime (newIORuntime)
 import Singular.Registry.Confirmation (newIOConfirmationRuntime)
-import Singular.Registry.LedgerProvider (Network (..), ReadFailure (..))
+import Singular.Registry.Evidence (NoWitness)
+import Singular.Registry.LedgerProvider (AcquireFailure, Acquisition (..), LedgerProvider (..), Network (..), ReadFailure (..), Session)
 import Singular.Registry.NetworkTime (NetworkTimeFailure (..), validateNetworkTime)
 import Singular.Registry.Signing (SignedTx, assembleSigned)
 import Singular.Registry.TimeSource (TimeSource (..))
@@ -191,7 +197,20 @@ read when something is signed. Nothing is sent before it is built, and a
 network without pinned time or a token file that cannot be read stops it first.
 -}
 openKoiosRuntime :: (Handoff -> IO ()) -> KoiosAccess -> IO (Either KoiosStartFailure RegistryRuntime)
-openKoiosRuntime report access = do
+openKoiosRuntime report access = fmap openedRuntime <$> openKoios report access
+
+{- | The registry runtime of an access and the way to read the chain through Singular's own session: what a
+command that builds with Singular's fold needs beside the runtime that signs, hands over and observes.
+-}
+data KoiosOpened = KoiosOpened
+    { openedRuntime :: !RegistryRuntime
+    , openedAcquire :: forall a. (Session NoWitness IO -> IO a) -> IO (Either AcquireFailure a)
+    -- ^ a session of the latest chain state, for the length of the action
+    }
+
+-- | The runtime and the session acquirer over the live transport of an access.
+openKoios :: (Handoff -> IO ()) -> KoiosAccess -> IO (Either KoiosStartFailure KoiosOpened)
+openKoios report access = do
     let magic = fromIntegral (koiosNetworkMagic access)
     pinned <- resolveTimeSource magic (koiosNetworkTime access)
     case pinned of
@@ -210,8 +229,10 @@ openKoiosRuntime report access = do
                         Right live -> do
                             let client = Koios defaultClientConfig live
                             confirmation <- newIOConfirmationRuntime
-                            Right
-                                <$> koiosRegistryRuntime
+                            providerRuntime <- newIORuntime mempty (\_ -> pure ())
+                            let provider = koiosProvider providerRuntime (Network magic) (pure (Right source)) client{koiosTransport = wholeAnswers (koiosTransport client)}
+                            runtime <-
+                                koiosRegistryRuntime
                                     KoiosParts
                                         { partReads = koiosReads client time clock
                                         , partSign = \tx ->
@@ -223,5 +244,7 @@ openKoiosRuntime report access = do
                                         , partClock = clock
                                         , partWindow = koiosValidityEnd client (pure (Right source)) (Network magic)
                                         }
+                            pure
+                                (Right KoiosOpened{openedRuntime = runtime, openedAcquire = acquire provider (Latest (Network magic))})
   where
     clock = (\t -> floor (t * 1_000)) <$> getPOSIXTime

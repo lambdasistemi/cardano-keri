@@ -119,6 +119,7 @@ withSetup world action = withSystemTempDirectory "registry-booking-command" $ \s
                     , rfRequest = ""
                     , rfSnapshot = scratch </> "snapshot.json"
                     , rfSnapshotOut = Nothing
+                    , rfPending = []
                     }
             }
 

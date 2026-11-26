@@ -398171,436 +398171,471 @@
    ]
   },
   "docs-design-trust-model/relayers-and-hunters-03": {
-   "audio_sha256": "300f119e6ce74ec07c01472d6220dc0465b92a461fe73b60dbaf914899cda00f",
-   "characters": 452,
-   "cost": 0.00044747999999999994,
-   "duration": 29.775,
+   "audio_sha256": "74aeba0771461cac10cd97f18aff2557fbd7c52c7b2ebd8c387a06cadf788f4d",
+   "characters": 490,
+   "cost": 0.0004851,
+   "duration": 33.25,
    "index": 3,
-   "key": "8c8547ed847e1521dd6020b955460a43dc49e710a417bab141ce435ef8dd98e3",
+   "key": "a5b4c1c3093c2772dc9e4f326462bf2b9cfb1be19327680c02900eda3526ae67",
    "page": "docs/design/trust-model.md",
    "pause_ms": 400,
    "section": "relayers-and-hunters",
-   "sent_text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility and closed by any advance to the tip. The attacker's bonds stay the attacker's: the refund address is fixed at registration. Removing the residual would mean removing the relayer.",
-   "text": "Permissionlessness has one price, and it is stated rather than hidden: because the chain cannot tell the controller from a relayer, the first registration of an AID can be made by a stale-key holder who advances only to their own epoch. The window is bounded by juvenility and closed by any advance to the tip. The attacker's bonds stay the attacker's: the refund address is fixed at registration. Removing the residual would mean removing the relayer.",
+   "sent_text": "A retired AID cannot register again in the same registry. A live checkpoint can still show an older key state if a later [KERI](/kˈɛɹi/) rotation has yet to land. The juvenility check opens at the birth slot plus W. Eligibility has no upper age limit, so age alone cannot tell a relying party whether a newer rotation exists. On conviction the remaining freeze bond and pool go to the address recorded at registration; the conviction bond D_reg goes to the payee of the eligible commitment.",
+   "text": "A retired AID cannot register again in the same registry. A live checkpoint can still show an older key state if a later KERI rotation has yet to land. The juvenility check opens at the birth slot plus W. Eligibility has no upper age limit, so age alone cannot tell a relying party whether a newer rotation exists. On conviction the remaining freeze bond and pool go to the address recorded at registration; the conviction bond D_reg goes to the payee of the eligible commitment.",
    "words": [
     {
-     "end": 1.075,
-     "start": 0.175,
-     "text": "Permissionlessness"
+     "end": 0.275,
+     "start": 0.2,
+     "text": "A"
     },
     {
-     "end": 1.288,
-     "start": 1.075,
-     "text": "has"
+     "end": 0.837,
+     "start": 0.275,
+     "text": "retired"
     },
     {
-     "end": 1.55,
-     "start": 1.288,
-     "text": "one"
-    },
-    {
-     "end": 2.025,
-     "start": 1.55,
-     "text": "price"
-    },
-    {
-     "end": 2.1,
-     "start": 2.025,
-     "text": ","
-    },
-    {
-     "end": 2.213,
-     "start": 2.1,
-     "text": "and"
-    },
-    {
-     "end": 2.3,
-     "start": 2.213,
-     "text": "it"
-    },
-    {
-     "end": 2.425,
-     "start": 2.3,
-     "text": "is"
-    },
-    {
-     "end": 2.85,
-     "start": 2.425,
-     "text": "stated"
-    },
-    {
-     "end": 3.162,
-     "start": 2.85,
-     "text": "rather"
-    },
-    {
-     "end": 3.325,
-     "start": 3.162,
-     "text": "than"
-    },
-    {
-     "end": 4.2,
-     "start": 3.325,
-     "text": "hidden"
-    },
-    {
-     "end": 4.425,
-     "start": 4.2,
-     "text": ":"
-    },
-    {
-     "end": 4.925,
-     "start": 4.6,
-     "text": "because"
-    },
-    {
-     "end": 5.062,
-     "start": 4.925,
-     "text": "the"
-    },
-    {
-     "end": 5.45,
-     "start": 5.062,
-     "text": "chain"
-    },
-    {
-     "end": 5.8,
-     "start": 5.45,
-     "text": "cannot"
-    },
-    {
-     "end": 6.037,
-     "start": 5.8,
-     "text": "tell"
-    },
-    {
-     "end": 6.125,
-     "start": 6.037,
-     "text": "the"
-    },
-    {
-     "end": 6.675,
-     "start": 6.125,
-     "text": "controller"
-    },
-    {
-     "end": 6.812,
-     "start": 6.675,
-     "text": "from"
-    },
-    {
-     "end": 6.875,
-     "start": 6.812,
-     "text": "a"
-    },
-    {
-     "end": 7.875,
-     "start": 6.875,
-     "text": "relayer"
-    },
-    {
-     "end": 8.075,
-     "start": 7.875,
-     "text": ","
-    },
-    {
-     "end": 8.387,
-     "start": 8.275,
-     "text": "the"
-    },
-    {
-     "end": 8.7,
-     "start": 8.387,
-     "text": "first"
-    },
-    {
-     "end": 9.475,
-     "start": 8.7,
-     "text": "registration"
-    },
-    {
-     "end": 9.562,
-     "start": 9.475,
-     "text": "of"
-    },
-    {
-     "end": 9.688,
-     "start": 9.562,
-     "text": "an"
-    },
-    {
-     "end": 10.512,
-     "start": 9.688,
+     "end": 1.513,
+     "start": 0.837,
      "text": "AID"
     },
     {
-     "end": 10.675,
-     "start": 10.512,
+     "end": 1.875,
+     "start": 1.513,
+     "text": "cannot"
+    },
+    {
+     "end": 2.35,
+     "start": 1.875,
+     "text": "register"
+    },
+    {
+     "end": 2.675,
+     "start": 2.35,
+     "text": "again"
+    },
+    {
+     "end": 2.763,
+     "start": 2.675,
+     "text": "in"
+    },
+    {
+     "end": 2.85,
+     "start": 2.763,
+     "text": "the"
+    },
+    {
+     "end": 3.1,
+     "start": 2.85,
+     "text": "same"
+    },
+    {
+     "end": 4.125,
+     "start": 3.1,
+     "text": "registry"
+    },
+    {
+     "end": 4.35,
+     "start": 4.125,
+     "text": "."
+    },
+    {
+     "end": 4.625,
+     "start": 4.55,
+     "text": "A"
+    },
+    {
+     "end": 4.963,
+     "start": 4.625,
+     "text": "live"
+    },
+    {
+     "end": 5.475,
+     "start": 4.963,
+     "text": "checkpoint"
+    },
+    {
+     "end": 5.625,
+     "start": 5.475,
      "text": "can"
     },
     {
-     "end": 10.825,
-     "start": 10.675,
-     "text": "be"
+     "end": 5.925,
+     "start": 5.625,
+     "text": "still"
     },
     {
-     "end": 11.125,
-     "start": 10.825,
-     "text": "made"
+     "end": 6.2,
+     "start": 5.925,
+     "text": "show"
     },
     {
-     "end": 11.3,
-     "start": 11.125,
-     "text": "by"
+     "end": 6.338,
+     "start": 6.2,
+     "text": "an"
     },
     {
-     "end": 11.413,
-     "start": 11.3,
+     "end": 6.713,
+     "start": 6.338,
+     "text": "older"
+    },
+    {
+     "end": 6.988,
+     "start": 6.713,
+     "text": "key"
+    },
+    {
+     "end": 7.412,
+     "start": 6.988,
+     "text": "state"
+    },
+    {
+     "end": 7.537,
+     "start": 7.412,
+     "text": "if"
+    },
+    {
+     "end": 7.625,
+     "start": 7.537,
      "text": "a"
     },
     {
-     "end": 11.975,
-     "start": 11.413,
-     "text": "stale-key"
+     "end": 7.95,
+     "start": 7.625,
+     "text": "later"
     },
     {
-     "end": 12.462,
-     "start": 11.975,
-     "text": "holder"
+     "end": 8.275,
+     "start": 7.95,
+     "text": "KERI"
     },
     {
-     "end": 12.625,
-     "start": 12.462,
-     "text": "who"
+     "end": 8.95,
+     "start": 8.275,
+     "text": "rotation"
     },
     {
-     "end": 13.288,
-     "start": 12.625,
-     "text": "advances"
+     "end": 9.15,
+     "start": 8.95,
+     "text": "has"
     },
     {
-     "end": 13.65,
-     "start": 13.288,
-     "text": "only"
+     "end": 9.35,
+     "start": 9.15,
+     "text": "yet"
     },
     {
-     "end": 13.775,
-     "start": 13.65,
+     "end": 9.475,
+     "start": 9.35,
      "text": "to"
     },
     {
-     "end": 13.975,
-     "start": 13.775,
-     "text": "their"
+     "end": 10.425,
+     "start": 9.475,
+     "text": "land"
     },
     {
-     "end": 14.225,
-     "start": 13.975,
-     "text": "own"
-    },
-    {
-     "end": 15.2,
-     "start": 14.225,
-     "text": "epoch"
-    },
-    {
-     "end": 15.425,
-     "start": 15.2,
+     "end": 10.65,
+     "start": 10.425,
      "text": "."
     },
     {
-     "end": 15.7,
-     "start": 15.6,
+     "end": 10.9,
+     "start": 10.825,
      "text": "The"
     },
     {
-     "end": 16.15,
-     "start": 15.7,
-     "text": "window"
-    },
-    {
-     "end": 16.312,
-     "start": 16.15,
-     "text": "is"
-    },
-    {
-     "end": 16.725,
-     "start": 16.312,
-     "text": "bounded"
-    },
-    {
-     "end": 16.913,
-     "start": 16.725,
-     "text": "by"
-    },
-    {
-     "end": 17.85,
-     "start": 16.913,
+     "end": 11.512,
+     "start": 10.9,
      "text": "juvenility"
     },
     {
-     "end": 18.013,
-     "start": 17.85,
-     "text": "and"
+     "end": 11.863,
+     "start": 11.512,
+     "text": "check"
     },
     {
-     "end": 18.5,
-     "start": 18.013,
-     "text": "closed"
+     "end": 12.212,
+     "start": 11.863,
+     "text": "opens"
     },
     {
-     "end": 18.712,
-     "start": 18.5,
-     "text": "by"
-    },
-    {
-     "end": 18.975,
-     "start": 18.712,
-     "text": "any"
-    },
-    {
-     "end": 19.425,
-     "start": 18.975,
-     "text": "advance"
-    },
-    {
-     "end": 19.513,
-     "start": 19.425,
-     "text": "to"
-    },
-    {
-     "end": 19.6,
-     "start": 19.513,
-     "text": "the"
-    },
-    {
-     "end": 20.425,
-     "start": 19.6,
-     "text": "tip"
-    },
-    {
-     "end": 20.625,
-     "start": 20.425,
-     "text": "."
-    },
-    {
-     "end": 20.925,
-     "start": 20.8,
-     "text": "The"
-    },
-    {
-     "end": 21.45,
-     "start": 20.925,
-     "text": "attacker's"
-    },
-    {
-     "end": 21.875,
-     "start": 21.45,
-     "text": "bonds"
-    },
-    {
-     "end": 22.138,
-     "start": 21.875,
-     "text": "stay"
-    },
-    {
-     "end": 22.275,
-     "start": 22.138,
-     "text": "the"
-    },
-    {
-     "end": 23.05,
-     "start": 22.275,
-     "text": "attacker's"
-    },
-    {
-     "end": 23.15,
-     "start": 23.05,
-     "text": ":"
-    },
-    {
-     "end": 23.275,
-     "start": 23.15,
-     "text": "the"
-    },
-    {
-     "end": 23.663,
-     "start": 23.275,
-     "text": "refund"
-    },
-    {
-     "end": 24.075,
-     "start": 23.663,
-     "text": "address"
-    },
-    {
-     "end": 24.263,
-     "start": 24.075,
-     "text": "is"
-    },
-    {
-     "end": 24.625,
-     "start": 24.263,
-     "text": "fixed"
-    },
-    {
-     "end": 24.725,
-     "start": 24.625,
+     "end": 12.288,
+     "start": 12.212,
      "text": "at"
     },
     {
-     "end": 26.1,
-     "start": 24.725,
-     "text": "registration"
+     "end": 12.375,
+     "start": 12.288,
+     "text": "the"
     },
     {
-     "end": 26.3,
-     "start": 26.1,
+     "end": 12.65,
+     "start": 12.375,
+     "text": "birth"
+    },
+    {
+     "end": 13.0,
+     "start": 12.65,
+     "text": "slot"
+    },
+    {
+     "end": 13.275,
+     "start": 13.0,
+     "text": "plus"
+    },
+    {
+     "end": 14.125,
+     "start": 13.275,
+     "text": "W."
+    },
+    {
+     "end": 15.1,
+     "start": 14.325,
+     "text": "Eligibility"
+    },
+    {
+     "end": 15.312,
+     "start": 15.1,
+     "text": "has"
+    },
+    {
+     "end": 15.587,
+     "start": 15.312,
+     "text": "no"
+    },
+    {
+     "end": 15.9,
+     "start": 15.587,
+     "text": "upper"
+    },
+    {
+     "end": 16.212,
+     "start": 15.9,
+     "text": "age"
+    },
+    {
+     "end": 16.675,
+     "start": 16.212,
+     "text": "limit"
+    },
+    {
+     "end": 16.788,
+     "start": 16.675,
+     "text": ","
+    },
+    {
+     "end": 17.038,
+     "start": 16.788,
+     "text": "so"
+    },
+    {
+     "end": 17.325,
+     "start": 17.038,
+     "text": "age"
+    },
+    {
+     "end": 17.75,
+     "start": 17.325,
+     "text": "alone"
+    },
+    {
+     "end": 18.138,
+     "start": 17.75,
+     "text": "cannot"
+    },
+    {
+     "end": 18.4,
+     "start": 18.138,
+     "text": "tell"
+    },
+    {
+     "end": 18.5,
+     "start": 18.4,
+     "text": "a"
+    },
+    {
+     "end": 19.013,
+     "start": 18.5,
+     "text": "relying"
+    },
+    {
+     "end": 19.425,
+     "start": 19.013,
+     "text": "party"
+    },
+    {
+     "end": 19.75,
+     "start": 19.425,
+     "text": "whether"
+    },
+    {
+     "end": 19.862,
+     "start": 19.75,
+     "text": "a"
+    },
+    {
+     "end": 20.175,
+     "start": 19.862,
+     "text": "newer"
+    },
+    {
+     "end": 20.8,
+     "start": 20.175,
+     "text": "rotation"
+    },
+    {
+     "end": 22.05,
+     "start": 20.8,
+     "text": "exists"
+    },
+    {
+     "end": 22.275,
+     "start": 22.05,
      "text": "."
     },
     {
-     "end": 26.913,
-     "start": 26.5,
-     "text": "Removing"
+     "end": 22.625,
+     "start": 22.475,
+     "text": "On"
     },
     {
-     "end": 27.0,
-     "start": 26.913,
+     "end": 23.275,
+     "start": 22.625,
+     "text": "conviction"
+    },
+    {
+     "end": 23.375,
+     "start": 23.275,
      "text": "the"
     },
     {
-     "end": 27.65,
-     "start": 27.0,
-     "text": "residual"
+     "end": 23.9,
+     "start": 23.375,
+     "text": "remaining"
     },
     {
-     "end": 27.825,
-     "start": 27.65,
-     "text": "would"
+     "end": 24.288,
+     "start": 23.9,
+     "text": "freeze"
     },
     {
-     "end": 28.05,
-     "start": 27.825,
-     "text": "mean"
+     "end": 24.725,
+     "start": 24.288,
+     "text": "bond"
     },
     {
-     "end": 28.487,
-     "start": 28.05,
-     "text": "removing"
+     "end": 24.862,
+     "start": 24.725,
+     "text": "and"
     },
     {
-     "end": 28.575,
-     "start": 28.487,
+     "end": 25.275,
+     "start": 24.862,
+     "text": "pool"
+    },
+    {
+     "end": 25.5,
+     "start": 25.275,
+     "text": "go"
+    },
+    {
+     "end": 25.587,
+     "start": 25.5,
+     "text": "to"
+    },
+    {
+     "end": 25.725,
+     "start": 25.587,
      "text": "the"
     },
     {
-     "end": 29.575,
-     "start": 28.575,
-     "text": "relayer"
+     "end": 26.2,
+     "start": 25.725,
+     "text": "address"
     },
     {
-     "end": 29.775,
-     "start": 29.575,
+     "end": 26.7,
+     "start": 26.2,
+     "text": "recorded"
+    },
+    {
+     "end": 26.825,
+     "start": 26.7,
+     "text": "at"
+    },
+    {
+     "end": 28.25,
+     "start": 26.825,
+     "text": "registration"
+    },
+    {
+     "end": 28.45,
+     "start": 28.25,
+     "text": ";"
+    },
+    {
+     "end": 28.7,
+     "start": 28.625,
+     "text": "the"
+    },
+    {
+     "end": 29.25,
+     "start": 28.7,
+     "text": "conviction"
+    },
+    {
+     "end": 29.6,
+     "start": 29.25,
+     "text": "bond"
+    },
+    {
+     "end": 30.275,
+     "start": 29.6,
+     "text": "D_reg"
+    },
+    {
+     "end": 30.6,
+     "start": 30.275,
+     "text": "goes"
+    },
+    {
+     "end": 30.688,
+     "start": 30.6,
+     "text": "to"
+    },
+    {
+     "end": 30.775,
+     "start": 30.688,
+     "text": "the"
+    },
+    {
+     "end": 31.25,
+     "start": 30.775,
+     "text": "payee"
+    },
+    {
+     "end": 31.337,
+     "start": 31.25,
+     "text": "of"
+    },
+    {
+     "end": 31.487,
+     "start": 31.337,
+     "text": "the"
+    },
+    {
+     "end": 32.0,
+     "start": 31.487,
+     "text": "eligible"
+    },
+    {
+     "end": 33.05,
+     "start": 32.0,
+     "text": "commitment"
+    },
+    {
+     "end": 33.25,
+     "start": 33.05,
      "text": "."
     }
    ]

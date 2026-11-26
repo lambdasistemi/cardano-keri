@@ -399,7 +399,7 @@ fn facts_connected() -> CheckpointDatumV2 {
     epoch: 0,
     poisoned: False,
     frozen: False,
-    born_at: 2,
+    born_at: 1,
     refund_to: #"29",
     topped_up: False,
     keys: datum_vectors.keys_registered_funded(),

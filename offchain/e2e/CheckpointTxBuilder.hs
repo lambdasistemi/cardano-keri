@@ -372,7 +372,7 @@ import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Word (Word32, Word8)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Ouroboros.Network.Magic (NetworkMagic (..))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
@@ -7218,8 +7218,40 @@ bookingWithoutAttestationTx ::
     RegistrationData ->
     ValidityPlan ->
     IO ConwayTx
-bookingWithoutAttestationTx env fixture proof record validity =
-    fst <$> bookingTx env fixture proof record validity 0 Map.empty
+bookingWithoutAttestationTx env fixture proof record validity = do
+    (honest, _) <- bookingTx env fixture proof record validity 0 Map.empty
+    attestationReference <- attestationReferenceOf env
+    params <-
+        withinSecs 30 "booking without its attestation: query parameters" $
+            queryProtocolParams (envProvider env)
+    let attestation = Tx.attestationPolicyId (deploymentOf env)
+        MultiAsset minted = honest ^. bodyTxL . mintTxBodyL
+        withoutIt = MultiAsset (Map.delete attestation minted)
+        paidWithout out =
+            let MaryValue coin (MultiAsset held) = out ^. valueTxOutL
+             in out & valueTxOutL .~ MaryValue coin (MultiAsset (Map.delete attestation held))
+        purposes =
+            [
+                ( ConwayMinting (AsIx (mintingIndex (applicationPolicy env) withoutIt))
+                , List [actionData (BookRegistration 0)]
+                , Tx.scriptExUnits
+                )
+            ,
+                ( ConwayMinting (AsIx (mintingIndex (PolicyID (envHashProofHash env)) withoutIt))
+                , Tx.hashProofBurnRedeemer
+                , Tx.hashProofBurnExUnits
+                )
+            ]
+        redeemers = Tx.redeemerMap Map.empty purposes
+    pure
+        ( honest
+            & bodyTxL . mintTxBodyL .~ withoutIt
+            & bodyTxL . outputsTxBodyL %~ fmap paidWithout
+            & bodyTxL . referenceInputsTxBodyL %~ Set.delete (fst attestationReference)
+            & bodyTxL . scriptIntegrityHashTxBodyL
+                .~ computeScriptIntegrity (Set.singleton PlutusV3) params redeemers (TxDats mempty)
+            & witsTxL . rdmrsTxWitsL .~ redeemers
+        )
 
 -- | What a transaction mints and pays of the attestation policy of the registry.
 attestationsIn :: CheckpointEnv -> ConwayTx -> (Integer, Integer)
@@ -7263,7 +7295,7 @@ bookingRefusedWithoutAttestationJourney env = do
     proof <- mintHashProof env (ownerParty env) fixture
     refusedValidity <- tipValidity env "refusal: booking without its attestation"
     let refusedRecord = registrationRecord env fixture refusedValidity
-        signed tx = addKeyWitness (partyKey (ownerParty env)) tx
+        signed = addKeyWitness (partyKey (ownerParty env))
         hashProofPolicy = PolicyID (envHashProofHash env)
     evidence <- evidenceDirectory
     -- the control: the booking with its attestation is accepted by every script, so the refusal below is not a setup failure
@@ -7311,6 +7343,18 @@ bookingRefusedWithoutAttestationJourney env = do
     dbg ("refusal: the node rejected the submission: " <> oneLine reason)
     forM_ ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"] $ \other ->
         when (other `isInfixOf` reason) $ fail ("refusal: the node refused for a reason other than the scripts: " <> other)
+    -- the node's own answer names the script that failed: the application's mint, and not the hash-proof's;
+    -- the answer is a shown string, so its quotes arrive escaped
+    let scriptHex policy = let PolicyID hash = policy in hexOf (scriptHashBytes hash)
+        namesScript policy =
+            ("ScriptInfo: MintingScript " <> scriptHex policy) `isInfixOf` reason
+                && ("The script hash is:ScriptHash \\\"" <> scriptHex policy) `isInfixOf` reason
+    forM_ ["ValidationTagMismatch", "PlutusFailure"] $ \needle ->
+        unless (needle `isInfixOf` reason) $ fail ("refusal: the node's answer does not say " <> needle)
+    unless (namesScript (applicationPolicy env)) $
+        fail "refusal: the node's answer does not name the application's mint as the script that failed"
+    when (namesScript hashProofPolicy) $
+        fail "refusal: the node's answer names the hash-proof mint as a script that failed"
     forM_ evidence $ \directory -> do
         Dir.createDirectoryIfMissing True directory
         BSL.writeFile (directory </> "refused-booking.tx.cbor") (serialize (eraProtVerLow @ConwayEra) signedRefused)
@@ -7319,9 +7363,9 @@ bookingRefusedWithoutAttestationJourney env = do
         writeFile (directory </> "refused-booking.submit.txt") (reason <> "\n")
     -- (3) the chain afterwards: the address answered, nothing is approved, the proof is unspent, the transaction left nothing
     approvedAfter <- approvedRequestsAt env "refusal: after the refused booking"
-    unless (map fst approvedAfter == map fst approvedBefore) $
+    unless (Set.fromList (map fst approvedAfter) == Set.fromList (map fst approvedBefore)) $
         fail "refusal: the application's address changed although the booking was refused"
-    unless (all (not . hasAsset (applicationPolicy env) (Tx.approval refusedRecord) . snd) approvedAfter) $
+    when (any (hasAsset (applicationPolicy env) (Tx.approval refusedRecord) . snd) approvedAfter) $
         fail "refusal: the refused booking left an approved request"
     proofLeft <-
         withinSecs 30 "refusal: read the proof output" $ queryUTxOByTxIn (envProvider env) (Set.singleton (fst proof))
@@ -7341,8 +7385,11 @@ bookingRefusedWithoutAttestationJourney env = do
         pollOutput (envProvider env) validId [0] (hasAsset (applicationPolicy env) validName)
             >>= requireJust "refusal: the valid booking did not settle"
     approvedLater <- approvedRequestsAt env "refusal: after the valid booking"
-    unless (map fst approvedLater == map fst approvedBefore <> [fst request]) $
-        fail "refusal: the application's address does not hold exactly the one approved request the valid booking booked"
+    unless (Set.fromList (map fst approvedLater) == Set.insert (fst request) (Set.fromList (map fst approvedBefore)) && length approvedLater == length approvedBefore + 1) $
+        fail
+            ( "refusal: the application's address does not hold exactly the one approved request the valid booking booked: "
+                <> show (map fst approvedBefore, map fst approvedLater, fst request)
+            )
     dbg ("refusal: refused " <> show (txIdTx signedRefused) <> ", then the valid booking " <> show validId <> " approved " <> show (fst request))
 
 {- | Where a run keeps the public artifacts of its settlements, when it is asked to: a directory

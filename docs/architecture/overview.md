@@ -10,14 +10,9 @@ rotation, consumer refusal and registry uniqueness before reading the mechanisms
 below.
 
 !!! abstract "Where this page stands"
-    The transaction architecture — thin checkpoint, reference observers,
-    zero-lovelace withdrawal, BLAKE3 premint — is **shipped on `main` today**.
-    The proposed M1 registration flow below moves full inception admission
-    into an earlier, repeatable attestation. That evidence boundary is not
-    implemented; the existing BLAKE3 token proves a narrower fact.
-    How lifecycle state is *represented* also changes: today it is role addresses, in the
-    [accepted design](../index.md#the-accepted-design) it is one
-    bit plus the checkpoint's own value. Both are described below, marked.
+    The transaction architecture — thin checkpoint, reference observers, zero-lovelace withdrawal, BLAKE3 premint — is that of the earlier deployed design (version 1).
+    The proposed M1 registration flow below is an earlier stand-alone proposal that moves full inception admission into a repeatable attestation. It is neither the constitution's requirement (the controller's booking mint validates the inception) nor the behaviour of the model and the validators at this revision (the fold checks it); issue #559 records that conflict and its model-first repair. The proposal is not implemented; the existing BLAKE3 token proves a narrower fact.
+    How lifecycle state is *represented* also changes: in version 1 it is role addresses, in the [accepted design](../index.md#the-accepted-design) it is the datum's poison and frozen bits and its pending-termination form, read by the holding predicate. Both are described below, marked.
 
 ## The identity plane
 
@@ -111,9 +106,9 @@ In this shipped flow, the parts have deliberately narrow jobs:
 
 ## Stable identity, changing authority
 
-The checkpoint token's asset name is derived from the qualified KERI AID. That
+In version 1 the checkpoint token's asset name is derived from the qualified KERI AID; in the accepted design the checkpoint holds the registry's representative asset for the AID. That
 policy ID and asset name form the stable Cardano handle. The datum changes as
-KERI rotates. Shipped today it is nine fields of pure key state:
+KERI rotates. In the earlier deployed design it was nine fields of pure key state:
 
 ```text
 CheckpointDatumV1 {
@@ -138,7 +133,7 @@ block discovery, but cannot create false authority.
 
 ## How lifecycle state is represented
 
-### Shipped today: role addresses
+### Earlier deployed design: role addresses
 
 State is carried by the script role address the token sits at, not by a
 caller-controlled status field:
@@ -149,12 +144,11 @@ caller-controlled status field:
 | ARMED | a later-event challenge is open | reject |
 | FROZEN | the delay bond was claimed | reject |
 
-There is no conviction role: conviction burns the AID token and creates no
-successor, so a consumer meets the no-candidate case. That follows from the
+In that design there was no conviction role: conviction burned the AID token and created no successor, so a consumer met the no-candidate case. That follows from the
 projection law — the chain never originates identity state, and no key event
 says "this AID is dead" for a validator to project.
 
-### Under the accepted design: one bit and the value
+### Under the accepted design: the poison bit, the frozen bit and the age
 
 The three roles go. What replaces them is smaller and reads directly off the
 checkpoint a consumer already resolves:
@@ -162,20 +156,16 @@ checkpoint a consumer already resolves:
 | Condition | How it is represented | Consumer result |
 |---|---|---|
 | poisoned | one bit in the datum, set by the current quorum: the owner's own lock on the checkpoint | reject |
-| frozen | `B` absent — a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) took it | reject |
+| frozen | the frozen bit in the datum, set by a freeze that paid `B` to the payee it named, cleared by a depositing rotation | reject |
 | juvenile | `now − born_at < W` | reject |
-| pending conviction | retained custody awaiting its associated Registry fold | reject |
-| convicted | the mark, terminal | no candidate |
+| pending termination | retained custody awaiting the matching Registry fold | reject |
+| convicted | retired by the matching fold; no output remains | no candidate alone does not tell it from never registered (the reader answers from a complete history) |
 
-Nothing there is a flag a caller can set. The poison is signed at the current
-threshold; the rest are facts about what the UTxO holds and when it was bonded.
-The consumer's whole predicate is: present, both bonds full, not poisoned,
-older than `W`, and the payment's own signature satisfies the current
-threshold.
+Nothing there is a flag a caller can set: the poison and frozen bits change only by the validated steps, and the rest are facts about the output and when the checkpoint was born. The holding predicate is: authenticated context, output at the checkpoint credential, exactly one representative asset, a datum that names the expected AID, state present, unfrozen and unpoisoned, and `born_at + W ≤ now`. The payment's own signature is checked separately.
 
 ## Uniqueness: the one shared object
 
-Today there is none. Registration uses no absence proof, so more than one
+In the earlier deployed design there was none. Registration uses no absence proof, so more than one
 candidate checkpoint can exist for an AID and a consumer cannot prove
 otherwise.
 
@@ -193,7 +183,7 @@ It is a registry of 32-byte keys, not a record of events — the record tree and
 its cursor are retired. Its mechanics are the MPFS cage — a Merkle Patricia
 Forestry store whose every update passes through one validator — made
 permissionless:
-requests are independent UTxOs anyone submits and anyone applies in batches
+requests are independent UTxOs that a booker submits (the controller, in the constitution's terms) and anyone in the folder role applies in batches
 (ruling D-037). It is built today in
 [singular](https://github.com/lambdasistemi/singular) and runs on a
 development network; what is delivered and what remains is on
@@ -237,21 +227,18 @@ effect.
 The scripts are stored in reference-script outputs; copying them inline would
 exceed the transaction-size limit. See
 [Observer architecture](observer-architecture.md) for the wire shape, the
-BLAKE3 fact token, sizes and costs — including the three bytes of headroom on
-`observer_advance` that make every datum decision a measured one.
+BLAKE3 fact token, sizes and costs — including the three bytes of headroom of the version 1 `observer_advance` that made every datum decision a measured one.
 
 For the proposed registration flow, the heavy inception admission moves to the
 earlier attestation transaction. The fold must still authenticate that result
 and couple registry insertion, checkpoint mint and output validation. This
 changes where registration evidence is checked; it does not remove those checks
 or change rotation evidence into inception attestations.
+At this revision the fold checks the inception; the constitution requires the controller's booking to do so, and issue #559 records the conflict.
 
 ## Permissionless does not mean unauthenticated
 
-Register, advance, freeze, top-up, poison relay and conviction may be submitted
-by anyone because their result is fixed by public evidence. The submitter
-cannot choose new keys, skip a sequence, lower a threshold, or remove required
-witnesses.
+In the accepted design, advance and freeze may be submitted by anyone: the evidence they present is public, the key state a rotation installs is the one that evidence establishes, and the submitter names the payee; a rotation carries a deposit only when the owner's new keys have signed its intent. A top-up may be submitted by anyone with a clear top-up mark and at least `P`, with no evidence and no payee. A registration is booked in the controller's role and folded by the registry's folder, a role of Singular's registry that knows nothing of KERI (constitution, principle XII); the model names no signer for either step. A poison needs the current key quorum's authorization, and a conviction needs a commitment opened beforehand. The submitter cannot change the new keys, thresholds and witnesses: they come from the rotation evidence, which the model takes as a premise and requires only to be for a strictly greater sequence number.
 
 Where authority *is* needed, it is a signature over exactly the thing being
 decided. In the M1 V1 release, close bound the refund address in a message
@@ -274,8 +261,7 @@ the current controllers signed; `ckeri` no longer offers that close.
 ## Current boundary and future planes
 
 The repository proves the identity-plane rungs on a protocol-11 development
-network and on preprod. It does **not** provide the accepted design's machine on
-chain at all, real three-of-seven GLEIF-scale settlement, a production
+network and on preprod. It does **not** yet show the accepted design's machine settled on a public network (the source tree implements only part of it: there is no poison spend), real three-of-seven GLEIF-scale settlement, a production
 deployment or mainnet service, a vLEI credential-chain verifier, a credential
 revocation mirror, or a wallet-to-Cardano authorization product.
 

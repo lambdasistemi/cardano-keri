@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "What was deployed, and the accepted design",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.",
       "pause": 400
     },
     {
@@ -21,7 +21,7 @@
       "pause": 400
     },
     {
-      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever this case resolves the acting trader's current authority — the detached-signature check \"against the L1 registry reference input\" (§2), the mermaid \"AID Active?\" step, and the \"cur_pubkey from L1\" of the per-action check (§3) — the live surface is the acting AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: asset id (checkpoint_policy_id, aid_asset_name), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). A delta = 0 rotation (seq + 1) consumes that checkpoint UTxO, so a detached order signed under the prior sequence is stale and cannot merely be re-pointed at the fresh checkpoint: the trader MUST re-sign the order under the current weighted keys + current sequence (value-bearing order flow carries the explicit Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup lifecycle — a rotated-away order is reclaimed or re-signed, never silently re-pointed). Preserved as written: the admission cache (trie_key → AdmissionLeaf {aid, credential_saids…}, carrying the verified stable qualified aid from which the checkpoint asset is derived; trie_key stays a historical-only key), the GLEIF → QVI → LE → ECR chain, and the all-TELs cascade — the historical credential/admission plane, which may still gate venue eligibility but never selects the current checkpoint identity.",
+      "text": "Per specs/92-checkpoint-contention/DECISION.md, wherever this case resolves the acting trader's current authority — the detached-signature check \"against the L1 registry reference input\" (§2), the mermaid \"AID Active?\" step, and the \"cur_pubkey from L1\" of the per-action check (§3) — the live surface is the acting AID's own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO: the registry's representative asset for the AID (in version 1, asset id (checkpoint_policy_id, aid_asset_name)), current weighted keys/threshold in the inline CheckpointDatum, read as a CIP-31 reference input and discovered by a generic exact-asset (policy_id, asset_name) lookup (candidate outref for liveness only, re-validated against the ledger). A delta = 0 rotation (a later sequence number) consumes that checkpoint UTxO, so a detached order signed under the prior sequence is stale and cannot merely be re-pointed at the fresh checkpoint: the trader MUST re-sign the order under the current weighted keys + current sequence (value-bearing order flow carries the explicit Execute / Refresh-Re-sign / Cancel-Reclaim / Expire-Cleanup lifecycle — a rotated-away order is reclaimed or re-signed, never silently re-pointed). Preserved as written: the admission cache (trie_key → AdmissionLeaf {aid, credential_saids…}, carrying the verified stable qualified aid from which the checkpoint asset is derived; trie_key stays a historical-only key), the GLEIF → QVI → LE → ECR chain, and the all-TELs cascade — the historical credential/admission plane, which may still gate venue eligibility but never selects the current checkpoint identity.",
       "pause": 400
     }
   ],
@@ -91,11 +91,11 @@
       "pause": 400
     },
     {
-      "text": "Admission cage per venue (an MPFS instance): trie_key → AdmissionLeaf { aid, credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after } (three or four SAIDs, depending on the role-credential issuance path — see the factored core); the leaf carries the verified stable qualified aid, bound at admission, so the sovereign checkpoint asset (checkpoint_policy_id, aid_asset_name) is derived from it (historical trie_key alone cannot select the current checkpoint). The admission transaction carries the raw ACDCs + proofs; the L3 verifier runs the full chain on-chain; permissionless.",
+      "text": "Admission cage per venue (an MPFS instance): trie_key → AdmissionLeaf { aid, credential_saids: [qvi, le, auth?, ecr], role_level, admitted_at, not_after } (three or four SAIDs, depending on the role-credential issuance path — see the factored core); the leaf carries the verified stable qualified aid, bound at admission, so the sovereign checkpoint's representative asset (in version 1 (checkpoint_policy_id, aid_asset_name)) is derived from it (historical trie_key alone cannot select the current checkpoint). The admission transaction carries the raw ACDCs + proofs; the L3 verifier runs the full chain on-chain; permissionless.",
       "pause": 300
     },
     {
-      "text": "Per-action check (in batch execution): MPF membership proof of trie_key in the admission cage (reference input; historical credential plane) + the acting AID's sovereign per-AID checkpoint as a CIP-31 reference input — current weighted keys/threshold in the inline CheckpointDatum, discovered by a generic exact-asset (policy_id, asset_name) lookup, with exactly one current checkpoint in the ACTIVE role — + verification that the order's detached witness set meets that checkpoint's current weighted threshold + TEL non-revocation proofs (reference input) + tx validity range ⊂ not_after. A delta = 0 rotation consumes the checkpoint, staling any order whose witness set was signed under a superseded sequence.",
+      "text": "Per-action check (in batch execution): MPF membership proof of trie_key in the admission cage (reference input; historical credential plane) + the acting AID's sovereign per-AID checkpoint as a CIP-31 reference input — current weighted keys/threshold in the inline CheckpointDatum, discovered by a generic exact-asset (policy_id, asset_name) lookup, with exactly one current eligible checkpoint (in version 1, in the ACTIVE role) — + verification that the order's detached witness set meets that checkpoint's current weighted threshold + TEL non-revocation proofs (reference input) + tx validity range ⊂ not_after. A delta = 0 rotation consumes the checkpoint, staling any order whose witness set was signed under a superseded sequence.",
       "pause": 300
     },
     {
@@ -183,6 +183,6 @@
   ],
   "_source": {
     "file": "regulated-defi.md",
-    "sha256": "6ac286ddba46cd5cfc3b1586b71b8154fd8e9146fe437bc016cb598108232e2e"
+    "sha256": "60077b94dd61165dc0a36df4e2a411e23935f0d6606a30fb09cedbc29de5bdfb"
   }
 }

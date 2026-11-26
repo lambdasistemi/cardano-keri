@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "The resolution rules, the indexer boundary, the authorization modes and the rotation race are shipped on main today and survive the M1 return. What changes is the predicate an application applies to the checkpoint it resolved: role addresses go, and a bit plus the checkpoint's own value take their place. Both are given below.",
+      "text": "The resolution rules, the indexer boundary and the rotation race are those of the earlier deployed design (version 1) and carry over to the accepted design; the authorization modes are designs for a future application. Under the accepted design, the holding check uses the checkpoint credential, the representative asset and the decoded lifecycle state, and the application checks its own operation's authorization separately. Both predicates are given below.",
       "pause": 400
     }
   ],
@@ -71,7 +71,7 @@
       "pause": 400
     },
     {
-      "text": "A convicted identity (the terminal state after a duplicity proof) is not a further role to reject. Conviction burns the AID token, so it leaves nothing to resolve and the application meets the no-checkpoint case. There is no identity-root inclusion proof and no separate Freeze-registry absence proof: Freeze changes the sovereign checkpoint's own role address.",
+      "text": "A convicted identity (the terminal state after a duplicity proof) is not a further role to reject. In version 1 conviction burned the AID token, so it left nothing to resolve and the application met the no-checkpoint case. There is no identity-root inclusion proof and no separate Freeze-registry absence proof: Freeze changes the sovereign checkpoint's own role address.",
       "pause": 400
     }
   ],
@@ -81,11 +81,11 @@
       "pause": 500
     },
     {
-      "text": "The older checkpoint design retains steps 1 to 5. The pending Singular integration also changes token and registry authentication as described below. Steps 6 and 7 become the consumer predicate, which reads only the datum and the checkpoint's value:",
+      "text": "The holding predicate authenticates the network, release and checkpoint credential. It requires the output at that credential to hold exactly one unit of the representative asset derived for the registry and AID.",
       "pause": 400
     },
     {
-      "text": "and, once the validity edge ships, now ≤ valid_until. Everything else fails closed: absent, frozen (the freeze bond taken), poisoned (locked by the owner's own declaration), juvenile (younger than the window W), convicted, parked (an output retains its token, minimum ADA and last key state), and pending conviction custody.",
+      "text": "The lifecycle check accepts a present checkpoint when its frozen and poisoned bits are clear and its age is at least the juvenility window (born_at + W ≤ now, equality included). A frozen, poisoned, juvenile, pending-termination or convicted checkpoint is refused, and so is an absent one. There is no parked state: a checkpoint is alive until it is convicted. The relying application checks authorization for its own operation separately.",
       "pause": 400
     },
     {
@@ -93,7 +93,7 @@
       "pause": 400
     },
     {
-      "text": "Frozen is not a flag. A frozen checkpoint is missing B. An application that looks for a status field will find none, and must compare against the deployment's D_reg and B.",
+      "text": "Freeze changes both datum and value. Only the frozen bit in the datum changes to true. B leaves the output, to the payee the freeze names. Changing only the lovelace leaves the holding predicate’s result unchanged. A caller relying on realizesState must establish the exact lovelace held for the state, including the registry minimum ADA.",
       "pause": 300
     },
     {
@@ -115,15 +115,15 @@
       "pause": 400
     },
     {
-      "text": "Those are conceptual commitments, not byte formats. The exact preimage bytes and termination approval vectors are not settled upstream. Registration approval binds the full holding address, including its payment and stake parts. The KERI AID key encoding still needs an explicit binding.",
+      "text": "The model fixes one concrete choice for these commitments (ConsumerBytes.lean): the registry key of an AID is its qualified CESR text bytes, the preimage is the Plutus Data serialisation of Singular's preimage type at the pinned revision, and the hash is BLAKE2b-256. The general consumer model takes the datum decoder as an input; one concrete version 2 decoder is declared (CheckpointDatum.lean). The collision freedom of the hash, the faithfulness of observation and the release provider remain assumptions. Registration approval binds the full holding address, including its payment and stake parts.",
       "pause": 400
     },
     {
-      "text": "A future consumer queries that exact asset under S, requires quantity one, authenticates the canonical registry and checks the holding's KERI datum and eligibility. A token in a parked output or pending termination is not an eligible checkpoint. A missing token alone does not distinguish terminal from never registered; that requires registry history or a proof against the on-chain root. Provider failure must be reported as unavailable.",
+      "text": "A future consumer queries that exact asset under S, requires quantity one, authenticates the canonical registry and checks the holding's KERI datum and eligibility. A token in pending termination custody is not an eligible checkpoint. A missing token alone does not distinguish terminal from never registered; that requires a complete registry history through the asked point; how a reader obtains one is an open decision of issue #353. Provider failure must be reported as unavailable.",
       "pause": 400
     },
     {
-      "text": "Cardano KERI's model at 7cb4e716107d8ca7cc53dcdb0cd26549315ee256 still has the earlier registry and dependency binding. The parked-state and consumer changes remain pending under the Lean correspondence register, parking and consumer predicate work. In particular, the earlier parked description on this page is not the upstream target: parking must retain the token and key state in a KERI output, while the registry remains active. No model or runtime behavior is changed by this documentation. See the complete mapping for the remaining stories and evidence.",
+      "text": "The model binds the public Singular library at the revision pinned in lean/lake-manifest.json, and lean/CardanoKeri/ConsumerIdentity.lean states the consumer predicate for the registry holding (#439, closed). The open escalations are kept in the Lean correspondence register; the value and exact-chain-point provider questions of #353 stay open there. Parking, described by earlier revisions of this page, is removed: there is no owner exit (#493). No model or runtime behavior is changed by this documentation. See the complete mapping for the remaining stories and evidence.",
       "pause": 400
     }
   ],
@@ -159,7 +159,7 @@
       "pause": 500
     },
     {
-      "text": "Two application patterns remain useful.",
+      "text": "Two application patterns are candidates for a future application.",
       "pause": 400
     }
   ],
@@ -177,7 +177,7 @@
       "pause": 400
     },
     {
-      "text": "resolves the ACTIVE checkpoint;",
+      "text": "resolves the eligible checkpoint holding (in version 1, the ACTIVE checkpoint);",
       "pause": 300
     },
     {
@@ -233,7 +233,7 @@
       "pause": 400
     },
     {
-      "text": "the AID controller threshold resolved from the current ACTIVE checkpoint; and",
+      "text": "the AID controller threshold resolved from the current eligible checkpoint (in version 1, the ACTIVE checkpoint); and",
       "pause": 300
     },
     {
@@ -265,15 +265,15 @@
       "pause": 500
     },
     {
-      "text": "Shipped today. As soon as Freeze settles, the checkpoint token moves from ACTIVE to ARMED. A value transaction referring to the old ACTIVE input is stale, and a new transaction resolving ARMED must reject by role. A timely response Advance creates a new ACTIVE checkpoint at the next sequence, so the application must obtain fresh authorization against that input. Conviction produces no output to resolve at all.",
+      "text": "Earlier deployed design (version 1). As soon as Freeze settles, the checkpoint token moves from ACTIVE to ARMED. A value transaction referring to the old ACTIVE input is stale, and a new transaction resolving ARMED must reject by role. A timely response Advance creates a new ACTIVE checkpoint at the next sequence, so the application must obtain fresh authorization against that input. Conviction produces no output to resolve at all.",
       "pause": 400
     },
     {
-      "text": "Under the accepted design. Every refusal is a spend of the checkpoint that changes what the datum or the value says, so the mechanics are the same: the referring transaction is stale and a rebuild against the successor applies the predicate afresh. The refusals differ in who caused them and in how they clear:",
+      "text": "Under the accepted design. A refusal that follows a spend of the checkpoint (poison, freeze, conviction) makes the referring transaction stale, and a rebuild against the successor applies the predicate afresh. Time changes one premise: the age condition becomes true when the juvenility window has elapsed, and the checkpoint is then eligible only if it is also unpoisoned, unfrozen and authenticated. A wrong context, or a datum that does not decode for the release or name the AID, is refused by the holding predicate with no change to the checkpoint. A stale reference or a missing reader observation is a separate premise of the reader, which answers only from the candidate the ledger supplies and the observations and history it is given; when its observation shows no holder, the leaf its history establishes decides terminal or never registered, and without one it answers unavailable. The refusals differ in who caused them and in how they clear:",
       "pause": 400
     },
     {
-      "text": "An application should not treat any of these as an error condition to retry. Each is a statement that the identity is currently unfit to authorize, and each has a party who can make it fit again — except the last two rows, where the answer is respectively \"never\" and \"not by anyone but the owner\".",
+      "text": "An application should not treat any of these as an error condition to retry. Each is a statement that the identity is currently unfit to authorize, and each clears by its own rule in the table (a witnessed rotation, a depositing rotation, or time) — except the last two rows: a pending termination ends only when the matching fold consumes its termination request, and a convicted identity never returns.",
       "pause": 400
     }
   ],
@@ -291,7 +291,7 @@
       "pause": 400
     },
     {
-      "text": "Rotation is the remedy, and it is not retroactive. Once a rotation settles, authorizations bound to the previous checkpoint input are stale, but a transaction that already settled under the old ACTIVE checkpoint stands.",
+      "text": "Rotation is the remedy, and it is not retroactive. Once a rotation settles, authorizations bound to the previous checkpoint input are stale, but a transaction that already settled under the old checkpoint (in version 1, the ACTIVE one) stands.",
       "pause": 300
     },
     {
@@ -343,11 +343,11 @@
       "pause": 400
     },
     {
-      "text": "the right token at the wrong role;",
+      "text": "the right token at the wrong credential (in version 1, the wrong role);",
       "pause": 300
     },
     {
-      "text": "the right AID with multiple ACTIVE candidates;",
+      "text": "the right AID with several candidate holdings for one registry and asset (in version 1, multiple ACTIVE candidates);",
       "pause": 300
     },
     {
@@ -385,6 +385,6 @@
   ],
   "_source": {
     "file": "value-auth.md",
-    "sha256": "03e6b5638b6a8993766e2905c489e23919388cb2fe1a7c6eb84a98bc5063b8f5"
+    "sha256": "de1ba77f6fcbf3356942f0a3a80c07bd503d5820ce41cfb532ab5d0cc30b51bf"
   }
 }

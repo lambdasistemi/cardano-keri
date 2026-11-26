@@ -1,14 +1,11 @@
 # Identity operations
 
-Every operation, one by one: what the shipped validators do, and what the M1
-return replaces it with.
+Every operation, one by one: what the earlier deployed validators (version 1) did, and what the M1 return replaces it with.
 
 !!! abstract "Where this page stands"
-    The **Shipped today** sections describe programs published on preprod and
-    exercised by settled transactions. The **Under the accepted design** sections
+    The **Shipped today** sections describe the version 1 programs published on preprod on 2026-07-28 and exercised by settled transactions; their validators are no longer in the source tree. The **Under the accepted design** sections
     describe the [accepted design](../index.md#the-accepted-design),
-    proved in `lean/CardanoKeri/Checkpoint.lean` and playable in the
-    checkpoint simulator. Nothing designed is built. For evidence and
+    defined in `lean/CardanoKeri/Checkpoint.lean`, proved in `CheckpointGoals.lean` and playable in the checkpoint simulator. The source tree implements part of it (there is no poison spend yet); none of it is claimed deployed. For evidence and
     transaction IDs, start with the [story ladder](../story-ladder.md).
 
 A **KERI AID** (Key Event Receipt Infrastructure Autonomic Identifier) has a
@@ -18,8 +15,7 @@ transaction output) identified by a quantity-one token derived from the AID.
 
 ## The datum
 
-Shipped today, `CheckpointDatumV1` is **pure key state** — nine fields, no
-lifecycle flag (`onchain/lib/cardano_keri/checkpoint/datum.ak`):
+In the earlier deployed design, `CheckpointDatumV1` was **pure key state** — nine fields, no lifecycle flag (the record was removed from `onchain/lib/cardano_keri/checkpoint/datum.ak` in `7c49bd97`):
 
 - the AID;
 - current controller public keys and their weighted threshold;
@@ -30,26 +26,20 @@ lifecycle flag (`onchain/lib/cardano_keri/checkpoint/datum.ak`):
 
 Lifecycle state lives outside it, in the script role address the token sits at.
 
-Datum V2, in the accepted design, adds what the new machine needs: `poisoned`
-(the owner's own lock on the checkpoint), `born_at` (for juvenility: the age a
-checkpoint must reach before a consumer trusts it), `refund_to`, and `alive_at`
-and `valid_until` reserved for a future validity edge. The three sums of money
+Datum V2, in the accepted design, adds what the new machine needs: the epoch, `poisoned` (the owner's own lock on the checkpoint), `frozen`, `born_at` (for juvenility: the age a checkpoint must reach before a consumer trusts it), `refund_to` and the top-up mark. The model has no checkpoint expiry field. The three sums of money
 — `D_reg` the conviction bond, `B` the freeze bond and the pool of advance
-funds — are value, not fields. That change lands on `observer_advance`,
-which has three bytes of headroom, so epic
-[#319](https://github.com/lambdasistemi/cardano-keri/issues/319) measures before
-epic [#322](https://github.com/lambdasistemi/cardano-keri/issues/322) decides.
+funds — are value, not fields. The version 2 datum is written by the validator in the source tree (`onchain/lib/cardano_keri/checkpoint/datum.ak`).
 
 ## Operation status
 
 | Operation | Shipped today | Under the accepted design |
 |---|---|---|
 | Register | Creates a bonded checkpoint at sequence zero. No uniqueness rule | A registry request: absence proof, insert and checkpoint mint together; no second first-registration |
-| Advance | Applies one genuine witnessed rotation | The same, plus a bond option and the premium `P` (the fee the pool pays for landing a rotation) to whoever landed it. The refund address is never changed |
+| Advance | Applies one genuine witnessed rotation | The rotation selects a bond option. If the pool covers it, the premium `P` goes to the address the submitter names. Otherwise the rotation is unpaid. The refund address stays fixed. |
 | Close | Current controllers burn the token and take the refund | **Gone.** There is no owner exit: a checkpoint is alive until it is convicted |
-| Freeze | Moves a lagging checkpoint to ARMED for the response window | Payment to a hunter (anyone paid to land rotations, or to freeze a checkpoint that cannot pay for one) when the pool is short. The datum is untouched; `B` leaves |
+| Freeze | Moves a lagging checkpoint to ARMED for the response window | With a short pool, a successful freeze pays `B` to the address named in the action. The datum sets only its frozen bit to true and keeps the old keys. |
 | ClaimFreeze / thaw | Pays the recorded hunter after the deadline; thaw re-posts `B` | **Gone.** No deadline, no claim, no timeout economy |
-| Convict | Burns the token on a witnessed irreconcilable fork | A terminal `Convicted` state on a duplicity proof; `D_reg` in full to the convictor |
+| Convict | Burns the token on a witnessed irreconcilable fork | Conviction creates pending termination custody and pays `D_reg` to the eligible commitment’s payee. After termination booking, the consuming registry fold burns the token and retires the AID. |
 | Poison | — | New: the current quorum declares the epoch compromised |
 | Top-up | — | New: anyone adds at least one premium to the pool, once between two rotations. No signature. The only datum change is the top-up mark |
 
@@ -95,25 +85,22 @@ their epoch.
 
 ### Under the accepted design
 
-Registration becomes a **request** against the registry: it identifies the AID,
-binds the inception evidence, and carries the bonds and a refund address chosen
-by whoever pays. It is applied in a batch by anyone. This does not require the
+Registration becomes a **request** against the registry: it identifies the AID and carries the bonds and a refund address chosen by whoever pays. The constitution requires the controller's booking to validate the inception evidence; at this revision the model and the validators check it at the fold, and issue #559 records that conflict and its model-first repair. The registry's folder applies it in a batch. This does not require the
 raw inception to be stored in the request: the proposed
 [earlier attestation](follow-one-identity.md#proposed-attest-inception-before-requesting-registration)
 would authenticate inception validity and its initial key state. Such an
 attestation may be issued more than once; registry admission supplies checkpoint
 uniqueness. Its concrete format and validation are still to be implemented.
-Application checks that the AID has **no leaf**,
-inserts one, and creates the checkpoint in the same transaction. The persistent
+The registry's fold checks that the AID has **no leaf**, inserts one, and delivers the checkpoint holding the booking committed. The persistent
 leaf prevents a second first-registration of the AID, and there is no revival:
 a registered identity stays live until it is convicted. See
 [the registration guarantee](follow-one-identity.md#what-registration-guarantees)
 for the atomic mint/insertion obligation and the model's evidence limits.
 
-The new checkpoint is **juvenile**: unconsumable for `W` slots. That window is
+The new checkpoint's juvenile window starts at `born_at`, the booking's validity upper bound, which can precede the fold: it is unconsumable until `born_at + W`, and a fold that lands after that has no juvenile period left. That window is
 what bounds the stale-key registration above — anyone can advance the
 checkpoint onward with the controller's later public rotations, and the moment
-that happens the registrant's bonds answer to the controller's keys.
+that happens the checkpoint's operative key state is the controller's; the refund address chosen at registration does not change, and a conviction pays the bond still held and the remaining pool to it.
 
 ## Advance
 
@@ -157,11 +144,9 @@ afterwards.
 
 The predicate is unchanged. What is added is everything around it:
 
-- a **bond option** — `keep`, or `deposit` (the unfreeze: refill `B` when
-  a hunter has taken it). There is no withdraw;
+- a **bond option** — `keep`, or `deposit` (the unfreeze: refill `B` after a freeze paid it to the payee the freeze named). There is no withdraw;
 - the **premium** `P` paid from the pool to the payee the transaction names,
-  when the pool covers it. An unpaid rotation is still a valid rotation: no
-  transition ever requires the pool;
+  when the pool covers it. An unpaid rotation is still a valid rotation: no rotation requires the pool to cover the premium;
 - the **poison cleared**, unconditionally.
 
 A `deposit` travels in **a message signed by the keys of the epoch the rotation
@@ -192,7 +177,7 @@ address limits where the money goes but not whether the identity dies.
 
 There is no close. The owner keeps her checkpoint alive — bonds, rotations,
 unfreezing — until it is convicted; a relying party sees a checkpoint that
-is either alive or convicted. The current-key thief loses the close entirely:
+is alive, a pending termination that consumers refuse, or retired once the terminating fold has run. The current-key thief loses the close entirely:
 the only Cardano power the current keys retain is the poison, and a rotation
 clears that.
 
@@ -221,15 +206,11 @@ new sequence.
 ### Under the accepted design
 
 Freeze survives, with a different job. It is not a punishment for lag — the
-party who can prove a later witnessed rotation can simply **land** it, which
-costs the owner nothing and leaves the checkpoint fresh, so paying for the
+party who can prove a later witnessed rotation can simply **land** it, which leaves the checkpoint fresh and costs the owner at most the premium from the pool, so paying for the
 freeze instead would pay for the harmful move.
 
-Instead a hunter freezes only when the owner's **pool is short**: it presents
-exactly the advance evidence, takes `B`, and leaves the datum untouched — the
-old keys stay. Frozen is the absence of `B`, a value-level fact, not a role or
-a flag. There is no deadline, no claim, no thaw window: the owner comes back by
-a rotation with `deposit`, which restores both bonds.
+Instead a hunter freezes only when the owner's **pool is short** and the checkpoint is neither frozen nor poisoned: it presents exactly the advance evidence, and `B` goes to the payee the freeze names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores `B`. There is no deadline, no claim, no thaw window: the owner comes back by
+a rotation with `deposit`, which restores `B`.
 
 There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and
 no timeout.
@@ -237,16 +218,11 @@ no timeout.
 ## Poison — new in the accepted design
 
 A poison is the current quorum's declaration that this epoch is compromised.
-The key holders sign, at `cur_threshold`, a short preimage bound to the
-register policy, the AID and the current sequence — producible with stock
-`kli sign`, no KERI-side change, no BLAKE3 — and anyone lands it. It is never
+The current key quorum authorizes it at `cur_threshold`; the model does not yet specify the bytes they sign, and no validator implements the poison spend. It is never
 witnessed, because it is a Cardano-side declaration and not a projected KERI
 event.
 
-Its effect is one bit. The checkpoint becomes unconsumable. From a
-poisoned present checkpoint the machine still enables rotation, top-up,
-conviction, and close (the reap by the next keys). Only a second poison
-and a freeze are refused — those two require the epoch still clean.
+Its effect is one bit. The checkpoint becomes unconsumable. From a poisoned present checkpoint the machine still allows a rotation with its evidence, a top-up while its mark is clear, and a conviction with an eligible commitment; there is no close. A second poison and a freeze are refused — those two require the epoch still clean.
 Consumer authorization fails because the checkpoint is unconsumable. A
 rotation clears the poison.
 
@@ -274,10 +250,7 @@ exposes no command for it.
 
 ### Under the accepted design
 
-The same proof, a different effect. The convictor names a payee and takes
-`D_reg` in full; `B` and the pool go to the refund address; the checkpoint
-becomes `Convicted`, terminal; the token stays, and there is **no
-transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031).
+A different comparison and a different effect. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state, together with a rival rotation valid against the same previous commitments; the commitment's payee takes `D_reg` in full, and the freeze bond still held (none when frozen) and the pool go to the refund address. The checkpoint becomes a pending termination: the output and the token stay, consumers refuse it, and there is **no local transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031). A termination booking then moves the pending output into the termination request, and only the fold that consumes that request burns the token and retires the key.
 
 Terminality is not severity. KERI has no event that un-duplicates an
 identifier: superseding recovery is a rotation over an interaction, by rule and
@@ -285,9 +258,7 @@ not by duplicity, while two establishment events at one sequence is duplicity
 and KERI's only answer is permanent distrust. A clearable conviction would be
 the chain inventing a recovery KERI lacks.
 
-Who can trigger it is narrow. A stranger cannot: only a holder of the
-pre-committed keys could have signed the second rotation, and only colluding
-witnesses could have receipted both. The residual is real and bounded: a
+Producing the evidence is narrow: only a holder of the pre-committed keys could have signed the second rotation, and each rotation needs the receipts of its own derived witnesses at its own threshold; the comparison does not itself require the two receipt sets to overlap. Presenting it is not: once the evidence exists, any party that holds the duplicity proof and an eligible commitment can submit the conviction. The residual is real and bounded: a
 next-key thief with `toad` colluding witnesses can convict the identity she
 already controls under KERI and take `D_reg` on the way out. Exposure is
 `D_reg` and the witness set the controller chose.

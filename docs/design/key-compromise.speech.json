@@ -17,7 +17,7 @@
       "pause": 400
     },
     {
-      "text": "The exposure described here is what ships on main today. The M1 return changes the answer in two specific places, each marked below: close stops answering to the current keys, and the poison — the owner's own lock on the checkpoint — becomes the owner's on-chain instrument. Both are accepted design — proved in the Lean, not built.",
+      "text": "The exposure described here is that of the earlier deployed design (version 1). The M1 return changes the answer in two specific places, each marked below: close stops answering to the current keys, and the poison — the owner's own lock on the checkpoint — becomes the owner's on-chain instrument. Both are accepted design — proved in the Lean; no validator implements the poison yet.",
       "pause": 400
     }
   ],
@@ -31,7 +31,11 @@
       "pause": 400
     },
     {
-      "text": "Close becomes the reap, the only close there is: a witnessed rotation by the next keys whose signed message names the payee and the refund address (ruling D-036), so it needs the next keys exactly like any other rotation. Parking retains the token, minimum ADA and key state in an output while the registry key stays active. A duplicity proof enters pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the keys of the epoch the rotation opens (ruling D-038). A thief holding only the current keys is left with exactly one Cardano move — the poison — and that is the owner's instrument, not hers.",
+      "text": "There is no close: the design has no owner exit, no parking and no revival, so the current keys cannot end the identity. A duplicity proof, revealed under a commitment opened beforehand, enters",
+      "pause": 400
+    },
+    {
+      "text": "pending custody; its associated Registry fold completes conviction. Deposit is the unfreeze. That intent is signed by the keys of the epoch the rotation opens (ruling D-038). A thief holding only the current keys is left with exactly one Cardano move — the poison — and that is the owner's instrument, not hers.",
       "pause": 400
     },
     {
@@ -133,7 +137,7 @@
       "pause": 400
     },
     {
-      "text": "a Cardano transaction that already settled under the older ACTIVE checkpoint is not reversed;",
+      "text": "a Cardano transaction that already settled under the older checkpoint (in version 1, the ACTIVE one) is not reversed;",
       "pause": 300
     },
     {
@@ -159,11 +163,11 @@
       "pause": 400
     },
     {
-      "text": "What it is. The owner's key holders sign, at their own cur_threshold, a short declaration over a preimage bound to the register policy, the AID and the current sequence. Stock kli sign produces it, per member; no KERI-side change is needed, and no BLAKE3 is computed on chain. Anyone may relay it. It is never witnessed, because it is a Cardano-side declaration and not a projected KERI event.",
+      "text": "What it is. The owner's current key quorum authorizes it at its own cur_threshold; the model does not yet specify the bytes they sign, and no validator implements the poison spend. It is never witnessed, because it is a Cardano-side declaration and not a projected KERI event.",
       "pause": 400
     },
     {
-      "text": "What it does. One bit in the datum. The checkpoint becomes unconsumable immediately, and from a poisoned state the only enabled edge is a rotation: no close, no second poison, no consumer authorization. So the two moves a current-key thief would otherwise have — using the identity, and cashing it out — are both gone for every epoch the owner has poisoned.",
+      "text": "What it does. One bit in the datum. The checkpoint becomes unconsumable immediately. From a poisoned state a rotation with its evidence clears the poison, a top-up while its mark is clear and a conviction with an eligible commitment remain possible, and a second poison and a freeze are refused; there is no close and no consumer authorization. So the two moves a current-key thief would otherwise have — using the identity, and cashing it out — are both gone for every epoch the owner has poisoned.",
       "pause": 400
     },
     {
@@ -181,7 +185,7 @@
       "pause": 500
     },
     {
-      "text": "The price of the second row is stated rather than hidden: a poisoned identity whose next keys are lost is frozen forever, its conviction bond (the stake a duplicity proof would seize) included. The size of that bond is a deployment parameter and an economic call.",
+      "text": "The price of the second row is stated rather than hidden: a poisoned identity whose next keys are lost stays poisoned and unconsumable until it is convicted, its conviction bond (the stake a duplicity proof would seize) included. The size of that bond is a deployment parameter and an economic call.",
       "pause": 400
     }
   ],
@@ -191,7 +195,7 @@
       "pause": 500
     },
     {
-      "text": "If two witnessed rotations exist at one sequence — the same current keys revealed, each with receipts from at least toad of the witnesses — that is not a suspicion, it is duplicity, and anyone holding both can prove it on chain. The identity becomes Convicted, terminally, and the convictor takes D_reg. See Identity operations.",
+      "text": "In the accepted design, if two witnessed rotations of different content exist at one sequence, both valid against the same previous commitments and each with the receipts of its own derived witnesses, that is not a suspicion, it is duplicity. Presented against the live checkpoint whose key state they accuse, together with an open commitment that names this identifier, deployment, key state, evidence and payee and is still inside its slot window, it can be proved on chain. The checkpoint becomes a pending termination and the commitment's payee takes D_reg; the booking of the termination and the fold that consumes its request then retire the identity, terminally. See Identity operations.",
       "pause": 400
     },
     {
@@ -223,6 +227,6 @@
   ],
   "_source": {
     "file": "key-compromise.md",
-    "sha256": "105f7c138bc1626a71546d866ba803c5cafd7098443f5b5c967f4328cca8f8cb"
+    "sha256": "5d6bea9fb1f5daa51713691b0455b49f77aa744f856d62b2956c043746ed935c"
   }
 }

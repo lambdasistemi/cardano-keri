@@ -15,11 +15,11 @@
       "pause": 500
     },
     {
-      "text": "The only production input is the plutus-blueprint derivation wired by offchain/flake.nix. The blaster app accepts no blueprint path and does not search the current directory, environment variables, or ambient files. It selects exactly one validator titled checkpoint.checkpoint.spend, requires a non-empty string compiledCode, and rejects missing, renamed, malformed, or duplicate matches.",
+      "text": "The audited program of this page is the one in the committed offchain/blaster/m8-baseline-plutus.json, which offchain/flake.nix feeds to the baseline; the live plutus-blueprint derivation of the same file is a separate artifact. The blaster app accepts no blueprint path and does not search the current directory, environment variables, or ambient files. It selects exactly one validator titled checkpoint.checkpoint.spend, requires a non-empty string compiledCode, and rejects missing, renamed, malformed, or duplicate matches.",
       "pause": 400
     },
     {
-      "text": "The current audited identities are:",
+      "text": "The audited identities of the committed baseline are:",
       "pause": 400
     },
     {
@@ -73,6 +73,6 @@
   ],
   "_source": {
     "file": "blaster-tractability.md",
-    "sha256": "0472e5454937ceea93a71ff6c987316a9658dbbeb3368f19b6eab7912fddffa5"
+    "sha256": "ccd30519ca9d962ed8f049619cf605be58ad1bf43df4176c4d2ed76ccf4850a9"
   }
 }

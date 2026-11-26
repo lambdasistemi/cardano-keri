@@ -1,16 +1,15 @@
 # Observer architecture
 
 !!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
+    Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design (D-036 to D-040) an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses.
 
 
 The production transaction shape separates small state-machine checks from
@@ -152,7 +151,7 @@ Register
 ```
 
 The large `RegistrationEvidence` no longer rides inside that mint redeemer.
-It rides once in the observer envelope. This is the current wire shape from
+It rides once in the observer envelope. This was the wire shape of the version 1 programs, from
 PR [#146](https://github.com/lambdasistemi/cardano-keri/pull/146).
 
 ## Reference delivery
@@ -187,7 +186,7 @@ story pull requests, not estimates.
 | ARMED response, thin checkpoint | 419,014 memory / 144,731,099 CPU | [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
 | ARMED response, Advance observer | 3,707,244 memory / 1,845,793,955 CPU | [PR #150](https://github.com/lambdasistemi/cardano-keri/pull/150) |
 
-The Advance observer has only **3 bytes** of measured applied-script headroom.
+The version 1 Advance observer had only **3 bytes** of measured applied-script headroom (PR #150).
 Issue [#149](https://github.com/lambdasistemi/cardano-keri/issues/149) is a
 required size-reduction chore before the real seven-key rotation story. A
 passing current transaction does not make that margin maintainable.

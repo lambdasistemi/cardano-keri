@@ -363,13 +363,13 @@
     "index": 1,
     "name": "docs-architecture-amaru-integration/amaru-integration-analysis-01",
     "pause_ms": 400,
-    "v": "1400cc797193"
+    "v": "cf330cdc4b4c"
    },
    {
     "index": 2,
     "name": "docs-architecture-amaru-integration/amaru-integration-analysis-02",
     "pause_ms": 400,
-    "v": "2735df175802"
+    "v": "8ccea0750069"
    },
    {
     "index": 3,
@@ -891,7 +891,7 @@
     "index": 1,
     "name": "docs-architecture-amaru-integration/where-cardano-keri-fits-01",
     "pause_ms": 400,
-    "v": "4c57c0c7fe29"
+    "v": "8e08de3d939f"
    },
    {
     "index": 2,
@@ -997,13 +997,13 @@
     "index": 1,
     "name": "docs-architecture-blaster-tractability/production-uplc-source-01",
     "pause_ms": 400,
-    "v": "6eca9f00ba13"
+    "v": "28e077527c24"
    },
    {
     "index": 2,
     "name": "docs-architecture-blaster-tractability/production-uplc-source-02",
     "pause_ms": 400,
-    "v": "a3f15c8ff1d9"
+    "v": "d24c972da501"
    },
    {
     "index": 3,
@@ -1141,7 +1141,7 @@
     "index": 1,
     "name": "docs-architecture-checkpoint-version-remnant-audit/what-the-arity-defect-actually-was-01",
     "pause_ms": 400,
-    "v": "f23023ca077e"
+    "v": "b1e34b38ebc5"
    },
    {
     "index": 2,
@@ -1367,13 +1367,13 @@
     "index": 1,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-01",
     "pause_ms": 400,
-    "v": "b8567625ae24"
+    "v": "c13fc282bfd2"
    },
    {
     "index": 2,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-02",
     "pause_ms": 400,
-    "v": "851e4a4263a0"
+    "v": "0e8b4d9f86b2"
    },
    {
     "index": 3,
@@ -1391,13 +1391,13 @@
     "index": 5,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-05",
     "pause_ms": 400,
-    "v": "39ea45180313"
+    "v": "1a01306ce0e7"
    },
    {
     "index": 6,
     "name": "docs-architecture-follow-one-identity/4-the-registry-refuses-a-duplicate-follow-the-money-06",
     "pause_ms": 400,
-    "v": "f3761f828e0c"
+    "v": "1a52bd0eb113"
    },
    {
     "index": 7,
@@ -1435,7 +1435,7 @@
     "index": 4,
     "name": "docs-architecture-follow-one-identity/follow-one-identity-04",
     "pause_ms": 400,
-    "v": "05b57702df68"
+    "v": "c7da74b14aff"
    }
   ],
   "from-the-model-to-a-running-system": [
@@ -1499,7 +1499,7 @@
     "index": 6,
     "name": "docs-architecture-follow-one-identity/how-to-play-an-example-06",
     "pause_ms": 400,
-    "v": "a5460663198f"
+    "v": "c99b6d6193a6"
    }
   ],
   "the-booking-shows-the-inception-the-fold-shows-nothing": [
@@ -1519,7 +1519,7 @@
     "index": 2,
     "name": "docs-architecture-follow-one-identity/the-booking-shows-the-inception-the-fold-shows-nothing-02",
     "pause_ms": 400,
-    "v": "e5e5a73a3afa"
+    "v": "ea9109e681e3"
    },
    {
     "index": 3,
@@ -1577,19 +1577,25 @@
     "index": 1,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-01",
     "pause_ms": 400,
-    "v": "c2fd82e711a1"
+    "v": "faa8b7fa3265"
    },
    {
     "index": 2,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-02",
     "pause_ms": 400,
-    "v": "5526f074fb7f"
+    "v": "83ee5537d504"
    },
    {
     "index": 3,
     "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-03",
     "pause_ms": 400,
-    "v": "605f4c399c7c"
+    "v": "66eab36b0d45"
+   },
+   {
+    "index": 4,
+    "name": "docs-architecture-follow-one-identity/what-does-active-token-promise-04",
+    "pause_ms": 400,
+    "v": "a825e75111d2"
    }
   ],
   "what-must-enforce-the-guarantee-on-cardano": [
@@ -1683,7 +1689,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/identity-operations-01",
     "pause_ms": 400,
-    "v": "e64727f626c0"
+    "v": "b2e22bf9167d"
    },
    {
     "index": 2,
@@ -1695,7 +1701,7 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/identity-operations-03",
     "pause_ms": 400,
-    "v": "2ee3d518fc42"
+    "v": "7829a22db04c"
    },
    {
     "index": 4,
@@ -1723,13 +1729,13 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/poison-new-in-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "899d9bcad31a"
+    "v": "176be0df3a25"
    },
    {
     "index": 2,
     "name": "docs-architecture-identity-ops/poison-new-in-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "798b390c77d2"
+    "v": "55544be45858"
    },
    {
     "index": 3,
@@ -1781,7 +1787,7 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/shipped-today-03",
     "pause_ms": 400,
-    "v": "6a018df31881"
+    "v": "bbdf72c1abf8"
    },
    {
     "index": 4,
@@ -2001,7 +2007,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/the-datum-01",
     "pause_ms": 400,
-    "v": "5be3530c05ca"
+    "v": "81af25260881"
    },
    {
     "index": 2,
@@ -2049,7 +2055,7 @@
     "index": 9,
     "name": "docs-architecture-identity-ops/the-datum-09",
     "pause_ms": 400,
-    "v": "d7fd917c0ed8"
+    "v": "239b6e0fd1b6"
    }
   ],
   "top-up-new-in-the-accepted-design": [
@@ -2063,7 +2069,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "271d879f9dd8"
+    "v": "66264466ae35"
    }
   ],
   "under-the-accepted-design": [
@@ -2077,13 +2083,13 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "2c4acc59c2c9"
+    "v": "6cbd079d3493"
    },
    {
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "0b921efe7ca2"
+    "v": "6f9ee5246f80"
    }
   ],
   "under-the-accepted-design_1": [
@@ -2103,13 +2109,13 @@
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_1-02",
     "pause_ms": 300,
-    "v": "5a7467052031"
+    "v": "0072869b7769"
    },
    {
     "index": 3,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_1-03",
     "pause_ms": 300,
-    "v": "3812dcb8ae86"
+    "v": "4c684e550e4b"
    },
    {
     "index": 4,
@@ -2135,7 +2141,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_2-01",
     "pause_ms": 400,
-    "v": "27109884590a"
+    "v": "3b040cbd2105"
    },
    {
     "index": 2,
@@ -2155,13 +2161,13 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_3-01",
     "pause_ms": 400,
-    "v": "c76202d293a9"
+    "v": "545e314bd333"
    },
    {
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_3-02",
     "pause_ms": 400,
-    "v": "95a810d04bb6"
+    "v": "8acfe11eba78"
    },
    {
     "index": 3,
@@ -2181,7 +2187,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_4-01",
     "pause_ms": 400,
-    "v": "a93de4fbc905"
+    "v": "0095033dbae1"
    },
    {
     "index": 2,
@@ -2193,7 +2199,7 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_4-03",
     "pause_ms": 400,
-    "v": "353b0b57938a"
+    "v": "a54dfb222804"
    }
   ],
   "what-is-off-chain": [
@@ -2265,7 +2271,7 @@
     "index": 2,
     "name": "docs-architecture-observer-architecture/measured-sizes-and-costs-02",
     "pause_ms": 400,
-    "v": "840e1394a5b7"
+    "v": "fb664096f683"
    }
   ],
   "observer-architecture": [
@@ -2285,7 +2291,7 @@
     "index": 2,
     "name": "docs-architecture-observer-architecture/observer-architecture-02",
     "pause_ms": 400,
-    "v": "e7ef693ca8f9"
+    "v": "f1b44c5ab8f2"
    },
    {
     "index": 3,
@@ -2379,7 +2385,7 @@
     "index": 6,
     "name": "docs-architecture-observer-architecture/registrations-premint-fact-token-06",
     "pause_ms": 400,
-    "v": "657d5ca68456"
+    "v": "2c0bb8321037"
    }
   ],
   "security-properties-of-the-split": [
@@ -2605,7 +2611,7 @@
     "index": 4,
     "name": "docs-architecture-overview/architecture-overview-04",
     "pause_ms": 400,
-    "v": "e7197792789b"
+    "v": "bd05b9e97ef2"
    }
   ],
   "current-boundary-and-future-planes": [
@@ -2619,13 +2625,33 @@
     "index": 1,
     "name": "docs-architecture-overview/current-boundary-and-future-planes-01",
     "pause_ms": 400,
-    "v": "95e25d715607"
+    "v": "30d06027306c"
    },
    {
     "index": 2,
     "name": "docs-architecture-overview/current-boundary-and-future-planes-02",
     "pause_ms": 400,
     "v": "66405d8e56cd"
+   }
+  ],
+  "earlier-deployed-design-role-addresses": [
+   {
+    "index": 0,
+    "name": "docs-architecture-overview/earlier-deployed-design-role-addresses-00",
+    "pause_ms": 500,
+    "v": "192fb551fad7"
+   },
+   {
+    "index": 1,
+    "name": "docs-architecture-overview/earlier-deployed-design-role-addresses-01",
+    "pause_ms": 400,
+    "v": "7fadf8029e3d"
+   },
+   {
+    "index": 2,
+    "name": "docs-architecture-overview/earlier-deployed-design-role-addresses-02",
+    "pause_ms": 400,
+    "v": "b648acfa6d81"
    }
   ],
   "how-lifecycle-state-is-represented": [
@@ -2661,13 +2687,13 @@
     "index": 1,
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-01",
     "pause_ms": 400,
-    "v": "19a8735d3f85"
+    "v": "d1ea9ce86a6b"
    },
    {
     "index": 2,
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-02",
     "pause_ms": 400,
-    "v": "3510c0279c0c"
+    "v": "7b1f2a0751b6"
    },
    {
     "index": 3,
@@ -2679,7 +2705,7 @@
     "index": 4,
     "name": "docs-architecture-overview/permissionless-does-not-mean-unauthenticated-04",
     "pause_ms": 400,
-    "v": "f018654abeec"
+    "v": "69a3a47bc515"
    }
   ],
   "related-pages": [
@@ -2718,26 +2744,6 @@
     "name": "docs-architecture-overview/related-pages-05",
     "pause_ms": 300,
     "v": "3d7dd38f877a"
-   }
-  ],
-  "shipped-today-role-addresses": [
-   {
-    "index": 0,
-    "name": "docs-architecture-overview/shipped-today-role-addresses-00",
-    "pause_ms": 500,
-    "v": "356d0a226509"
-   },
-   {
-    "index": 1,
-    "name": "docs-architecture-overview/shipped-today-role-addresses-01",
-    "pause_ms": 400,
-    "v": "7fadf8029e3d"
-   },
-   {
-    "index": 2,
-    "name": "docs-architecture-overview/shipped-today-role-addresses-02",
-    "pause_ms": 400,
-    "v": "bef824ed23c7"
    }
   ],
   "shipped-v1-evidence-flow": [
@@ -2801,7 +2807,7 @@
     "index": 1,
     "name": "docs-architecture-overview/stable-identity-changing-authority-01",
     "pause_ms": 400,
-    "v": "759ab4b188f9"
+    "v": "c222281e163c"
    },
    {
     "index": 2,
@@ -2853,33 +2859,33 @@
     "index": 3,
     "name": "docs-architecture-overview/transaction-architecture-03",
     "pause_ms": 400,
-    "v": "9bd41890d2c8"
+    "v": "8e8c59bf2f73"
    },
    {
     "index": 4,
     "name": "docs-architecture-overview/transaction-architecture-04",
     "pause_ms": 400,
-    "v": "627166a58aa2"
+    "v": "ab0a56b92d31"
    }
   ],
-  "under-the-accepted-design-one-bit-and-the-value": [
+  "under-the-accepted-design-the-poison-bit-the-frozen-bit-and-the-age": [
    {
     "index": 0,
-    "name": "docs-architecture-overview/under-the-accepted-design-one-bit-and-the-value-00",
+    "name": "docs-architecture-overview/under-the-accepted-design-the-poison-bit-the-frozen-bit-and-the-age-00",
     "pause_ms": 500,
-    "v": "3348d79e8b76"
+    "v": "feb00b26228a"
    },
    {
     "index": 1,
-    "name": "docs-architecture-overview/under-the-accepted-design-one-bit-and-the-value-01",
+    "name": "docs-architecture-overview/under-the-accepted-design-the-poison-bit-the-frozen-bit-and-the-age-01",
     "pause_ms": 400,
     "v": "5a1738696d15"
    },
    {
     "index": 2,
-    "name": "docs-architecture-overview/under-the-accepted-design-one-bit-and-the-value-02",
+    "name": "docs-architecture-overview/under-the-accepted-design-the-poison-bit-the-frozen-bit-and-the-age-02",
     "pause_ms": 400,
-    "v": "12eb732fbd24"
+    "v": "7cb90c8697c4"
    }
   ],
   "uniqueness-the-one-shared-object": [
@@ -2893,19 +2899,19 @@
     "index": 1,
     "name": "docs-architecture-overview/uniqueness-the-one-shared-object-01",
     "pause_ms": 400,
-    "v": "ee581f2174b9"
+    "v": "15561d3f7b5e"
    },
    {
     "index": 2,
     "name": "docs-architecture-overview/uniqueness-the-one-shared-object-02",
     "pause_ms": 400,
-    "v": "0c4afc7808f4"
+    "v": "c061284c18ae"
    },
    {
     "index": 3,
     "name": "docs-architecture-overview/uniqueness-the-one-shared-object-03",
     "pause_ms": 400,
-    "v": "a4e466f156a9"
+    "v": "4e2c70c19401"
    }
   ]
  },
@@ -2991,7 +2997,7 @@
     "index": 5,
     "name": "docs-architecture-system/how-applications-consume-identity-05",
     "pause_ms": 300,
-    "v": "ed842e433167"
+    "v": "6abe702a402d"
    },
    {
     "index": 6,
@@ -3081,7 +3087,7 @@
     "index": 2,
     "name": "docs-architecture-system/registration-flow-shipped-02",
     "pause_ms": 400,
-    "v": "e0e989c873b8"
+    "v": "c39b8e9cfd1a"
    }
   ],
   "registration-through-the-registry-designed": [
@@ -3101,7 +3107,7 @@
     "index": 2,
     "name": "docs-architecture-system/registration-through-the-registry-designed-02",
     "pause_ms": 400,
-    "v": "8696bb14c1b0"
+    "v": "c3a7a7ece881"
    }
   ],
   "system-architecture": [
@@ -3127,7 +3133,7 @@
     "index": 3,
     "name": "docs-architecture-system/system-architecture-03",
     "pause_ms": 400,
-    "v": "00ece758b935"
+    "v": "0599ea120317"
    }
   ],
   "the-identity-checkpoint-shipped": [
@@ -3161,7 +3167,7 @@
     "index": 2,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-02",
     "pause_ms": 400,
-    "v": "09ac0025cb90"
+    "v": "a0630b9dc423"
    }
   ]
  },
@@ -3177,7 +3183,7 @@
     "index": 1,
     "name": "docs-architecture-value-auth/authorization-modes-01",
     "pause_ms": 400,
-    "v": "bde61e4c3237"
+    "v": "5bbde1f64dec"
    }
   ],
   "compromised-controller-keys": [
@@ -3203,7 +3209,7 @@
     "index": 3,
     "name": "docs-architecture-value-auth/compromised-controller-keys-03",
     "pause_ms": 300,
-    "v": "1b3030d32e12"
+    "v": "950d2a8376b2"
    },
    {
     "index": 4,
@@ -3349,13 +3355,13 @@
     "index": 2,
     "name": "docs-architecture-value-auth/minimum-consumer-checklist-02",
     "pause_ms": 300,
-    "v": "8def3876d0ed"
+    "v": "a68a46098874"
    },
    {
     "index": 3,
     "name": "docs-architecture-value-auth/minimum-consumer-checklist-03",
     "pause_ms": 300,
-    "v": "2440903a9bd0"
+    "v": "63501cd1669e"
    },
    {
     "index": 4,
@@ -3429,7 +3435,7 @@
     "index": 3,
     "name": "docs-architecture-value-auth/native-cardano-signer-03",
     "pause_ms": 300,
-    "v": "0719bb6691f9"
+    "v": "aaaaeb8245c2"
    },
    {
     "index": 4,
@@ -3473,19 +3479,19 @@
     "index": 2,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-02",
     "pause_ms": 400,
-    "v": "06eca5d3a093"
+    "v": "b1b457af95db"
    },
    {
     "index": 3,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-03",
     "pause_ms": 400,
-    "v": "2309a880ee4d"
+    "v": "d7f03edfdf49"
    },
    {
     "index": 4,
     "name": "docs-architecture-value-auth/pending-singular-registry-integration-04",
     "pause_ms": 400,
-    "v": "aac2847ee57d"
+    "v": "3615a89c2e7e"
    }
   ],
   "refusal-behavior": [
@@ -3499,19 +3505,19 @@
     "index": 1,
     "name": "docs-architecture-value-auth/refusal-behavior-01",
     "pause_ms": 400,
-    "v": "b48761d1ebbe"
+    "v": "d75e721a9bb0"
    },
    {
     "index": 2,
     "name": "docs-architecture-value-auth/refusal-behavior-02",
     "pause_ms": 400,
-    "v": "7f3782575a2c"
+    "v": "613b97e118b0"
    },
    {
     "index": 3,
     "name": "docs-architecture-value-auth/refusal-behavior-03",
     "pause_ms": 400,
-    "v": "d1506aac2b52"
+    "v": "9c7e8e553893"
    }
   ],
   "resolve-current-authority": [
@@ -3591,7 +3597,7 @@
     "index": 12,
     "name": "docs-architecture-value-auth/resolve-current-authority-12",
     "pause_ms": 400,
-    "v": "712c21462025"
+    "v": "c5e5e63f154b"
    }
   ],
   "rotation-and-transaction-races": [
@@ -3625,13 +3631,13 @@
     "index": 1,
     "name": "docs-architecture-value-auth/under-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "0ec178e0942d"
+    "v": "099bc60b6ec0"
    },
    {
     "index": 2,
     "name": "docs-architecture-value-auth/under-the-accepted-design-02",
     "pause_ms": 400,
-    "v": "e58c533ae472"
+    "v": "af45aa049d75"
    },
    {
     "index": 3,
@@ -3643,7 +3649,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/under-the-accepted-design-04",
     "pause_ms": 300,
-    "v": "6f6bedd46b3b"
+    "v": "b3da646f6d8d"
    },
    {
     "index": 5,
@@ -3687,7 +3693,7 @@
     "index": 4,
     "name": "docs-architecture-value-auth/value-authorization-04",
     "pause_ms": 400,
-    "v": "a83a5c416644"
+    "v": "118f96cae507"
    }
   ],
   "value-cage-oracle": [
@@ -3713,7 +3719,7 @@
     "index": 3,
     "name": "docs-architecture-value-auth/value-cage-oracle-03",
     "pause_ms": 300,
-    "v": "b1c05ad6c895"
+    "v": "28f1eb7c4971"
    },
    {
     "index": 4,
@@ -3886,52 +3892,6 @@
     "v": "1e55ab972663"
    }
   ],
-  "current-limits": [
-   {
-    "index": 0,
-    "name": "docs-architecture-veridian-bridge/current-limits-00",
-    "pause_ms": 500,
-    "v": "310f3f62e528"
-   },
-   {
-    "index": 1,
-    "name": "docs-architecture-veridian-bridge/current-limits-01",
-    "pause_ms": 300,
-    "v": "234b2959f280"
-   },
-   {
-    "index": 2,
-    "name": "docs-architecture-veridian-bridge/current-limits-02",
-    "pause_ms": 300,
-    "v": "6e2175057858"
-   },
-   {
-    "index": 3,
-    "name": "docs-architecture-veridian-bridge/current-limits-03",
-    "pause_ms": 300,
-    "v": "7f2553416411"
-   },
-   {
-    "index": 4,
-    "name": "docs-architecture-veridian-bridge/current-limits-04",
-    "pause_ms": 300,
-    "v": "779a78cd9dda"
-   },
-   {
-    "index": 5,
-    "name": "docs-architecture-veridian-bridge/current-limits-05",
-    "pause_ms": 300,
-    "v": "5eecb8ffbf0e"
-   }
-  ],
-  "current-transaction-specifications": [
-   {
-    "index": 0,
-    "name": "docs-architecture-veridian-bridge/current-transaction-specifications-00",
-    "pause_ms": 500,
-    "v": "cad2bf32f2f3"
-   }
-  ],
   "digest-boundary": [
    {
     "index": 0,
@@ -4005,7 +3965,7 @@
     "index": 1,
     "name": "docs-architecture-veridian-bridge/freeze-01",
     "pause_ms": 400,
-    "v": "e622125f87cd"
+    "v": "89750eb3afcb"
    },
    {
     "index": 2,
@@ -4064,6 +4024,44 @@
     "v": "328e92f91abc"
    }
   ],
+  "limits-of-the-version-1-programs": [
+   {
+    "index": 0,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-00",
+    "pause_ms": 500,
+    "v": "9a39d3630b6b"
+   },
+   {
+    "index": 1,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-01",
+    "pause_ms": 300,
+    "v": "234b2959f280"
+   },
+   {
+    "index": 2,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-02",
+    "pause_ms": 300,
+    "v": "6e2175057858"
+   },
+   {
+    "index": 3,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-03",
+    "pause_ms": 300,
+    "v": "7f2553416411"
+   },
+   {
+    "index": 4,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-04",
+    "pause_ms": 300,
+    "v": "779a78cd9dda"
+   },
+   {
+    "index": 5,
+    "name": "docs-architecture-veridian-bridge/limits-of-the-version-1-programs-05",
+    "pause_ms": 300,
+    "v": "5eecb8ffbf0e"
+   }
+  ],
   "one-identity-one-checkpoint": [
    {
     "index": 0,
@@ -4075,19 +4073,19 @@
     "index": 1,
     "name": "docs-architecture-veridian-bridge/one-identity-one-checkpoint-01",
     "pause_ms": 400,
-    "v": "b2b9fc3f685b"
+    "v": "bd51ed6be8cd"
    },
    {
     "index": 2,
     "name": "docs-architecture-veridian-bridge/one-identity-one-checkpoint-02",
     "pause_ms": 400,
-    "v": "1a8cfd29b572"
+    "v": "6cd58b5bc927"
    },
    {
     "index": 3,
     "name": "docs-architecture-veridian-bridge/one-identity-one-checkpoint-03",
     "pause_ms": 400,
-    "v": "fc3dbf0b453d"
+    "v": "99c605749222"
    }
   ],
   "register": [
@@ -4223,13 +4221,13 @@
     "index": 1,
     "name": "docs-architecture-veridian-bridge/synchronization-lag-01",
     "pause_ms": 400,
-    "v": "2f62bb2ac8b4"
+    "v": "67e32da4a7d7"
    },
    {
     "index": 2,
     "name": "docs-architecture-veridian-bridge/synchronization-lag-02",
     "pause_ms": 400,
-    "v": "191302ed327d"
+    "v": "17d0a421c236"
    },
    {
     "index": 3,
@@ -4241,13 +4239,13 @@
     "index": 4,
     "name": "docs-architecture-veridian-bridge/synchronization-lag-04",
     "pause_ms": 300,
-    "v": "426f8ff17de3"
+    "v": "a8c92c9c8203"
    },
    {
     "index": 5,
     "name": "docs-architecture-veridian-bridge/synchronization-lag-05",
     "pause_ms": 300,
-    "v": "6950dcb6a336"
+    "v": "9c9fca9b95bc"
    },
    {
     "index": 6,
@@ -4279,7 +4277,15 @@
     "index": 2,
     "name": "docs-architecture-veridian-bridge/veridian-bridge-02",
     "pause_ms": 400,
-    "v": "6b3397ecf39c"
+    "v": "963ec6979945"
+   }
+  ],
+  "version-1-transaction-specifications": [
+   {
+    "index": 0,
+    "name": "docs-architecture-veridian-bridge/version-1-transaction-specifications-00",
+    "pause_ms": 500,
+    "v": "70ba08629226"
    }
   ],
   "what-veridian-is": [
@@ -4311,7 +4317,7 @@
     "index": 4,
     "name": "docs-architecture-veridian-bridge/what-veridian-is-04",
     "pause_ms": 400,
-    "v": "7cb58760dff7"
+    "v": "9845cce11898"
    }
   ]
  },
@@ -6833,7 +6839,7 @@
     "index": 2,
     "name": "docs-design-aid-model/aid-cryptographic-model-02",
     "pause_ms": 400,
-    "v": "6b5a695bacb8"
+    "v": "32202f811233"
    },
    {
     "index": 3,
@@ -6857,7 +6863,7 @@
     "index": 6,
     "name": "docs-design-aid-model/aid-cryptographic-model-06",
     "pause_ms": 400,
-    "v": "f4824d6c45f8"
+    "v": "cc6882de4f12"
    }
   ],
   "cbor-determinism": [
@@ -7154,6 +7160,44 @@
     "v": "4a17fe812663"
    }
   ],
+  "the-deposit-intent": [
+   {
+    "index": 1,
+    "name": "docs-design-aid-model/the-deposit-intent-01",
+    "pause_ms": 400,
+    "v": "3fb0774ba868"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-aid-model/the-deposit-intent-03",
+    "pause_ms": 400,
+    "v": "87dd8db06962"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-aid-model/the-deposit-intent-08",
+    "pause_ms": 300,
+    "v": "a69aa3ff278e"
+   },
+   {
+    "index": 9,
+    "name": "docs-design-aid-model/the-deposit-intent-09",
+    "pause_ms": 300,
+    "v": "bead10851c1c"
+   },
+   {
+    "index": 10,
+    "name": "docs-design-aid-model/the-deposit-intent-10",
+    "pause_ms": 400,
+    "v": "b5da8b2c22b1"
+   },
+   {
+    "index": 13,
+    "name": "docs-design-aid-model/the-deposit-intent-13",
+    "pause_ms": 400,
+    "v": "17370e54df58"
+   }
+  ],
   "v1-boundaries": [
    {
     "index": 0,
@@ -7363,13 +7407,13 @@
     "index": 1,
     "name": "docs-design-business-cases-index/business-cases-comparison-and-factored-core-01",
     "pause_ms": 400,
-    "v": "8c2212c77e8a"
+    "v": "34121f81d2ab"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-index/business-cases-comparison-and-factored-core-02",
     "pause_ms": 400,
-    "v": "f88ded7a717b"
+    "v": "19ef487e2ac3"
    },
    {
     "index": 3,
@@ -7393,7 +7437,7 @@
     "index": 6,
     "name": "docs-design-business-cases-index/business-cases-comparison-and-factored-core-06",
     "pause_ms": 400,
-    "v": "c301ea1c2e12"
+    "v": "f14e4fe87675"
    },
    {
     "index": 7,
@@ -7439,7 +7483,7 @@
     "index": 1,
     "name": "docs-design-business-cases-index/the-factored-core-required-by-every-case-01",
     "pause_ms": 300,
-    "v": "f9dea4abd9fd"
+    "v": "28319acca38e"
    },
    {
     "index": 2,
@@ -7451,7 +7495,7 @@
     "index": 3,
     "name": "docs-design-business-cases-index/the-factored-core-required-by-every-case-03",
     "pause_ms": 300,
-    "v": "5e0f13c78069"
+    "v": "d8b8d913f987"
    },
    {
     "index": 4,
@@ -7565,7 +7609,7 @@
     "index": 7,
     "name": "docs-design-business-cases-institutional-contracts/1-actors-credential-level-07",
     "pause_ms": 400,
-    "v": "fed559295ea6"
+    "v": "fcc04f3add74"
    }
   ],
   "2-gated-action-enforcement-point": [
@@ -7579,13 +7623,13 @@
     "index": 1,
     "name": "docs-design-business-cases-institutional-contracts/2-gated-action-enforcement-point-01",
     "pause_ms": 400,
-    "v": "4d10087321e0"
+    "v": "2d99c8a52271"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-institutional-contracts/2-gated-action-enforcement-point-02",
     "pause_ms": 400,
-    "v": "fb58f57448d9"
+    "v": "b9852573eb3f"
    },
    {
     "index": 3,
@@ -7597,7 +7641,7 @@
     "index": 4,
     "name": "docs-design-business-cases-institutional-contracts/2-gated-action-enforcement-point-04",
     "pause_ms": 400,
-    "v": "b6a181d6a266"
+    "v": "faf0f5f3d9d4"
    }
   ],
   "3-design-sketch": [
@@ -7629,19 +7673,19 @@
     "index": 4,
     "name": "docs-design-business-cases-institutional-contracts/3-design-sketch-04",
     "pause_ms": 300,
-    "v": "ad8853d15118"
+    "v": "00af15c6a1c5"
    },
    {
     "index": 5,
     "name": "docs-design-business-cases-institutional-contracts/3-design-sketch-05",
     "pause_ms": 300,
-    "v": "11d30e1253a0"
+    "v": "c854d592293f"
    },
    {
     "index": 6,
     "name": "docs-design-business-cases-institutional-contracts/3-design-sketch-06",
     "pause_ms": 300,
-    "v": "63f40d9de22b"
+    "v": "e1ebea928eae"
    },
    {
     "index": 7,
@@ -7757,13 +7801,13 @@
     "index": 1,
     "name": "docs-design-business-cases-institutional-contracts/case-d-institutional-contracts-01",
     "pause_ms": 400,
-    "v": "ee5d61a5b462"
+    "v": "7cb115bfabd1"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-institutional-contracts/case-d-institutional-contracts-02",
     "pause_ms": 400,
-    "v": "d35f368d6136"
+    "v": "43e632e9197f"
    },
    {
     "index": 3,
@@ -7787,7 +7831,7 @@
     "index": 6,
     "name": "docs-design-business-cases-institutional-contracts/case-d-institutional-contracts-06",
     "pause_ms": 300,
-    "v": "31c18a245ff1"
+    "v": "bd166ffd9dc2"
    },
    {
     "index": 7,
@@ -7805,7 +7849,7 @@
     "index": 9,
     "name": "docs-design-business-cases-institutional-contracts/case-d-institutional-contracts-09",
     "pause_ms": 300,
-    "v": "a9a8fbde058d"
+    "v": "2c056601543d"
    },
    {
     "index": 10,
@@ -7957,13 +8001,13 @@
     "index": 2,
     "name": "docs-design-business-cases-regulated-defi/3-design-sketch-02",
     "pause_ms": 300,
-    "v": "8993c0fadc03"
+    "v": "e814c6ebdec7"
    },
    {
     "index": 3,
     "name": "docs-design-business-cases-regulated-defi/3-design-sketch-03",
     "pause_ms": 300,
-    "v": "de2f6f241b48"
+    "v": "1b3afc4c6597"
    },
    {
     "index": 4,
@@ -8097,13 +8141,13 @@
     "index": 1,
     "name": "docs-design-business-cases-regulated-defi/case-a-regulated-defi-gate-01",
     "pause_ms": 400,
-    "v": "87636c53e852"
+    "v": "a76b36830cf8"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-regulated-defi/case-a-regulated-defi-gate-02",
     "pause_ms": 400,
-    "v": "f2d4654a8002"
+    "v": "c45ea99be5e3"
    },
    {
     "index": 3,
@@ -8121,7 +8165,7 @@
     "index": 5,
     "name": "docs-design-business-cases-regulated-defi/case-a-regulated-defi-gate-05",
     "pause_ms": 400,
-    "v": "5b65b5a70ea3"
+    "v": "62f6d40db9e3"
    }
   ]
  },
@@ -8137,7 +8181,7 @@
     "index": 1,
     "name": "docs-design-business-cases-security-tokens/1-actors-credential-level-01",
     "pause_ms": 300,
-    "v": "fff570415f7c"
+    "v": "b299f5edb317"
    },
    {
     "index": 2,
@@ -8249,13 +8293,13 @@
     "index": 1,
     "name": "docs-design-business-cases-security-tokens/3-design-sketch-01",
     "pause_ms": 400,
-    "v": "1f4fee69ca80"
+    "v": "fdf39560e4a8"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-security-tokens/3-design-sketch-02",
     "pause_ms": 400,
-    "v": "0df3d8343146"
+    "v": "1356c46103e4"
    },
    {
     "index": 3,
@@ -8281,7 +8325,7 @@
     "index": 1,
     "name": "docs-design-business-cases-security-tokens/4-pressure-on-the-open-decisions-01",
     "pause_ms": 300,
-    "v": "509650eb8280"
+    "v": "c284eb741173"
    },
    {
     "index": 2,
@@ -8431,13 +8475,13 @@
     "index": 1,
     "name": "docs-design-business-cases-security-tokens/case-c-kyc-gated-security-tokens-01",
     "pause_ms": 400,
-    "v": "28a82b2b5164"
+    "v": "c7c6a760a18d"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-security-tokens/case-c-kyc-gated-security-tokens-02",
     "pause_ms": 400,
-    "v": "a5e65d93f07b"
+    "v": "bb74283f9659"
    },
    {
     "index": 3,
@@ -8455,7 +8499,7 @@
     "index": 5,
     "name": "docs-design-business-cases-security-tokens/case-c-kyc-gated-security-tokens-05",
     "pause_ms": 400,
-    "v": "7f324725e67d"
+    "v": "21b56806da74"
    },
    {
     "index": 6,
@@ -8545,13 +8589,13 @@
     "index": 5,
     "name": "docs-design-business-cases-spo-delegation/2-gated-action-enforcement-point-05",
     "pause_ms": 400,
-    "v": "471291c7c55f"
+    "v": "f35701565599"
    },
    {
     "index": 6,
     "name": "docs-design-business-cases-spo-delegation/2-gated-action-enforcement-point-06",
     "pause_ms": 400,
-    "v": "01758f6c6693"
+    "v": "824383492f83"
    },
    {
     "index": 7,
@@ -8735,13 +8779,13 @@
     "index": 1,
     "name": "docs-design-business-cases-spo-delegation/case-b-identified-spo-delegation-01",
     "pause_ms": 400,
-    "v": "1c729d0049a6"
+    "v": "871d23306605"
    },
    {
     "index": 2,
     "name": "docs-design-business-cases-spo-delegation/case-b-identified-spo-delegation-02",
     "pause_ms": 400,
-    "v": "add9f538f593"
+    "v": "6d49d5e761ee"
    },
    {
     "index": 3,
@@ -8759,7 +8803,7 @@
     "index": 5,
     "name": "docs-design-business-cases-spo-delegation/case-b-identified-spo-delegation-05",
     "pause_ms": 400,
-    "v": "4c6dccbf846d"
+    "v": "b0f9e94e35cd"
    }
   ]
  },
@@ -8885,7 +8929,7 @@
     "index": 2,
     "name": "docs-design-consumer-identity/the-checkpoint-datum-02",
     "pause_ms": 400,
-    "v": "0f3f362c6c3f"
+    "v": "7e18b00072e6"
    },
    {
     "index": 3,
@@ -8945,13 +8989,13 @@
     "index": 12,
     "name": "docs-design-consumer-identity/the-checkpoint-datum-12",
     "pause_ms": 400,
-    "v": "1c2affc487b1"
+    "v": "37c6238a70f9"
    },
    {
     "index": 13,
     "name": "docs-design-consumer-identity/the-checkpoint-datum-13",
     "pause_ms": 400,
-    "v": "f8c6b3bae0d4"
+    "v": "ff8ede450ed3"
    },
    {
     "index": 14,
@@ -8977,7 +9021,7 @@
     "index": 2,
     "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-02",
     "pause_ms": 400,
-    "v": "80a198d8ff9d"
+    "v": "64269abeaf68"
    },
    {
     "index": 3,
@@ -9007,19 +9051,19 @@
     "index": 7,
     "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-07",
     "pause_ms": 300,
-    "v": "f3a0190296e8"
+    "v": "17953bc21449"
    },
    {
     "index": 8,
     "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-08",
     "pause_ms": 400,
-    "v": "0d7726194493"
+    "v": "07919645fa09"
    },
    {
     "index": 9,
     "name": "docs-design-consumer-identity/the-checkpoint-outputs-value-09",
     "pause_ms": 400,
-    "v": "074544ce4832"
+    "v": "39317d199612"
    }
   ],
   "the-concrete-bytes": [
@@ -9157,7 +9201,7 @@
     "index": 7,
     "name": "docs-design-consumer-identity/the-connected-example-07",
     "pause_ms": 400,
-    "v": "a809f5ae8da5"
+    "v": "b84ca4e6828c"
    }
   ],
   "the-consumer-predicate-in-aiken": [
@@ -9215,7 +9259,7 @@
     "index": 5,
     "name": "docs-design-consumer-identity/the-datum-decoder-in-aiken-05",
     "pause_ms": 300,
-    "v": "00424e2bce2f"
+    "v": "4c4536e4be9b"
    },
    {
     "index": 6,
@@ -9419,7 +9463,7 @@
     "index": 3,
     "name": "docs-design-credential-verification/delegation-recursion-becomes-induction-03",
     "pause_ms": 400,
-    "v": "bf76da0919cf"
+    "v": "49ebd7a10a37"
    }
   ],
   "superseding-recovery": [
@@ -9447,7 +9491,7 @@
     "index": 1,
     "name": "docs-design-credential-verification/the-checkpoint-remembers-its-past-key-states-01",
     "pause_ms": 400,
-    "v": "990114f7735e"
+    "v": "5dc4358d01b5"
    },
    {
     "index": 2,
@@ -9459,7 +9503,7 @@
     "index": 3,
     "name": "docs-design-credential-verification/the-checkpoint-remembers-its-past-key-states-03",
     "pause_ms": 400,
-    "v": "8e3ffffa418a"
+    "v": "dc2840772a1b"
    }
   ],
   "the-revocation-mirror": [
@@ -9559,7 +9603,7 @@
     "index": 2,
     "name": "docs-design-credential-verification/verifying-credentials-against-the-checkpoint-02",
     "pause_ms": 400,
-    "v": "5547cb90bd32"
+    "v": "8f3bb5ff1cd5"
    },
    {
     "index": 3,
@@ -9667,7 +9711,7 @@
     "index": 2,
     "name": "docs-design-defi-gate/gate-flow-02",
     "pause_ms": 400,
-    "v": "a9fa01ef90f1"
+    "v": "bc6b95b39064"
    },
    {
     "index": 3,
@@ -9717,7 +9761,7 @@
     "index": 1,
     "name": "docs-design-defi-gate/one-line-summary-01",
     "pause_ms": 400,
-    "v": "f5f59f51227a"
+    "v": "0c7b0192dd59"
    }
   ],
   "properties-the-allowlist-pattern-cannot-offer": [
@@ -9749,13 +9793,13 @@
     "index": 4,
     "name": "docs-design-defi-gate/properties-the-allowlist-pattern-cannot-offer-04",
     "pause_ms": 300,
-    "v": "e9df2757f0e9"
+    "v": "efe964a96cf2"
    },
    {
     "index": 5,
     "name": "docs-design-defi-gate/properties-the-allowlist-pattern-cannot-offer-05",
     "pause_ms": 300,
-    "v": "46235e70067f"
+    "v": "ca27c867e042"
    }
   ],
   "the-incumbent-pattern-and-its-three-weaknesses": [
@@ -9821,13 +9865,13 @@
     "index": 1,
     "name": "docs-design-defi-gate/the-regulated-defi-gate-01",
     "pause_ms": 400,
-    "v": "c40a2b4d424d"
+    "v": "0b51a664bcfc"
    },
    {
     "index": 2,
     "name": "docs-design-defi-gate/the-regulated-defi-gate-02",
     "pause_ms": 400,
-    "v": "a6038c9cdb82"
+    "v": "abb3f917cfc0"
    },
    {
     "index": 3,
@@ -9845,7 +9889,7 @@
     "index": 5,
     "name": "docs-design-defi-gate/the-regulated-defi-gate-05",
     "pause_ms": 400,
-    "v": "084148bf3bfe"
+    "v": "3da6f259f792"
    },
    {
     "index": 6,
@@ -9903,7 +9947,7 @@
     "index": 1,
     "name": "docs-design-defi-gate/what-cardano-keri-contributes-the-chain-runs-the-gate-itself-01",
     "pause_ms": 400,
-    "v": "3c3c96690d8c"
+    "v": "1fcb30f27ad0"
    },
    {
     "index": 2,
@@ -9927,13 +9971,13 @@
     "index": 5,
     "name": "docs-design-defi-gate/what-cardano-keri-contributes-the-chain-runs-the-gate-itself-05",
     "pause_ms": 300,
-    "v": "fddcf079363e"
+    "v": "7d6e01e34222"
    },
    {
     "index": 6,
     "name": "docs-design-defi-gate/what-cardano-keri-contributes-the-chain-runs-the-gate-itself-06",
     "pause_ms": 400,
-    "v": "14dbf572ec63"
+    "v": "b6f877f4ea49"
    }
   ],
   "what-the-gate-is-not": [
@@ -10055,7 +10099,7 @@
     "index": 4,
     "name": "docs-design-key-compromise/compromise-of-the-current-keys-04",
     "pause_ms": 400,
-    "v": "821042c56374"
+    "v": "ed66319221bd"
    }
   ],
   "related-pages": [
@@ -10125,7 +10169,7 @@
     "index": 5,
     "name": "docs-design-key-compromise/rotation-is-the-remedy-05",
     "pause_ms": 300,
-    "v": "27743f1bafbf"
+    "v": "5588ed0ea62f"
    },
    {
     "index": 6,
@@ -10163,13 +10207,13 @@
     "index": 2,
     "name": "docs-design-key-compromise/the-poison-what-the-owner-does-before-and-instead-of-rotating-02",
     "pause_ms": 400,
-    "v": "d5615585fb28"
+    "v": "83788c090a48"
    },
    {
     "index": 3,
     "name": "docs-design-key-compromise/the-poison-what-the-owner-does-before-and-instead-of-rotating-03",
     "pause_ms": 400,
-    "v": "3e26aae0ef34"
+    "v": "93ad7829a29b"
    },
    {
     "index": 4,
@@ -10195,7 +10239,7 @@
     "index": 1,
     "name": "docs-design-key-compromise/the-two-cases-it-serves-and-the-one-it-does-not-01",
     "pause_ms": 400,
-    "v": "34d1231c4b79"
+    "v": "f17c4e10757c"
    }
   ],
   "what-the-stolen-current-keys-authorize": [
@@ -10215,11 +10259,17 @@
     "index": 2,
     "name": "docs-design-key-compromise/what-the-stolen-current-keys-authorize-02",
     "pause_ms": 400,
-    "v": "78bc31bdccb8"
+    "v": "5a64f2c18b0c"
    },
    {
     "index": 3,
     "name": "docs-design-key-compromise/what-the-stolen-current-keys-authorize-03",
+    "pause_ms": 400,
+    "v": "96de5703abab"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-key-compromise/what-the-stolen-current-keys-authorize-04",
     "pause_ms": 400,
     "v": "6be5762310a7"
    }
@@ -10235,7 +10285,7 @@
     "index": 1,
     "name": "docs-design-key-compromise/when-the-fork-is-real-not-merely-suspected-01",
     "pause_ms": 400,
-    "v": "0a40c1e75af7"
+    "v": "113843c5dd0b"
    },
    {
     "index": 2,
@@ -10430,6 +10480,20 @@
     "name": "docs-design-lean-invariants-plan/model-architecture-and-boundaries-03",
     "pause_ms": 400,
     "v": "14386ffd4859"
+   }
+  ],
+  "plan-bring-the-watcher-and-incentive-design-into-lean": [
+   {
+    "index": 0,
+    "name": "docs-design-lean-invariants-plan/plan-bring-the-watcher-and-incentive-design-into-lean-00",
+    "pause_ms": 400,
+    "v": "1226e894dc0e"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-lean-invariants-plan/plan-bring-the-watcher-and-incentive-design-into-lean-01",
+    "pause_ms": 400,
+    "v": "6ce233d95326"
    }
   ],
   "sponsorship-freeze-and-reward-economics": [
@@ -10829,13 +10893,13 @@
     "index": 2,
     "name": "docs-design-operational/operational-constraints-02",
     "pause_ms": 400,
-    "v": "6df221d43ab7"
+    "v": "9e923f0ee3f4"
    },
    {
     "index": 3,
     "name": "docs-design-operational/operational-constraints-03",
     "pause_ms": 400,
-    "v": "8f3c7dae2b7c"
+    "v": "470d11bf0e89"
    }
   ],
   "per-identity-serialization": [
@@ -11035,13 +11099,13 @@
     "index": 5,
     "name": "docs-design-operational/transaction-and-script-size-05",
     "pause_ms": 400,
-    "v": "d572933273ac"
+    "v": "029247ece7fa"
    },
    {
     "index": 6,
     "name": "docs-design-operational/transaction-and-script-size-06",
     "pause_ms": 400,
-    "v": "e684356ffd31"
+    "v": "6b2f948d63c3"
    }
   ],
   "validity-intervals": [
@@ -11387,7 +11451,7 @@
     "index": 9,
     "name": "docs-design-record-cursor-projection-fidelity/8-where-this-lands-09",
     "pause_ms": 300,
-    "v": "3ed8e2c69563"
+    "v": "37c4bf35180d"
    }
   ],
   "design-note-001-recordcursor-data-model-and-projection-fidelity": [
@@ -11401,13 +11465,13 @@
     "index": 1,
     "name": "docs-design-record-cursor-projection-fidelity/design-note-001-recordcursor-data-model-and-projection-fidelity-01",
     "pause_ms": 400,
-    "v": "6692633a8b75"
+    "v": "83831092a336"
    },
    {
     "index": 2,
     "name": "docs-design-record-cursor-projection-fidelity/design-note-001-recordcursor-data-model-and-projection-fidelity-02",
     "pause_ms": 400,
-    "v": "462bcd3166c3"
+    "v": "2b75b9d8ce1c"
    },
    {
     "index": 3,
@@ -11472,52 +11536,52 @@
     "v": "c337f4200982"
    }
   ],
-  "gap-against-the-current-skeleton-material": [
+  "gap-against-the-skeleton-of-that-date-material": [
    {
     "index": 0,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-00",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-00",
     "pause_ms": 500,
-    "v": "4d75e9d8a14c"
+    "v": "7b94241e9a68"
    },
    {
     "index": 1,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-01",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-01",
     "pause_ms": 400,
     "v": "370a6838c5cd"
    },
    {
     "index": 2,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-02",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-02",
     "pause_ms": 300,
     "v": "5ef12d54df8d"
    },
    {
     "index": 3,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-03",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-03",
     "pause_ms": 300,
     "v": "fe4f7f1e8d68"
    },
    {
     "index": 4,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-04",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-04",
     "pause_ms": 300,
     "v": "c661b29478b8"
    },
    {
     "index": 5,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-05",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-05",
     "pause_ms": 300,
     "v": "c5687f53a30c"
    },
    {
     "index": 6,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-06",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-06",
     "pause_ms": 300,
     "v": "e7f27c8157e4"
    },
    {
     "index": 7,
-    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-current-skeleton-material-07",
+    "name": "docs-design-record-cursor-projection-fidelity/gap-against-the-skeleton-of-that-date-material-07",
     "pause_ms": 400,
     "v": "5c8abb90588c"
    }
@@ -11651,7 +11715,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/checkpoint-and-the-associated-system-01",
     "pause_ms": 400,
-    "v": "6c1a0786fd67"
+    "v": "1a59b3e9863e"
    },
    {
     "index": 2,
@@ -11723,13 +11787,13 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-01",
     "pause_ms": 400,
-    "v": "87cf62de0364"
+    "v": "8d920716bf1e"
    },
    {
     "index": 2,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-02",
     "pause_ms": 400,
-    "v": "85d33b8adacd"
+    "v": "79a6ee69653a"
    },
    {
     "index": 3,
@@ -11797,7 +11861,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-01",
     "pause_ms": 400,
-    "v": "df2183e8c7d4"
+    "v": "f237a6f15e0d"
    },
    {
     "index": 2,
@@ -11809,7 +11873,7 @@
     "index": 3,
     "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-03",
     "pause_ms": 400,
-    "v": "6d3cbff97666"
+    "v": "fd6150335abf"
    },
    {
     "index": 4,
@@ -11827,13 +11891,13 @@
     "index": 6,
     "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-06",
     "pause_ms": 300,
-    "v": "21f056ac6a5c"
+    "v": "2ff4facec831"
    },
    {
     "index": 7,
     "name": "docs-design-registry-as-mpfs/retiring-a-convicted-identity-07",
     "pause_ms": 300,
-    "v": "0495f225fc5e"
+    "v": "09f8c7ccefa8"
    },
    {
     "index": 8,
@@ -11897,7 +11961,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/the-registry-and-retained-identity-outputs-01",
     "pause_ms": 400,
-    "v": "1a369c2464e7"
+    "v": "a2196b6aaff8"
    },
    {
     "index": 2,
@@ -11923,13 +11987,13 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/what-registration-guarantees-02",
     "pause_ms": 400,
-    "v": "bc3a0c8f5fd5"
+    "v": "d55fcf3350ff"
    },
    {
     "index": 3,
     "name": "docs-design-registry-as-mpfs/what-registration-guarantees-03",
     "pause_ms": 400,
-    "v": "5f520b72edac"
+    "v": "d6d7085f4324"
    }
   ],
   "where-the-registry-is-built": [
@@ -11943,7 +12007,7 @@
     "index": 1,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-01",
     "pause_ms": 400,
-    "v": "5baf53ea9964"
+    "v": "a4907de66838"
    },
    {
     "index": 2,
@@ -11983,7 +12047,7 @@
     "index": 3,
     "name": "docs-design-singular-package-boundary/building-the-keri-libraries-against-the-singular-package-03",
     "pause_ms": 400,
-    "v": "f203e51d8321"
+    "v": "15c9c1e3132b"
    },
    {
     "index": 4,
@@ -12031,7 +12095,7 @@
     "index": 1,
     "name": "docs-design-singular-package-boundary/remaining-production-work-01",
     "pause_ms": 400,
-    "v": "c0ea91da3988"
+    "v": "81344ce017e2"
    },
    {
     "index": 2,
@@ -12115,7 +12179,7 @@
     "index": 1,
     "name": "docs-design-singular-package-boundary/what-the-tests-show-and-what-they-do-not-01",
     "pause_ms": 400,
-    "v": "11e1e0b1df31"
+    "v": "5ffb96bcf203"
    },
    {
     "index": 2,
@@ -12167,7 +12231,7 @@
     "index": 6,
     "name": "docs-design-super-watcher/advance-06",
     "pause_ms": 400,
-    "v": "9007ff44c618"
+    "v": "16a4b58c2fa9"
    },
    {
     "index": 7,
@@ -12179,7 +12243,7 @@
     "index": 8,
     "name": "docs-design-super-watcher/advance-08",
     "pause_ms": 400,
-    "v": "9b132ae9c353"
+    "v": "b7509093c6d0"
    }
   ],
   "convict-accepted-design": [
@@ -12193,13 +12257,13 @@
     "index": 1,
     "name": "docs-design-super-watcher/convict-accepted-design-01",
     "pause_ms": 400,
-    "v": "260082b42bf5"
+    "v": "6a098cd6d6d9"
    },
    {
     "index": 2,
     "name": "docs-design-super-watcher/convict-accepted-design-02",
     "pause_ms": 400,
-    "v": "1b711aaf7e2d"
+    "v": "af55d7ab1671"
    }
   ],
   "credential-plane-extension": [
@@ -12235,7 +12299,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/freeze-accepted-design-01",
     "pause_ms": 400,
-    "v": "5e1f335dd2eb"
+    "v": "339043024bec"
    }
   ],
   "freshness-and-availability": [
@@ -12255,7 +12319,7 @@
     "index": 2,
     "name": "docs-design-super-watcher/freshness-and-availability-02",
     "pause_ms": 400,
-    "v": "a570f4bd70ff"
+    "v": "280dedc6ea8c"
    }
   ],
   "operational-loop": [
@@ -12299,13 +12363,13 @@
     "index": 6,
     "name": "docs-design-super-watcher/operational-loop-06",
     "pause_ms": 300,
-    "v": "f2bf06c77349"
+    "v": "ef471666b253"
    },
    {
     "index": 7,
     "name": "docs-design-super-watcher/operational-loop-07",
     "pause_ms": 300,
-    "v": "a8c1a9f79a0e"
+    "v": "21836606a96b"
    },
    {
     "index": 8,
@@ -12349,7 +12413,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/poison-relay-accepted-design-01",
     "pause_ms": 400,
-    "v": "590b543e92f9"
+    "v": "850b8be97874"
    }
   ],
   "security-principle": [
@@ -12363,7 +12427,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/security-principle-01",
     "pause_ms": 400,
-    "v": "96727f193f5e"
+    "v": "d0cbc9f8a207"
    }
   ],
   "the-cross-plane-problem": [
@@ -12395,7 +12459,7 @@
     "index": 4,
     "name": "docs-design-super-watcher/the-cross-plane-problem-04",
     "pause_ms": 400,
-    "v": "20fbeb8ae9aa"
+    "v": "e976d85d2a97"
    },
    {
     "index": 5,
@@ -12427,7 +12491,7 @@
     "index": 3,
     "name": "docs-design-super-watcher/the-hunter-relayer-evidence-submitter-and-paid-maintainer-03",
     "pause_ms": 400,
-    "v": "348740777656"
+    "v": "8ff282ac18b9"
    }
   ],
   "the-hunters-wage-accepted-design": [
@@ -12441,7 +12505,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-01",
     "pause_ms": 400,
-    "v": "0ec0342dbc2e"
+    "v": "9e9068136107"
    },
    {
     "index": 2,
@@ -12453,13 +12517,13 @@
     "index": 3,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-03",
     "pause_ms": 300,
-    "v": "6e1bc39d3aa8"
+    "v": "185a0d1b1bd1"
    },
    {
     "index": 4,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-04",
     "pause_ms": 300,
-    "v": "3b3c6d6d9939"
+    "v": "3850281b37ff"
    },
    {
     "index": 5,
@@ -12471,13 +12535,51 @@
     "index": 6,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-06",
     "pause_ms": 400,
-    "v": "db050bbd3cbc"
+    "v": "74c61ab24cbe"
    },
    {
     "index": 7,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-07",
     "pause_ms": 400,
-    "v": "1dfc056065af"
+    "v": "389e263a82e6"
+   }
+  ],
+  "what-a-hunter-could-do-in-version-1": [
+   {
+    "index": 0,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-00",
+    "pause_ms": 500,
+    "v": "76c63111b732"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-01",
+    "pause_ms": 400,
+    "v": "a959342fd5a8"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-02",
+    "pause_ms": 300,
+    "v": "0798c22b8690"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-03",
+    "pause_ms": 300,
+    "v": "1deddb9ef4e1"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-04",
+    "pause_ms": 300,
+    "v": "fc76da75bcf7"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-super-watcher/what-a-hunter-could-do-in-version-1-05",
+    "pause_ms": 400,
+    "v": "68c7a934df8f"
    }
   ],
   "what-a-hunter-is-not": [
@@ -12547,44 +12649,6 @@
     "pause_ms": 400,
     "v": "75b9d181b639"
    }
-  ],
-  "what-a-hunter-may-do-today": [
-   {
-    "index": 0,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-00",
-    "pause_ms": 500,
-    "v": "74dd0a7699b4"
-   },
-   {
-    "index": 1,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-01",
-    "pause_ms": 400,
-    "v": "e7e445042e3b"
-   },
-   {
-    "index": 2,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-02",
-    "pause_ms": 300,
-    "v": "0798c22b8690"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-03",
-    "pause_ms": 300,
-    "v": "1deddb9ef4e1"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-04",
-    "pause_ms": 300,
-    "v": "fc76da75bcf7"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-super-watcher/what-a-hunter-may-do-today-05",
-    "pause_ms": 400,
-    "v": "1c44f20fe657"
-   }
   ]
  },
  "docs/design/trust-model.md": {
@@ -12613,7 +12677,7 @@
     "index": 1,
     "name": "docs-design-trust-model/close-cannot-redirect-the-refund-01",
     "pause_ms": 400,
-    "v": "a9aec8ba85e1"
+    "v": "cc79dcd2b801"
    },
    {
     "index": 2,
@@ -12645,13 +12709,13 @@
     "index": 2,
     "name": "docs-design-trust-model/current-key-theft-02",
     "pause_ms": 400,
-    "v": "2bbfbe9b3145"
+    "v": "44eb6f477342"
    },
    {
     "index": 3,
     "name": "docs-design-trust-model/current-key-theft-03",
     "pause_ms": 400,
-    "v": "38f56f7614d8"
+    "v": "d721bc808f7a"
    }
   ],
   "discovery-lag": [
@@ -12665,7 +12729,7 @@
     "index": 1,
     "name": "docs-design-trust-model/discovery-lag-01",
     "pause_ms": 400,
-    "v": "3081540e62be"
+    "v": "63cd98e37db4"
    }
   ],
   "duplicate-live-registration": [
@@ -12801,7 +12865,13 @@
     "index": 3,
     "name": "docs-design-trust-model/keri-witnesses-03",
     "pause_ms": 400,
-    "v": "85e17c274f17"
+    "v": "4698a43de9b1"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-trust-model/keri-witnesses-04",
+    "pause_ms": 400,
+    "v": "871a449d0a10"
    }
   ],
   "next-key-theft": [
@@ -12829,7 +12899,7 @@
     "index": 1,
     "name": "docs-design-trust-model/relayers-and-hunters-01",
     "pause_ms": 400,
-    "v": "1257a6d6309c"
+    "v": "2f2d9860bd1d"
    },
    {
     "index": 2,
@@ -12841,15 +12911,15 @@
     "index": 3,
     "name": "docs-design-trust-model/relayers-and-hunters-03",
     "pause_ms": 400,
-    "v": "80333195a542"
+    "v": "74aeba077146"
    }
   ],
-  "residuals-of-what-ships-today": [
+  "residuals-of-the-earlier-deployed-design": [
    {
     "index": 0,
-    "name": "docs-design-trust-model/residuals-of-what-ships-today-00",
+    "name": "docs-design-trust-model/residuals-of-the-earlier-deployed-design-00",
     "pause_ms": 500,
-    "v": "41786395bbc3"
+    "v": "02e390f3240d"
    }
   ],
   "rotation-cannot-choose-an-arbitrary-successor": [
@@ -13043,7 +13113,7 @@
     "index": 1,
     "name": "docs-design-trust-model/threat-summary-01",
     "pause_ms": 400,
-    "v": "e12cea1a5c32"
+    "v": "22eafb19330b"
    }
   ],
   "trust-and-responsibility-boundaries": [
@@ -13077,7 +13147,7 @@
     "index": 3,
     "name": "docs-design-trust-model/trust-model-03",
     "pause_ms": 400,
-    "v": "487c73397ca0"
+    "v": "b4bf7caee84d"
    }
   ],
   "what-the-accepted-design-guarantees": [
@@ -13091,15 +13161,15 @@
     "index": 1,
     "name": "docs-design-trust-model/what-the-accepted-design-guarantees-01",
     "pause_ms": 400,
-    "v": "497c892f302f"
+    "v": "9775c3e3aade"
    }
   ],
-  "what-the-current-validators-guarantee-shipped-today": [
+  "what-the-earlier-deployed-validators-guarantee": [
    {
     "index": 0,
-    "name": "docs-design-trust-model/what-the-current-validators-guarantee-shipped-today-00",
+    "name": "docs-design-trust-model/what-the-earlier-deployed-validators-guarantee-00",
     "pause_ms": 500,
-    "v": "d3e9246d4239"
+    "v": "76721b0cb5d2"
    }
   ],
   "who-a-conviction-pays": [
@@ -13113,7 +13183,7 @@
     "index": 1,
     "name": "docs-design-trust-model/who-a-conviction-pays-01",
     "pause_ms": 400,
-    "v": "595d6d2b4740"
+    "v": "f685832cafef"
    },
    {
     "index": 2,
@@ -13167,7 +13237,7 @@
     "index": 10,
     "name": "docs-design-trust-model/who-a-conviction-pays-10",
     "pause_ms": 400,
-    "v": "9e31d0427612"
+    "v": "fa64445f93a9"
    },
    {
     "index": 11,
@@ -13225,7 +13295,7 @@
     "index": 7,
     "name": "docs-design-user-experience/current-product-boundary-07",
     "pause_ms": 300,
-    "v": "7aa7bb95587f"
+    "v": "56d51e0246c7"
    },
    {
     "index": 8,
@@ -13293,7 +13363,7 @@
     "index": 7,
     "name": "docs-design-user-experience/find-the-checkpoint-07",
     "pause_ms": 400,
-    "v": "7628e34bf098"
+    "v": "9afddbf6f7ee"
    }
   ],
   "first-know-the-aid": [
@@ -13348,6 +13418,26 @@
     "v": "578790aef5b4"
    }
   ],
+  "no-way-out-but-conviction": [
+   {
+    "index": 2,
+    "name": "docs-design-user-experience/no-way-out-but-conviction-02",
+    "pause_ms": 300,
+    "v": "a3b7625ec5d9"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-user-experience/no-way-out-but-conviction-04",
+    "pause_ms": 400,
+    "v": "985995ac3948"
+   },
+   {
+    "index": 5,
+    "name": "docs-design-user-experience/no-way-out-but-conviction-05",
+    "pause_ms": 400,
+    "v": "f0c39947f3b0"
+   }
+  ],
   "poison": [
    {
     "index": 0,
@@ -13365,7 +13455,7 @@
     "index": 2,
     "name": "docs-design-user-experience/poison-02",
     "pause_ms": 400,
-    "v": "05f8b29aeb48"
+    "v": "8a2be4ef49c7"
    },
    {
     "index": 3,
@@ -13385,7 +13475,7 @@
     "index": 1,
     "name": "docs-design-user-experience/register-01",
     "pause_ms": 400,
-    "v": "4101fc06dcf3"
+    "v": "d2d65a6a5ff0"
    },
    {
     "index": 2,
@@ -13409,7 +13499,7 @@
     "index": 5,
     "name": "docs-design-user-experience/register-05",
     "pause_ms": 300,
-    "v": "028972d0e48f"
+    "v": "3a8b75e31fe7"
    },
    {
     "index": 6,
@@ -13421,7 +13511,7 @@
     "index": 7,
     "name": "docs-design-user-experience/register-07",
     "pause_ms": 400,
-    "v": "e89b4508e514"
+    "v": "4d22d591309e"
    }
   ],
   "rotate": [
@@ -13467,13 +13557,13 @@
     "index": 1,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-01",
     "pause_ms": 400,
-    "v": "c33cf9497acc"
+    "v": "0c93f02f644c"
    },
    {
     "index": 2,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-02",
     "pause_ms": 400,
-    "v": "7dbdc85013e6"
+    "v": "59cfa463532d"
    }
   ],
   "three-balances-three-explanations": [
@@ -13493,19 +13583,19 @@
     "index": 2,
     "name": "docs-design-user-experience/three-balances-three-explanations-02",
     "pause_ms": 300,
-    "v": "8cbbd3cd18a2"
+    "v": "a0a27462ef69"
    },
    {
     "index": 3,
     "name": "docs-design-user-experience/three-balances-three-explanations-03",
     "pause_ms": 300,
-    "v": "12acc486e242"
+    "v": "e8a832c1abd0"
    },
    {
     "index": 4,
     "name": "docs-design-user-experience/three-balances-three-explanations-04",
     "pause_ms": 300,
-    "v": "6160dbfe6659"
+    "v": "b19254798e10"
    },
    {
     "index": 5,
@@ -13537,7 +13627,7 @@
     "index": 3,
     "name": "docs-design-user-experience/user-experience-a-keri-identity-on-cardano-03",
     "pause_ms": 400,
-    "v": "14484fd4cf5e"
+    "v": "233c03f73884"
    }
   ]
  },
@@ -13553,7 +13643,7 @@
     "index": 1,
     "name": "docs-design-vlei/1-compliance-gated-contracts-01",
     "pause_ms": 400,
-    "v": "f859f0378010"
+    "v": "addaa2ef40c3"
    },
    {
     "index": 2,
@@ -13579,13 +13669,13 @@
     "index": 1,
     "name": "docs-design-vlei/2-non-censorable-key-history-01",
     "pause_ms": 400,
-    "v": "9266b8d3d0f0"
+    "v": "90c74071eb64"
    },
    {
     "index": 2,
     "name": "docs-design-vlei/2-non-censorable-key-history-02",
     "pause_ms": 400,
-    "v": "8fe736d40c59"
+    "v": "f328d44c402c"
    }
   ],
   "3-governance-eligibility": [
@@ -13605,7 +13695,7 @@
     "index": 2,
     "name": "docs-design-vlei/3-governance-eligibility-02",
     "pause_ms": 400,
-    "v": "84458d866097"
+    "v": "21d76661e512"
    }
   ],
   "4-acdc-notarization-on-chain": [
@@ -13625,7 +13715,7 @@
     "index": 2,
     "name": "docs-design-vlei/4-acdc-notarization-on-chain-02",
     "pause_ms": 400,
-    "v": "b88d79e0d2ed"
+    "v": "513ef90b61b2"
    },
    {
     "index": 3,
@@ -13717,7 +13807,7 @@
     "index": 3,
     "name": "docs-design-vlei/how-cardano-keri-is-the-bridge-layer-03",
     "pause_ms": 400,
-    "v": "845bbad66c84"
+    "v": "beb6a87818b6"
    },
    {
     "index": 4,
@@ -13757,13 +13847,13 @@
     "index": 1,
     "name": "docs-design-vlei/vlei-bridge-legal-entity-identity-on-cardano-01",
     "pause_ms": 400,
-    "v": "7fc0974072e4"
+    "v": "73a39dd70d2d"
    },
    {
     "index": 2,
     "name": "docs-design-vlei/vlei-bridge-legal-entity-identity-on-cardano-02",
     "pause_ms": 400,
-    "v": "6b513263ff1e"
+    "v": "22abd9121d28"
    }
   ],
   "what-is-vlei": [
@@ -13857,13 +13947,13 @@
     "index": 3,
     "name": "docs-design-watcher-conformance/concrete-rotation-refinement-03",
     "pause_ms": 400,
-    "v": "3348a05fe747"
+    "v": "b5d12d217017"
    },
    {
     "index": 4,
     "name": "docs-design-watcher-conformance/concrete-rotation-refinement-04",
     "pause_ms": 400,
-    "v": "05ebfc9862d4"
+    "v": "a9dbd7260667"
    },
    {
     "index": 5,
@@ -14119,13 +14209,13 @@
     "index": 2,
     "name": "docs-design-watcher-conformance/the-consumer-story-02",
     "pause_ms": 400,
-    "v": "0f2da81544d4"
+    "v": "f9828994e166"
    },
    {
     "index": 3,
     "name": "docs-design-watcher-conformance/the-consumer-story-03",
     "pause_ms": 400,
-    "v": "a7d5ed9496c6"
+    "v": "44cd97fe73c8"
    },
    {
     "index": 4,
@@ -14361,7 +14451,7 @@
     "index": 1,
     "name": "docs-design-words/where-the-words-sit-01",
     "pause_ms": 400,
-    "v": "c2e09e398bcd"
+    "v": "97652562324a"
    }
   ]
  },

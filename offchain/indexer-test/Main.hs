@@ -10,9 +10,11 @@ import Cardano.KERI.Indexer.Query.ServerSpec qualified as QueryServerSpec
 import Cardano.KERI.Indexer.Query.SwaggerDriftSpec qualified as QuerySwaggerDriftSpec
 import Cardano.KERI.Indexer.Query.TxSpec qualified as QueryTxSpec
 import Cardano.KERI.Indexer.Query.TypesSpec qualified as QueryTypesSpec
+import Cardano.KERI.Indexer.ReaderVerdictSpec qualified as ReaderVerdictSpec
 import Cardano.KERI.Indexer.ReadsSpec qualified as ReadsSpec
 import Cardano.KERI.Indexer.ReleaseHoldingsSpec qualified as ReleaseHoldingsSpec
 import Cardano.KERI.Indexer.ReleaseReaderSpec qualified as ReleaseReaderSpec
+import Cardano.KERI.Indexer.RequestHolderSpec qualified as RequestHolderSpec
 import Cardano.KERI.Indexer.ResumeSpec qualified as ResumeSpec
 import Cardano.KERI.Indexer.RollbackSpec qualified as RollbackSpec
 import Cardano.KERI.Indexer.StoreBindingSpec (holdStoreOpen)
@@ -47,4 +49,6 @@ suite = hspec $ do
     RollbackSpec.spec
     ReleaseHoldingsSpec.spec
     ReleaseReaderSpec.spec
+    RequestHolderSpec.spec
+    ReaderVerdictSpec.spec
     StoreBindingSpec.spec

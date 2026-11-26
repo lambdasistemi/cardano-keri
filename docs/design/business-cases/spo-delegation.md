@@ -1,16 +1,16 @@
 # Case B — Identified SPO Delegation
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.
 
 
 "Only delegate to legally identified pools" — an institution's stake may only
@@ -21,14 +21,12 @@ ever back operators with a valid Legal Entity vLEI.
     Entity's **current authority** — "`PoolBinding.trie_key` Active in the L1 AID registry"
     (§2), the mermaid "trie_key Active?" step, and the LE `cur_key` owner-signature on
     pool-side registration — the live surface is that LE AID's **own sovereign, per-AID,
-    quantity-one uniquely-tokenized checkpoint UTxO**: asset id `(checkpoint_policy_id,
-    aid_asset_name)`, current weighted keys/threshold in the inline `CheckpointDatum`, read as
+    quantity-one uniquely-tokenized checkpoint UTxO**: the registry's representative asset for the AID (in version 1, asset id `(checkpoint_policy_id,
+    aid_asset_name)`), current weighted keys/threshold in the inline `CheckpointDatum`, read as
     a **CIP-31 reference input** and discovered by a **generic exact-asset `(policy_id,
     asset_name)` lookup** (candidate outref for liveness only, re-validated against the
-    ledger). "Active" means exactly one current checkpoint at the **ACTIVE**
-    role address. ARMED, FROZEN, missing, duplicated, and stale
-    candidates fail closed; there is no separate shared freeze registry. A
-    `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint UTxO, so an owner signature
+    ledger). "Active" means exactly one current eligible checkpoint (in version 1, at the **ACTIVE** role address). Frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates fail closed (in version 1, ARMED and FROZEN); there is no separate shared freeze registry. A
+    `delta = 0` rotation (a later sequence number) **consumes** the checkpoint UTxO, so an owner signature
     made under the prior sequence is **stale** and must be **re-signed** by the current
     weighted keys over the fully bound message + current sequence, never merely re-pointed at
     the fresh checkpoint. **Preserved as written**: the separate **identified-pools registry**
@@ -101,15 +99,15 @@ witnesses a delegation certificate only if the redeemer proves `stake_pool` is
 bound to an Active, unrevoked vLEI entity.** The script checks: membership
 proof of `pool_id → PoolBinding` in the identified-pools registry, and — since
 the binding carries the LE's **stable qualified AID** — resolves the bound LE
-AID's **current authority live in its sovereign per-AID checkpoint** — asset id
-`(checkpoint_policy_id, aid_asset_name)` derived from that qualified AID, read
-as a CIP-31 reference input, with exactly one current checkpoint in the
-**ACTIVE** role — and TEL non-revocation (L2), all against reference inputs.
+AID's **current authority in its sovereign per-AID checkpoint, which must be an eligible holding** — the registry's representative asset for the AID (in version 1 asset id
+`(checkpoint_policy_id, aid_asset_name)`) derived from that qualified AID, read
+as a CIP-31 reference input, with exactly one current eligible checkpoint (in version 1, in the
+**ACTIVE** role) — and TEL non-revocation (L2), all against reference inputs.
 
 **Pool-side registration** is mutual attestation: the SPO submits
 `PoolBinding { pool_id, cold_vkey, aid, trie_key }` — carrying the LE's
-**stable qualified AID** `aid` (from which the checkpoint asset id
-`(checkpoint_policy_id, aid_asset_name)` is derived) alongside the historical
+**stable qualified AID** `aid` (from which the checkpoint's representative asset is derived; in version 1 asset id
+`(checkpoint_policy_id, aid_asset_name)`) alongside the historical
 `trie_key` (admission-cache key only; it cannot by itself select the current
 checkpoint) — with (a) an Ed25519 signature by `cold_vkey` over a
 domain-separated `{pool_id, cold_vkey, aid, trie_key, network_id}` message,
@@ -142,7 +140,7 @@ flowchart TB
         INST --> PUB
     end
     PUB -->|"pool_id bound?<br/>(membership proof)"| IPR
-    PUB -->|"LE current authority live<br/>in its own checkpoint? (#92)"| CHK["LE AID sovereign checkpoint<br/>(per-AID, reference input)"]
+    PUB -->|"LE holding eligible<br/>in its own checkpoint? (#92)"| CHK["LE AID sovereign checkpoint<br/>(per-AID, reference input)"]
     PUB -->|"LE credential unrevoked?"| L2["L2 issuer TELs<br/>(reference input)"]
 
     style IPR fill:#1e3a5f,stroke:#4a90d9,color:#e0e0e0

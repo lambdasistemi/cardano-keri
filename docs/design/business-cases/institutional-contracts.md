@@ -1,16 +1,16 @@
 # Case D — Institutional Contracts
 
-!!! note "What ships, and the accepted design"
+!!! note "What was deployed, and the accepted design"
     Unless a paragraph below is marked as preprod or `main` today, it
     describes the accepted design (D-036 to D-040). In that design an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses; the case study below that cites it says so locally.
 
 
 Bilateral or few-party on-chain contracts — escrow, DvP settlement, repo,
@@ -25,10 +25,10 @@ validator, not an oracle.
 
     - **Current authority (who is signing now).** The validator reads the **acting officer/
       service AID's** own sovereign, per-AID, quantity-one uniquely-tokenized checkpoint UTxO —
-      asset id `(checkpoint_policy_id, aid_asset_name)`, current weighted keys/threshold in the
+      the registry's representative asset for the AID (in version 1, asset id `(checkpoint_policy_id, aid_asset_name)`), fixed by the consumer together with the network, release and checkpoint credential, current weighted keys/threshold in the
       inline `CheckpointDatum`, read as a **CIP-31 reference input**, discovered by a **generic
       exact-asset `(policy_id, asset_name)` lookup** (candidate outref for liveness only,
-      re-validated against the ledger) — and verifies a **witness set meeting THAT acting AID's
+      re-validated against the ledger), which must be an eligible holding (present, unfrozen, unpoisoned, at least `W` old) — and verifies a **witness set meeting THAT acting AID's
       current weighted threshold** over the fully bound transition + current sequence. It does
       **not** verify the officer's signature against the **counterparty LE AID's** checkpoint.
     - **Eligibility (may this signer bind this entity).** **Separately**, the historical
@@ -40,7 +40,7 @@ validator, not an oracle.
     Two distinct causes of staleness, kept separate:
 
     - **Same-officer AID key rotation** — the acting AID's keys change; its checkpoint asset
-      identity is **unchanged**. A `delta = 0` rotation (`seq + 1`) **consumes** the checkpoint,
+      identity is **unchanged**. A `delta = 0` rotation (a later sequence number) **consumes** the checkpoint,
       so a pre-signed authorization is **stale** and must be **re-signed** by the *same* acting
       AID's current weighted keys over the current sequence (Execute / Refresh-Re-sign /
       Cancel-Reclaim / Expire-Cleanup) — no counterparty swap.
@@ -103,8 +103,7 @@ footnote. Two distinct delegation concepts must not be conflated:
   delegated from the LE's AID, with cooperative anchoring. This binds key
   custody, not role authority.
 
-The chain can enforce the first today (it is ACDC verification, Layer 3); the
-second is the deferred KERI-parity work. For contracts, credential-level
+The first is the job of ACDC verification (Layer 3), which is designed and prototyped but not built; the second is the deferred KERI-parity work. For contracts, credential-level
 delegation is sufficient and is the natural v1: role authority is what
 contract law cares about.
 
@@ -120,13 +119,13 @@ transition names which party (or quorum) must act. The acting party is an
 **officer/service AID**, not the counterparty's LE root AID (§1), so the
 validator makes **two separate checks**: (1) a **witness set meeting the acting
 officer AID's current weighted threshold** — read from **that acting AID's**
-own **sovereign per-AID checkpoint** (asset id `(checkpoint_policy_id,
+own **sovereign per-AID checkpoint** (the registry's representative asset for the AID, in version 1 asset id `(checkpoint_policy_id,
 aid_asset_name)`, current weighted keys/threshold in the inline
 `CheckpointDatum`, read as a CIP-31 reference input, discovered by a generic
 exact-asset `(policy_id, asset_name)` lookup; #92) over the fully bound
 transition + current sequence; and (2), separately, that an **unrevoked OOR/ECR
 credential chain** links that acting AID to the **fixed counterparty LE** and an
-eligible role (L2 TEL proofs). Because a `delta = 0` rotation consumes the
+eligible role (L2 TEL proofs). Both checks apply only to an eligible holding of that acting AID's checkpoint (present, unfrozen, unpoisoned, at least `W` old): a holding that carries a valid weighted signature set but is poisoned, frozen or younger than `W` confers no authority. Because a `delta = 0` rotation consumes the
 acting AID's checkpoint, its authority is re-resolved fresh — a witness set
 meeting the current weighted threshold at the current sequence — at every
 transition; a *revoked* OOR instead forces re-designation to a different acting
@@ -136,15 +135,15 @@ An escrow template, as a state machine — every arrow is a transaction whose
 validator verifies the named party's **acting-AID witness set against its
 sovereign checkpoint** (a set meeting its current weighted threshold over the
 transition + current sequence) **plus** a **separate OOR/ECR + TEL eligibility**
-check linking that acting AID to the fixed counterparty LE, before allowing the
+check linking that acting AID to the fixed counterparty LE, and only while that checkpoint is an eligible holding (present, unfrozen, unpoisoned, at least `W` old), before allowing the
 transition:
 
 ```mermaid
 stateDiagram-v2
     [*] --> Formed: instantiation co-signed by both entities'<br/>officer AIDs (counterparty LE + designated acting officer AID / checkpoint asset id fixed in datum)
-    Formed --> Funded: Buyer's officer AID deposits<br/>(witness set meets acting officer AID's current weighted threshold + OOR links it to Buyer LE)
-    Funded --> Released: delivery confirmed<br/>(Buyer officer AID witness set → funds to Seller)
-    Funded --> Refunded: deal cancelled<br/>(both officer AIDs' witness sets → funds back to Buyer)
+    Formed --> Funded: Buyer's officer AID deposits<br/>(eligible holding; witness set meets acting officer AID's current weighted threshold + OOR links it to Buyer LE)
+    Funded --> Released: delivery confirmed<br/>(eligible holding; Buyer officer AID witness set → funds to Seller)
+    Funded --> Refunded: deal cancelled<br/>(eligible holdings; both officer AIDs' witness sets → funds back to Buyer)
     Formed --> Formed: re-designation —<br/>OOR revoked ⇒ LE swaps to a different acting officer AID
     Funded --> Funded: re-designation —<br/>OOR revoked ⇒ LE swaps to a different acting officer AID
     Released --> [*]
@@ -164,7 +163,7 @@ with both identities. That `trie_key`/KEL-replay step is **historical due
 diligence only** — it establishes provenance and the OOR/ECR eligibility chain,
 and **never selects current keys**. The template fixes, per counterparty, the
 **stable counterparty LE identity** *and* the **designated acting officer AID /
-checkpoint-asset identity** `(checkpoint_policy_id, aid_asset_name)`; **current
+checkpoint-asset identity** (the registry's representative asset for the AID; in version 1 `(checkpoint_policy_id, aid_asset_name)`); **current
 authority** is then the **acting officer AID's sovereign per-AID checkpoint**,
 read live at each transition (#92) — not KEL replay, and not the LE root AID's
 keys. No trusted introducer is needed — the registries and each acting AID's own
@@ -183,8 +182,8 @@ On top of L1–L4:
   checkpoint-asset id**; what is read live is that **acting AID's** current key
   state:
     - *Fixed at formation*: bake the counterparty LE identity and the acting
-      officer AID's **per-AID checkpoint asset id** `(checkpoint_policy_id,
-      aid_asset_name)` into the datum. Stable (rotation-proof — the asset id is
+      officer AID's **per-AID checkpoint asset id** (the registry's representative asset for the AID; in version 1 `(checkpoint_policy_id,
+      aid_asset_name)`) into the datum. Stable (rotation-proof — the asset id is
       AID-derived and never changes across the acting AID's `delta = 0`
       rotations), but blind to **OOR revocation / officer departure** unless
       paired with per-transition reads (which then force re-designation to a
@@ -192,15 +191,14 @@ On top of L1–L4:
     - *Live per transition*: re-read the **acting officer AID's sovereign
       per-AID checkpoint** as a CIP-31 reference input at every spend — a
       witness set meeting its current weighted keys/threshold, with exactly one
-      current checkpoint at the **ACTIVE** role address — plus OOR
-      non-revocation (L2 TEL) linking it to the fixed LE. ARMED, FROZEN,
-      missing, duplicated, and stale candidates reject. The honest
+      current eligible checkpoint (in version 1, at the **ACTIVE** role address) — plus OOR
+      non-revocation (L2 TEL) linking it to the fixed LE. Frozen, poisoned, juvenile, pending-termination, convicted, missing, duplicated, and stale candidates reject (in version 1, ARMED and FROZEN). The honest
       default for institutional risk:
       each transition is a fresh attestation; a `delta = 0` rotation of the
       acting AID stales any authorization bound to a prior sequence (⇒ re-sign),
       while OOR revocation (⇒ re-designation) swaps in a different acting AID.
     - Recommended: fixed LE + acting-AID checkpoint asset id + live
-      checkpoint/role read — identity cannot drift, standing is re-proven each
+    checkpoint read (the eligible holding; in version 1 the role read) — identity cannot drift, standing is re-proven each
       transition.
 - **Ceremony tooling**: institutional contract UX is a *ceremony
   coordinator* that gathers OOR-backed witnesses from each entity's signers

@@ -1,16 +1,15 @@
 # Veridian bridge
 
 !!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
+    Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design (D-036 to D-040) an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses.
 
 
 ## What Veridian is
@@ -27,21 +26,18 @@ signatures, and indexed witness receipts. Cardano validates those artifacts
 before changing the checkpoint.
 
 !!! warning "Integration status"
-    The Register, Close, Advance, Freeze, and response transactions are
-    implemented and settled for the small fixture. A production
+    The Register, Close and Advance transactions of the earlier deployed design (version 1) settled on preprod for the small fixture, and its Freeze and response transactions on a development network. A production
     `cardano-keri-sdk`, WASM package, and Veridian user flow are future work.
-    Types below describe the current ledger wire or an explicitly labelled
+    Types below describe the version 1 ledger wire or an explicitly labelled
     future interface; they are not claims that a published SDK exists.
 
 ## One identity, one checkpoint
 
 Veridian names an identity with a KERI **AID** (Autonomic Identifier) and
-maintains its **KEL** (Key Event Log). cardano-keri derives a Cardano asset name
-from that AID. A quantity-one token and inline datum form the sovereign
+maintains its **KEL** (Key Event Log). In version 1 cardano-keri derived a Cardano asset name from that AID; in the accepted design the checkpoint holds the registry's representative asset for the AID. A quantity-one token and inline datum form the sovereign
 checkpoint UTxO.
 
-There is no shared identity root, `trie_key`, or global key-state registry in
-the current transaction path.
+There is no shared identity root, `trie_key`, or global key-state registry in the version 1 transaction path; the accepted design adds the registry.
 
 ```mermaid
 flowchart LR
@@ -60,7 +56,7 @@ flowchart LR
 
 The relayer does not need the controller's private keys for public projection
 operations. It receives already signed KERI evidence and may pay to submit it.
-The on-chain result is fixed by that evidence.
+In version 1 the on-chain result is fixed by that evidence and the checkpoint input: the Advance action carries no payee and no deposit choice, and the output holds exactly the input's value. In the accepted design the key state on chain is still the one that evidence establishes, and the submitter also names the payee and, when the owner's new keys signed a deposit intent, chooses whether the rotation restores the freeze bond.
 
 ## Digest boundary
 
@@ -82,7 +78,7 @@ At rotation:
 
 No Cardano-specific AID flavor or Blake2 replacement is required.
 
-## Current transaction specifications
+## Version 1 transaction specifications
 
 ### Register
 
@@ -171,9 +167,7 @@ response Advances settled in
 ### Freeze
 
 Freeze is a permissionless challenge submitted by a hunter — in the shipped V1,
-the challenger of a lagging checkpoint; in the accepted design, anyone paid to
-land rotations or to freeze a checkpoint that cannot pay for one — holding
-witnessed conflict evidence.
+the challenger of a lagging checkpoint; in the accepted design, anyone holding evidence of a later rotation when the pool is below the premium, with the bond paid to the payee the freeze names.
 
 ```text
 checkpoint spend redeemer: Freeze { hunter_pkh }
@@ -245,15 +239,15 @@ the user must see the exact input, action, and destination before signing.
 ## Synchronization lag
 
 KERI and Cardano do not settle simultaneously. After a KERI rotation is
-published, Cardano still shows the old ACTIVE checkpoint until an Advance or
+published, Cardano still shows the old checkpoint (in version 1, the ACTIVE one), which consumers keep accepting while it is eligible, until an Advance or
 valid Freeze transaction settles.
 
-During that interval, a Cardano-only consumer can see stale authority. The
-current mitigations are:
+During that interval, a Cardano-only consumer can see stale authority. In version 1 the
+mitigations were:
 
 - anyone can relay the genuine next Advance;
-- anyone with witnessed later-event evidence can Freeze the stale checkpoint;
-- Freeze immediately moves it to ARMED, which consumers reject; and
+- anyone with witnessed later-event evidence could Freeze the stale checkpoint (the version 1 validator required the enforcement observation, an input at the ACTIVE role address holding at least the protected value, a finite validity upper bound and an ARMED successor with the same value; the accepted design instead requires evidence of a strictly later sequence number, a pool below the premium and a checkpoint that is neither frozen nor poisoned, `Checkpoint.lean` 301–306);
+- a version 1 Freeze immediately moved it to ARMED, which consumers rejected; the accepted freeze sets the datum's frozen bit, which the holding predicate refuses (`ConsumerIdentity.lean` 73–89); and
 - high-value applications must define how fresh their KERI monitoring and
   checkpoint resolution must be.
 
@@ -275,7 +269,7 @@ Given a KERI AID:
 The indexer supplies location, not truth. A stale result refers to a spent
 output and rejects.
 
-## Current limits
+## Limits of the version 1 programs
 
 - The settled fixture has two controller keys, not GLEIF's real
   three-of-seven shape.

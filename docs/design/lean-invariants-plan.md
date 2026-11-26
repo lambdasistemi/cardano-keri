@@ -5,7 +5,7 @@
     stood when it was written. The accepted design has since removed them:
     there is no owner exit, and a checkpoint is alive until it is convicted
     ([#493](https://github.com/lambdasistemi/cardano-keri/issues/493)). The
-    text below is kept as written.
+  text below is kept as written, and it also uses other earlier wording, for example that a hunter is paid for landing rotations or for a freeze, a dormant leaf that can be convicted and a reap; the accepted payee is the one the submitter names (`lean/CardanoKeri/Checkpoint.lean`).
 
 
 ## The stories this plan must cover

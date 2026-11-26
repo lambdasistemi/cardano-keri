@@ -28,6 +28,7 @@ import Cardano.KERI.AID.Checkpoint.Value (heldValue)
 import Cardano.KERI.AID.Consumer (
     Clause,
     ObservedOutput (..),
+    OutputDatum (..),
     Release (..),
     consumableHolding,
  )
@@ -199,7 +200,7 @@ expectedClauses ri facts raw window now =
         ObservedOutput
             { ooCredential = ScriptCredential (riCheckpointValidator ri)
             , ooAssets = [asset ri raw]
-            , ooDatum = Just (BSL.toStrict (serialise (datumOf facts)))
+            , ooDatum = DatumInline (BSL.toStrict (serialise (datumOf facts)))
             }
 
 -- | The registry a release names, as the identity answers render it.

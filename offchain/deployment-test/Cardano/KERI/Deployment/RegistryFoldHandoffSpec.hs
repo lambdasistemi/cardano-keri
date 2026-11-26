@@ -5,7 +5,7 @@
 Module      : Cardano.KERI.Deployment.RegistryFoldHandoffSpec
 Description : what a fold says about the fold it signed, read from a working pipe as it happens
 
-A fold that stops after its premint has signed a second transaction. What the folder
+A fold that stops at the handoff has signed its one transaction. What the folder
 can know of it depends on how far it got: it was signed and never handed to the node,
 or the handoff began and the node may or may not have received it. Each case is run
 with its lines written to a real pipe and read by another thread line by line while the
@@ -22,7 +22,7 @@ module Cardano.KERI.Deployment.RegistryFoldHandoffSpec (spec) where
 
 import Cardano.KERI.Deployment.RegistryBookingChain
 import Cardano.KERI.Deployment.RegistryBookingCommand (printFoldEvent, renderFoldStopped)
-import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..), feeOf, whileConnected)
+import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..), whileConnected)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (noFaults)
 import Cardano.KERI.Deployment.RegistryFold
@@ -51,10 +51,7 @@ data HowFar = NeverHandedOver | NodeMayHaveReceived
 
 -- | The facts a transcript is checked against, each taken from the chain fixture and not from what the command printed.
 data Facts = Facts
-    { factPremint :: String
-    , factProof :: String
-    , factFee :: Integer
-    , factFold :: String
+    { factFold :: String
     -- ^ the id of the transaction the runtime signed last before the fold was handed over
     , factState :: String
     , factRoot :: String
@@ -123,7 +120,7 @@ rowOf NodeMayHaveReceived facts =
 
 -- | The only words the stage line holds besides the failure the node client died of.
 stagePrefix :: String
-stagePrefix = "ckeri: registry fold stopped after the premint settled, at the handoff of the fold to the node: "
+stagePrefix = "ckeri: registry fold stopped at the handoff of the fold to the node: "
 
 -- | Digit runs replaced by one mark, for what differs between runs (thread numbers).
 maskDigits :: String -> String
@@ -137,20 +134,12 @@ maskDigits = go
 -- | The lines of a transcript, but for the one that carries the failure's own words.
 expectedLines :: HowFar -> Facts -> [String]
 expectedLines howFar facts =
-    ["handing premint " <> factPremint facts <> " to the node"]
-        <> premintReceipt
-        <> ["handing fold " <> factFold facts <> " to the node"]
+    ["handing fold " <> factFold facts <> " to the node"]
         <> [stageLine]
-        <> premintReceipt
         <> [rowOf howFar facts]
         <> ["node-confirmed-state: " <> factState facts <> " root " <> factRoot facts]
-        <> ["not retried: the premint is not minted again and no transaction is sent again by this command"]
+        <> ["not retried: no transaction is sent again by this command"]
   where
-    premintReceipt =
-        [ "premint-transaction: " <> factPremint facts
-        , "proof-output: " <> factProof facts
-        , "premint-fee: " <> show (factFee facts)
-        ]
     stageLine = stagePrefix <> factFailure facts
 
 -- | Why a transcript is not the one the facts call for: line by line, nothing added and nothing missing.
@@ -172,7 +161,7 @@ checkTranscript howFar facts actual = do
 -- | The two transcripts, each already right, differ in the one row and in no other.
 checkPair :: Facts -> [String] -> Facts -> [String] -> Either String ()
 checkPair factsA a factsB b = do
-    let masked facts = map (maskFailure . replaceAll (factFold facts) "<fold>" . replaceAll (factPremint facts) "<premint>")
+    let masked facts = map (maskFailure . replaceAll (factFold facts) "<fold>")
         differing = [(x, y) | (x, y) <- zip (masked factsA a) (masked factsB b), x /= y]
     unless (length a == length b) $ Left "the transcripts have different lengths"
     case differing of
@@ -233,14 +222,14 @@ scenario howFar = do
                             , trSubmit = \tx -> do
                                 modifyIORef' submits (+ 1)
                                 n <- readIORef submits
-                                -- the fold is the second submission: its id is on the pipe, with the writer open, as the handoff begins
-                                when (howFar == NodeMayHaveReceived && n == 2) $ do
+                                -- the fold is the one submission: its id is on the pipe, with the writer open, as the handoff begins
+                                when (howFar == NodeMayHaveReceived && n == 1) $ do
                                     signedId <- readIORef lastSigned
                                     visible <- visibleOnPipe pipe ("handing fold " <> signedId <> " to the node")
                                     modifyIORef' known (&& visible)
                                 outcome <- trSubmit transactions tx
                                 -- the node has it; the reply is lost to the dying client
-                                when (howFar == NodeMayHaveReceived && n == 2) (void (connectionEnds client))
+                                when (howFar == NodeMayHaveReceived && n == 1) (void (connectionEnds client))
                                 pure outcome
                             }
                     }
@@ -262,7 +251,6 @@ scenario howFar = do
                 { foldBlueprint = worldBlueprint world
                 , foldIdentity = deployedIdentity (worldDeployed world)
                 , foldRecord = deployedRecord (worldDeployed world)
-                , foldExport = export
                 , foldRequestOutput = request
                 , foldSnapshot = Snapshot "the deployer" [] []
                 , foldPayerAddress = folderAddress
@@ -282,15 +270,11 @@ scenario howFar = do
     transactions' <- accepted world
     reportedFold <- readIORef foldId
     isKnown <- readIORef known
-    let premintTx = transactions' !! base
     pure
         Run
             { runFacts =
                 Facts
-                    { factPremint = idText (transactionId premintTx)
-                    , factProof = maybe "" refText (proofOutputOf world premintTx)
-                    , factFee = feeOf premintTx
-                    , factFold = reportedFold
+                    { factFold = reportedFold
                     , factState = refText stateRef
                     , factRoot = B8.unpack (convertToBase Base16 emptyRoot)
                     , factFailure = failureShown
@@ -315,10 +299,7 @@ syntheticTranscript howFar facts =
 someFacts :: String -> Facts
 someFacts foldId =
     Facts
-        { factPremint = replicate 64 'a'
-        , factProof = replicate 64 'a' <> "#0"
-        , factFee = 2_107_065
-        , factFold = foldId
+        { factFold = foldId
         , factState = replicate 64 'c' <> "#0"
         , factRoot = replicate 64 '0'
         , factFailure = "the node connection ended: ConnectionLost"
@@ -380,8 +361,9 @@ spec = describe "#351 what a fold says about the fold it signed" $ around_ withi
             -- what the command knows, and what the chain shows
             fmap attemptStatus (stoppedFoldAttempt (runStop never)) `shouldBe` Just NotHandedToNode
             fmap attemptStatus (stoppedFoldAttempt (runStop maybeThere)) `shouldBe` Just HandoffUnknown
-            runAccepted never `shouldBe` runBase never + 1
-            runAccepted maybeThere `shouldBe` runBase maybeThere + 2
+            -- the fold never left, or the node has it: the one transaction of the command
+            runAccepted never `shouldBe` runBase never
+            runAccepted maybeThere `shouldBe` runBase maybeThere + 1
             runAcceptedLast maybeThere `shouldBe` factFold (runFacts maybeThere)
             -- the complete transcripts, line by line, and their difference
             checkTranscript NeverHandedOver (runFacts never) (runTranscript never) `shouldBe` Right ()

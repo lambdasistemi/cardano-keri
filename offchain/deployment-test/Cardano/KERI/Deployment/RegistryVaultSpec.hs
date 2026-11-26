@@ -28,6 +28,7 @@ import Cardano.KERI.Deployment.RegistryCommandSpec (capturing)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (noFaults, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), signWithPaymentKey)
 import Cardano.Ledger.Address (Addr)
 import Control.Concurrent (threadDelay)
@@ -236,7 +237,7 @@ runners =
                 RegistryDeploySettings
                     { rdNetworkMagic = givenMagic given
                     , rdBlueprint = unreadable directory "blueprint"
-                    , rdNodeSocket = "no-node.socket"
+                    , rdProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rdFundingAddress = "addr_test1unused"
                     , rdSigningKeyFile = givenFile given
                     , rdVault = givenVault given
@@ -262,7 +263,7 @@ runners =
                 RegistryRegisterSettings
                     { rgNetworkMagic = givenMagic given
                     , rgBlueprint = unreadable directory "blueprint"
-                    , rgNodeSocket = "no-node.socket"
+                    , rgProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rgFundingAddress = "addr_test1unused"
                     , rgSigningKeyFile = givenFile given
                     , rgVault = givenVault given
@@ -280,7 +281,7 @@ runners =
                 RegistryFoldSettings
                     { rfNetworkMagic = givenMagic given
                     , rfBlueprint = unreadable directory "blueprint"
-                    , rfNodeSocket = "no-node.socket"
+                    , rfProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rfFundingAddress = "addr_test1unused"
                     , rfSigningKeyFile = givenFile given
                     , rfVault = givenVault given
@@ -288,7 +289,6 @@ runners =
                     , rfTimeoutSeconds = 5
                     , rfReleaseIdentity = unreadable directory "identity"
                     , rfReferenceRecord = unreadable directory "record"
-                    , rfKliExport = unreadable directory "export"
                     , rfRequest = ""
                     , rfSnapshot = unreadable directory "snapshot"
                     , rfSnapshotOut = Nothing
@@ -300,7 +300,7 @@ runners =
                 RegistryReturnSettings
                     { rnNetworkMagic = givenMagic given
                     , rnBlueprint = unreadable directory "blueprint"
-                    , rnNodeSocket = "no-node.socket"
+                    , rnProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                     , rnFundingAddress = "addr_test1unused"
                     , rnSigningKeyFile = givenFile given
                     , rnVault = givenVault given
@@ -378,7 +378,7 @@ withBooking world action = withSystemTempDirectory "registry-vault" $ \scratch -
         RegistryRegisterSettings
             { rgNetworkMagic = developmentMagic
             , rgBlueprint = blueprint
-            , rgNodeSocket = "no-node.socket"
+            , rgProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
             , rgFundingAddress = "addr_test1unused"
             , rgSigningKeyFile = Nothing
             , rgVault = Nothing

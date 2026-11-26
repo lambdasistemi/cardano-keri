@@ -9,8 +9,7 @@ pages called this role the *super watcher*; the accepted design gives it a wage 
 name.
 
 !!! abstract "Where this page stands"
-    The cross-plane problem, the evidence rules for advance, and what the role
-    is *not* are **shipped on `main` today** — those transactions settle. The
+    The cross-plane problem, the evidence rules for advance, and what the role is *not* are those of the earlier deployed design (version 1) — its advance transactions settled on preprod. The
     hunter's economics (the premium paid for landing a rotation, the freeze,
     the conviction payout) are the
     **accepted design**, proved in the Lean and playable in the checkpoint
@@ -28,9 +27,7 @@ ahead:
 - Cardano may have settled an advance while a particular off-chain client has
   not refreshed its KEL or ledger view.
 
-The hunter observes both and closes that gap. The owner does not: in the M1
-return the owner rotates with `kli` and never touches Cardano except to put
-money in. That asymmetry is deliberate.
+The hunter observes both and closes that gap. The owner does not: the owner rotates with `kli`; on Cardano the controller books the registration, funds the pool and, when needed, authorizes a deposit with the new keys or a poison with the current key quorum. That asymmetry is deliberate.
 
 ```mermaid
 flowchart LR
@@ -51,50 +48,44 @@ The hunter seeds its own watcher from the witness OOBIs published on the
 [endpoint board](../user/discovery-endpoint-board.md), so discovery itself does
 not require asking anybody.
 
-## What a hunter may do today
+## What a hunter could do in version 1
 
-Against the programs shipped on `main`, a hunter may:
+Against the version 1 programs published on preprod, a hunter could:
 
 - relay a public inception through premint and register;
 - relay a genuine witnessed rotation through advance;
 - monitor transaction settlement and the new unspent checkpoint.
 
-There is no payment for any of it. Routine event relay has no on-chain fee
-today, so a commercial relayer needs an off-chain payment model. That is the
+There was no payment for any of it. Routine event relay had no on-chain fee, so a commercial relayer needed an off-chain payment model. That is the
 gap the accepted design closes.
 
 ## The hunter's wage — accepted design
 
-The owner keeps three separate sums in the checkpoint, and only two of them
-can ever reach a hunter:
+The owner keeps three separate sums in the checkpoint, and only two of them go to a payee that a hunter names:
 
-| Component | What it is for | Reaches a hunter when |
+| Component | What it is for | Who receives it, and when |
 |---|---|---|
-| the **pool** | the owner's advance funds | a landed rotation pays the premium `P`, the fee for landing it |
-| `B`, the **freeze bond** | forcing the owner's engagement: what a hunter takes when the pool cannot pay | a freeze, and only while `pool < P` |
-| `D_reg`, the **conviction bond** | the stake a duplicity proof seizes | a conviction, never a fee |
+| the **pool** | the owner's advance funds | the payee the submitter names, when a rotation lands with the pool covering the premium `P` |
+| `B`, the **freeze bond** | forcing the owner's engagement: what a freeze pays to the payee it names when the pool cannot pay | the payee the freeze names, and only while `pool < P` with the checkpoint clean and unfrozen |
+| `D_reg`, the **conviction bond** | the stake a duplicity proof seizes | the payee of the eligible commitment, at an accepted conviction; never a fee |
 
 **The loop.** The hunter sees the owner's rotation on KERI. It looks at
 Cardano:
 
-- if the pool covers the premium, it lands the rotation and takes `P`;
-- if it does not, it takes `B` and **freezes** the checkpoint on its old keys —
-  the same evidence, applied to nothing. The datum is unchanged, `B` leaves,
-  and the checkpoint is unconsumable until the owner rotates with a deposit
-  that restores it.
+- if the pool covers the premium, it lands the rotation and names the payee of `P`;
+- if the pool is short and the checkpoint is neither frozen nor poisoned, it can **freeze** the checkpoint on its old keys with the same evidence. The freeze sets only the frozen bit in the datum and pays `B` to the payee it names. The checkpoint stays frozen until a depositing rotation restores the bond. A rotation with a short pool still lands, unpaid.
 
 The freeze is therefore not a punishment for lag. It is what makes a
 non-paying owner come back, and it is bounded by two things the owner
 controls: fund the pool, or do not rotate.
 
 **Two hunters racing** produce one winner. If the pool covers `P` the first
-advance wins and the second fails on the spent input; if it does not, the
-first freeze takes `B` and the second finds nothing to take.
+advance wins and the second fails on the spent input; if it does not, the first freeze pays `B` and the second is refused because the checkpoint is already frozen.
 
 **No bounty.** There is no payment for detecting misbehaviour, because a flow
 whose profitability depends on another party's misbehaviour invites staged
 misbehaviour. The single exception is the conviction, and it is an exception
-on principled ground: two witnessed rotations at one sequence are a KERI verdict
+on principled ground: two rotations of different content at one sequence, both valid against the same previous commitments and each receipted by its own witnesses, are a KERI verdict
 ([duplicity](https://trustoverip.github.io/kswg-keri-specification/#duplicity)), not a judgement the chain invents.
 
 ## What a hunter is not
@@ -130,12 +121,11 @@ The hunter must collect:
 - the current checkpoint outref.
 
 The advance observer reconstructs and validates the transition. The hunter
-cannot choose alternate keys or skip a sequence, and the sequence only ever
+cannot choose alternate keys, and the sequence number only ever
 moves forward — the checkpoint cannot roll back (ruling D-022).
 
 !!! warning "One unsettled question inside advance"
-    For a rotation that cuts or adds witnesses, the shipped validator counts
-    receipts against the **new** witness set and the **new** `toad`. Whether
+    For a rotation that cuts or adds witnesses, the version 1 validator counted receipts against the **new** witness set and the **new** `toad`. Whether
     `keripy` applies the same rule, or tallies against the parent's set, is not
     yet established. Epic
     [#320](https://github.com/lambdasistemi/cardano-keri/issues/320) builds the
@@ -146,31 +136,21 @@ moves forward — the checkpoint cannot roll back (ruling D-022).
 
 The hunter presents the same evidence it would use to advance: a later
 witnessed rotation with its receipts. The freeze runs the advance predicate and
-differs only in effect. It additionally requires that the pool is below `P`,
-and it is not enabled from a poisoned checkpoint (one locked by the owner's own
-declaration), which is already
-unconsumable.
+differs only in effect. It additionally requires that the pool is below `P` and that the checkpoint is neither frozen nor poisoned (one locked by the owner's own declaration, which is already unconsumable); `B` goes to the payee the freeze names.
 
 ### Poison relay — accepted design
 
-The poison is a declaration the owner's current keys sign at their own
-threshold, over a short preimage bound to the policy, the AID and the sequence.
+The poison is a declaration the owner's current key quorum authorizes; the model does not yet specify the bytes they sign, and no validator implements the poison spend.
 It is never witnessed, and anyone may land it. A hunter that carries poisons
 promptly is doing the most valuable thing in the system: the poison's whole
 purpose is to be fast.
 
 ### Convict — accepted design
 
-The conviction proof is narrower than any lag evidence. It requires a **second**
-rotation at the tip's own sequence that reveals exactly the tip's current keys,
-is signed at the current threshold, and carries receipts from at least `toad` of
-the tip's witnesses — and differs in content from the accepted one. No history
-is needed, because the revealed keys *are* the current keys.
+The conviction proof is narrower than any lag evidence. It requires a rival rotation at the native sequence of the accepted one, valid against the same previous commitments: it satisfies the previous next-key commitment and its own signing threshold, carries receipts from its own derived witnesses, and differs in complete content from the accepted one. The comparison runs against the authenticated context the checkpoint selects, never one the rival chooses.
 
 A stranger cannot manufacture this. Only a holder of the pre-committed keys
-could have signed the second rotation, and only colluding witnesses could have
-receipted both. The convictor names a payee and takes `D_reg` in full; the
-identity becomes `convicted`, which is terminal.
+could have signed the second rotation, and each rotation needs the receipts of its own derived witnesses at its own threshold; the comparison does not itself require the two receipt sets to overlap. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state; its payee takes `D_reg` in full, and the freeze bond still held and the pool go to the refund address. The checkpoint becomes a pending termination; the booking that moves the pending output into the termination request and the fold that consumes that request then retire the identity, which is terminal.
 
 ## Operational loop
 
@@ -181,10 +161,8 @@ A robust hunter would:
 2. collect and verify witness receipts;
 3. resolve each AID's current Cardano checkpoint and read its pool;
 4. compare the native KERI sequence with the checkpoint's;
-5. choose the permitted public projection — advance when the pool pays, freeze
-   when it does not, a poison relay when one exists, a conviction when the
-   proof is in hand, and no transaction when evidence is incomplete;
-6. construct the thin-checkpoint and observer envelope;
+5. choose the permitted public projection — a rotation (paid when the pool covers `P`, unpaid otherwise), a freeze when the pool is below `P` and the checkpoint is clean and unfrozen, a poison relay when one exists, a conviction when the proof is in hand and its commitment is eligible, and no transaction when evidence is incomplete;
+6. construct the transaction for the chosen step with the evidence it needs;
 7. evaluate and budget every script purpose;
 8. submit and wait for settlement;
 9. handle contention and rollback; and
@@ -199,9 +177,10 @@ network partitions, Cardano inclusion delay, chain rollbacks, block-level
 censorship, or a colluding witness threshold.
 
 Applications should not silently outsource all freshness policy to one hunter.
-The **juvenility window** `W` exists for that reason: a consumer refuses a
-checkpoint younger than `W` slots after its registration, and `W` is calibrated above measured relayer latency
-rather than guessed. Its value is set from the measurement taken in epic
+A relying application checks a checkpoint’s age against the juvenility window
+`W`. It can use a clean, unfrozen checkpoint only once the current slot
+reaches its birth slot plus `W`. The planned devnet measurement of the time
+from witness receipt to landed rotation will inform the choice of `W` in epic
 [#325](https://github.com/lambdasistemi/cardano-keri/issues/325).
 
 ## Credential-plane extension
@@ -214,8 +193,5 @@ answers which issued roles remain valid. Only the first plane is in M1.
 ## Security principle
 
 The hunter is safe to make permissionless because it pays to submit public
-proofs whose on-chain result is deterministic, and it is paid from value the
-owner chose to keep there. A hostile hunter can withhold its own service or waste
-fees on invalid transactions. It cannot choose a different valid successor,
-take `D_reg` without a duplicity proof, take `B` while the pool pays, or move
-one lovelace to an address the owner's keys did not authorize.
+proofs whose key state is fixed by the evidence, and nothing in the validators pays the submitter as such: the rest of the outcome is fixed by the whole transaction, which names the payee and the deposit option; when the pool covers the premium, the premium goes from value the owner chose to keep there to the address the rotation names, which need not be the submitter's; a rotation with a short pool lands unpaid. A hostile hunter can withhold its own service or waste
+fees on invalid transactions. It cannot install a key state other than the one its evidence establishes, take `D_reg` without an accepted conviction, or take `B` while the pool pays. For a paid rotation the submitter names the payee of the premium from the pool; a freeze pays the bond to the address it names. When the owner's new keys have signed a deposit intent, the same evidence supports a rotation that keeps the frozen state and one that deposits and clears it; the intent authorizes the deposit amount for that checkpoint input.

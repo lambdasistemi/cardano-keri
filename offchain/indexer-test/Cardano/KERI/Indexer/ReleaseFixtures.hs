@@ -20,6 +20,13 @@ module Cardano.KERI.Indexer.ReleaseFixtures (
     pendingFacts,
     datumOf,
     outputAt,
+    outputWithDatum,
+    contextFor,
+    applicationAddr,
+    requestLovelace,
+    requestAssets,
+    bookedRequest,
+    observedOutput,
     txInAt,
     frozenLive,
     liveWith,
@@ -47,9 +54,11 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Value (heldValue)
-import Cardano.KERI.AID.Consumer (Release (..), representativeAsset)
+import Cardano.KERI.AID.Consumer (Context, ObservedOutput, Release (..), representativeAsset)
+import Cardano.KERI.AID.Reader (terminationApproval)
 import Cardano.KERI.AID.Release (ReleaseIdentity (..), releaseContext)
 import Cardano.KERI.Deployment.Manifest (CheckpointInfo (..), Manifest (..), writeManifestAtomic)
+import Cardano.KERI.Indexer.Codecs (Observation (..), observeOutput)
 import Cardano.KERI.Indexer.Config (decodeAddress)
 import Cardano.KERI.Indexer.FollowerSpec (m1Manifest)
 import Cardano.Ledger.Address (Addr (..))
@@ -135,6 +144,40 @@ keyStateOf rawAid =
         , cdNativeSn = 5
         }
 
+-- | The relying context of an identity for a raw identifier digest.
+contextFor :: ReleaseIdentity -> ByteString -> Context
+contextFor ri raw = releaseContext ri (qb64Aid raw)
+
+-- | The address of the application credential of the release.
+applicationAddr :: ReleaseIdentity -> Addr
+applicationAddr ri =
+    Addr
+        (if riNetwork ri == 0 then Testnet else Mainnet)
+        (ScriptHashObj (scriptHashOf (rlApplicationCredential (riRelease ri))))
+        StakeRefNull
+
+-- | The lovelace a booking places on a request: the termination carrier and the tip.
+requestLovelace :: ReleaseIdentity -> Integer
+requestLovelace ri = riTerminationCarrier ri + minimumTip (riApplicationParameters ri)
+
+-- | The two assets of a request of an identity, named by the producer.
+requestAssets :: Context -> [(ByteString, ByteString, Integer)]
+requestAssets context =
+    [ let (p, n) = representativeAsset context in (p, n, 1)
+    , let (p, n) = terminationApproval context in (p, n, 1)
+    ]
+
+-- | The output a booking transaction places for an identity.
+bookedRequest :: ReleaseIdentity -> Context -> Indexer.TxOut
+bookedRequest ri context =
+    outputWithDatum (applicationAddr ri) (requestLovelace ri) (requestAssets context) NoDatum
+
+-- | The observed output of a ledger output, through the store's boundary.
+observedOutput :: Indexer.TxOut -> ObservedOutput
+observedOutput txOut = case observeOutput txOut of
+    Right observation -> obsOutput observation
+    Left refusal -> error ("the observation refused a built output: " <> show refusal)
+
 -- | The qualified text of the AID of a raw 32-byte digest.
 aidText :: ByteString -> ByteString
 aidText = qb64Aid
@@ -167,9 +210,17 @@ quantity) and this inline datum, as the store holds it.
 -}
 outputAt :: Addr -> Integer -> [(ByteString, ByteString, Integer)] -> Maybe PLC.Data -> Indexer.TxOut
 outputAt addr lovelace assets datum =
+    outputWithDatum addr lovelace assets (maybe NoDatum (Datum . dataToBinaryData . Data) datum)
+
+{- | An output at an address with this lovelace, these assets and this datum in
+any form the ledger carries: none, a hash or inline.
+-}
+outputWithDatum ::
+    Addr -> Integer -> [(ByteString, ByteString, Integer)] -> Datum ConwayEra -> Indexer.TxOut
+outputWithDatum addr lovelace assets datum =
     Indexer.TxOut $
         serialize' (eraProtVerLow @ConwayEra) $
-            base & datumTxOutL .~ maybe NoDatum (Datum . dataToBinaryData . Data) datum
+            base & datumTxOutL .~ datum
   where
     base :: TxOut ConwayEra
     base = mkBasicTxOut addr (MaryValue (Coin lovelace) (MultiAsset policies))

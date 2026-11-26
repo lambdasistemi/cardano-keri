@@ -30,6 +30,7 @@ data-files:
   deployment-test/fixtures/koios-recorded/*.json
   deployment-test/fixtures/register-preflight-board-manifest.json
   deployment-test/fixtures/register-preflight-m1-manifest.json
+  deployment-test/fixtures/registry-v1/*.json
   docs/assets/swagger/query-api.json
   indexer-test/fixtures/*.json
   test/keri-fixtures/fixtures/*.json
@@ -193,6 +194,7 @@ library deployment
     Cardano.KERI.Deployment.Manifest
     Cardano.KERI.Deployment.NodeSocketRuntime
     Cardano.KERI.Deployment.Publisher
+    Cardano.KERI.Deployment.RefusalAt
     Cardano.KERI.Deployment.Registration
     Cardano.KERI.Deployment.Registry
     Cardano.KERI.Deployment.RegistryChain
@@ -208,6 +210,7 @@ library deployment
     Cardano.KERI.Deployment.SigningKeyCheck
     Cardano.KERI.Deployment.TopUp
     Cardano.KERI.Deployment.TransactionRuntime
+    Cardano.KERI.Deployment.WalletHolding
 
 -- The Koios instance of the registry runtime: its reads and its settlement.
 -- It alone holds the dependency on Singular's main library, which carries
@@ -538,17 +541,22 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain
     Cardano.KERI.Deployment.RegistryBookingCommandSpec
+    Cardano.KERI.Deployment.RegistryBookingEvaluationSpec
+    Cardano.KERI.Deployment.RegistryBookingShapeSpec
     Cardano.KERI.Deployment.RegistryCommandSpec
     Cardano.KERI.Deployment.RegistryDeploySpec
     Cardano.KERI.Deployment.RegistryFilesSpec
     Cardano.KERI.Deployment.RegistryFixture
     Cardano.KERI.Deployment.RegistryFoldHandoffSpec
     Cardano.KERI.Deployment.RegistryFoldSpec
+    Cardano.KERI.Deployment.RegistryFoldV3Spec
     Cardano.KERI.Deployment.RegistryKoiosCommandSpec
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
+    Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
+    Cardano.KERI.Deployment.RegistryRegisterStagesSpec
     Cardano.KERI.Deployment.RegistryRequestSpec
     Cardano.KERI.Deployment.RegistryReturnCommandSpec
     Cardano.KERI.Deployment.RegistryReturnSpec
@@ -563,6 +571,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.TopUpTransactionSpec
     Cardano.KERI.Deployment.TransactionRuntime.Fixtures
     Cardano.KERI.Deployment.TransactionRuntimeSpec
+    Cardano.KERI.Deployment.WalletHoldingSpec
     Paths_cardano_keri
 
   build-depends:

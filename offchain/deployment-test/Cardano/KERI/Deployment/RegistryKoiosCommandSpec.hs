@@ -65,6 +65,8 @@ import Cardano.KERI.Deployment.RegistryProvider
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (TransactionScriptFailure (UnknownTxIn))
+import Cardano.Ledger.Api.Tx (bodyTxL)
+import Cardano.Ledger.Api.Tx.Body (referenceInputsTxBodyL)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator, serialize')
 import Cardano.Ledger.Conway (ConwayEra)
@@ -83,10 +85,12 @@ import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf, stripPrefix)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import GHC.IO.Encoding (getLocaleEncoding, setLocaleEncoding, utf8)
+import Lens.Micro ((^.))
 import Paths_cardano_keri (getDataFileName)
 import Singular.Provider.Koios.Client (Koios (..), defaultClientConfig)
 import Singular.Provider.Koios.Http (HttpConfig (..), defaultHttpConfig, newHttpTransport)
@@ -215,6 +219,18 @@ accepting :: Script
 accepting seen _ = case transactionOf (seenBody seen) of
     Just tx -> answering 202 ("\"" <> TE.encodeUtf8 (renderTransactionId (transactionId tx)) <> "\"")
     Nothing -> answering 400 "undecodable"
+
+{- | The script for the booking's handoffs: the premint, which has no reference input, is accepted under its own id and
+the booking's requests are counted from its first.
+-}
+forBooking :: Script -> Script
+forBooking script seen earlier = case transactionOf (seenBody seen) of
+    Just tx | Set.null (tx ^. bodyTxL . referenceInputsTxBodyL) -> accepting seen earlier
+    _ -> script seen (earlier - 1)
+
+-- | The script for the command of the scenario: only a register has a premint to let through first.
+scriptFor :: String -> Script -> Script
+scriptFor name script = if name == "register" then forBooking script else script
 
 -- | No answer to the first @n@ requests, then the script.
 silentFor :: Int -> Script -> Script
@@ -558,7 +574,6 @@ refusalSpec = describe "a provider choice that is not exactly one" $ do
             , rfTimeoutSeconds = 5
             , rfReleaseIdentity = "/nonexistent/release-identity.json"
             , rfReferenceRecord = "/nonexistent/reference-outputs.json"
-            , rfKliExport = "/nonexistent/export.cesr"
             , rfRequest = ""
             , rfSnapshot = "/nonexistent/snapshot.json"
             , rfSnapshotOut = Nothing
@@ -636,35 +651,40 @@ handoffSpec :: Spec
 handoffSpec = describe "the handoff of a transaction a command signed" $ do
     it "sends the same bytes again when an attempt got no answer, and builds and signs nothing after the first handoff" $
         withRegister $ \c -> do
-            (wired, requests, (code, out, _)) <- onKoiosRun (silentFor 2 accepting) 5 settles c
+            (wired, requests, (code, out, _)) <- onKoiosRun (forBooking (silentFor 2 accepting)) 8 settles c
             code `shouldBe` ExitSuccess
             booking <- last <$> caseLanded c
-            map (serialize' (eraProtVerHigh @ConwayEra)) (handedOver requests)
+            -- the premint is handed over once, the booking three times
+            map (serialize' (eraProtVerHigh @ConwayEra)) (drop 1 (handedOver requests))
                 `shouldBe` replicate 3 (serialize' (eraProtVerHigh @ConwayEra) booking)
             out `shouldSatisfy` (("provider-handoff: " <> T.unpack (renderHandoff (Handoff (transactionId booking) 3 Accepted))) `isInfixOf`)
             events <- wiredEvents wired
-            dropWhile (/= "handoff") events `shouldBe` ["handoff"]
+            -- nothing is built or signed after the booking's handoff: it is the last thing that happened
+            drop (length events - 1) events `shouldBe` ["handoff"]
     it "ends in the unknown, with the attempts and the provider named, when no attempt was answered" $
         withRegister $ \c -> do
-            (wired, requests, (code, out, err)) <- onKoiosRun (\_ _ -> silent) 2 settles c
+            (wired, requests, (code, out, err)) <- onKoiosRun (forBooking (\_ _ -> silent)) 2 settles c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
                 booking = idText signed
-            length requests `shouldBe` 2
+            -- the premint, then two unanswered attempts of the booking
+            length requests `shouldBe` 3
             err `shouldSatisfy` (("booking " <> booking <> " may or may not have reached the provider; check it before spending again") `isInfixOf`)
             err `shouldSatisfy` (("handoff-unconfirmed: " <> T.unpack (renderHandoff (Handoff (transactionId signed) 2 NoAnswer))) `isInfixOf`)
             err `shouldSatisfy` (not . ("it is not on chain" `isInfixOf`))
             err `shouldSatisfy` (not . ("the node" `isInfixOf`))
             out `shouldSatisfy` (("provider-handoff: " <> T.unpack (renderHandoff (Handoff (transactionId signed) 2 NoAnswer))) `isInfixOf`)
             events <- wiredEvents wired
-            dropWhile (/= "handoff") events `shouldBe` ["handoff"]
-            caseLanded c >>= (`shouldBe` [])
+            drop (length events - 1) events `shouldBe` ["handoff"]
+            -- the premint landed; the booking did not
+            caseLanded c >>= (`shouldBe` 1) . length
     it "says a refusal at the first attempt is the provider's, and that the transaction is not on chain" $
         withRegister $ \c -> do
-            (_, requests, (code, out, err)) <- onKoiosRun (refusing "BadInputsUTxO") 3 settles c
+            (_, requests, (code, out, err)) <- onKoiosRun (forBooking (refusing "BadInputsUTxO")) 3 settles c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
-            length requests `shouldBe` 1
+            -- the premint, then the booking refused at its first attempt
+            length requests `shouldBe` 2
             err `shouldSatisfy` (("booking " <> idText signed <> " was refused by the provider: BadInputsUTxO; it is not on chain") `isInfixOf`)
             err `shouldSatisfy` ("ckeri: registry register stopped, refused by the provider: submission-refused: BadInputsUTxO" `isInfixOf`)
             err `shouldSatisfy` (not . ("the ledger" `isInfixOf`))
@@ -672,7 +692,7 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
     it "keeps what the provider said of a refusal word for word, whatever it says of itself" $
         withRegister $ \c -> do
             let said = "the node rejected the spending input"
-            (_, requests, (code, out, err)) <- onKoiosRun (refusing said) 3 settles c
+            (_, requests, (code, out, err)) <- onKoiosRun (forBooking (refusing said)) 3 settles c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
             err `shouldSatisfy` (("booking " <> idText signed <> " was refused by the provider: " <> T.unpack (TE.decodeUtf8 said) <> "; it is not on chain") `isInfixOf`)
@@ -682,7 +702,7 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
     it "keeps the accents and the marks of what the provider said of a refusal, in the row and the cause, as the handoff report does" $
         utf8Streams . withRegister $ \c -> do
             let said = "d\233p\244t refus\233, the node rejected the input \xE001the node \xE000the node\xE001"
-            (_, requests, (code, out, err)) <- onKoiosRun (refusing (TE.encodeUtf8 (T.pack said))) 3 settles c
+            (_, requests, (code, out, err)) <- onKoiosRun (forBooking (refusing (TE.encodeUtf8 (T.pack said)))) 3 settles c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
             err `shouldSatisfy` (("booking " <> idText signed <> " was refused by the provider: " <> said <> "; it is not on chain") `isInfixOf`)
@@ -693,7 +713,7 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
             utf8Locale . withScenario scenario $ \c -> do
                 let said = "d\233p\244t refus\233"
                 (wired, requests, (code, out, err)) <-
-                    withStandIn (refusing (TE.encodeUtf8 (T.pack said))) $ \url seen -> do
+                    withStandIn (scriptFor name (refusing (TE.encodeUtf8 (T.pack said)))) $ \url seen -> do
                         wired <- wire 3 settles (caseRuntime c) (casePayer c)
                         result <- caseRunAscii c (wiredOpeners wired) (koiosAt url)
                         requests <- seen
@@ -709,7 +729,7 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
                 out `shouldSatisfy` refusalLineNames signed
     it "keeps the words of an answer that is neither an acceptance nor a refusal word for word" $
         withRegister $ \c -> do
-            (_, _, (code, _, err)) <- onKoiosRun (\_ _ -> answering 403 "the node is down") 3 settles c
+            (_, _, (code, _, err)) <- onKoiosRun (forBooking (\_ _ -> answering 403 "the node is down")) 3 settles c
             code `shouldBe` ExitFailure 1
             err `shouldSatisfy` ("the node is down" `isInfixOf`)
             err `shouldSatisfy` (not . ("the provider is down" `isInfixOf`))
@@ -738,7 +758,7 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
                         secondLine = "second line of the reason"
                         reason = maybe firstLine (\separator -> firstLine <> separator <> secondLine) lineBreak
                         said = TE.encodeUtf8 (T.pack reason)
-                    (_, requests, (code, out, err)) <- onKoiosRun (refusing said) 3 settles c
+                    (_, requests, (code, out, err)) <- onKoiosRun (scriptFor name (refusing said)) 3 settles c
                     code `shouldBe` ExitFailure 1
                     let signed = last (handedOver requests)
                         refusalPrefix = "provider-handoff: refused by the provider after 1 attempt: "
@@ -783,10 +803,11 @@ handoffSpec = describe "the handoff of a transaction a command signed" $ do
                 other -> expectationFailure ("one row was wanted: " <> show other)
     it "does not say a refusal is not on chain when an earlier attempt got no answer: the transaction may have been delivered" $
         withRegister $ \c -> do
-            (_, requests, (code, _, err)) <- onKoiosRun (silentFor 1 (refusing "BadInputsUTxO")) 3 settles c
+            (_, requests, (code, _, err)) <- onKoiosRun (forBooking (silentFor 1 (refusing "BadInputsUTxO"))) 3 settles c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
-            length requests `shouldBe` 2
+            -- the premint, then the booking's unanswered attempt and its refused one
+            length requests `shouldBe` 3
             err `shouldSatisfy` (("booking " <> idText signed <> " may or may not have reached the provider; check it before spending again") `isInfixOf`)
             err `shouldSatisfy` (not . ("it is not on chain" `isInfixOf`))
     it "tells a deployment that stops at an unanswered handoff that no other transaction was built or signed, and not that nothing was resubmitted" $
@@ -834,7 +855,9 @@ settlementSpec = describe "a transaction the provider accepted" $ do
                             , unsettledDeadlineMs = 1_700_000_120_000
                             , unsettledBoundSeconds = Nothing
                             }
-            (_, requests, (code, _, err)) <- onKoiosRun accepting 3 unsettled c
+            -- the premint is seen to settle; the booking is accepted and not seen
+            let onlyTheBooking tx = if Set.null (tx ^. bodyTxL . referenceInputsTxBodyL) then settles tx else unsettled tx
+            (_, requests, (code, _, err)) <- onKoiosRun accepting 3 onlyTheBooking c
             code `shouldBe` ExitFailure 1
             let signed = last (handedOver requests)
             err `shouldSatisfy` (("booking " <> idText signed <> " was accepted by the provider and is not seen on chain; check it before spending again") `isInfixOf`)
@@ -877,7 +900,7 @@ evaluationSpec = describe "an evaluation that refuses a booking on Koios" $
                                 { trEvaluate = fmap (Map.map (const (Left (UnknownTxIn missing)))) . trEvaluate (rtTransactions base)
                                 }
                         }
-            withStandIn accepting $ \url seen -> do
+            withStandIn (forBooking accepting) $ \url seen -> do
                 wired <- wire 3 settles refusing' (casePayer c)
                 (code, _, err) <- caseRun c (wiredOpeners wired) (koiosAt url)
                 code `shouldBe` ExitFailure 1
@@ -885,9 +908,11 @@ evaluationSpec = describe "an evaluation that refuses a booking on Koios" $
                 err `shouldSatisfy` ("the local evaluation refused the booking" `isInfixOf`)
                 err `shouldSatisfy` (not . ("the provider's evaluation" `isInfixOf`))
                 err `shouldSatisfy` (not . ("the node" `isInfixOf`))
-                err `shouldSatisfy` ("nothing was submitted; nothing was spent" `isInfixOf`)
+                -- the premint of the hash proof was handed over and landed; the booking was never submitted
+                err `shouldSatisfy` ("the booking was not submitted" `isInfixOf`)
+                err `shouldSatisfy` (not . ("nothing was submitted; nothing was spent" `isInfixOf`))
                 requests <- seen
-                requests `shouldSatisfy` null
+                length requests `shouldBe` 1
 
 -- | Run an action with the standard streams and the default text encoding set to UTF-8, and put them back.
 utf8Streams :: IO a -> IO a

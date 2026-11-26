@@ -18,7 +18,7 @@ module Cardano.KERI.Deployment.RegistryShortDepositSpec (spec) where
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (RegistrationData (..))
 import Cardano.KERI.Deployment.NodeSocketRuntime (RegistryOpener)
-import Cardano.KERI.Deployment.Registry (registryMinimumDeposit)
+import Cardano.KERI.Deployment.Registry (registryInitialFloor, registryMinimumDeposit)
 import Cardano.KERI.Deployment.RegistryBookingChain
 import Cardano.KERI.Deployment.RegistryBookingCommand
 import Cardano.KERI.Deployment.RegistryChain (Boundary (..), RegistryRuntime (..), submitBoundary)
@@ -26,6 +26,7 @@ import Cardano.KERI.Deployment.RegistryCommandSpec (capturing)
 import Cardano.KERI.Deployment.RegistryDeploy (Deployed (..))
 import Cardano.KERI.Deployment.RegistryDeploySpec (Faults (..), noFaults, testTerms, walletAddress)
 import Cardano.KERI.Deployment.RegistryFiles (writeDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.RegistryRegister
 import Cardano.KERI.Deployment.RegistryRequest (registrationOfOutput)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
@@ -39,6 +40,7 @@ import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Exception (try)
+import Control.Monad (forM_)
 import Data.ByteString qualified as BS
 import Data.Either (fromLeft)
 import Data.Foldable (toList)
@@ -56,12 +58,20 @@ import System.IO (stderr, stdout)
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec
 
-{- | The floor of a booking: the least deposit the application's minting purpose accepts (the registry's minimum
-ADA, checkpoint deposit and freeze bond), read from the terms of the world, and one lovelace below it.
+{- | The registry's minimum deposit (its minimum ADA, checkpoint deposit and freeze bond), read from the terms of the
+world, and one lovelace below it. It is not what the application accepts: that is 'initialFloor', which adds one
+premium. The stand-in chain here runs no script, so a refusal is injected: these cases show what the command does
+with a refusal; the ledger's execution of the application is in "Cardano.KERI.Deployment.RegistryBookingEvaluationSpec".
 -}
-floorDeposit, shortDeposit :: Integer
+floorDeposit, initialFloor, shortDeposit, shortPool :: Integer
 floorDeposit = registryMinimumDeposit testTerms
 shortDeposit = floorDeposit - 1
+
+-- | The least deposit the application accepts: the registry's minimum and one premium of the terms (the pool). The valid side of the real boundary.
+initialFloor = registryInitialFloor testTerms
+
+-- | The deposit that covers the registry's minimum and leaves the pool one lovelace short of one premium: the invalid side beside 'initialFloor'.
+shortPool = initialFloor - 1
 
 -- | What the node answers to the evaluation of a booking: the application refuses it.
 refusing :: Faults
@@ -86,8 +96,12 @@ booked runtime = registerRegistration runtime (const (pure ()))
 zeroLine :: String
 zeroLine = "nothing was submitted; nothing was spent"
 
+-- | What the command says when only the premint of the hash proof landed.
+bookingNotSubmitted :: String
+bookingNotSubmitted = "the booking was not submitted"
+
 spec :: Spec
-spec = describe "#351 a booking with a deposit below the registry's floor" $ around_ withinOneMinute $ do
+spec = describe "#351 the command's report of a booking the node's evaluation refuses (the refusal is injected by the stand-in: no script runs; the application's own refusal is in the ledger evaluation of RegistryBookingEvaluationSpec)" $ around_ withinOneMinute $ do
     describe "the library" $ do
         it "builds the booking with the short deposit and hands it to the node's evaluation, which refuses it: nothing is submitted, and the refusal is the node evaluation's" $ do
             world <- newWorld 1_000
@@ -96,9 +110,10 @@ spec = describe "#351 a booking with a deposit below the registry's floor" $ aro
             sent0 <- submissionsMade world
             outcome <- booked runtime (registerRequestOf world export){registerDeposit = Just shortDeposit}
             case outcome of
-                Left (RegisterTransaction failure) -> submitBoundary failure `shouldBe` NodeEvaluation
+                Left (RegisterAfterPremint _ _ failure) -> submitBoundary failure `shouldBe` NodeEvaluation
                 other -> expectationFailure ("not the node evaluation's refusal: " <> show other)
-            submissionsMade world >>= (`shouldBe` sent0)
+            -- the premint of the hash proof landed before the booking was built; the booking was not submitted
+            submissionsMade world >>= (`shouldBe` (sent0 + 1))
             -- what the node was asked is the booking, with the short deposit and the lovelace that follows it
             asked <- askedOf
             length asked `shouldBe` 1
@@ -109,13 +124,13 @@ spec = describe "#351 a booking with a deposit below the registry's floor" $ aro
                         requestOut ^. coinTxOutL `shouldBe` Coin (shortDeposit + 1_000_000 + 500_000)
                     [] -> expectationFailure "the booking has no output"
                 other -> expectationFailure ("not one evaluation: " <> show (length other))
-        it "is the same booking at the floor: asked of the node, and accepted when the node accepts it" $ do
+        it "is the same booking at the initial floor, the valid side of the pool boundary: asked of the node, and accepted when the node accepts it (the stand-in accepts whatever it is given: this shows what the command does, not what the application validates)" $ do
             world <- newWorld 1_000
             export <- loadExport "kli-export-single.cesr"
             (runtime, askedOf) <- watching (runtimeOf noFaults world)
-            outcome <- booked runtime (registerRequestOf world export){registerDeposit = Just floorDeposit}
+            outcome <- booked runtime (registerRequestOf world export){registerDeposit = Just initialFloor}
             registered <- either (fail . show) pure outcome
-            requestDeposit (registeredRecord registered) `shouldBe` floorDeposit
+            requestDeposit (registeredRecord registered) `shouldBe` initialFloor
             askedOf >>= (`shouldBe` 1) . length
     describe "the command" $ do
         let run faults deposit = do
@@ -133,7 +148,7 @@ spec = describe "#351 a booking with a deposit below the registry's floor" $ aro
                             RegistryRegisterSettings
                                 { rgNetworkMagic = 42
                                 , rgBlueprint = blueprint
-                                , rgNodeSocket = "no-node.socket"
+                                , rgProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
                                 , rgFundingAddress = "addr_test1unused"
                                 , rgSigningKeyFile = Just "no-key.skey"
                                 , rgVault = Nothing
@@ -151,23 +166,30 @@ spec = describe "#351 a booking with a deposit below the registry's floor" $ aro
                         capturing stderr (capturing stdout (withCurrentDirectory work (try @ExitCode (runRegistryRegisterWith opener settings))))
                     sentAfter <- submissionsMade world
                     pure (fromLeft ExitSuccess outcome, out, err, sentAfter - sent0)
-        it "says the node's evaluation refused the booking, naming the application's minting purpose, with the boundary, and that nothing was submitted or spent" $ do
-            (code, out, err, sent) <- run refusing shortDeposit
-            code `shouldBe` ExitFailure 1
-            sent `shouldBe` 0
-            err `shouldSatisfy` ("the node's evaluation refused the booking: " `isInfixOf`)
-            err `shouldSatisfy` ("the application's minting purpose" `isInfixOf`)
-            err `shouldSatisfy` (zeroLine `isInfixOf`)
-            err `shouldSatisfy` ("refused by the node's evaluation of the transaction" `isInfixOf`)
-            -- not the command's own pre-emption, and not the ledger's refusal
-            err `shouldSatisfy` (not . ("deposit-below-floor" `isInfixOf`))
-            err `shouldSatisfy` (not . ("refused by the command" `isInfixOf`))
-            err `shouldSatisfy` (not . ("refused by the ledger" `isInfixOf`))
-            -- the booking was built: the window was announced before the node refused it
-            out `shouldSatisfy` ("validity-interval-slots: " `isInfixOf`)
-            out `shouldSatisfy` (not . ("booking-transaction" `isInfixOf`))
-        it "books the same booking at the floor: the control" $ do
-            (code, out, _, sent) <- run noFaults floorDeposit
+        forM_ [("one lovelace below the registry's minimum", shortDeposit), ("one lovelace short of a pool of one premium", shortPool)] $ \(what, amount) ->
+            it ("says the node's evaluation refused the booking of a deposit " <> what <> ", naming the purpose the evaluator refused, with the boundary, and that only the premint of the hash proof landed") $ do
+                (code, out, err, sent) <- run refusing amount
+                code `shouldBe` ExitFailure 1
+                -- the premint of the hash proof landed; the booking was never submitted
+                sent `shouldBe` 1
+                out `shouldSatisfy` ("premint-transaction: " `isInfixOf`)
+                out `shouldSatisfy` ("proof-output: " `isInfixOf`)
+                err `shouldSatisfy` (bookingNotSubmitted `isInfixOf`)
+                err `shouldSatisfy` (not . (zeroLine `isInfixOf`))
+                err `shouldSatisfy` ("the node's evaluation refused the booking: " `isInfixOf`)
+                -- the purpose the evaluator named, attributed to no policy the command cannot know it to be
+                err `shouldSatisfy` ("minting purpose" `isInfixOf`)
+                err `shouldSatisfy` (not . ("the application's" `isInfixOf`))
+                err `shouldSatisfy` ("refused by the node's evaluation of the transaction" `isInfixOf`)
+                -- not the command's own pre-emption, and not the ledger's refusal
+                err `shouldSatisfy` (not . ("deposit-below-floor" `isInfixOf`))
+                err `shouldSatisfy` (not . ("refused by the command" `isInfixOf`))
+                err `shouldSatisfy` (not . ("refused by the ledger" `isInfixOf`))
+                -- the booking was built: the window was announced before the node refused it
+                out `shouldSatisfy` ("validity-interval-slots: " `isInfixOf`)
+                out `shouldSatisfy` (not . ("booking-transaction" `isInfixOf`))
+        it "books the same booking at the initial floor, the valid side of the boundary the short pool is paired with (the stand-in reports; whether the application refuses the short deposit is shown by the ledger evaluation of RegistryBookingEvaluationSpec)" $ do
+            (code, out, _, sent) <- run noFaults initialFloor
             code `shouldBe` ExitSuccess
-            sent `shouldBe` 1
+            sent `shouldBe` 2
             out `shouldSatisfy` ("booking-transaction: " `isInfixOf`)

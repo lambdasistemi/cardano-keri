@@ -19,7 +19,8 @@ import Cardano.KERI.Deployment.RegistryBookingCommand (
     RegistryRegisterSettings (..),
     RegistryReturnSettings (..),
  )
-import Control.Monad (unless)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
+import Control.Monad (forM_, unless)
 import Data.Char (toUpper)
 import Data.List (isInfixOf)
 import Data.List.NonEmpty (NonEmpty)
@@ -42,11 +43,10 @@ nodeOptions =
     , ("--timeout-seconds", "77")
     , ("--release-identity", "identity.json")
     , ("--reference-record", "references.json")
-    , ("--kli-export", "export.cesr")
     ]
 
 registerOptions :: [(String, String)]
-registerOptions = nodeOptions <> [("--request-deposit", "1009000005")]
+registerOptions = nodeOptions <> [("--kli-export", "export.cesr"), ("--request-deposit", "1009000005")]
 
 foldOptions :: [(String, String)]
 foldOptions =
@@ -61,7 +61,7 @@ registerSettings =
     RegistryRegisterSettings
         { rgNetworkMagic = 42
         , rgBlueprint = "plutus.json"
-        , rgNodeSocket = "node.socket"
+        , rgProvider = ProviderChoice (Just "node.socket") Nothing Nothing Nothing
         , rgFundingAddress = "addr_test1qexample"
         , rgSigningKeyFile = Just "payment.skey"
         , rgVault = Nothing
@@ -78,7 +78,7 @@ foldSettings =
     RegistryFoldSettings
         { rfNetworkMagic = 42
         , rfBlueprint = "plutus.json"
-        , rfNodeSocket = "node.socket"
+        , rfProvider = ProviderChoice (Just "node.socket") Nothing Nothing Nothing
         , rfFundingAddress = "addr_test1qexample"
         , rfSigningKeyFile = Just "payment.skey"
         , rfVault = Nothing
@@ -86,7 +86,6 @@ foldSettings =
         , rfTimeoutSeconds = 77
         , rfReleaseIdentity = "identity.json"
         , rfReferenceRecord = "references.json"
-        , rfKliExport = "export.cesr"
         , rfRequest = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3"
         , rfSnapshot = "snapshot.json"
         , rfSnapshotOut = Just "next-snapshot.json"
@@ -110,7 +109,7 @@ returnSettings =
     RegistryReturnSettings
         { rnNetworkMagic = 42
         , rnBlueprint = "plutus.json"
-        , rnNodeSocket = "node.socket"
+        , rnProvider = ProviderChoice (Just "node.socket") Nothing Nothing Nothing
         , rnFundingAddress = "addr_test1qexample"
         , rnSigningKeyFile = Just "payment.skey"
         , rnVault = Nothing
@@ -124,19 +123,87 @@ returnSettings =
 -- | The options a return cannot run without.
 requiredReturn :: [String]
 requiredReturn =
-    ["--blueprint", "--node-socket", "--funding-address", "--release-identity", "--reference-record", "--request"]
+    ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--request"]
 
 argumentsOf :: [(String, String)] -> [String]
 argumentsOf options = concat [[name, value] | (name, value) <- options]
 
 -- | The options a command cannot run without.
 requiredRegister, requiredFold :: [String]
-requiredRegister =
-    ["--blueprint", "--node-socket", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
-requiredFold = requiredRegister <> ["--request", "--snapshot"]
+requiredFold =
+    ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--request", "--snapshot"]
+requiredRegister = ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
 
 spec :: Spec
 spec = describe "#351 ckeri registry register and ckeri registry fold: the command surface" $ do
+    it "takes the provider from options or environment: a node socket, or a Koios URL with an optional token file, as given and not yet checked" $ do
+        let without names options = [o | o@(name, _) <- options, name `notElem` names]
+            koiosOptions = [("--koios-url", "https://koios.example/api/v1"), ("--koios-token-file", "koios.token")]
+            chosen a b c = ProviderChoice a b c Nothing
+            url = Just "https://koios.example/api/v1"
+        forM_
+            [ ("only a Koios URL", without ["--node-socket"] nodeOptions <> take 1 koiosOptions, chosen Nothing url Nothing)
+            , ("a Koios URL and a token file", without ["--node-socket"] nodeOptions <> koiosOptions, chosen Nothing url (Just "koios.token"))
+            , ("both a node socket and a Koios URL", nodeOptions <> take 1 koiosOptions, chosen (Just "node.socket") url Nothing)
+            , ("neither", without ["--node-socket"] nodeOptions, chosen Nothing Nothing Nothing)
+            ]
+            $ \(label, options, expected) -> do
+                registered <- parseWith [] (["registry", "register"] <> argumentsOf (without [] options <> [("--kli-export", "export.cesr"), ("--request-deposit", "1009000005")]))
+                case registered of
+                    Right (RegistryRegister settings) -> (label, rgProvider settings) `shouldBe` (label, expected)
+                    other -> expectationFailure (label <> ": not parsed: " <> showResult other)
+                returned <- parseWith [] (["registry", "return"] <> argumentsOf (without ["--kli-export"] options <> [("--request", "aa#0")]))
+                case returned of
+                    Right (RegistryReturn settings) -> (label, rnProvider settings) `shouldBe` (label, expected)
+                    other -> expectationFailure (label <> ": not parsed: " <> showResult other)
+                folded <- parseWith [] (["registry", "fold"] <> argumentsOf (options <> [("--request", "aa#0"), ("--snapshot", "s.json")]))
+                case folded of
+                    Right (RegistryFold settings) -> (label, rfProvider settings) `shouldBe` (label, expected)
+                    other -> expectationFailure (label <> ": not parsed: " <> showResult other)
+        fromEnvironment <-
+            parseWith
+                [("CKERI_KOIOS_URL", "https://koios.example/api/v1"), ("CKERI_KOIOS_TOKEN_FILE", "koios.token")]
+                (["registry", "return"] <> argumentsOf (without ["--node-socket"] returnOptions))
+        case fromEnvironment of
+            Right (RegistryReturn settings) -> rnProvider settings `shouldBe` chosen Nothing url (Just "koios.token")
+            other -> expectationFailure ("not parsed: " <> showResult other)
+    forM_ [("register", ["registry", "register"] <> argumentsOf registerOptions), ("return", ["registry", "return"] <> argumentsOf returnOptions)] $ \(name, command) ->
+        describe ("the directory of the network time of registry " <> name) $ do
+            let timeOf environment extra = do
+                    parsed <- parseWith environment (command <> extra)
+                    pure $ case parsed of
+                        Right (RegistryRegister settings) -> Right (chosenNetworkTime (rgProvider settings))
+                        Right (RegistryReturn settings) -> Right (chosenNetworkTime (rnProvider settings))
+                        Right _ -> Left "the arguments were taken for another command"
+                        Left errors -> Left (show errors)
+            it "is none when neither the option nor the variable names one" $
+                timeOf [] [] >>= (`shouldBe` Right Nothing)
+            it "is the directory the option names, spaced or joined to it" $ do
+                timeOf [] ["--network-time", "time-dir"] >>= (`shouldBe` Right (Just "time-dir"))
+                timeOf [] ["--network-time=time-dir"] >>= (`shouldBe` Right (Just "time-dir"))
+            it "is the directory SINGULAR_NETWORK_TIME names, as public Singular reads it, when no option is given" $
+                timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] [] >>= (`shouldBe` Right (Just "variable-dir"))
+            it "is the option's directory when the variable names another: the option first" $
+                timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] ["--network-time", "option-dir"] >>= (`shouldBe` Right (Just "option-dir"))
+            it "is refused when the option is given an empty value, or the variable is empty and no option is given" $ do
+                emptyOption <- timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] ["--network-time", ""]
+                emptyOption `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
+                emptyVariable <- timeOf [("SINGULAR_NETWORK_TIME", "")] []
+                emptyVariable `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
+    describe "registry fold, which reads no network time" $ do
+        let command = ["registry", "fold"] <> argumentsOf foldOptions
+            timeOf environment extra = do
+                parsed <- parseWith environment (command <> extra)
+                pure $ case parsed of
+                    Right (RegistryFold settings) -> Right (chosenNetworkTime (rfProvider settings))
+                    Right _ -> Left "the arguments were taken for another command"
+                    Left errors -> Left (show errors)
+        it "runs as before beside an empty SINGULAR_NETWORK_TIME: the variable is not read" $
+            timeOf [("SINGULAR_NETWORK_TIME", "")] [] >>= (`shouldBe` Right Nothing)
+        it "takes no directory from SINGULAR_NETWORK_TIME" $
+            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] [] >>= (`shouldBe` Right Nothing)
+        it "does not know the option: it is not recognised, as before" $
+            timeOf [] ["--network-time", "time-dir"] >>= (`shouldSatisfy` either ("--network-time" `isInfixOf`) (const False))
     it "parses every option of register to its own setting" $ do
         result <- parseWith [] (["registry", "register"] <> argumentsOf registerOptions)
         case result of
@@ -149,7 +216,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
             other -> expectationFailure ("not parsed: " <> showResult other)
     it "leaves the optional settings out: the request deposit, the next snapshot, the network magic and the timeout take their defaults" $ do
         let without names = [o | o@(name, _) <- nodeOptions, name `notElem` names]
-        registered <- parseWith [] (["registry", "register"] <> argumentsOf (without ["--network-magic", "--timeout-seconds"]))
+        registered <- parseWith [] (["registry", "register"] <> argumentsOf (without ["--network-magic", "--timeout-seconds"] <> [("--kli-export", "export.cesr")]))
         case registered of
             Right (RegistryRegister settings) -> do
                 rgDeposit settings `shouldBe` Nothing
@@ -190,7 +257,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
                     Right _ -> expectationFailure (option <> " was left out of fold and it was parsed")
             )
             requiredFold
-    it "offers no option that means a store, a manifest, a provider or a registry term" $
+    it "offers no option that means a store, a manifest, a token by value or a registry term" $
         mapM_
             ( \command ->
                 mapM_
@@ -212,6 +279,9 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
     it "offers a deposit to the request of register only, and a snapshot to fold only" $ do
         unrecognisedArgs (["registry", "fold"] <> argumentsOf foldOptions <> ["--request-deposit", "1"])
             >>= (`shouldBe` ["--request-deposit", "1"])
+        -- the booking attested the inception: fold takes no export, from an option or the environment
+        unrecognisedArgs (["registry", "fold"] <> argumentsOf foldOptions <> ["--kli-export", "export.cesr"])
+            >>= (`shouldBe` ["--kli-export", "export.cesr"])
         unrecognisedArgs (["registry", "register"] <> argumentsOf registerOptions <> ["--snapshot", "s.json"])
             >>= (`shouldBe` ["--snapshot", "s.json"])
     it "parses every option of return to its own setting" $ do

@@ -43,8 +43,9 @@ The same content lives in the repository as an MkDocs site rooted at
 
 - `onchain/`: `aiken build` and `aiken check`
 - `offchain/`: `nix build .#checks.x86_64-linux.unit-tests` (or enter
-  `nix develop` for a GHC shell); `cabal run gen-vectors` regenerates the
-  Aiken test vectors
+  `nix develop` for a GHC shell); `cabal run gen-vectors` (from `offchain/`) prints the
+  owner-auth Aiken test vectors and regenerates the booking attestation corpus for both
+  its Aiken and Haskell consumers
 
 ## Releases
 

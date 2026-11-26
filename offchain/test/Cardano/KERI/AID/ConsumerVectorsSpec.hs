@@ -55,6 +55,7 @@ import Cardano.KERI.AID.Consumer (
     DecodedCheckpoint (..),
     Environment (..),
     ObservedOutput (..),
+    OutputDatum (..),
     Release (..),
     consumableHolding,
     consumableHoldingB,
@@ -197,7 +198,7 @@ holdingOf r datum =
     ObservedOutput
         { ooCredential = checkpointCredential
         , ooAssets = [(unhex (irAssetPolicy r), unhex (irActiveName r), 1)]
-        , ooDatum = Just datum
+        , ooDatum = DatumInline datum
         }
 
 spec :: Spec
@@ -233,7 +234,7 @@ identityVerdictCase r =
                 ObservedOutput
                     { ooCredential = checkpointCredential
                     , ooAssets = [(policy, name, 1)]
-                    , ooDatum = Just (liveDatumOf (cxAid c) False False 100)
+                    , ooDatum = DatumInline (liveDatumOf (cxAid c) False False 100)
                     }
             refusals c =
                 consumableHolding maturityWindow 110 (environmentOf c) c

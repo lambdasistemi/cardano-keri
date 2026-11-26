@@ -19,6 +19,10 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     advanceEvidenceData,
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
+    bookingAttestationBurnData,
+    bookingAttestationClaimData,
+    bookingAttestationIssueData,
+    bookingAttestationName,
     convictObserverRedeemerData,
     convictSpendRedeemerData,
     enforcementEvidenceData,
@@ -31,9 +35,11 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     topUpSpendRedeemerData,
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
+import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString qualified as BS
 import PlutusCore.Data (Data (..))
-import Test.Hspec (Spec, describe, it, shouldBe)
+import PlutusTx.Builtins.Internal (BuiltinByteString (..), BuiltinData (..), serialiseData)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe)
 
 evidence :: RegistrationEvidence
 evidence =
@@ -50,6 +56,24 @@ evidence =
         , reOffBt = 9
         , reCtrlSigs = [(0, BS.replicate 64 0xa1)]
         , reWitReceipts = [(1, BS.replicate 64 0xb1)]
+        }
+
+-- | A second request's evidence: every field differs from 'evidence'.
+otherEvidence :: RegistrationEvidence
+otherEvidence =
+    RegistrationEvidence
+        { reEventBytes = "icq"
+        , reOffT = 11
+        , reOffI = 12
+        , reOffS = 13
+        , reOffK = [14, 15]
+        , reOffKt = 16
+        , reOffN = [17]
+        , reOffNt = 18
+        , reOffB = []
+        , reOffBt = 19
+        , reCtrlSigs = [(1, BS.replicate 64 0xa2), (2, BS.replicate 64 0xb2)]
+        , reWitReceipts = []
         }
 
 advanceEvidence :: AdvanceEvidence
@@ -167,6 +191,56 @@ spec = describe "#136 Register observer wire" $ do
                     ]
                 , registrationEvidenceData evidence
                 ]
+
+    it "nests the Issue redeemer and keeps each booked request with its own evidence" $
+        bookingAttestationIssueData (BS.replicate 28 0xc0) [(3, evidence), (5, otherEvidence)]
+            `shouldBe` Constr
+                0
+                [ B (BS.replicate 28 0xc0)
+                , List
+                    [ Constr 0 [I 3, registrationEvidenceData evidence]
+                    , Constr 0 [I 5, registrationEvidenceData otherEvidence]
+                    ]
+                ]
+
+    it "does not move the evidence of a request to another request's index" $
+        bookingAttestationIssueData (BS.replicate 28 0xc0) [(3, evidence), (5, otherEvidence)]
+            `shouldNotBe` bookingAttestationIssueData (BS.replicate 28 0xc0) [(3, otherEvidence), (5, evidence)]
+
+    it "encodes Burn as constructor one with no field" $
+        bookingAttestationBurnData `shouldBe` Constr 1 []
+
+    it "writes, for two booked requests with distinct evidence, the bytes the validators' own types write for the same redeemer" $
+        let BuiltinByteString bytes =
+                serialiseData
+                    ( BuiltinData
+                        ( bookingAttestationIssueData
+                            (BS.replicate 28 0xc0)
+                            [(3, evidence), (5, otherEvidence)]
+                        )
+                    )
+         in convertToBase Base16 bytes
+                `shouldBe` ("d8799f581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c09fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffd8799f05d8799f436963710b0c0d9f0e0fff109f11ff1280139f9f015840a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2ff9f025840b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2ffff80ffffffff" :: BS.ByteString)
+
+    it "writes the claim of a booking and the name that digests it as the validators do" $ do
+        let claim =
+                bookingAttestationClaimData
+                    (BS.replicate 28 0xc0)
+                    3
+                    (Constr 1 [B "initial", I 7])
+                    1_009_000_000
+            BuiltinByteString bytes = serialiseData (BuiltinData claim)
+        convertToBase Base16 bytes
+            `shouldBe` ("d8799f582163617264616e6f2d6b6572692f626f6f6b2d726567697374726174696f6e2f7631581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c003d87a9f47696e697469616c07ff1a3c241e40ff" :: BS.ByteString)
+        convertToBase
+            Base16
+            ( bookingAttestationName
+                (BS.replicate 28 0xc0)
+                3
+                (Constr 1 [B "initial", I 7])
+                1_009_000_000
+            )
+            `shouldBe` ("4364c47043472214a864ab1e196061b4b0c00066407ec312ca2b94381e9ea934" :: BS.ByteString)
 
     it "encodes the Advance arm at spend constructor zero with its payee output index and the keep option" $
         advanceSpendRedeemerData 4 Keep

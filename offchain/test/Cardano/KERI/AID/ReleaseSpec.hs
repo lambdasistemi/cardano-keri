@@ -37,6 +37,7 @@ import Cardano.KERI.AID.Consumer (
     Context (..),
     Environment (..),
     ObservedOutput (..),
+    OutputDatum (..),
     Release (..),
     consumableHolding,
     representativeAsset,
@@ -129,7 +130,7 @@ emptyOutputAt ri =
     ObservedOutput
         { ooCredential = ScriptCredential (riCheckpointValidator ri)
         , ooAssets = []
-        , ooDatum = Nothing
+        , ooDatum = DatumAbsent
         }
 
 authenticates :: ReleaseIdentity -> ReleaseIdentity -> ByteString -> Bool

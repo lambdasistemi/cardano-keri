@@ -1,20 +1,18 @@
 # Operational constraints
 
 !!! note "What ships, and the accepted design"
-    Unless a paragraph below is marked as preprod or `main` today, it
-    describes the accepted design (D-036 to D-040). In that design an
+    Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design (D-036 to D-040) an
     identity is **active** until it is convicted: there is no owner exit, no
-    parking and no revival. A duplicity proof enters pending custody; its
+    parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its
     associated Registry fold makes it **convicted** (terminal); there is no
     withdraw; a `deposit` rotation is the
     unfreeze; and the **poison**, the owner's own lock on the checkpoint,
     lasts one epoch and is cleared by rotation. Play the
     [checkpoint simulation](../simulator/index.html).
-    What ships today is the V1 checkpoint with role addresses.
+    What was deployed is the V1 checkpoint with role addresses.
 
 
-This page describes the sovereign per-AID checkpoint that has settled in the
-small-identity stories. It does not describe the retired shared-registry
+This page describes the version 1 per-AID checkpoint that settled in the small-identity stories (the earlier deployed design). It does not describe the retired shared-registry
 design.
 
 ## Per-identity serialization
@@ -43,7 +41,7 @@ The current architecture stores the checkpoint and observer programs in
 reference-script UTxOs. Operation transactions refer to those outputs instead
 of copying several validators inline.
 
-Latest settled sizes:
+Sizes settled for the version 1 programs:
 
 | Program | Applied size |
 |---|---:|
@@ -51,8 +49,7 @@ Latest settled sizes:
 | Enforcement observer | 13,548 bytes |
 | Advance observer | 16,130 bytes |
 
-The Advance observer's 3-byte margin is a release blocker for further feature
-work. [#149](https://github.com/lambdasistemi/cardano-keri/issues/149) must
+The version 1 Advance observer's 3-byte margin was a release blocker for further feature work. [#149](https://github.com/lambdasistemi/cardano-keri/issues/149) must
 create at least 1 KB of headroom before the real seven-key rotation.
 
 ## Execution budgeting

@@ -77,7 +77,7 @@ output the certified request names, in the folding transaction
 | Responsibility | Required check |
 |---|---|
 | MPFS insertion | The AID key is absent and the insertion produces the correct registry root. Generic MPFS does not interpret KERI inception evidence. |
-| KERI admission, at the booking | Required of the validator: before the approval is minted, the inception evidence must cover the AID and the key state the initial datum declares. The model states the evidence as one fact of the key and does not state that binding. On `main` this check still runs at the fold. The fold then delivers the checkpoint output the approval commits, with its required value, and the inserted leaf identifies it. |
+| KERI admission, at the booking | Required of the validator: before the approval is minted, the inception evidence must cover the AID and the key state the initial datum declares. The model states the evidence as one fact of the key and does not state that binding. The booking requires the attestation minted in the same transaction, which verifies the inception, and checks the initial state (`Application.only_booking_reads_inception`); the evidence is local: no deployed registry runs it yet. The fold then delivers the checkpoint output the approval commits (`Application.fold_delivers_committed`), with its required value, and the inserted leaf identifies it. |
 | Mint authorization | The quantity-one checkpoint mint is bound to that same admitted registration and inserted leaf; minting cannot bypass that registration boundary. |
 
 These are **required implementation obligations**. The Registry's
@@ -100,10 +100,13 @@ A folder then needs nothing from the controller.** Booking the same identifier
 twice is allowed. The registry supplies uniqueness when a fold admits the
 first request and creates the checkpoint.
 
-This is the model's rule. On `main` the validators and the commands still
-prove the inception at the fold; they change with the code that follows the
-model. The model's statement that Singular's client can fold a KERI request
-is for one request per fold.
+This is the model's rule, and the merged code follows it: the application mint
+verifies the inception at the booking, through an attestation minted in the
+same transaction, which is what the constitution requires of the controller's
+booking mint; the fold consumes the admitted request and reads no inception
+evidence. The evidence is local: no deployed registry runs it yet. The model's
+statement that Singular's client can fold a KERI request is for one request
+per fold.
 
 The [architecture diagram](overview.md#m1-registration-flow) shows the booking,
 the booked request, the fold and the consumer boundaries together.
@@ -168,9 +171,7 @@ block come from the same file. `expect` fields describe results checked by the
 documentation build; they do not grant permission to an action.
 
 The checkpoint examples use model units: `D = 1000` is the conviction bond
-(stake against duplicity), `B = 5` the freeze bond (what a hunter takes when the
-pool cannot pay for a rotation), `P = 2` the premium (the fee the pool pays
-whoever lands a rotation) and `W = 10` the juvenility window (the age a
+(stake against duplicity), `B = 5` the freeze bond (what a freeze pays to the payee it names, once rotation evidence exists and the pool holds less than the premium), `P = 2` the premium (what a rotation pays from the pool to the payee the submitter names, when the pool holds at least that much) and `W = 10` the juvenility window (the age a
 checkpoint must reach before a consumer trusts it) in slots. Addresses `1` and `2` stand for Alice and Hal. These
 small integers are simulator values, not real addresses or deployment settings.
 
@@ -281,8 +282,7 @@ cannot turn it into a second registered identity.
 
 **Guarantee and conditions:** processing a registration requires an absent AID
 leaf. With Alice already registered, a duplicate request cannot create another
-checkpoint. Until the request's deadline nobody may spend it; after the deadline
-anyone may return it to its refund address.
+checkpoint. A return whose validity interval starts before the request's deadline is refused, so until then a fold is the only way to spend the request, and the fold of this duplicate is refused because the key is already active (`key-exists`); a fold's whole validity interval must end at or before the deadline and a return's whole validity interval must start at or after it, so from the deadline anyone may return the request to its refund address.
 
 [Open the registry simulator](../simulator/registry/index.html) ·
 [Open duplicate.dsl](scenarios/duplicate.dsl)

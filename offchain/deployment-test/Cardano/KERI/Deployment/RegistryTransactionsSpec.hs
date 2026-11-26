@@ -15,7 +15,32 @@ by a wallet no builder knows, under protocol parameters whose prices are not
 zero: each pays the ledger's minimum fee, no output names another network, and
 the lovelace of every transaction is conserved.
 -}
-module Cardano.KERI.Deployment.RegistryTransactionsSpec (spec) where
+module Cardano.KERI.Deployment.RegistryTransactionsSpec (
+    spec,
+
+    -- * What the specs of the booking share
+    terms,
+    deployment,
+    deposit,
+    walletOf,
+    afterTx,
+    outputAt,
+    outputsOf,
+    producedBy,
+    pricedParameters,
+    paysItsWay,
+    mintOf,
+    datumOf,
+    token,
+    built,
+    interval,
+    load,
+    txIn,
+    ada,
+    scriptHashOf,
+    feeOf,
+    registrySeedIn,
+) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Application (
@@ -47,7 +72,7 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
  )
-import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
+import Cardano.KERI.AID.Checkpoint.Wire (asPlcData, bookingAttestationBurnData)
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Trie
@@ -72,8 +97,6 @@ import Cardano.KERI.Deployment.Script (
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
 import Cardano.Ledger.Address (
-    AccountAddress (..),
-    AccountId (..),
     Addr (..),
     Withdrawals (..),
     serialiseAddr,
@@ -94,6 +117,7 @@ import Cardano.Ledger.Api.Tx.Body (
     inputsTxBodyL,
     mintTxBodyL,
     outputsTxBodyL,
+    referenceInputsTxBodyL,
     treasuryDonationTxBodyL,
     vldtTxBodyL,
     withdrawalsTxBodyL,
@@ -153,7 +177,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data qualified as PLC
 import System.Environment (getEnv)
-import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
+import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe, shouldNotBe, shouldSatisfy)
 
 -- | The registry's terms: a chain that is not the devnet (network nibble 1).
 terms :: RegistryTerms
@@ -457,22 +481,23 @@ spec = do
                 application = artifactScriptHash (scriptsApplication scripts)
                 state = scriptHashOf (scriptsStateHash scripts)
                 hashProof = artifactScriptHash (observerHashProof (scriptsObservers scripts))
-                lifecycle = artifactScriptHash (observerLifecycle (scriptsObservers scripts))
+                attestation = artifactScriptHash (scriptsAttestation scripts)
                 observerReferences = [(txIn 0x91, mkBasicTxOut refund (inject (ada 10)))]
                 seedOutput = (registrySeedIn, mkBasicTxOut refund (inject (ada 200)))
                 known0 = payerFunds owner <> payerFunds folder <> [seedOutput] <> observerReferences
             template <-
-                built (publishTemplate pricedParameters owner (ada 10) (scriptsTemplate scripts))
+                built (publishTemplate Nothing pricedParameters owner (ada 10) (scriptsTemplate scripts))
             let owner1 = afterTx owner template
             applicationTx <-
-                built (publishReferenceScript pricedParameters owner1 (ada 10) applicationScript)
+                built (publishReferenceScript Nothing pricedParameters owner1 (ada 10) applicationScript)
             let owner2 = afterTx owner1 applicationTx
             stateTx <-
-                built (publishReferenceScript pricedParameters owner2 (ada 10) stateScript)
+                built (publishReferenceScript Nothing pricedParameters owner2 (ada 10) stateScript)
             let owner3 = afterTx owner2 stateTx
             (genesis, genesisPurposes) <-
                 built
                     ( createConfiguration
+                        Nothing
                         pricedParameters
                         registry
                         [outputAt template 0, outputAt applicationTx 0, outputAt stateTx 0]
@@ -486,6 +511,8 @@ spec = do
                         { referenceApplication = outputAt applicationTx 0
                         , referenceState = outputAt stateTx 0
                         , referenceConfiguration = outputAt genesis 1
+                        , referenceAttestation = (txIn 0x84, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceHashProof = (txIn 0x85, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         }
                 owner4 = afterTx owner3 genesis
                 record = registrationRecord registry refund deposit export interval
@@ -506,55 +533,55 @@ spec = do
                     (<>)
                     (token state (stateTokenName seed) 1)
                     (token application (configurationTokenName (scriptsRegistry scripts)) 1)
-            -- booking
+            -- the hash proof of the booking, preminted first, and the booking that burns it
+            bookingProofTx <- built (mintHashProof pricedParameters registry owner4 export interval)
+            -- valid over the interval it is given, so a booking can follow it within the booking width
+            bookingProofTx ^. bodyTxL . vldtTxBodyL
+                `shouldBe` ValidityInterval (SJust (lowerSlot interval)) (SJust (upperSlot interval))
+            let owner4b = afterTx owner4 bookingProofTx
+                knownBeforeBooking = knownAfterGenesis <> producedBy bookingProofTx
+                bookingProofName = proofTokenName (reEventBytes (inceptionEvidence export)) (cdCesrAid (inceptionDatum export))
+            mintOf bookingProofTx `shouldBe` token hashProof bookingProofName 1
             (booking, _) <-
                 built
-                    ( bookRegistration
+                    ( bookRegistrations
                         pricedParameters
                         registry
                         references
-                        owner4
-                        record
+                        owner4b
+                        [BookedRequest record export (outputAt bookingProofTx 0)]
                         interval
                         0
                         Map.empty
                     )
             let requestOut = outputAt booking 0
-                owner5 = afterTx owner4 booking
-            paysItsWay knownAfterGenesis booking `shouldBe` True
-            mintOf booking `shouldBe` token application (approval record) 1
+                owner5 = afterTx owner4b booking
+            paysItsWay knownBeforeBooking booking `shouldBe` True
+            mintOf booking
+                `shouldBe` Map.unionsWith
+                    (<>)
+                    [ token application (approval record) 1
+                    , token attestation (attestationName registry 0 record) 1
+                    , token hashProof bookingProofName (-1)
+                    ]
             snd requestOut ^. coinTxOutL
                 `shouldBe` Coin (requestLovelace (registryParameters terms) record)
             datumOf (snd requestOut) `shouldBe` Just (heldDatumData (Registration record))
-            -- the hash proof the fold burns
-            proofTx <- built (mintHashProof pricedParameters registry folder export interval)
-            -- valid over the interval it is given, so a fold can cap it at the request's deadline
-            proofTx ^. bodyTxL . vldtTxBodyL
-                `shouldBe` ValidityInterval (SJust (lowerSlot interval)) (SJust (upperSlot interval))
-            let evidence = inceptionEvidence export
-                proofName =
-                    proofTokenName (reEventBytes evidence) (cdCesrAid (inceptionDatum export))
-                folder1 = afterTx folder proofTx
-                knownAfterBooking = knownAfterGenesis <> producedBy booking
-            mintOf proofTx `shouldBe` token hashProof proofName 1
-            paysItsWay knownAfterBooking proofTx `shouldBe` True
-            -- the fold
+            let knownAfterBooking = knownBeforeBooking <> producedBy booking
+                folder1 = folder
+            -- the fold: no evidence, no proof, no withdrawal
             let key = requestKey record
                 foldPlan =
                     FoldPlan
                         { foldRequest = requestOut
                         , foldBooked = record
-                        , foldInception = export
-                        , foldProof = outputAt proofTx 0
-                        , foldReferences = observerReferences
                         , foldRegistered = []
                         , foldTerminated = []
                         , foldState = outputAt genesis 0
                         , foldValidity = interval
                         , foldPayer = folder1
                         }
-                knownForFold =
-                    knownAfterBooking <> producedBy proofTx
+                knownForFold = knownAfterBooking
             (foldTx, foldPurposes) <-
                 built (foldRegistration pricedParameters registry references foldPlan Map.empty)
             let tree = Trie.build [(key, activeLeaf)]
@@ -565,8 +592,8 @@ spec = do
                         (AsIx (fromIntegral (Set.findIndex (fst (outputAt genesis 0)) foldInputs)))
                 Redeemers redeemers = foldTx ^. witsTxL . rdmrsTxWitsL
             paysItsWay knownForFold foldTx `shouldBe` True
-            Set.size foldPurposes `shouldBe` 6
-            Map.size redeemers `shouldBe` 6
+            Set.size foldPurposes `shouldBe` 4
+            Map.size redeemers `shouldBe` 4
             firstOutput foldTx `shouldBe` deliveredHolding registry record
             datumOf (outputsOf foldTx !! 1) `shouldBe` Just (stateDatumData newRoot)
             (foldTx ^. bodyTxL . treasuryDonationTxBodyL)
@@ -576,7 +603,6 @@ spec = do
                     (<>)
                     [ token application (approval record) (-1)
                     , token state (activeTokenName (scriptsRegistry scripts) key) 1
-                    , token hashProof proofName (-1)
                     ]
             Map.lookup stateSpend (Map.map fst redeemers)
                 `shouldBe` Just
@@ -593,17 +619,17 @@ spec = do
                             ]
                         )
                     )
-            Map.keys (let Withdrawals w = foldTx ^. bodyTxL . withdrawalsTxBodyL in w)
-                `shouldBe` [AccountAddress Mainnet (AccountId (ScriptHashObj lifecycle))]
+            Map.null (let Withdrawals w = foldTx ^. bodyTxL . withdrawalsTxBodyL in w) `shouldBe` True
             -- a second request, booked and returned after its deadline
+            secondProofTx <- built (mintHashProof pricedParameters registry owner5 export interval)
             (second, _) <-
                 built
-                    ( bookRegistration
+                    ( bookRegistrations
                         pricedParameters
                         registry
                         references
-                        owner5
-                        record
+                        (afterTx owner5 secondProofTx)
+                        [BookedRequest record export (outputAt secondProofTx 0)]
                         interval
                         0
                         Map.empty
@@ -628,12 +654,39 @@ spec = do
                         refund
                         Map.empty
                     )
-            paysItsWay (knownForFold <> producedBy second) returnTx
+            paysItsWay (knownForFold <> producedBy secondProofTx <> producedBy second) returnTx
                 `shouldBe` True
             firstOutput returnTx ^. addrTxOutL `shouldBe` refund
             firstOutput returnTx ^. coinTxOutL
                 `shouldBe` Coin (requestLovelace (registryParameters terms) record - minimumTip (registryParameters terms))
             mintOf returnTx `shouldBe` token application (approval record) (-1)
+            -- the same return, composed with the controller's burn of the attestation its booking left in change
+            let holder = afterTx (afterTx owner5 secondProofTx) second
+                heldAttestation = outputAt second 1
+            (burningTx, burningPurposes) <-
+                built (returnRequestsBurning pricedParameters registry references holder secondBooking returnValidity refund [heldAttestation] Map.empty)
+            let attested = token attestation (attestationName registry 0 record) (-1)
+                mintedBurning = burningTx ^. bodyTxL . mintTxBodyL
+                Redeemers burningRedeemers = burningTx ^. witsTxL . rdmrsTxWitsL
+                purposeOf policy = ConwayMinting (AsIx (mintingIndex (PolicyID policy) mintedBurning))
+            mintOf burningTx `shouldBe` Map.unionsWith (<>) [token application (approval record) (-1), attested]
+            Set.size burningPurposes `shouldBe` 3
+            Map.size burningRedeemers `shouldBe` 3
+            purposeOf application `shouldNotBe` purposeOf attestation
+            Map.lookup (purposeOf application) (Map.map fst burningRedeemers) `shouldBe` Just (Data (PLC.List []))
+            Map.lookup (purposeOf attestation) (Map.map fst burningRedeemers) `shouldBe` Just (Data bookingAttestationBurnData)
+            Set.member (fst heldAttestation) (burningTx ^. bodyTxL . inputsTxBodyL) `shouldBe` True
+            Set.member (fst (referenceAttestation references)) (burningTx ^. bodyTxL . referenceInputsTxBodyL) `shouldBe` True
+            -- the return itself is as it was: the refund and the tip
+            firstOutput burningTx `shouldBe` firstOutput returnTx
+            -- control: with nothing to burn the return is the return
+            (plainTx, _) <-
+                built (returnRequestsBurning pricedParameters registry references folder1 secondBooking returnValidity refund [] Map.empty)
+            plainTx `shouldBe` returnTx
+            -- control: an output that holds no attestation is no burn
+            case returnRequestsBurning pricedParameters registry references holder secondBooking returnValidity refund [outputAt secondProofTx 0] Map.empty of
+                Left NothingToBurn -> pure ()
+                other -> expectationFailure ("not a refusal to burn nothing: " <> either show (const "a built return") other)
         it "pay a fee that follows the units they declare" $ do
             registry <- deployment
             export <- load "kli-export-single.cesr"
@@ -644,23 +697,16 @@ spec = do
                         { referenceApplication = (txIn 0x81, mkBasicTxOut refund (inject (ada 10)))
                         , referenceState = (txIn 0x82, mkBasicTxOut refund (inject (ada 10)))
                         , referenceConfiguration = (txIn 0x83, mkBasicTxOut refund (inject (ada 10)))
+                        , referenceAttestation = (txIn 0x84, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceHashProof = (txIn 0x85, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         }
                 record = registrationRecord registry refund deposit export interval
                 bookWith budgets =
                     fst
                         <$> built
-                            ( bookRegistration
-                                pricedParameters
-                                registry
-                                references
-                                owner
-                                record
-                                interval
-                                0
-                                budgets
-                            )
+                            (bookOne pricedParameters registry references owner record export budgets)
             discovery <- bookWith Map.empty
-            measured <- bookWith (Map.singleton (ConwayMinting (AsIx 0)) (ExUnits 1_000_000 500_000_000))
+            measured <- bookWith (Map.fromList [(ConwayMinting (AsIx position), ExUnits 1_000_000 500_000_000) | position <- [0 .. 2]])
             feeOf measured `shouldSatisfy` (< feeOf discovery)
             feeOf measured `shouldSatisfy` (>= minimumFee measured)
             feeOf discovery `shouldSatisfy` (>= minimumFee discovery)
@@ -685,10 +731,12 @@ spec = do
                             { referenceApplication = (txIn 0x81, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                             , referenceState = (txIn 0x82, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                             , referenceConfiguration = (txIn 0x83, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                            , referenceAttestation = (txIn 0x84, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                            , referenceHashProof = (txIn 0x85, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                             }
                     record = registrationRecord registry (payerAddress payer) deposit export interval
                 (tx, _) <-
-                    built (bookRegistration pricedParameters registry references payer record interval 0 Map.empty)
+                    built (bookOne pricedParameters registry references payer record export Map.empty)
                 pure tx
         it "never take an output that carries a reference script or a datum as funding or as collateral" $ do
             registry <- deployment
@@ -710,10 +758,11 @@ spec = do
                 carried = Set.fromList (map fst carrying)
             Set.intersection carried spent `shouldBe` Set.empty
             Set.intersection carried collateral `shouldBe` Set.empty
-            paysItsWay (payerFunds payer) tx `shouldBe` True
+            proof <- proofKnown payer
+            paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
             -- a publication takes none of them either
             published <-
-                built (publishReferenceScript pricedParameters payer (Coin 40_000_000) script)
+                built (publishReferenceScript Nothing pricedParameters payer (Coin 40_000_000) script)
             Set.intersection carried (published ^. bodyTxL . inputsTxBodyL) `shouldBe` Set.empty
         it "carry their native assets into the change" $ do
             let payer =
@@ -723,12 +772,15 @@ spec = do
                         , inject (ada 700)
                         ]
             tx <- booking payer
-            paysItsWay (payerFunds payer) tx `shouldBe` True
-            any ((== nativeToken) . assetsOf) (outputsOf tx) `shouldBe` True
+            proof <- proofKnown payer
+            paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
+            -- the change holds the token beside the attestation the booking returned to it
+            any (holdsAll nativeToken . assetsOf) (outputsOf tx) `shouldBe` True
         it "are several when no one of them covers the payment" $ do
             let payer = walletWith (replicate 6 (inject (ada 300)))
             tx <- booking payer
-            paysItsWay (payerFunds payer) tx `shouldBe` True
+            proof <- proofKnown payer
+            paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
             length (tx ^. bodyTxL . inputsTxBodyL) `shouldSatisfy` (>= 4)
         it "include a collateral without native assets" $ do
             let payer =
@@ -739,7 +791,8 @@ spec = do
                         ]
             tx <- booking payer
             let collateral = toList (tx ^. bodyTxL . collateralInputsTxBodyL)
-            paysItsWay (payerFunds payer) tx `shouldBe` True
+            proof <- proofKnown payer
+            paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
             collateral `shouldBe` [fst (payerFunds payer !! 2)]
         it "may all be needed when the collateral is the smallest suitable output" $ do
             let payer =
@@ -748,8 +801,10 @@ spec = do
             tx <- booking payer
             toList (tx ^. bodyTxL . collateralInputsTxBodyL)
                 `shouldBe` [fst (payerFunds payer !! 4)]
-            length (tx ^. bodyTxL . inputsTxBodyL) `shouldBe` 4
-            paysItsWay (payerFunds payer) tx `shouldBe` True
+            -- the four of the wallet and the proof the booking spends
+            length (tx ^. bodyTxL . inputsTxBodyL) `shouldBe` 5
+            proof <- proofKnown payer
+            paysItsWay (payerFunds payer <> proof) tx `shouldBe` True
         it "are chosen once: the same outputs fund the transaction whatever units it declares" $ do
             registry <- deployment
             export <- load "kli-export-single.cesr"
@@ -760,6 +815,8 @@ spec = do
                         { referenceApplication = (txIn 0x81, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         , referenceState = (txIn 0x82, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         , referenceConfiguration = (txIn 0x83, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceAttestation = (txIn 0x84, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceHashProof = (txIn 0x85, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         }
                 request =
                     Booking
@@ -806,8 +863,10 @@ spec = do
                         { referenceApplication = (txIn 0x81, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         , referenceState = (txIn 0x82, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         , referenceConfiguration = (txIn 0x83, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceAttestation = (txIn 0x84, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
+                        , referenceHashProof = (txIn 0x85, mkBasicTxOut (walletAddress 0x50) (inject (ada 10)))
                         }
-            case bookRegistration (pricedParameters & ppMaxTxSizeL .~ 100) registry references payer record interval 0 Map.empty of
+            case bookOne (pricedParameters & ppMaxTxSizeL .~ 100) registry references payer record export Map.empty of
                 Left (TransactionTooLarge size limit) -> do
                     limit `shouldBe` 100
                     size `shouldSatisfy` (> 100)
@@ -829,6 +888,7 @@ spec = do
                     ( wallet
                     , seedOutput
                     , createConfiguration
+                        Nothing
                         pricedParameters
                         registry
                         []
@@ -863,3 +923,48 @@ initialFacts export refund =
         , lvToppedUp = False
         , lvKeys = keyMaterialOf (inceptionDatum export)
         }
+
+{- | The booking of one request, the hash proof of whose inception an earlier premint
+left with the payer.
+-}
+bookOne ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    RegistryReferences ->
+    Payer ->
+    RegistrationData ->
+    InceptionExport ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+bookOne parameters registry references payer record export =
+    bookRegistrations
+        parameters
+        registry
+        references
+        payer
+        [BookedRequest record export (proofOutputOf registry export (payerAddress payer) 0x7e)]
+        interval
+        0
+
+-- | An output of the premint of an inception's hash proof, held at an address.
+proofOutputOf :: RegistryDeployment -> InceptionExport -> Addr -> Word8 -> (TxIn, TxOut ConwayEra)
+proofOutputOf registry export address n =
+    ( txIn n
+    , mkBasicTxOut
+        address
+        ( MaryValue
+            (ada 5)
+            (MultiAsset (token (artifactScriptHash (observerHashProof (scriptsObservers (deploymentScripts registry)))) (inceptionProofName export) 1))
+        )
+    )
+
+-- | The proof output 'bookOne' spends, with the outputs a payer holds: what the booking may spend.
+proofKnown :: Payer -> IO [(TxIn, TxOut ConwayEra)]
+proofKnown payer = do
+    registry <- deployment
+    export <- load "kli-export-single.cesr"
+    pure [proofOutputOf registry export (payerAddress payer) 0x7e]
+
+-- | Whether some assets hold at least every asset of another.
+holdsAll :: MultiAsset -> MultiAsset -> Bool
+holdsAll (MultiAsset wanted) (MultiAsset held) = Map.isSubmapOfBy Map.isSubmapOf wanted held

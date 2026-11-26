@@ -21,7 +21,7 @@ read from the recorded body by a decoder apart from the code under test, or
 taken from the ledger and the node's recorded slot starts, never read back from
 the code under test.
 -}
-module Cardano.KERI.Deployment.KoiosReadsSpec (spec) where
+module Cardano.KERI.Deployment.KoiosReadsSpec (spec, riggedRecorded, recordedTipStart, walletAddress) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.Crypto.Hash qualified as Hash
@@ -31,6 +31,7 @@ import Cardano.KERI.Deployment.KoiosRuntime (
     evaluateLocally,
     koiosReads,
  )
+import Cardano.KERI.Deployment.KoiosSettlementSpec (jsonBytes, okJson)
 import Cardano.KERI.Deployment.RegistryBookingChain (
     World (..),
     loadExport,
@@ -48,7 +49,8 @@ import Cardano.KERI.Deployment.RegistryChain (
 import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), noFaults)
 import Cardano.KERI.Deployment.RegistryRegister (registerRegistration)
 import Cardano.KERI.Deployment.RegistryTransactions (Payer (..), ValidityPlan (..), publishReferenceScript)
-import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
+import Cardano.KERI.Deployment.TestNetworkTime (TestNetwork (..), testNetworkTime)
+import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (pattern RequireTimeStart)
 
@@ -63,7 +65,7 @@ import Cardano.Ledger.Api.PParams (
     ppTxFeePerByteL,
  )
 import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx)
-import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mkBasicTxBody)
+import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mkBasicTxBody, outputsTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, coinTxOutL, datumTxOutL, mkBasicTxOut, referenceScriptTxOutL, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), TxIx (..), natVersion)
 import Cardano.Ledger.Binary (decodeFull')
@@ -154,6 +156,7 @@ import Singular.Registry.LocalEvaluation (EvaluationFailure (..))
 import Singular.Registry.NetworkTime (
     NetworkTime,
     NetworkTimeFailure (..),
+    slotStartMs,
     validateNetworkTime,
  )
 import Singular.Registry.TimeSource (TimeSource (..), loadPinnedSource)
@@ -168,6 +171,7 @@ spec = describe "the Koios reads of a registry runtime" $ do
     outputsUnderReferencesSpec
     protocolParametersSpec
     observationSpec
+    subSecondSpec
     evaluationSpec
     recordedProvenanceSpec
     recordedObservationSpec
@@ -374,6 +378,35 @@ tips =
     , ("tip-first-second-era.json", 86_400, 1_655_769_600_000, 1_000, 518_399)
     ]
 
+{- | A network whose slots last a tenth of a second, as the local test chain's do, and a provider that states the
+time of its tip in whole seconds, as Koios does (its @block_time@ is UNIX seconds): the slot starts at some tenth
+of a second, and the second it falls in is what the provider states. The observation takes that tip whatever tenth
+of its second it starts at, and still refuses a tip stated in another second.
+-}
+subSecondSpec :: Spec
+subSecondSpec = describe "the observation of a network whose slots are shorter than a second" $ do
+    let network = TestNetwork{slotSeconds = 1 / 10, epochLength = 432_000, securityParam = 2_160, activeSlotsCoeff = 0.05, zeroMs = 1_790_000_000_000, laterEra = Nothing}
+        observeAt slot stated = do
+            time <- testNetworkTime network
+            start <- either (fail . show) pure (slotStartMs time (SlotNo (fromInteger slot)))
+            let row =
+                    object
+                        [ "abs_slot" .= slot
+                        , "hash" .= T.replicate 32 "ab"
+                        , "block_height" .= (1 :: Int)
+                        , "epoch_no" .= (0 :: Int)
+                        , "block_time" .= stated start
+                        ]
+                transport = Client.Transport $ \_ -> pure (okJson 200 [] (jsonBytes [row]))
+            (,) start <$> try @KoiosFailure (readObservation (koiosReads (Koios defaultClientConfig transport) time (pure 0)))
+    forM_ [100 .. 109 :: Integer] $ \slot ->
+        it ("takes the tip of slot " <> show slot <> ", which starts " <> show ((slot - 100) * 100) <> " ms into its second, as the second the provider states") $ do
+            (start, outcome) <- observeAt slot (`div` 1_000)
+            fmap obsTipStartMs outcome `shouldBe` Right start
+    it "refuses a tip the provider states in another second than the one its slot starts in" $ do
+        (start, outcome) <- observeAt 105 ((+ 1) . (`div` 1_000))
+        outcome `shouldBe` Left (TipTimeDisagrees ((start `div` 1_000 + 1) * 1_000) start)
+
 observationSpec :: Spec
 observationSpec = describe "the observation" $ do
     forM_ tips $ \(file, slot, start, slotLength, horizon) ->
@@ -530,11 +563,18 @@ bookingTransaction = do
     outcome <- registerRegistration runtime (\_ -> pure ()) (registerRequestOf world export)
     _ <- either (fail . show) pure outcome
     chain <- readIORef (worldChain world)
-    booking <- case chainAccepted chain of
-        tx : _ -> pure tx
-        [] -> fail "the booking landed no transaction"
+    -- the booking is the last transaction landed; the premint of its hash proof is the one before it
+    (booking, premint) <- case chainAccepted chain of
+        tx : earlier : _ -> pure (tx, earlier)
+        _ -> fail "the registration landed no premint and booking"
+    let preminted =
+            Map.fromList
+                [ (TxIn (transactionId premint) (TxIx ix), out)
+                | (ix, out) <- zip [0 ..] (toList (premint ^. bodyTxL . outputsTxBodyL))
+                ]
+        beforeBooking = preminted <> standing
     scripted <- trEvaluate (rtTransactions runtime) booking
-    pure (booking, standing, scripted)
+    pure (booking, beforeBooking, scripted)
 
 resolveFrom :: Map TxIn (TxOut ConwayEra) -> Set TxIn -> IO (Map TxIn (TxOut ConwayEra))
 resolveFrom world wanted = pure (Map.restrictKeys world wanted)
@@ -832,13 +872,13 @@ hashOfHex = fromJust . hashFromBytes . hexBytes
 
 recordedProvenanceSpec :: Spec
 recordedProvenanceSpec = describe "the recorded answers" $ do
-    it "are the eight the recorder wrote, loading together under one schema revision" $ do
+    it "are the nine the recorder wrote, loading together under one schema revision" $ do
         directory <- recordedDirectory
         names <- filter (".json" `isSuffixOf`) <$> listDirectory directory
-        length names `shouldBe` 8
+        length names `shouldBe` 9
         set <- recordedSet
         setRevision set `shouldBe` "v1.4.2"
-        length (setFixtures set) `shouldBe` 8
+        length (setFixtures set) `shouldBe` 9
     it "keep each request, the schema revision, the time and the SHA-256 of the body, and the SHA-256 is the body's" $ do
         directory <- recordedDirectory
         names <- filter (".json" `isSuffixOf`) <$> listDirectory directory
@@ -1017,7 +1057,7 @@ recordedReferenceScriptSpec = describe "the wallet's outputs that carry a refere
             readProtocolParameters reads'
         publication parameters funds lovelace =
             either (Left . show) Right $
-                publishReferenceScript parameters (Payer address funds) (Coin lovelace) standIn
+                publishReferenceScript Nothing parameters (Payer address funds) (Coin lovelace) standIn
         stripped = map (second (referenceScriptTxOutL .~ SNothing))
         spentBy tx = Set.fromList (toList (tx ^. bodyTxL . inputsTxBodyL))
     it "keep their reference scripts through the Koios read: six of fifteen, at the references the recording states" $ do

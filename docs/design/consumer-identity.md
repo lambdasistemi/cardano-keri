@@ -101,7 +101,7 @@ fixture codec and hash; the concrete bytes follow in the next section.
 | Hash collision freedom | Rely on BLAKE2b-256 having no collision over the identity domain; this is assumed, not proved |
 | Published scripts | Bind actual policy application and script hashes to an authenticated release manifest |
 | Network, release and checkpoint credential resolution | Obtain them independently; missing or conflicting evidence refuses |
-| Physical value | Read the premium pool from the output's value and require at least the minimum ADA, the deposit and the freeze bond the datum says are held (see [the checkpoint output's value](#the-checkpoint-outputs-value)); the validator enforcing it on chain is the datum version 2 work ([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)) |
+| Physical value | Read the premium pool from the output's value and require at least the minimum ADA, the deposit and the freeze bond the datum says are held (see [the checkpoint output's value](#the-checkpoint-outputs-value)); the validator in the source tree checks the amounts through `onchain/lib/cardano_keri/checkpoint/value.ak` (`with_value` and `held_value`, used in `checkpoint_register.ak`; issue [#339](https://github.com/lambdasistemi/cardano-keri/issues/339), closed), separately from the consumer predicate |
 | Current reference and holding movement | Verify current unspentness and observation fidelity; registration Origin is immutable metadata |
 | Reduced registry identifier | Establish the explicit finite faithful mapping when separation relies on that representation |
 | Discovery and settlement | Do not infer absence or terminality from an empty lookup or a provider failure; [what a reader answers](#what-a-reader-answers-about-an-identifier) states which evidence decides each |
@@ -177,11 +177,11 @@ flowchart LR
   T -->|consumer| R
 ```
 
-Version 1, constructor 0, is the layout the checkpoint validator writes today.
+Version 1, constructor 0, is the layout the earlier deployed checkpoint validator wrote.
 It carries keys, thresholds, witnesses and counters, but no poison, no freeze,
 no birth slot and no pending-termination form, so a poisoned checkpoint and a
 clean one would be byte-identical. The decoder refuses it. Version 2 is
-written by the model first; the on-chain validator adopts it later.
+written by the model first; the validator in the source tree writes it.
 
 | Position | Field | Kind | Lean state | What the consumer does with it |
 |---|---|---|---|---|
@@ -206,7 +206,7 @@ true is constructor 1, both without fields.
 
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
-| Which datum the consumer reads | Version 2, declared in the Lean first | Decoding version 1 as written today | Version 1 carries none of the facts the consumer needs |
+| Which datum the consumer reads | Version 2, declared in the Lean first | Decoding version 1, the layout of the earlier deployed design | Version 1 carries none of the facts the consumer needs |
 | How the AID is carried | Its qualified CESR text, the registry key of [the concrete bytes](#the-concrete-bytes) | The 32 raw digest bytes | The key is the text; rebuilding it from a digest needs a derivation code the datum does not carry |
 | Where the pool and the bonds live | In the output's value | In the datum | The datum carries facts, the value carries amounts |
 | What the decoder validates | Every shape in the whole datum; the values of the fields it reads | The full well-formedness of the key material | Key widths, threshold ranges, witness duplicates and `toad` are the checkpoint validator's obligation when it writes the datum |
@@ -250,11 +250,11 @@ decoded state with an intended one, through `realizesState` and the
 registration bridge, compare the datum's facts and the output's lovelace, so
 they apply to funded registrations too.
 
-The vector table `lean/checkpoint-datum-vectors.json` lists seven written
+The vector table `lean/checkpoint-datum-vectors.json` lists eight written
 datums with the decoder's result and the consumer's verdict on a genuine
 holding (registered and funded, juvenile, rotated with weighted thresholds and
-witnesses, poisoned, frozen, pending termination, numbers beyond 2^64), and
-twenty-nine datums the decoder refuses, each a named change: version 1, an
+witnesses, topped up, poisoned, frozen, pending termination, numbers beyond 2^64), and
+thirty-two datums the decoder refuses, each a named change: version 1, an
 unknown version, every wrong arity, every field of the wrong kind, a trailing
 byte, a truncated datum. The Lean emits the table and checks the committed
 copy against the decoder and the consumer predicate. Changing any committed
@@ -263,8 +263,7 @@ node of another kind, is refused.
 
 These checks cover the listed inputs; the theorems cover all inputs. The
 Aiken consumer decodes version 2 ([the datum decoder in
-Aiken](#the-datum-decoder-in-aiken)); the on-chain validator does not write
-version 2 yet. Reading the pool and the bonds from the value is modelled in
+Aiken](#the-datum-decoder-in-aiken)); the validator in the source tree writes version 2. Reading the pool and the bonds from the value is modelled in
 [the checkpoint output's value](#the-checkpoint-outputs-value). This code is
 not for mainnet.
 
@@ -286,7 +285,7 @@ a bond must be refused. The model states this amount in
 stateDiagram-v2
   [*] --> Live: register<br/>Mc + D + B + pool0
   Live --> Live: rotate, poison,<br/>top-up
-  Live --> Frozen: freeze<br/>B to hunter
+  Live --> Frozen: freeze<br/>B to the payee it names
   Frozen --> Live: deposit<br/>rotation, B in
   Frozen --> Frozen: rotate,<br/>poison,<br/>top-up
   Live --> Pending: convict<br/>D, B, pool out
@@ -296,9 +295,7 @@ stateDiagram-v2
 
 The diagram reads in words: a registration delivers the minimum ADA, the
 deposit, the freeze bond and the initial pool the registrant chooses. Every
-later step moves exactly the amounts its flow names. A freeze pays the freeze
-bond to the hunter, a rotation with a deposit brings it back, and a conviction
-pays the deposit to the convictor and the bond and pool to the refund address.
+later step moves exactly the amounts its flow names. A freeze pays the freeze bond to the payee it names, a rotation with a deposit brings it back, and a conviction pays the deposit to the payee of its commitment and the freeze bond still held and the pool to the refund address.
 The pending output keeps only the minimum ADA, which the termination booking
 consumes.
 
@@ -327,7 +324,7 @@ above the floor (`withValue_iff`, `realizes_determines_state`).
 - The registry books a carrier of at least `Mc + D_registry`, where the
   registry's deposit is the checkpoint's deposit plus freeze bond; one lovelace
   short is refused (`short_carrier_registration_refused`). A successful joint
-  registration delivers exactly `Mc + D + B + pool0` (`registerJoint_value`).
+  registration delivers exactly `Mc + D + B + pool0` (`registerJoint_value`). The application's initial state additionally requires the initial pool to cover at least one premium (`Application.initialState`, `Checkpoint.Step.register`): a carrier whose pool is below `P` passes the registry's floor and its request is refused when it is folded.
 
 | Decision | Chosen | Rejected | Why |
 |---|---|---|---|
@@ -335,7 +332,7 @@ above the floor (`withValue_iff`, `realizes_determines_state`).
 | What registration delivers | A carrier of `Mc + D + B + pool0`, the pool chosen per registration | A fixed carrier; a pool or bond paid outside the carrier | The registry's fold delivers exactly the declared carrier to the output |
 | Where the amounts live | In the output's value | In the datum | The datum carries facts; the value carries amounts |
 
-The vector table `lean/checkpoint-value-vectors.json` takes the seven states of
+The vector table `lean/checkpoint-value-vectors.json` takes the eight states of
 the datum vectors and gives, for each, the lovelace its output holds, its floor
 and what a holding with those datum facts reads as at lovelace values around
 them: the state itself only at the lovelace it holds. It also books
@@ -347,9 +344,7 @@ any committed field fails the check.
 
 These checks cover the listed inputs; the theorems cover all inputs. The
 consumer predicate itself does not read the value: a relying contract that
-needs the bonds checks the lovelace against the floor, and the validator that
-enforces the amounts on chain is the datum version 2 work
-([#339](https://github.com/lambdasistemi/cardano-keri/issues/339)). How an
+needs the bonds checks the lovelace against the floor, and the validator in the source tree checks the amounts through `onchain/lib/cardano_keri/checkpoint/value.ak` (`with_value` and `held_value`, used in `checkpoint_register.ak`; issue [#339](https://github.com/lambdasistemi/cardano-keri/issues/339), closed). How an
 honest owner recovers the deposit, the freeze bond or the pool is not settled
 by the model.
 
@@ -447,8 +442,7 @@ transaction's validity interval, in the same unit as the datum's birth time and
 the maturity parameter; a transaction with no finite lower bound is refused.
 A datum the decoder does not accept makes the consumer refuse the holding; it
 never makes the script fail. The pool and the bond amounts are held in the
-output's value and are not read from it (the datum decodes with a pool of 0;
-[#339](https://github.com/lambdasistemi/cardano-keri/issues/339)). The
+output's value and are not read from it (the datum decodes with a pool of 0). The
 datum a holding carries is read from the chain; no check ties it to the
 registration record that produced it
 ([#514](https://github.com/lambdasistemi/cardano-keri/issues/514)).
@@ -543,7 +537,7 @@ Two executable layers check it, beside the connected run.
 - **The Lean vectors.** `consumer_checkpoint_datum_vectors.ak` is generated by
   `scripts/checkpoint-datum-vectors.mjs` from
   `lean/checkpoint-datum-vectors.json` (`just gen-checkpoint-datum-vectors`).
-  Each of the thirty-six rows has a test that the decoder returns the row's
+  Each of the forty rows has a test that the decoder returns the row's
   result and a test that the consumer predicate, on the concrete identity bytes
   and this decoder, returns the row's verdict; each test is named after the
   row. The Lean CI job runs `node scripts/checkpoint-datum-vectors.mjs --check`

@@ -28,11 +28,13 @@ import Cardano.KERI.Deployment.RegistryDeploySpec (
     loadTestBlueprint,
     newChain,
     noFaults,
+    registrationsOf,
     testTerms,
     walletAddress,
     walletOutputs,
  )
 import Cardano.KERI.Deployment.RegistryFiles (decodeReferenceRecord, readDeploymentFiles)
+import Cardano.KERI.Deployment.RegistryProvider (ProviderChoice (..))
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..))
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Hashes (unsafeMakeSafeHash)
@@ -65,7 +67,7 @@ settingsIn blueprint directory =
     RegistryDeploySettings
         { rdNetworkMagic = 42
         , rdBlueprint = blueprint
-        , rdNodeSocket = "no-node.socket"
+        , rdProvider = ProviderChoice (Just "no-node.socket") Nothing Nothing Nothing
         , rdFundingAddress = "addr_test1unused"
         , rdSigningKeyFile = Just "no-key.skey"
         , rdVault = Nothing
@@ -175,9 +177,9 @@ spec = describe "#351 ckeri registry deploy" $ do
                     ]
                 -- and before the next transaction is submitted: at the n-th submission n are already printed
                 submissionsSeen <- readIORef printedAtSubmission
-                reverse submissionsSeen `shouldBe` [0 .. 7]
-                length (filter (": " `isInfixOf`) printed) `shouldSatisfy` (>= 8)
-                out `shouldSatisfy` ("registered the registration observer's reward credential" `isInfixOf`)
+                reverse submissionsSeen `shouldBe` [0 .. 6]
+                length (filter (": " `isInfixOf`) printed) `shouldSatisfy` (>= 7)
+                out `shouldSatisfy` (not . ("credential" `isInfixOf`))
                 out `shouldSatisfy` ("not deployed by this command" `isInfixOf`)
                 err `shouldSatisfy` ("not for mainnet" `isInfixOf`)
                 -- nothing but the two files appears, and nothing it could have read was touched: no store, no manifest
@@ -191,25 +193,23 @@ spec = describe "#351 ckeri registry deploy" $ do
                 readDeploymentFiles (rdReleaseIdentityOut settings) (rdReferenceRecordOut settings)
                     >>= either (fail . show) (const (pure ()))
 
-    describe "what a deployment says about the credential" $ do
-        it "says it did not register a credential that was registered already, and says it registered one that was not" $ do
+    describe "what a deployment says about stake credentials" $ do
+        it "makes no claim about one, whether or not the chain holds the credential of the historical observer" $ do
             blueprintPath <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
             blueprint <- loadTestBlueprint
             account <- lifecycleAccount blueprint
-            forM_ [(True, "was already registered and was not registered again"), (False, "registered the registration observer's reward credential;")] $ \(preRegistered, wording) ->
+            forM_ [True, False] $ \preRegistered ->
                 withSystemTempDirectory "registry-command" $ \directory -> do
                     let settings = settingsIn blueprintPath directory
                         start = newChain walletOutputs
                     chainRef <- newIORef (if preRegistered then start{chainRegistered = Set.singleton account} else start)
                     let opener _ use = use (chainRuntime noFaults chainRef, walletAddress)
                     (_, out) <- capturing stdout (runRegistryDeployWith opener settings)
-                    out `shouldSatisfy` (wording `isInfixOf`)
                     out `shouldSatisfy` ("not deployed by this command" `isInfixOf`)
-                    -- the opposite claim is not made
-                    out
-                        `shouldSatisfy` ( \o ->
-                                            ("registered the registration observer's reward credential;" `isInfixOf` o) /= preRegistered
-                                        )
+                    out `shouldSatisfy` (not . ("credential" `isInfixOf`))
+                    -- nothing the deployment submits registers a credential
+                    chain <- readIORef chainRef
+                    forM_ (chainAccepted chain) $ \tx -> registrationsOf tx `shouldBe` Set.empty
 
     describe "a deployment that cannot begin" $ do
         it "stops before it asks the node anything when a file it would write is already there" $ do
@@ -323,7 +323,7 @@ spec = describe "#351 ckeri registry deploy" $ do
                     [ err `shouldSatisfy` (("landed: " <> renderStep step <> " " <> txid) `isInfixOf`)
                     | (step, txid) <- zip allSteps landedIds
                     ]
-                err `shouldSatisfy` ("stopped at: publish-registration-observer" `isInfixOf`)
+                err `shouldSatisfy` ("stopped at: publish-state-script" `isInfixOf`)
                 sequence_
                     [ err `shouldSatisfy` (("not landed: " <> renderStep step) `isInfixOf`)
                     | step <- drop 3 allSteps
@@ -341,10 +341,9 @@ spec = describe "#351 ckeri registry deploy" $ do
             let seedRef = OutputReference (BS.replicate 32 0xa3) 4
                 seedSpent =
                     DeployFailure
-                        { failureLanded = [Landed PublishTemplate (transactionIdOf 1) 170_000 5_000_000 0]
+                        { failureLanded = [Landed PublishTemplate (transactionIdOf 1) 170_000 5_000_000 0 Nothing]
                         , failureStoppedAt = Just CreateRegistry
                         , failureNotLanded = drop 1 allSteps
-                        , failureSkipped = []
                         , failureCause = SeedSpent seedRef
                         }
                 text = unlines (renderFailure seedSpent)
@@ -365,7 +364,7 @@ spec = describe "#351 ckeri registry deploy" $ do
                 outcome `shouldBe` (Left (ExitFailure 1) :: Either ExitCode ())
                 chain <- readIORef chainRef
                 let landedIds = reverse (map (T.unpack . renderTransactionId . transactionId) (chainAccepted chain))
-                length landedIds `shouldBe` 7
+                length landedIds `shouldBe` 6
                 err `shouldSatisfy` (("seed-spent: the registry's seed " <> concat (replicate 32 "a3") <> "#4 was spent before the genesis") `isInfixOf`)
                 sequence_
                     [ err `shouldSatisfy` (("landed: " <> renderStep step <> " " <> txid) `isInfixOf`)
@@ -373,23 +372,12 @@ spec = describe "#351 ckeri registry deploy" $ do
                     ]
                 err `shouldSatisfy` ("not landed: create-registry" `isInfixOf`)
                 listDirectory directory `shouldBe'` []
-        it "says which step it did not need" $ do
-            let skipped =
-                    DeployFailure
-                        { failureLanded = []
-                        , failureStoppedAt = Just PublishTemplate
-                        , failureNotLanded = filter (/= RegisterObserverCredential) allSteps
-                        , failureSkipped = [RegisterObserverCredential]
-                        , failureCause = NodeFailed "x"
-                        }
-            unlines (renderFailure skipped) `shouldSatisfy` ("skipped: register-observer-credential" `isInfixOf`)
         it "says a transaction it could not see settle may still land, and was not resubmitted" $ do
             let uncertain =
                     DeployFailure
                         { failureLanded = []
                         , failureStoppedAt = Just PublishTemplate
                         , failureNotLanded = allSteps
-                        , failureSkipped = []
                         , failureCause = NotObserved (transactionIdOf 2) "timed out"
                         }
                 text = unlines (renderFailure uncertain)

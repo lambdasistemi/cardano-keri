@@ -43,9 +43,9 @@ use keri_application_connected.{
 }
 use keri_application_fixture.{creation, genesis, keri, template_input}
 use keri_application_requests.{
-  Booking, Fold, application, booking, booking_tx, checkpoint_hash, envelope,
-  fold, fold_tx, holding_output, pending_reference, reference, registry,
-  return_tx, returned, termination, termination_booking, termination_booking_tx,
+  Booking, Fold, application, booking, booking_tx, checkpoint_hash, fold,
+  fold_tx, holding_output, pending_reference, reference, registry, return_tx,
+  returned, termination, termination_booking, termination_booking_tx,
   termination_tx,
 }
 use registry_fixture.{
@@ -69,7 +69,7 @@ fn run_mint_with(
 ) -> Bool {
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     minimum_deposit,
     initial_floor,
     rows.network_id,
@@ -92,7 +92,7 @@ fn run_spend_with(
 ) -> Bool {
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     initial_floor,
     rows.network_id,
@@ -174,7 +174,7 @@ test measure_termination_fold() {
   let none: List<Action> = []
   keri_application.keri_application.spend(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -197,23 +197,7 @@ test measure_return() {
   run_spend(ReturnRegistration, tx) && run_mint(rows.minimum_deposit, none, tx)
 }
 
-// ---- the application beside the real observer -------------------------------------------
-
-fn observer_accepts(tx: Transaction) -> Bool {
-  let claim = ObserverClaim {
-    action: observe_register,
-    checkpoint_policy: checkpoint_hash(),
-    own_ref: None,
-  }
-  checkpoint_observer.observer_lifecycle.withdraw(
-    0,
-    hash_proof_policy,
-    d_reg,
-    envelope(claim, as_data(vec.pos_2key_evidence)),
-    0,
-    tx,
-  )
-}
+// ---- the application at the real scale ----------------------------------------------------
 
 fn application_accepts(tx: Transaction) -> Bool {
   let none: List<Action> = []
@@ -225,21 +209,6 @@ fn application_accepts(tx: Transaction) -> Bool {
   )
 }
 
-test the_application_and_the_real_observer_accept_a_fold_at_the_floor() {
-  let tx = fold_tx(connected_fold(True))
-  application_accepts(tx) && observer_accepts(tx)
-}
-
-test the_application_does_not_read_the_hash_proof_burn() {
-  // The hash-proof token is not burned: the application, which does not read
-  // it, accepts; the observer does read it (next test).
-  application_accepts(fold_tx(connected_fold(False)))
-}
-
-test the_observer_refuses_a_fold_that_burns_no_hash_proof() fail {
-  observer_accepts(fold_tx(connected_fold(False)))
-}
-
 fn booking_at(deposit: Int) -> Booking {
   Booking {
     ..booking(),
@@ -248,9 +217,9 @@ fn booking_at(deposit: Int) -> Booking {
   }
 }
 
-test a_booking_at_the_registrys_floor_is_accepted_and_one_below_is_refused() {
-  let at = booking_at(booking_floor)
-  let below = booking_at(booking_floor - 1)
+test a_booking_at_the_initial_floor_is_accepted_and_one_below_is_refused() {
+  let at = booking_at(floor)
+  let below = booking_at(floor - 1)
   run_mint_with(booking_floor, floor, at.actions, booking_tx(at)) && !run_mint_with(
     booking_floor,
     floor,
@@ -259,23 +228,26 @@ test a_booking_at_the_registrys_floor_is_accepted_and_one_below_is_refused() {
   )
 }
 
-test a_booking_between_the_floors_is_bookable_but_not_foldable() {
-  // The model's declared limit: booking checks the registry's floor, a fold the
-  // checkpoint's initial floor, one premium above it. A request between them is
-  // accepted at booking; its fold leaves a pool under one premium.
-  let between = booking_at(booking_floor)
-  let f = connected_fold(True)
-  let data = RegistrationData { ..f.data, deposit: booking_floor }
-  run_mint_with(booking_floor, floor, between.actions, booking_tx(between)) && !application_accepts(
-    fold_tx(
-      Fold {
-        ..f,
-        data,
-        request_lovelace: booking_floor + cfg.registration_cost + cfg.minimum_tip,
-        holding_lovelace: booking_floor,
-      },
-    ),
+test a_booking_at_the_registrys_floor_is_accepted_when_the_pool_is_not_asked_for() {
+  // The registry's floor is the minimum ADA plus the deposit and the freeze
+  // bond: with no pool asked for (an initial floor at it), a booking at it is
+  // accepted and one lovelace below is refused.
+  let at = booking_at(booking_floor)
+  let below = booking_at(booking_floor - 1)
+  run_mint_with(booking_floor, booking_floor, at.actions, booking_tx(at)) && !run_mint_with(
+    booking_floor,
+    booking_floor,
+    below.actions,
+    booking_tx(below),
   )
+}
+
+test a_booking_between_the_floors_is_refused_and_its_fold_would_leave_no_premium() {
+  // A request between the registry's floor and the initial floor leaves a pool
+  // under one premium: the booking refuses it, and a fold of
+  // such a request, which no booking mints, still delivers what it commits.
+  let between = booking_at(booking_floor)
+  run_mint_with(booking_floor, floor, between.actions, booking_tx(between)) == False
 }
 
 test the_deployment_floors_are_the_checkpoint_programs_numbers() {
@@ -304,7 +276,7 @@ test measure_genesis() {
   let (tx, action) = genesis_with_template()
   keri_application.keri_application.mint(
     cfg.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -354,7 +326,7 @@ fn delivered_input(output: Output) -> Input {
 }
 
 fn delivered() -> Output {
-  holding_output(connected_fold(True))
+  holding_output(connected_fold())
 }
 
 fn delivered_live(output: Output) -> CheckpointDatumV2 {
@@ -461,8 +433,8 @@ fn representative_of(output: Output) -> Value {
 }
 
 test a_fold_over_the_connected_scenario_is_accepted() {
-  let tx = fold_tx(connected_fold(True))
-  application_accepts(tx) && observer_accepts(tx)
+  let tx = fold_tx(connected_fold())
+  application_accepts(tx)
 }
 
 test the_output_a_fold_delivers_is_advanced() {
@@ -475,7 +447,7 @@ test the_output_a_fold_delivers_is_topped_up() {
 
 fn one_lovelace_below_the_checkpoints_floor() -> Fold {
   Fold {
-    ..connected_fold(True),
+    ..connected_fold(),
     holding_lovelace: checkpoint_min_ada + d_reg + freeze_bond - 1,
   }
 }
@@ -493,7 +465,7 @@ test an_output_one_lovelace_below_the_checkpoints_floor_is_not_topped_up() fail 
 }
 
 fn without_the_token() -> Fold {
-  Fold { ..connected_fold(True), holding_active: 0, active_mint: 0 }
+  Fold { ..connected_fold(), holding_active: 0, active_mint: 0 }
 }
 
 test a_fold_delivering_no_active_token_is_refused() {

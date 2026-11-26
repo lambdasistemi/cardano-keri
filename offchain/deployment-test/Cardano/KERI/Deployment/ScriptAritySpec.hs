@@ -806,13 +806,21 @@ groupBoundaries =
             \journey): no published deployment identity"
         )
     ,
+        ( "booking_attestation.booking_attestation"
+        , Unapplied
+            "booking attestation policy: applied by the registry derivation \
+            \of the release that books through it, to the hash-proof policy \
+            \and the registration deposit; no part of the historical V1 \
+            \artifact inventory"
+        )
+    ,
         ( "keri_application.keri_application"
         , Unapplied
-            "KERI application: its five parameters (the hash of the compiled \
-            \singular_state script template, the lifecycle observer, the \
-            \booking floor, the fold floor and the network) are applied at \
-            \deployment by a later slice; no published deployment identity \
-            \yet"
+            "KERI application: its seven parameters (the hash of the compiled \
+            \singular_state script template, the booking attestation policy, \
+            \the booking floor, the fold floor, the network, the minimum ADA \
+            \and the termination carrier) are applied by the registry \
+            \derivation"
         )
     ]
 

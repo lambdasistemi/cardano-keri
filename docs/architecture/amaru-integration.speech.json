@@ -5,11 +5,11 @@
       "pause": 500
     },
     {
-      "text": "What ships, and the accepted design",
+      "text": "Historical analysis",
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "This page analyses a third party's July 2026 proposal against the earlier oracle-mediated identity model, as its warning below says. It describes neither the accepted design nor the version 1 programs. In the accepted design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal). Play the checkpoint simulation.",
       "pause": 400
     },
     {
@@ -77,7 +77,7 @@
       "pause": 500
     },
     {
-      "text": "Nothing in cardano-keri is shipped runtime infrastructure today. The concrete shipped substrate to build on is MPFS plugin support: MPFS can host domain-specific authorization logic at the cage/plugin layer without changing the Cardano node.",
+      "text": "When this analysis was written (July 2026), nothing in cardano-keri was shipped runtime infrastructure. The concrete shipped substrate to build on is MPFS plugin support: MPFS can host domain-specific authorization logic at the cage/plugin layer without changing the Cardano node.",
       "pause": 400
     },
     {
@@ -393,6 +393,6 @@
   ],
   "_source": {
     "file": "amaru-integration.md",
-    "sha256": "e2e79c678a8844d2b6b6c42421ee8d280eddf6bc491c23ca121c36b5e4bb5fad"
+    "sha256": "e940dfcfcaddc01bd59990bbebe884a484b87c21287abc4a703f12e526c53d0b"
   }
 }

@@ -63,7 +63,7 @@ fn mint(
 fn mint_as_is(deployment: Deployment, action: Action, tx: Transaction) -> Bool {
   keri_application.keri_application.mint(
     vectors.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,
@@ -90,7 +90,7 @@ fn spend(
 ) -> Bool {
   keri_application.keri_application.spend(
     vectors.state_template_hash,
-    rows.observer_hash,
+    rows.attestation_hash,
     rows.minimum_deposit,
     rows.initial_floor,
     rows.network_id,

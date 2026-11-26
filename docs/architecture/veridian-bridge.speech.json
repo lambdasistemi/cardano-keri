@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active or parked (a retained output holds its token, minimum ADA and last key state; the registry key stays active). A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; the only close is the reap, a rotation by the next keys; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design (D-036 to D-040) an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses.",
       "pause": 400
     }
   ],
@@ -31,7 +31,7 @@
       "pause": 400
     },
     {
-      "text": "The Register, Close, Advance, Freeze, and response transactions are implemented and settled for the small fixture. A production cardano-keri-sdk, WASM package, and Veridian user flow are future work. Types below describe the current ledger wire or an explicitly labelled future interface; they are not claims that a published SDK exists.",
+      "text": "The Register, Close and Advance transactions of the earlier deployed design (version 1) settled on preprod for the small fixture, and its Freeze and response transactions on a development network. A production cardano-keri-sdk, WASM package, and Veridian user flow are future work. Types below describe the version 1 ledger wire or an explicitly labelled future interface; they are not claims that a published SDK exists.",
       "pause": 400
     }
   ],
@@ -41,15 +41,15 @@
       "pause": 500
     },
     {
-      "text": "Veridian names an identity with a KERI AID (Autonomic Identifier) and maintains its KEL (Key Event Log). cardano-keri derives a Cardano asset name from that AID. A quantity-one token and inline datum form the sovereign checkpoint UTxO.",
+      "text": "Veridian names an identity with a KERI AID (Autonomic Identifier) and maintains its KEL (Key Event Log). In version 1 cardano-keri derived a Cardano asset name from that AID; in the accepted design the checkpoint holds the registry's representative asset for the AID. A quantity-one token and inline datum form the sovereign checkpoint UTxO.",
       "pause": 400
     },
     {
-      "text": "There is no shared identity root, trie_key, or global key-state registry in the current transaction path.",
+      "text": "There is no shared identity root, trie_key, or global key-state registry in the version 1 transaction path; the accepted design adds the registry.",
       "pause": 400
     },
     {
-      "text": "The relayer does not need the controller's private keys for public projection operations. It receives already signed KERI evidence and may pay to submit it. The on-chain result is fixed by that evidence.",
+      "text": "The relayer does not need the controller's private keys for public projection operations. It receives already signed KERI evidence and may pay to submit it. In version 1 the on-chain result is fixed by that evidence and the checkpoint input: the Advance action carries no payee and no deposit choice, and the output holds exactly the input's value. In the accepted design the key state on chain is still the one that evidence establishes, and the submitter also names the payee and, when the owner's new keys signed a deposit intent, chooses whether the rotation restores the freeze bond.",
       "pause": 400
     }
   ],
@@ -95,9 +95,9 @@
       "pause": 400
     }
   ],
-  "current-transaction-specifications": [
+  "version-1-transaction-specifications": [
     {
-      "text": "Current transaction specifications.",
+      "text": "Version 1 transaction specifications.",
       "pause": 500
     }
   ],
@@ -231,7 +231,7 @@
       "pause": 500
     },
     {
-      "text": "Freeze is a permissionless challenge submitted by a hunter — in the shipped V1, the challenger of a lagging checkpoint; in the accepted design, anyone paid to land rotations or to freeze a checkpoint that cannot pay for one — holding witnessed conflict evidence.",
+      "text": "Freeze is a permissionless challenge submitted by a hunter — in the shipped V1, the challenger of a lagging checkpoint; in the accepted design, anyone holding evidence of a later rotation when the pool is below the premium, with the bond paid to the payee the freeze names.",
       "pause": 400
     },
     {
@@ -309,11 +309,11 @@
       "pause": 500
     },
     {
-      "text": "KERI and Cardano do not settle simultaneously. After a KERI rotation is published, Cardano still shows the old ACTIVE checkpoint until an Advance or valid Freeze transaction settles.",
+      "text": "KERI and Cardano do not settle simultaneously. After a KERI rotation is published, Cardano still shows the old checkpoint (in version 1, the ACTIVE one), which consumers keep accepting while it is eligible, until an Advance or valid Freeze transaction settles.",
       "pause": 400
     },
     {
-      "text": "During that interval, a Cardano-only consumer can see stale authority. The current mitigations are:",
+      "text": "During that interval, a Cardano-only consumer can see stale authority. In version 1 the mitigations were:",
       "pause": 400
     },
     {
@@ -321,11 +321,11 @@
       "pause": 300
     },
     {
-      "text": "anyone with witnessed later-event evidence can Freeze the stale checkpoint;",
+      "text": "anyone with witnessed later-event evidence could Freeze the stale checkpoint (the version 1 validator required the enforcement observation, an input at the ACTIVE role address holding at least the protected value, a finite validity upper bound and an ARMED successor with the same value; the accepted design instead requires evidence of a strictly later sequence number, a pool below the premium and a checkpoint that is neither frozen nor poisoned, Checkpoint.lean 301–306);",
       "pause": 300
     },
     {
-      "text": "Freeze immediately moves it to ARMED, which consumers reject; and",
+      "text": "a version 1 Freeze immediately moved it to ARMED, which consumers rejected; the accepted freeze sets the datum's frozen bit, which the holding predicate refuses (ConsumerIdentity.lean 73–89); and",
       "pause": 300
     },
     {
@@ -371,9 +371,9 @@
       "pause": 400
     }
   ],
-  "current-limits": [
+  "limits-of-the-version-1-programs": [
     {
-      "text": "Current limits.",
+      "text": "Limits of the version 1 programs.",
       "pause": 500
     },
     {
@@ -399,6 +399,6 @@
   ],
   "_source": {
     "file": "veridian-bridge.md",
-    "sha256": "95ba3bf90cecb46130305c819e1d3d14e737a3e0a07d29d463bfc6f2feffd613"
+    "sha256": "fe66fb6bc864d9fbacd152458ba6014651658e95b9e0fc626e5186d94d854f61"
   }
 }

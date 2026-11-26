@@ -5,14 +5,13 @@ properties. It does not add a solver theorem or a kernel proof.
 
 ## Production UPLC source
 
-The only production input is the `plutus-blueprint` derivation wired by
-`offchain/flake.nix`. The `blaster` app accepts no blueprint path and does not
+The audited program of this page is the one in the committed `offchain/blaster/m8-baseline-plutus.json`, which `offchain/flake.nix` feeds to the baseline; the live `plutus-blueprint` derivation of the same file is a separate artifact. The `blaster` app accepts no blueprint path and does not
 search the current directory, environment variables, or ambient files. It
 selects exactly one validator titled `checkpoint.checkpoint.spend`, requires a
 non-empty string `compiledCode`, and rejects missing, renamed, malformed, or
 duplicate matches.
 
-The current audited identities are:
+The audited identities of the committed baseline are:
 
 - blueprint SHA-256:
   `896d2c4642740a26248dc46cdeecbce18730061785e78cfbedc2a13a5c9c577c`

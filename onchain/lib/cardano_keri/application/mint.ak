@@ -5,10 +5,12 @@
 //// the actions its redeemer lists: each action is accepted by its own rule,
 //// each asset an action brings into being is minted exactly once, no other
 //// positive quantity is minted, and every burn is the approval of a request
-//// the transaction spends from the application address.
+//// the transaction spends from the application address. A booking also needs
+//// the attestation of its inception in the mint field (`application/registration`).
 ////
 //// ## Dependencies
-//// `application/configuration`, `application/held`, `application/registration`;
+//// `application/configuration`, `application/held`,
+//// `application/registration`;
 //// `singular_state/preimage`; the Aiken standard library.
 ////
 //// ## Assumptions
@@ -78,6 +80,9 @@ fn distinct(items: List<Int>) -> Bool {
 
 /// One action.
 fn action_accepted(
+  attestation_policy: PolicyId,
+  initial_floor: Int,
+  network_id: Int,
   state_template_hash: ByteArray,
   minimum_deposit: Int,
   checkpoint_minimum_ada: Int,
@@ -101,7 +106,15 @@ fn action_accepted(
         None -> False
       }
     BookRegistration { output_index } ->
-      book_registration(application_policy, minimum_deposit, output_index, tx)
+      book_registration(
+        attestation_policy,
+        initial_floor,
+        network_id,
+        application_policy,
+        minimum_deposit,
+        output_index,
+        tx,
+      )
     BookTermination { pending, output_index, registry, key } ->
       book_termination(
         application_policy,
@@ -168,6 +181,9 @@ fn accounted(
 
 /// The accepted mint and burn under the application policy of a transaction.
 pub fn application_mint(
+  attestation_policy: PolicyId,
+  initial_floor: Int,
+  network_id: Int,
   state_template_hash: ByteArray,
   minimum_deposit: Int,
   checkpoint_minimum_ada: Int,
@@ -182,6 +198,9 @@ pub fn application_mint(
       actions,
       fn(action) {
         action_accepted(
+          attestation_policy,
+          initial_floor,
+          network_id,
           state_template_hash,
           minimum_deposit,
           checkpoint_minimum_ada,

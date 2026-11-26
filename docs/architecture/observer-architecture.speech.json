@@ -9,7 +9,7 @@
       "pause": 400
     },
     {
-      "text": "Unless a paragraph below is marked as preprod or main today, it describes the accepted design (D-036 to D-040). In that design an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What ships today is the V1 checkpoint with role addresses.",
+      "text": "Unless a paragraph below is marked as the accepted design, it describes the version 1 programs published on preprod, whose validators are no longer in the source tree. In the accepted design (D-036 to D-040) an identity is active until it is convicted: there is no owner exit, no parking and no revival. A duplicity proof, revealed under a commitment opened beforehand, enters pending custody; its associated Registry fold makes it convicted (terminal); there is no withdraw; a deposit rotation is the unfreeze; and the poison, the owner's own lock on the checkpoint, lasts one epoch and is cleared by rotation. Play the checkpoint simulation. What was deployed is the V1 checkpoint with role addresses.",
       "pause": 400
     },
     {
@@ -163,7 +163,7 @@
       "pause": 400
     },
     {
-      "text": "The large RegistrationEvidence no longer rides inside that mint redeemer. It rides once in the observer envelope. This is the current wire shape from PR #146.",
+      "text": "The large RegistrationEvidence no longer rides inside that mint redeemer. It rides once in the observer envelope. This was the wire shape of the version 1 programs, from PR #146.",
       "pause": 400
     }
   ],
@@ -191,7 +191,7 @@
       "pause": 400
     },
     {
-      "text": "The Advance observer has only 3 bytes of measured applied-script headroom. Issue #149 is a required size-reduction chore before the real seven-key rotation story. A passing current transaction does not make that margin maintainable.",
+      "text": "The version 1 Advance observer had only 3 bytes of measured applied-script headroom (PR #150). Issue #149 is a required size-reduction chore before the real seven-key rotation story. A passing current transaction does not make that margin maintainable.",
       "pause": 400
     }
   ],
@@ -223,6 +223,6 @@
   ],
   "_source": {
     "file": "observer-architecture.md",
-    "sha256": "34af3e0786c586517e4a09cee7761eeb2d41c051a12fc0c28b13379e4803bb62"
+    "sha256": "17da075ba9c78a8ef994e060fd8c8bf7d7c14f5231152d5c61ab8eee720b6066"
   }
 }

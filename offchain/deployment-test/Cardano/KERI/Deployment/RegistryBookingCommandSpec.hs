@@ -10,7 +10,7 @@ Each command is run whole, over the chain of "Cardano.KERI.Deployment.RegistryBo
 in a directory of its own: what it prints as it goes, what it refuses and at which
 boundary, what it leaves alone. The words a refusal is made of are spelled here.
 -}
-module Cardano.KERI.Deployment.RegistryBookingCommandSpec (spec) where
+module Cardano.KERI.Deployment.RegistryBookingCommandSpec (spec, Setup (..), withSetup, openerOver, runCaptured, requestText) where
 
 import Cardano.Crypto.DSIGN.Class (deriveVerKeyDSIGN, rawDeserialiseSignKeyDSIGN)
 import Cardano.KERI.AID.Application (RegistrationData (..))

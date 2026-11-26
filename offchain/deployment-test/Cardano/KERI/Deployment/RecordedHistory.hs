@@ -22,6 +22,7 @@ module Cardano.KERI.Deployment.RecordedHistory (
     streamFailingAfter,
     failingSession,
     countingHistory,
+    deliveringRegardless,
     singularIdentityOf,
     touchesToken,
     withFoldRedeemer,
@@ -221,3 +222,14 @@ countingHistory session = do
     reads' <- newIORef 0
     let counted asset range = modifyIORef' reads' (+ 1) >> history session asset range
     pure (session{history = counted}, readIORef reads')
+
+{- | A session that serves the given blocks whatever asset is asked for, and counts the blocks it
+delivers: the material of one registry handed to a replay that asks for another's.
+-}
+deliveringRegardless :: [HistoryBlock] -> IO (Session NoWitness IO, IO Int)
+deliveringRegardless blocks = do
+    delivered <- newIORef 0
+    let serve = \case
+            [] -> HistoryStream (pure (Right Nothing))
+            b : more -> HistoryStream (modifyIORef' delivered (+ 1) >> pure (Right (Just (b, serve more))))
+    pure (refusing{history = \_ _ -> pure (Right (serve blocks))}, readIORef delivered)

@@ -18,7 +18,6 @@ module Cardano.KERI.Deployment.RegistryReplaySpec (spec) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
 import Cardano.KERI.AID.Application (
-    RegistrationData (..),
     RegistryIdentity (..),
     activeTokenName,
     stateTokenName,
@@ -36,7 +35,7 @@ import Cardano.KERI.Deployment.RegistryReplay
 import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..))
 import Cardano.KERI.Deployment.RegistryTransactions (registryRootOf)
 import Cardano.Ledger.Api.Tx (bodyTxL, txIdTx)
-import Cardano.Ledger.Api.Tx.Body (outputsTxBodyL)
+import Cardano.Ledger.Api.Tx.Body (mintTxBodyL, outputsTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, addrTxOutL, coinTxOutL, valueTxOutL)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -85,8 +84,6 @@ data Scene = Scene
     { sceneWorld :: World
     , sceneFirstRequest :: TxIn
     , sceneSecondRequest :: TxIn
-    , sceneFirstRecord :: RegistrationData
-    , sceneSecondRecord :: RegistrationData
     , sceneFirstKey :: ByteString
     , sceneSecondKey :: ByteString
     }
@@ -110,9 +107,9 @@ booked = do
     world <- newWorld 1_000
     single <- loadExport "kli-export-single.cesr"
     multi <- loadExport "kli-export-2-of-5.cesr"
-    (r1, rec1) <- bookDirectly world single
-    (r2, rec2) <- bookDirectly world multi
-    pure (Scene world r1 r2 rec1 rec2 (keyOf single) (keyOf multi))
+    (r1, _) <- bookDirectly world single
+    (r2, _) <- bookDirectly world multi
+    pure (Scene world r1 r2 (keyOf single) (keyOf multi))
 
 -- | The first identity folded by the installed builder, on the snapshot of the empty registry.
 withFirstFolded :: IO Scene
@@ -127,13 +124,19 @@ withFirstFolded = do
 withBothFolded :: IO Scene
 withBothFolded = do
     scene <- booked
+    foldBoth scene
+    pure scene
+
+-- | Fold the two booked requests by the installed builder.
+foldBoth :: Scene -> IO ()
+foldBoth scene = do
     let world = sceneWorld scene
         runtime = runtimeOf noFaults world
     first' <- foldBookedRequest runtime (const (pure ())) (inputOf world (sceneFirstRequest scene) emptySnapshot)
     done <- either (fail . show) pure first'
     second' <- foldBookedRequest runtime (const (pure ())) (inputOf world (sceneSecondRequest scene) (doneSnapshot done))
     _ <- either (fail . show) pure second'
-    pure scene
+    pure ()
 
 historyOf :: World -> IO [ConwayTx]
 historyOf = accepted
@@ -290,13 +293,18 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
             state <- either (fail . renderReplayStop) pure replayed
             replayActive state `shouldBe` [sceneFirstKey scene]
             length (replayFolds state) `shouldBe` 1
-        it "the history of another registry reaches no genesis: nothing mints the token of the registry selected" $ do
+        it "coherent material of another registry, delivered despite the policy asked for, reaches no genesis: nothing mints the token selected" $ do
             scene <- withBothFolded
             let world = sceneWorld scene
                 other = (registryOf world){registryStatePolicy = BS.replicate 28 0x07}
             txs <- historyOf world
             (live, root) <- liveOf world
-            replayed <- replayRegistryState (recordedSession (blocksOf txs)) (singularIdentityOf other) live root
+            let otherBlocks = blocksOf (stateTransactions world txs)
+            (session, delivered) <- deliveringRegardless otherBlocks
+            replayed <- replayRegistryState session (singularIdentityOf other) live root
+            -- the otherBlocks blocks were delivered to the replay: genesis and both folds, not an empty stream
+            delivered >>= (`shouldBe` length otherBlocks)
+            length otherBlocks `shouldBe` 3
             stopped replayed >>= (`shouldBe` HistoryIncomplete (singularIdentityOf other) Nothing MissingTransaction)
 
     describe "the fold takes the replayed state, and stops before it spends when the replay does" $ do
@@ -346,6 +354,40 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
             txs <- historyOf world
             (genesis, _) <- genesisAndFolds world txs
             refusedWith (HistoryIncomplete (who world) Nothing MissingTransaction) world (recordedSession (blocksOf (filter (/= genesis) txs))) (sceneSecondRequest scene)
+        it "stops before any handoff when the provider's first read fails, with its cause" $ do
+            scene <- withFirstFolded
+            let world = sceneWorld scene
+            refusedWith
+                (HistoryIncomplete (who world) Nothing (ProviderHistoryFailure (HistoryReadFailure (BackendReadFailure "the provider is down"))))
+                world
+                (failingSession "the provider is down")
+                (sceneSecondRequest scene)
+        it "stops before any handoff when a fold in the middle of the history is missing" $ do
+            scene <- withBothFolded
+            let world = sceneWorld scene
+            single <- loadExport "kli-export-single.cesr"
+            (third, _) <- bookDirectly world single
+            txs <- historyOf world
+            (_, [firstFold, secondFold]) <- genesisAndFolds world txs
+            refusedWith
+                (HistoryIncomplete (who world) (Just (txIdTx secondFold)) OutsideLineage)
+                world
+                (recordedSession (blocksOf (filter (/= firstFold) txs)))
+                third
+        it "stops before any handoff when the root the node reports for its state output is not the one the history rebuilds" $ do
+            scene <- withFirstFolded
+            let world = sceneWorld scene
+                claimed = registryRootOf [sceneSecondKey scene] []
+                rebuilt = registryRootOf [sceneFirstKey scene] []
+            txs <- historyOf world
+            setRegistryRoot world [sceneSecondKey scene] []
+            Just (_, liveOut) <- stateOutputOf world
+            rootOfOutput liveOut `shouldBe` claimed
+            refusedWith
+                (StaleState (who world) Nothing (StaleRoot (Root claimed) (Root rebuilt)))
+                world
+                (recordedSession (blocksOf txs))
+                (sceneSecondRequest scene)
         it "stops before any handoff when a fold's redeemer disagrees with its root" $ do
             scene <- withFirstFolded
             let world = sceneWorld scene
@@ -377,18 +419,27 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
 
     describe "the names the replay and our builders agree on (each side derived apart)" $ do
         it "the state token, the active tokens and the registration approvals are the same assets in Singular's derivation and in the transactions" $ do
-            scene <- withBothFolded
+            scene <- booked
             let world = sceneWorld scene
+                runtime = runtimeOf noFaults world
                 registry = registryOf world
                 singular = singularIdentityOf registry
-                singularName = (\(AssetName n) -> SBS.fromShort n)
+                singularName (AssetName n) = SBS.fromShort n
+                appPolicy = applicationPolicyOf world
+                requestRefs = [sceneFirstRequest scene, sceneSecondRequest scene]
+            -- the booking outputs, observed before the folds spend them, and the mints that made them
+            observed <- rtOutputs runtime (Set.fromList requestRefs)
+            Map.keys observed `shouldMatchList` requestRefs
+            bookingTxs <- accepted world
+            let minted = [(n, q) | tx <- bookingTxs, (n, q) <- mintedUnder appPolicy tx, q > 0]
+            foldBoth scene
             -- the state token: Singular's name of the seed against ours against the asset the deployment minted
             singularName (Singular.stateTokenName (seedOf world)) `shouldBe` stateTokenName (riSeed (deployedIdentity (worldDeployed world)))
             singularName (Singular.stateTokenName (seedOf world)) `shouldBe` registryName registry
             Just (_, stateOut) <- stateOutputOf world
             heldNames (registryStatePolicy registry) stateOut `shouldBe` [(registryName registry, 1)]
             -- the active token of each key, and the approval the booking minted, against the holding the fold delivered
-            forM_ [(sceneFirstKey scene, sceneFirstRecord scene), (sceneSecondKey scene, sceneSecondRecord scene)] $ \(key, record) -> do
+            forM_ (zip requestRefs [sceneFirstKey scene, sceneSecondKey scene]) $ \(ref, key) -> do
                 singularName (Singular.activeTokenName singular key) `shouldBe` activeTokenName registry key
                 held <- checkpointHolding world key
                 case held of
@@ -398,16 +449,12 @@ spec = describe "#558 the registry's state rebuilt from the public history of it
                             Coin deposit = holding ^. coinTxOutL
                             preimage = Singular.registrationPreimage key singular (fromJust (transAddr (holding ^. addrTxOutL))) (Singular.initialDatumHash datum) (PV3.Lovelace deposit)
                             derived = singularName (Singular.approvalName preimage)
-                        requestOut <- rtOutputs (runtimeOf noFaults world) (Set.singleton (bookedAt scene key))
-                        -- the approval that sat on the booked request, read from the booking's own output
-                        forM_ (Map.elems requestOut) $ \out ->
-                            [n | (n, 1) <- heldNamesUnder (applicationPolicyOf world) out] `shouldBe` [derived]
-                        requestDeposit record `shouldBe` deposit
+                        -- the booked output exists, holds exactly one approval, and it is the one derived apart
+                        out <- maybe (fail ("the booking output " <> show ref <> " was not observed")) pure (Map.lookup ref observed)
+                        heldNames appPolicy out `shouldBe` [(derived, 1)]
+                        -- and the booking's actual mint carries that name with quantity one
+                        filter ((== derived) . fst) minted `shouldBe` [(derived, 1)]
                     other -> expectationFailure ("expected one holding, found " <> show (length other))
-  where
-    bookedAt scene key
-        | key == sceneFirstKey scene = sceneFirstRequest scene
-        | otherwise = sceneSecondRequest scene
 
 -- | The names and quantities of the tokens an output holds under a policy.
 heldNames :: ByteString -> TxOut ConwayEra -> [(ByteString, Integer)]
@@ -420,9 +467,6 @@ heldNames policy out = case out ^. valueTxOutL of
         ]
   where
     hashBytes = hashToBytes
-
-heldNamesUnder :: ByteString -> TxOut ConwayEra -> [(ByteString, Integer)]
-heldNamesUnder = heldNames
 
 applicationPolicyOf :: World -> ByteString
 applicationPolicyOf = rlApplicationPolicy . riRelease . deployedIdentity . worldDeployed
@@ -444,3 +488,13 @@ stateRefOf world tx =
         other -> error ("expected one state output, found " <> show (length other))
   where
     registry = registryOf world
+
+-- | The names and quantities a transaction mints or burns under a policy.
+mintedUnder :: ByteString -> ConwayTx -> [(ByteString, Integer)]
+mintedUnder policy tx = case tx ^. bodyTxL . mintTxBodyL of
+    MultiAsset assets ->
+        [ (SBS.fromShort n, q)
+        | (PolicyID (ScriptHash h), names) <- Map.toList assets
+        , hashToBytes h == policy
+        , (AssetName n, q) <- Map.toList names
+        ]

@@ -23,6 +23,7 @@ pub type Case {
   off_kt: Int,
   off_s: Int,
   off_a: Int,
+  off_p: Int,
   said: ByteArray,
 }
 
@@ -66,6 +67,7 @@ pub const fork_recorded: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 349,
+    off_p: 150,
     said: "EFxT9NO96i_hM0LaqP29FICxu18po_iUHg9dzQsa7TNm",
   }
 
@@ -109,6 +111,7 @@ pub const fork_rival: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 349,
+    off_p: 150,
     said: "EFzOhOnYOmA2I3NxBZkNQCm5Dux8q2kCndy7dlateXRp",
   }
 
@@ -159,6 +162,7 @@ pub const fork_witnessed_recorded: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 349,
+    off_p: 150,
     said: "EEx6yzkEBCGolgeRtG-Ws5A_j-T_7tKi3JknU0UIUhrY",
   }
 
@@ -209,6 +213,7 @@ pub const fork_witnessed_rival: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 349,
+    off_p: 150,
     said: "ENONxZTtLrR9r_ZHc8mJBHW-4_9eR0FM52yBGN0rhyuO",
   }
 
@@ -259,6 +264,7 @@ pub const honest_2key_rotation: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 443,
+    off_p: 150,
     said: "EOdfp09BunXnKjUqfl6wr397TKswLMVQJjXd5TSWTl1N",
   }
 
@@ -326,6 +332,7 @@ pub const advance_witnessed_2key: Case =
     off_kt: 196,
     off_s: 137,
     off_a: 535,
+    off_p: 150,
     said: "ED71f6CsirwRaiX7SujGLB6I58FQDiqHMwRQXufMvzHk",
   }
 

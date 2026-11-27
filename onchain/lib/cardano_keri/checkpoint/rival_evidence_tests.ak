@@ -259,12 +259,19 @@ test a_claim_of_another_threshold_is_refused() {
   opened(with_claim(advance_witnessed_2key, claim)) == None
 }
 
+// The bytes carry a p that is not a qualified digest (a quote in place of its
+// code) and the claim says so too: the bytes match the claim and the structure
+// is still refused.
 test a_prior_that_is_not_a_qualified_digest_is_refused() {
-  let claim = RivalClaim {
-    ..fork_rival.claim,
-    prior: bytearray.concat("\"", bytearray.drop(fork_rival.claim.prior, 1)),
+  let c = fork_rival
+  let bad = bytearray.concat("\"", bytearray.drop(c.claim.prior, 1))
+  let claim = RivalClaim { ..c.claim, prior: bad }
+  let bytes = splice(c.event_bytes, c.off_p, 44, bad)
+  and {
+    canonical_structure(c.claim, c.event_bytes),
+    bytearray.slice(bytes, c.off_p, c.off_p + 43) == bad,
+    !canonical_structure(claim, bytes),
   }
-  !canonical_structure(claim, fork_rival.event_bytes)
 }
 
 // ---------------------------------------------------------
@@ -395,10 +402,15 @@ fn padding(n: Int) -> ByteArray {
   }
 }
 
+// Padding inside the anchors keeps the structure; only the size is over the
+// hash limit.
 test bytes_over_the_hash_limit_are_refused_without_a_hash() {
-  let long = bytearray.concat(fork_rival.event_bytes, padding(700))
+  let c = fork_rival
+  let long = resized(
+    splice(c.event_bytes, bytearray.length(c.event_bytes) - 2, 0, padding(700)),
+  )
   and {
     bytearray.length(long) > 1024,
-    open_digest(fork_rival.claim, long) == None,
+    open_digest(c.claim, long) == None,
   }
 }

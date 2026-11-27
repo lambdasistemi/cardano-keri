@@ -82,25 +82,23 @@ const predicateMutants = [
 ];
 
 const evidenceMutants = [
-  { name: 'hash-limit', clause: 'bytes over 1024 are not hashed', from: 'length > hash_limit || ', to: '' },
-  { name: 'span-start', clause: 'd span inside the bytes (start)', from: 'off_d < 0 || ', to: '' },
-  { name: 'span-end', clause: 'd span inside the bytes (end)', from: 'off_d + 44 > length', to: 'False' },
+  { name: 'hash-limit', clause: 'bytes over 1024 are not hashed', from: 'size > hash_limit || ', to: '' },
+  { name: 'prior-qualified', clause: 'p is a qualified digest', from: 'aid_digest(claim.prior) != None,', to: 'True,' },
+  { name: 'structure-prefix', clause: 'every claimed value sits in its canonical top-level field', from: 'bytearray.take(dress(event_bytes, d_off), prefix) == expected,', to: 'True,' },
+  { name: 'anchors-open', clause: 'the anchors are a list', from: 'bytearray.at(event_bytes, prefix) == 91,', to: 'True,' },
+  { name: 'anchors-close', clause: 'the anchors close the event', from: 'bytearray.drop(event_bytes, size - 2) == "]}",', to: 'True,' },
+  { name: 'structure-checked-at-the-opener', clause: 'the structure is established where the digest is opened', from: 'if canonical_structure(claim, event_bytes) {', to: 'if True {' },
   { name: 'said-dressing', clause: 'the d value is dressed before hashing', from: '|> bytearray.concat(dummy_span)', to: '|> bytearray.concat("")' },
-  { name: 'declared-digest-refused', clause: 'the carried d is the recomputed digest', from: 'if slice_matches(event_bytes, off_d, qb64_aid(digest)) {', to: 'if True {' },
-  { name: 'keys-list-bound', clause: 'k list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_k_list,\n      list_text(list.map(claim.cur_keys, qb64_verkey)),\n    ),', to: '    True,' },
-  { name: 'next-list-bound', clause: 'n list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_n_list,\n      list_text(list.map(claim.next_keys, qb64_aid)),\n    ),', to: '    True,' },
-  { name: 'cut-list-bound', clause: 'br list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_br_list,\n      list_text(list.map(e.wit_cut, qb64_witness_verkey)),\n    ),', to: '    True,' },
-  { name: 'add-list-bound', clause: 'ba list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_ba_list,\n      list_text(list.map(e.wit_add, qb64_witness_verkey)),\n    ),', to: '    True' },
-  { name: 'sequence-bound', clause: 'the claimed sequence is the bytes', from: 'native_sn: claim.sn,', to: 'native_sn: 1,' },
-  { name: 'signatures-verified', clause: 'controller signatures verified over the bytes', from: 'verified_indices(claim.cur_keys, e.event_bytes, e.ctrl_sigs)', to: 'list.range(0, list.length(claim.cur_keys) - 1)' },
-  { name: 'receipts-verified', clause: 'witness receipts verified over the bytes', from: 'verified_indices(witnesses, e.event_bytes, e.wit_receipts)', to: 'list.range(0, list.length(witnesses) - 1)' },
+  { name: 'declared-digest-refused', clause: 'the carried d is the recomputed digest', from: 'if slice_matches(event_bytes, d_off, qb64_aid(digest)) {', to: 'if True {' },
+  { name: 'signatures-verified', clause: 'controller signatures verified over the bytes', from: 'verified_indices(claim.cur_keys, event_bytes, ctrl_sigs)', to: 'list.range(0, list.length(claim.cur_keys) - 1)' },
+  { name: 'receipts-verified', clause: 'witness receipts verified over the bytes', from: 'verified_indices(witnesses, event_bytes, wit_receipts)', to: 'list.range(0, list.length(witnesses) - 1)' },
   { name: 'receipts-against-derived-witnesses', clause: 'receipts index the derived witness set', from: 'let witnesses = derived_witnesses(previous, skeleton)', to: 'let witnesses = previous.witnesses' },
   { name: 'own-digest-carried', clause: 'the rival carries its own digest', from: 'event_digest: digest,', to: 'event_digest: claim.aid,' },
 ];
 const mutants = SET === 'evidence' ? evidenceMutants : predicateMutants;
 
 const survivorControl = SET === 'evidence'
-  ? { name: 'comment-only-edit', from: 'pub fn event_said(', to: '// an edit that changes no behaviour\npub fn event_said(' }
+  ? { name: 'comment-only-edit', from: 'pub fn open_digest(', to: '// an edit that changes no behaviour\npub fn open_digest(' }
   : { name: 'comment-only-edit', from: 'pub fn derived_witnesses(', to: '// an edit that changes no behaviour\npub fn derived_witnesses(' };
 
 const WORKERS = Math.max(1, Number(process.env.RIVAL_MUTANT_WORKERS ?? Math.min(4, availableParallelism())));

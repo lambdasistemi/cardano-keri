@@ -46,7 +46,7 @@ const intList = (xs) => `[${xs.join(', ')}]`;
 
 function probes(text) {
   const at = (needle) => { const i = text.indexOf(needle); if (i < 0 || text.indexOf(needle, i + 1) >= 0) throw new Error(`probe ${needle}`); return i; };
-  return { kt: at('"kt":'), s: at('"s":'), a: at('"a":') + 4, d: at('"d":"') + 5 };
+  return { kt: at('"kt":'), s: at('"s":'), a: at('"a":') + 4, d: at('"d":"') + 5, p: at('"p":"') + 5 };
 }
 
 const rows = cases.map(([file, name, icpKey, rotKey, sigKey, receiptKey]) => {
@@ -95,6 +95,7 @@ pub const ${name}: Case =
     off_kt: ${o.kt},
     off_s: ${o.s},
     off_a: ${o.a},
+    off_p: ${o.p},
     said: "${rot.said}",
   }
 `;
@@ -125,6 +126,7 @@ pub type Case {
   off_kt: Int,
   off_s: Int,
   off_a: Int,
+  off_p: Int,
   said: ByteArray,
 }
 `;

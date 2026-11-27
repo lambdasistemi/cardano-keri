@@ -29,7 +29,7 @@ use cardano_keri/consumer_table_interpretation.{
 use cardano_keri/consumer_test_interpretation as test_interpretation
 
 // ---------------------------------------------------------------------
-// Variations of the anchor row (born at 2, W = 5, now = 7: maturity is exact)
+// Variations of the anchor row (born at 1, W = 5, now = 6: maturity is exact)
 // ---------------------------------------------------------------------
 
 fn base() -> Query {
@@ -175,12 +175,12 @@ fn conjunction_variant(
   let q = if aid {
     q
   } else {
-    with_decoded(q, DecodedDatum { aid: q.context.aid + 1, state: live(2) })
+    with_decoded(q, DecodedDatum { aid: q.context.aid + 1, state: live(1) })
   }
   if state {
     q
   } else {
-    with_state(q, live_with(False, True, 2))
+    with_state(q, live_with(False, True, 1))
   }
 }
 
@@ -225,22 +225,21 @@ test ci01_ci02_acceptance_is_exactly_the_conjunction() {
 // CI03: for a realizing output the verdict is the old lifecycle predicate
 // ---------------------------------------------------------------------
 
-/// Each state with the Lean's `consumableState` verdict at W = 5, now = 7,
-/// stated by hand: present, unfrozen, unpoisoned and bornAt + 5 <= 7.
+/// Each state with the Lean's `consumableState` verdict at W = 5, now = 6,
+/// stated by hand: present, unfrozen, unpoisoned and bornAt + 5 <= 6.
 fn lifecycle_states() -> List<(State, Bool)> {
   [
     (Absent, False),
     (Convicted, False),
     (TerminationPending(Hash { epoch: 1, sn: 3 }), False),
-    (live_with(False, False, 2), True),
     (live_with(False, False, 1), True),
     (live_with(False, False, 0), True),
-    (live_with(False, False, 3), False),
-    (live_with(True, False, 2), False),
-    (live_with(False, True, 2), False),
-    (live_with(True, True, 2), False),
+    (live_with(False, False, 2), False),
+    (live_with(True, False, 1), False),
+    (live_with(False, True, 1), False),
+    (live_with(True, True, 1), False),
+    (live_with(False, False, 6), False),
     (live_with(False, False, 7), False),
-    (live_with(False, False, 8), False),
   ]
 }
 
@@ -491,8 +490,8 @@ test ci10_wrong_datum_aid_refused() {
   let q = base()
   verdict(q) && refuses_all(
     [
-      with_decoded(q, DecodedDatum { aid: q.context.aid + 1, state: live(2) }),
-      with_decoded(q, DecodedDatum { aid: 0, state: live(2) }),
+      with_decoded(q, DecodedDatum { aid: q.context.aid + 1, state: live(1) }),
+      with_decoded(q, DecodedDatum { aid: 0, state: live(1) }),
     ],
   )
 }
@@ -507,17 +506,17 @@ test ci11_ineligible_state_refused() {
     [
       with_state(q, Absent),
       with_state(q, Convicted),
-      with_state(q, live_with(False, True, 2)),
-      with_state(q, live_with(True, False, 2)),
-      with_state(q, live_with(True, True, 2)),
+      with_state(q, live_with(False, True, 1)),
+      with_state(q, live_with(True, False, 1)),
+      with_state(q, live_with(True, True, 1)),
       // one slot short of maturity
-      with_now(q, 6),
-      with_state(q, live_with(False, False, 3)),
+      with_now(q, 5),
+      with_state(q, live_with(False, False, 2)),
     ],
-  ) && verdict(with_now(q, 8)) && verdict(with_now(q, 7)) && verdict(
-    with_w(with_now(with_state(q, live_with(False, False, 7)), 7), 0),
+  ) && verdict(with_now(q, 7)) && verdict(with_now(q, 6)) && verdict(
+    with_w(with_now(with_state(q, live_with(False, False, 6)), 6), 0),
   ) && !verdict(
-    with_w(with_now(with_state(q, live_with(False, False, 7)), 6), 0),
+    with_w(with_now(with_state(q, live_with(False, False, 6)), 5), 0),
   )
 }
 
@@ -633,7 +632,7 @@ fn holding_of(t: Token, n: Int) -> Output {
 }
 
 fn accepts_with(c: Context, o: Output) -> Bool {
-  let decoded = DecodedDatum { aid: c.aid, state: live(2) }
+  let decoded = DecodedDatum { aid: c.aid, state: live(1) }
   let q = base()
   consumable_holding(
     test_interpretation.hash,

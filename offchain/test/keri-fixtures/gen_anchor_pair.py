@@ -39,7 +39,7 @@ def digest(byte):
 
 
 ROWS = []
-for index, seals in enumerate([0, 1, 2, 4, 8, 16, 32, 64]):
+for index, seals in enumerate([0, 1, 2, 4, 8, 10, 12, 13, 14, 16, 32, 64]):
     who = signer(0x60 + index)
     data = [{"d": digest(0x80 + index * 4 + k % 4 + (k // 4) * 0)} for k in range(seals)]
     # distinct seal digests: derive each from its own seed

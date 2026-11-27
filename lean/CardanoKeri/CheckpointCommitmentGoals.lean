@@ -536,31 +536,67 @@ theorem sys_conviction_consumes_commitment (p : Params) (env : SystemEnv) {s s' 
     conviction_closing_event p env h hlive hpending
   exact ⟨payee, c, now, held, named, dep, entitled, spent⟩
 
-/-- Given a reachable system where one step changes a live checkpoint to pending
-termination, reading the transaction recovers its conviction command, commitment,
-payee and slot. That same slot entitles the payee and follows the opening. -/
+/-- Given a reachable system with a live checkpoint, when the supplied conviction
+occurs, its commitment was open under its marker. That commitment entitles the
+supplied payee at the supplied slot, which is strictly after the opening. -/
 theorem sys_conviction_after_opening_slot (p : Params) (env : SystemEnv) {s s' : Sys}
+    (reach : SysReach p env s) {aid : AID} {l : Live} {payee : Addr} {c : Commitment} {now : Slot}
+    (live : s.states aid = .present l) (actual : (ClosingEvent.convict aid payee now).Occurs p env s s' c) :
+    s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now :=
+  conviction_event_after_opening reach live actual
+
+/-- Given a reachable live checkpoint and a system step leaving it pending, there
+exists a conviction between those states, with an open commitment entitling its
+payee at a slot strictly after opening. The step leaves that slot existential. -/
+theorem exists_conviction_after_opening_of_pending (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}
     (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :
     ∃ (payee : Addr) (c : Commitment) (now : Slot),
       (ClosingEvent.convict aid payee now).Occurs p env s s' c ∧
       s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now := by
   obtain ⟨payee, c, now, _, _, _, _, _, actual⟩ := conviction_closing_event p env h hlive hpending
-  exact ⟨payee, c, now, actual, conviction_event_after_opening reach hlive actual⟩
+  exact ⟨payee, c, now, actual, sys_conviction_after_opening_slot p env reach hlive actual⟩
 
-/-- **A commitment closes only inside or after its window.**
-Given a reachable system with a commitment `c` open under marker `m`, and a step
-after which nothing is open under `m`.
-When the step is read.
-Then the caller recovers the closing command, its transition between those two
-systems and the marker it consumed. Its recorded slot lies inside `c`'s window (a reveal, or the conviction that
-revealed `c`) or strictly after it (a sweep); never before `c` was eligible. -/
+/-- Given a reachable system holding commitment `c` under marker `m`, when the
+supplied closing event occurs, `m` is the commitment's marker and is absent
+afterwards. A supplied conviction or reveal occurs between eligibility and
+expiry, inclusively. A supplied sweep occurs strictly after expiry. -/
 theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s' : Sys}
+    (reach : SysReach p env s) {m : Marker} {c : Commitment} {event : ClosingEvent}
+    (hopen : s.commitments m = some c) (actual : event.Occurs p env s s' c) :
+    c.marker = m ∧ s'.commitments m = none ∧
+      match event with
+      | .convict _ _ now | .reveal now => c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt
+      | .sweep now => c.expiresAt < now := by
+  obtain ⟨rfl, _⟩ := ledger_well_formed p env reach m c hopen
+  refine ⟨rfl, ?_, ClosingEvent.timing actual⟩
+  cases event with
+  | convict aid payee now =>
+    obtain ⟨_, _, _, _, _, rfl⟩ := actual
+    simp [Sys.retireRevealed, Action.revealed, Sys.retire]
+  | reveal now =>
+    obtain ⟨_, _, _, rfl⟩ := actual
+    simp [Sys.retire]
+  | sweep now =>
+    obtain ⟨_, _, rfl⟩ := actual
+    simp [Sys.retire]
+
+/-- Given a reachable system with a commitment open under a marker, when a
+system step leaves that marker empty, the marker belongs to the commitment and
+some closing event realizes the transition at a slot inside or after its window. -/
+theorem exists_closing_event_of_marker_spent (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}
     (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none) :
     c.marker = m ∧ ∃ event : ClosingEvent, event.Occurs p env s s' c ∧
       ((c.eligibleAfter ≤ event.slot ∧ event.slot ≤ c.expiresAt) ∨ c.expiresAt < event.slot) := by
   refine ⟨(ledger_well_formed p env reach m c hopen).1, ?_⟩
+  suffices existsEvent : ∃ event : ClosingEvent, event.Occurs p env s s' c by
+    obtain ⟨event, actual⟩ := existsEvent
+    have timing := (commitment_closes_in_or_after_window p env reach hopen actual).2.2
+    refine ⟨event, actual, ?_⟩
+    cases event with
+    | convict | reveal => exact Or.inl timing
+    | sweep => exact Or.inr timing
   cases h with
   | register event =>
     obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
@@ -578,8 +614,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s
           obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened.1 r rfl
           rw [← same, hopen] at ropen
           cases ropen
-          obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p _ step
-          exact ⟨.convict x payee now, ⟨f, st, ordinary, step, opened, rfl⟩, Or.inl ⟨hent.2.2.2.1, hent.2.2.2.2⟩⟩
+          exact ⟨.convict x payee now, f, st, ordinary, step, opened, rfl⟩
         | register | rotate | poison | freeze | topUp => cases hr
       · simp [same, hopen] at hclosed
   | book event =>
@@ -601,7 +636,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s
     by_cases same : m = d.marker
     · rw [← same, hopen] at dopen
       cases dopen
-      exact ⟨.reveal now, ⟨by simpa [same] using hopen, early, late, rfl⟩, Or.inl ⟨early, late⟩⟩
+      exact ⟨.reveal now, by simpa [same] using hopen, early, late, rfl⟩
     · simp [same, hopen] at hclosed
   | sweep event =>
     obtain ⟨d, now, dopen, expired, rfl⟩ := event
@@ -609,7 +644,7 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s
     by_cases same : m = d.marker
     · rw [← same, hopen] at dopen
       cases dopen
-      exact ⟨.sweep now, ⟨by simpa [same] using hopen, expired, rfl⟩, Or.inr expired⟩
+      exact ⟨.sweep now, by simpa [same] using hopen, expired, rfl⟩
     · simp [same, hopen] at hclosed
 
 

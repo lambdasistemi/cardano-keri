@@ -140,6 +140,41 @@ private theorem conviction_at_five : (ClosingEvent.convict 11 7 5).Occurs p env 
   · exact Step.convict 5 7 commitment (by decide) (by decide)
   · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
 
+-- The same two states admit both commands. The headline timing result for
+-- the reveal must still use slot 10, even when the caller also has the sweep.
+example : commitment.eligibleAfter ≤ 10 ∧ 10 ≤ commitment.expiresAt := by
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  have reveal : (ClosingEvent.reveal 10).Occurs p env committed (committed.retire 1) commitment :=
+    ⟨rfl, by decide, by decide, rfl⟩
+  have sweep : (ClosingEvent.sweep 21).Occurs p env committed (committed.retire 1) commitment :=
+    ⟨rfl, by decide, rfl⟩
+  have applyReveal := commitment_closes_in_or_after_window p env reachable
+    (m := 1) (c := commitment) (event := .reveal 10) rfl (s' := committed.retire 1)
+  fail_if_success exact (applyReveal sweep).2.2
+  have sweepBound : commitment.expiresAt < 21 :=
+    (commitment_closes_in_or_after_window p env reachable (m := 1) (c := commitment)
+      (event := .sweep 21) rfl sweep).2.2
+  fail_if_success exact sweepBound
+  exact (applyReveal reveal).2.2
+
+-- The headline itself rules out a conviction at slot 4 for this reachable
+-- opening, even though the same successor can be produced at slot 5.
+example : ¬ (ClosingEvent.convict 11 7 4).Occurs p env committed pending commitment := by
+  intro early
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  have window := (commitment_closes_in_or_after_window p env reachable (m := 1)
+    (c := commitment) (event := .convict 11 7 4) rfl early).2.2
+  exact (by decide : ¬ commitment.eligibleAfter ≤ 4) window.1
+
+-- A conviction supplied at slot 5 entitles the supplied payee at slot 5.
+example : commitment.entitles (env 11) rotatedLive 7 5 ∧ commitment.openedAt < 5 := by
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  exact (sys_conviction_after_opening_slot p env reachable (aid := 11) (payee := 7)
+    (now := 5) (l := rotatedLive) rfl conviction_at_five).2
+
 -- The former time-only conclusion holds for every commitment, without a step.
 example (c : Commitment) : ∃ now : Slot,
     (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now :=

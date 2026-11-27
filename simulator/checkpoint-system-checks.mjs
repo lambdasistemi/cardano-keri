@@ -51,6 +51,7 @@ const checkClosing = (command, expected, label) => {
   const cell = {...early, command};
   assert.equal(systemProperties(cell).commitment_closes_in_or_after_window.holds, expected, label);
 };
+checkClosing({reveal: {marker: 1, now: 10}}, true, 'reveal at slot 10 reaches the same retired state');
 checkClosing({reveal: {marker: 1, now: 20}}, true, 'reveal at expiry');
 checkClosing({sweep: {marker: 1, now: 21}}, true, 'sweep after expiry');
 checkClosing({reveal: {marker: 1, now: 21}}, false, 'expired reveal');
@@ -60,6 +61,13 @@ const wrongSlot = structuredClone(convict);
 wrongSlot.command.local.now = 21;
 assert.equal(systemProperties(wrongSlot).commitment_closes_in_or_after_window.holds, false, 'expired conviction');
 assert.equal(systemProperties(wrongSlot).sys_conviction_after_opening_slot.holds, false, 'entitlement at actual slot');
+const beforeEligibility = structuredClone(convict);
+beforeEligibility.command.local.now = convict.command.local.action.convict.commitment.eligibleAfter - 1;
+const earlyConviction = systemProperties(beforeEligibility);
+for (const name of ['commitment_closes_in_or_after_window', 'sys_conviction_after_opening_slot']) {
+  assert(earlyConviction[name].exhibited, name + ' checked the supplied conviction');
+  assert.equal(earlyConviction[name].holds, false, name + ' refused the pre-eligibility slot');
+}
 // A step that changes the deployment, a top-up that burns an open commitment, a
 // conviction accepted on a commitment of another deployment, and a conviction
 // consuming a commitment in a system of another deployment.
@@ -130,4 +138,4 @@ for (const [field, change] of Object.entries(writerChanges)) {
   assert(replay.records.slice(0, -1).every(record => record.result.ok), field + ': changed writer must be reachable');
   assert.equal(replay.records.at(-1).result.error, 'checkpoint-rotation-writer-mismatch', field);
 }
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:26}));
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:29}));

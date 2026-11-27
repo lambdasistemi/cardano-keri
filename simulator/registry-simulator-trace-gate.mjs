@@ -3,6 +3,7 @@
  * replay. --selftest also checks corrupt corpora, a live guard mutation and a
  * cold source copy. Compile/setup failures never count as semantic controls. */
 import assert from 'node:assert/strict';
+import './checkpoint-rival-validity-checks.mjs';
 import {readFileSync,writeFileSync,mkdtempSync,cpSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';

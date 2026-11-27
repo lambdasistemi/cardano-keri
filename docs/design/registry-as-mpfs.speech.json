@@ -27,7 +27,7 @@
       "pause": 400
     },
     {
-      "text": "At a rotated checkpoint, concluding KERI duplicity from this spend also requires the rival to be valid under the predecessor’s rotation rules. Whether every rival accepted by the checkpoint meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments.",
+      "text": "A reachable conviction establishes KERI duplicity for the rival actually presented. A valid sibling at the same position with different content passes the evidence comparison. The convictor must also reveal the matching open commitment and mint the attestation for this spend. The Singular folder processes the resulting request.",
       "pause": 400
     }
   ],
@@ -225,7 +225,7 @@
       "pause": 400
     },
     {
-      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). Conformance to KERI duplicity remains open at inception and depends on the rival’s validity against the predecessor after rotation.",
+      "text": "In the Lean example, identifier 11 rotates to epoch 1, sequence 1. Its conviction creates output 0 of transaction 105. Transaction 200 spends that output and places the termination request at index 0. Choosing the registration output, the rotation output or a different request reference loses the correspondence. The economic entry records output 105#0, identifier 11, epoch 1 and sequence 1 (economic_entry_for_rotated_checkpoint). The example supplies the abstract attestation for transaction 105, whose observed mint field is empty. Ledger correspondence remains open under #576. Lean refuses conviction at inception. Validator evidence for this refusal remains outstanding.",
       "pause": 400
     }
   ],
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "registry-as-mpfs.md",
-    "sha256": "4916d2b3917b08dbddee8ab35d4398c615ff6a29cb7f8e35b54607a4965ca8e9"
+    "sha256": "cdc7c7f734637010ed0c34c786e7c567f815ea8114a15575e3a9e6af73fed4ab"
   }
 }

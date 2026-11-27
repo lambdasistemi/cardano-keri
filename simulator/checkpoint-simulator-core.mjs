@@ -290,61 +290,7 @@ const envDepositAuthorized = (env, e) => envHas(env, 'depositAuthorized', [e]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
 // Concrete transcription of CardanoKeri.Duplicity. The public scenario table
 // selects a documented example pair; it does not assert a duplicity verdict.
-const unique = xs => [...new Set(xs)];
-const distinct = xs => unique(xs).length === xs.length;
-const fractionAdd = (a, b) => [a[0] * b[1] + b[0] * a[1], a[1] * b[1]];
-const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
-const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
-function thresholdSatisfied(threshold, keys, signers) {
-  const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
-  const clauses = threshold.weighted.clauses;
-  let offset = 0;
-  const valid = clauses.length > 0 && clauses.every(clause => {
-    let sum = [0n, 1n];
-    if (!clause.length) return false;
-    for (const w of clause) {
-      const term = w.key || w.group;
-      if (!term.weight.denominator) return false;
-      if (w.key) {
-        if (signed[offset]) sum = fractionAdd(sum, fraction(term.weight));
-        offset++;
-      } else {
-        if (!term.members.length || term.members.some(m => !m.denominator)) return false;
-        let inner = [0n, 1n];
-        for (const member of term.members) {
-          if (signed[offset]) inner = fractionAdd(inner, fraction(member));
-          offset++;
-        }
-        if (atLeastOne(inner)) sum = fractionAdd(sum, fraction(term.weight));
-      }
-    }
-    return atLeastOne(sum);
-  });
-  return valid && offset === keys.length;
-}
-function verifiedSigners(event, signatures) {
-  return unique(signatures.filter(s => s.verified && canon(s.event) === canon(event)).map(s => s.signer));
-}
-function derivedWitnesses(prior, event) {
-  return unique([...prior.witnesses.filter(w => !event.cuts.includes(w)), ...event.adds]);
-}
-function signingValid(prior, signed) {
-  const event = signed.event, signers = verifiedSigners(event, signed.signatures);
-  const exposed = prior.nextKeys.filter(k => event.keys.includes(k));
-  return prior.nextKeys.length > 0 && distinct(prior.nextKeys) && distinct(event.keys) && event.keys.length > 0 &&
-    thresholdSatisfied(prior.nextThreshold, prior.nextKeys, signers.filter(k => exposed.includes(k))) &&
-    thresholdSatisfied(event.threshold, event.keys, signers);
-}
-function receiptsValid(prior, signed) {
-  const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
-  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
-    event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
-}
-function rotationValid(prior, signed) {
-  return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
-    signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
-}
+const { thresholdSatisfied, verifiedSigners, derivedWitnesses, signingValid, receiptsValid, rotationValid } = checkpointEvidence;
 function concreteDuplicityAt(epoch, sn, context, rival) {
   return context.epoch === epoch && context.accepted.event.sn === sn &&
     rotationValid(context.prior, context.accepted) && rotationValid(context.prior, rival) &&
@@ -362,7 +308,7 @@ function commitmentFor(l, payee, openedAt) {
 function entitles(env, c, l, payee, now, aid = 0) {
   const rival = observedSpend(env, aid, l.epoch, l.sn)?.comparison.rival;
   return c.keyState.epoch === l.epoch && c.keyState.sn === l.sn && rival !== undefined &&
-    rival.aid === c.aid && canon(rival) === canon(c.evidence) && c.payee === payee &&
+    rival.event.aid === c.aid && canon(rival) === canon(c.evidence) && c.payee === payee &&
     c.eligibleAfter <= now && now <= c.expiresAt;
 }
 function envAcceptsRival(env, epoch, sn, aid = 0) {
@@ -755,7 +701,7 @@ function explain(rec, s) {
     case 'already-topped-up': return 'This key state was already topped up: a top-up is allowed once between two rotations, so a stream of tiny top-ups cannot keep the checkpoint busy. The next touch needs KERI evidence: a rotation, a poison, a freeze or a conviction.';
     case 'top-up-below-premium': return `The top-up (${d.x}) is less than one premium (${p.P}): a top-up refills at least one premium.`;
     case 'commitment-not-entitling': return `The conviction reveals no commitment entitling its payee now: the commitment must name this key state (epoch ${l.epoch}, sequence ${l.sn}), the evidence shown at it and the payee paid, and the slot must lie in its window, after the upper bound of its opening transaction’s validity range and no later than it expires. The pool and the poison, freeze and top-up marks do not matter; a rotation changes the key state.`;
-    case 'no-duplicity-proof': return `No second rotation at sequence ${l.sn} revealing the keys of epoch ${l.epoch}, signed at the current threshold and receipted by the tip’s witnesses, was presented.`;
+    case 'no-duplicity-proof': return `No accepted rival was presented at sequence ${l.sn}, epoch ${l.epoch}. A distinct rotation must meet the carried previous commitments and its own signing and witness rules.`;
     case 'slot-regression': return `Slot ${rec.slot} is before the last accepted slot ${rec.now}: the chain does not go backwards.`;
   }
   return 'Refused: ' + rec.reason;

@@ -374,23 +374,25 @@ step:
           epoch: 2
           sn: 2
         evidence:
-          bytes: [0, 2, 2, 1]
-          rotation: true
-          aid: 0
-          sn: 2
-          revealedKeys:
-            - [0]
-          threshold:
-            unweighted:
-              m: 1
-          nextKeys:
-            - [1]
-          nextThreshold:
-            unweighted:
-              m: 1
-          toad: 0
-          signatures:
-            - [0,[0,0,2,2,1]]
+          event:
+            aid: 0
+            sn: 2
+            kind: rotation
+            priorDigest: 0
+            keys: [0]
+            threshold:
+              count:
+                required: 1
+            nextKeys: [1]
+            nextThreshold:
+              count:
+                required: 1
+            cuts: []
+            adds: []
+            witnessThreshold: 0
+            extension: []
+          structureVerified: true
+          signatures: [{"signer":0,"event":{"aid":0,"sn":2,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
           receipts: []
         payee: 3
         openedAt: 49

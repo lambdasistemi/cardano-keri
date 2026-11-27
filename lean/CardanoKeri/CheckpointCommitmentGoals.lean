@@ -129,14 +129,14 @@ theorem convict_refused_in_opening_slot (p : Params) (env : Env) {l : Live} {pay
     (Nat.not_le.mp fun h => Nat.not_lt.mpr hsame ((commitment_eligible_from_next_slot hformed t).mp h))
 
 /-- Given a local conviction, when the commitment is revealed, then its
-evidence is the very rival whose comparison the enforcement observer accepts.
+evidence is the very rival whose comparison the conviction mint accepts.
 The tip and the rival both name the commitment's identifier. -/
 theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr}
     {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}
     (h : Step p env (.convict payee c) t (.present l) f s') :
     ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧
       comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧
-      comparison.rival = c.evidence ∧ CheckpointConviction.accepts env.verifyRival comparison.tip c.evidence = true := by
+      comparison.rival = c.evidence ∧ CheckpointConviction.accepts comparison.tip c.evidence = true := by
   obtain ⟨_, hl, accepted, entitled⟩ := convict_requires_entitlement p env h
   cases hl
   have read := entitled.2.1
@@ -145,9 +145,9 @@ theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr
   | some comparison =>
     simp only [Env.acceptsRival, found, Option.map_some, Option.getD_some,
       CheckpointConviction.Comparison.acceptsAt, Bool.and_eq_true, beq_iff_eq] at accepted
-    by_cases named : comparison.rival.aid = c.aid
+    by_cases named : comparison.rival.event.aid = c.aid
     · simp [Env.evidenceAt, found, named] at read
-      obtain ⟨_, aid, _⟩ := CheckpointConviction.accepted_rival _ _ _ accepted.2
+      obtain ⟨_, _, _, aid, _⟩ := (CheckpointConviction.accepts_iff _ _).1 accepted.2
       exact ⟨_, rfl, aid.trans named, accepted.1.1, accepted.1.2, read, read ▸ accepted.2⟩
     · simp [Env.evidenceAt, found, named] at read
 

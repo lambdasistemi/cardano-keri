@@ -439,9 +439,9 @@
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.revealed-keys",
+      "id": "9.prior-next-keys",
       "story": 9,
-      "clause": "reveals the spent keys",
+      "clause": "satisfies the previous next-key commitment and threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
@@ -450,9 +450,9 @@
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.spent-signing-threshold",
+      "id": "9.rival-signing-threshold",
       "story": 9,
-      "clause": "meets the spent signing threshold",
+      "clause": "meets its own signing threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
@@ -461,9 +461,9 @@
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.spent-witness-threshold",
+      "id": "9.rival-receipt-threshold",
       "story": 9,
-      "clause": "meets the spent witness threshold",
+      "clause": "meets its own receipt threshold using its derived witnesses",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
@@ -472,9 +472,9 @@
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.forward-conflict",
+      "id": "9.complete-content-conflict",
       "story": 9,
-      "clause": "and differs on a forward field",
+      "clause": "and differs from the complete writer event",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",

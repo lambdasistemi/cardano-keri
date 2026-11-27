@@ -392,7 +392,7 @@ function renderPots() {
     ['Pending termination','Conviction retains the token and key. Booking moves whole custody to a request; another request cannot complete it.'],
     ['Retired registry key','Permanent. Its representative token was burned by the consuming fold.'],
     ['Time windows','Registration processing: '+c.processTime+' slots after the booking. Until then only a fold spends the request; from then anyone returns it, less its tip, to its refund address. Complete transaction bounds are checked.'],
-    ['Evidence table','The conviction observation supplies the indexed output, spent keys, rival, signatures and witness receipts. The simulator uses its finite signature verifier.']])dl.append(h('dt',{},term),h('dd',{},body));
+    ['Evidence table','The conviction observation names an indexed output and supplies the writer, its predecessor and the signed rival. The simulator checks event-bound signature and receipt reads. The fixture table supplies the abstract mint attestation.']])dl.append(h('dt',{},term),h('dd',{},body));
 }
 
 function renderNarration() {

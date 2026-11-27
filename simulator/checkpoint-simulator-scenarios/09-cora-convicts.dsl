@@ -9,7 +9,7 @@ params:
   B: 5
   P: 2
   W: 10
-atoms: ["9.same-sequence", "9.same-identifier", "9.revealed-keys", "9.spent-signing-threshold", "9.spent-witness-threshold", "9.forward-conflict"]
+atoms: ["9.same-sequence", "9.same-identifier", "9.prior-next-keys", "9.rival-signing-threshold", "9.rival-receipt-threshold", "9.complete-content-conflict"]
 step:
   slot: 0
   who: alice
@@ -62,7 +62,7 @@ step:
 step:
   slot: 1
   who: alice
-  say: "Alice lands her first rotation. The checkpoint now records the keys against which the observer will check the rival."
+  say: "Alice lands her first rotation. The checkpoint now carries the previous commitments for validating a sibling rotation."
   evidence:
     add: [{"rotationTo":[0,0,1]}]
   action:
@@ -176,7 +176,7 @@ step:
 step:
   slot: 12
   who: cora
-  say: "Cora supplies a conflicting rotation at sequence 1. The rival reveals the spent keys, meets the spent thresholds and conflicts on the next keys. Cora holds a commitment naming this key state, this evidence and herself, opened by a transaction whose validity range ended in the slot before; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
+  say: "Cora supplies a conflicting rotation at sequence 1. The rival satisfies the previous commitments and its own signing and receipt rules. Its next keys differ from the writer’s. Cora holds a commitment naming this key state, this evidence and herself, opened by a transaction whose validity range ended in the slot before; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
   evidence:
     add: [{"duplicityAt":[1,1]}]
   action:
@@ -189,23 +189,25 @@ step:
           epoch: 1
           sn: 1
         evidence:
-          bytes: [0, 1, 1, 1]
-          rotation: true
-          aid: 0
-          sn: 1
-          revealedKeys:
-            - [0]
-          threshold:
-            unweighted:
-              m: 1
-          nextKeys:
-            - [1]
-          nextThreshold:
-            unweighted:
-              m: 1
-          toad: 0
-          signatures:
-            - [0,[0,0,1,1,1]]
+          event:
+            aid: 0
+            sn: 1
+            kind: rotation
+            priorDigest: 0
+            keys: [0]
+            threshold:
+              count:
+                required: 1
+            nextKeys: [1]
+            nextThreshold:
+              count:
+                required: 1
+            cuts: []
+            adds: []
+            witnessThreshold: 0
+            extension: []
+          structureVerified: true
+          signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
           receipts: []
         payee: 3
         openedAt: 11
@@ -275,23 +277,25 @@ fork:
             epoch: 1
             sn: 1
           evidence:
-            bytes: [0, 1, 1, 1]
-            rotation: true
-            aid: 0
-            sn: 1
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,1,1,1]]
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -345,7 +349,7 @@ fork:
   step:
     slot: 0
     who: cora
-    say: "This sequence-zero fixture carries no rival rotation. The comparison refuses that fixture. The general inception case remains open."
+    say: "Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses this spend is still outstanding."
     evidence:
       add: [{"duplicityAt":[0,0]}]
     action:
@@ -358,23 +362,25 @@ fork:
             epoch: 0
             sn: 0
           evidence:
-            bytes: [0, 0, 0, 1]
-            rotation: false
-            aid: 0
-            sn: 0
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,0,0,1]]
+            event:
+              aid: 0
+              sn: 0
+              kind: inception
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":0,"kind":"inception","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 0
@@ -407,23 +413,25 @@ fork:
             epoch: 1
             sn: 1
           evidence:
-            bytes: [0, 1, 1, 1]
-            rotation: true
-            aid: 0
-            sn: 1
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,1,1,1]]
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -456,23 +464,25 @@ fork:
             epoch: 1
             sn: 1
           evidence:
-            bytes: [0, 1, 1, 1]
-            rotation: true
-            aid: 0
-            sn: 1
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,1,1,1]]
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 12
@@ -516,23 +526,25 @@ fork:
             epoch: 1
             sn: 1
           evidence:
-            bytes: [0, 1, 1, 1]
-            rotation: true
-            aid: 0
-            sn: 1
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,1,1,1]]
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -664,23 +676,25 @@ fork:
             epoch: 1
             sn: 1
           evidence:
-            bytes: [0, 1, 1, 1]
-            rotation: true
-            aid: 0
-            sn: 1
-            revealedKeys:
-              - [0]
-            threshold:
-              unweighted:
-                m: 1
-            nextKeys:
-              - [1]
-            nextThreshold:
-              unweighted:
-                m: 1
-            toad: 0
-            signatures:
-              - [0,[0,0,1,1,1]]
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11

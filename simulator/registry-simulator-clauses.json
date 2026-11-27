@@ -1,15 +1,15 @@
 {
   "version": 3,
   "model": "CardanoKeri.Registry.stepFn",
-  "surfaceSha256": "735a6934f75ae2b279593796e61365248a2a94e43500323eb418e91a32794416",
-  "storiesMarkdownSha256": "9ea46247d1a4de752112090796cccda70a3066fc9b5a629beaa674023ebad376",
+  "surfaceSha256": "0519d5566f83fcf51f8c15a6b0a06a84e9d9c7abd496f08ee7923178623c5ebe",
+  "storiesMarkdownSha256": "c90a9cdb692a56792e27b54703f2d9b978e1d43497e52daf7139ee7948ea8888",
   "clauses": [
     {
       "story": 1,
       "given": "An empty registry, Alice's inception evidence and a complete registration booking.",
       "when": "Alice posts its observed value, application tag, ready tag and interval.",
       "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused, and so is a booking without inception evidence.",
-      "scenarioSha256": "5bc5232bd5812873839a3efe1629e12f6700453bf97bc8d8c84b1950ded72057",
+      "scenarioSha256": "0e652829622d8893c1fe673f254d8c9e9a024cc04684db6c9b630022aa52c350",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -42,7 +42,7 @@
       "given": "A pending registration, whose inception evidence was shown when it was booked.",
       "when": "Hal spends the request and registry in a complete economic fold.",
       "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances. The fold succeeds the same with no inception evidence at hand.",
-      "scenarioSha256": "5247873d3e82876ce4f776146f204e5b19af80e84e307d5b2f13b0f28362cac2",
+      "scenarioSha256": "842f6c12aa11d55398e6ab8a71c1ed380abc060d465590052dabae7a2c518574",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -79,7 +79,7 @@
       "given": "Two folders have proposals for the same registry generation.",
       "when": "One fold succeeds before the other is attempted.",
       "then": "The first delivery remains; the stale generation is refused.",
-      "scenarioSha256": "57d26de62831d70387b39fde2dc28a3b61b73ef7b4069f8ab513b337b241d309",
+      "scenarioSha256": "a17a3136642580ea2935d760bbfa8b5785a8b7af735fe245e89da52a61422d23",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -122,7 +122,7 @@
       "given": "A key already has its first delivered carrier, and a second registration of the same key is booked.",
       "when": "A folder tries to process the duplicate, Sam tries to return it before its deadline, and Sam returns it after the deadline citing the active key.",
       "then": "Booking alone cannot replace the carrier and processing fails. Nothing spends the duplicate before its deadline; after it the return removes the request and pays the contents less the tip to its refund address.",
-      "scenarioSha256": "f0c5e5bc059d687f4ca009d68ffae2b5af0b300fe3be3f0df1ff409463f5dbb1",
+      "scenarioSha256": "ac871a8d5320213b10f721aadf46e6bf908e84671ad90099e5cd4e82a1dea90b",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -181,7 +181,7 @@
       "given": "Alice booked a registration with a recorded refund address; nobody has folded it.",
       "when": "Alice tries to take it back inside the processing window, or with an interval that starts before the deadline, then returns it at the deadline.",
       "then": "Both early attempts are refused: until the deadline only a fold may spend the request, the requester included. At the deadline the return needs no signature and pays the contents less the tip to the refund address.",
-      "scenarioSha256": "d5fa442e0a2d51d5aaf17221417cbcc6ad675402658bdde2569834a91a095596",
+      "scenarioSha256": "36497fc725ef9f24f186e98b776f066e953cb57e57b7d1ecbbf374adc7f27574",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -224,7 +224,7 @@
       "given": "A registration remains pending beyond its deadline.",
       "when": "Sam reads the current registry and returns it, or tries to return it before the deadline, or tries to pay the refund to himself.",
       "then": "The request is removed and the contents less its tip reach Alice's refund address; Sam keeps the tip as his fee. The early return and the redirected refund are refused.",
-      "scenarioSha256": "f64393e05780fda0c1e94484760258aa47201f2c9fd2143b24db9fb06dfba4d7",
+      "scenarioSha256": "5be2c30be7223747d691fc93bb446d61329103a9ca1b9887db50d301f10aed46",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -267,7 +267,7 @@
       "given": "A pending registration has a bounded processing window.",
       "when": "Hal processes a nonempty batch within that window, or tries the empty/late alternatives.",
       "then": "The valid delivery succeeds; empty and out-of-window folds refuse without a successor state.",
-      "scenarioSha256": "1a4c1fcf68bb113aa237df5398c680852f14bf5532ddd54ffec6ab809327e0f0",
+      "scenarioSha256": "cdee6a6103e66da945979b0b7edb489f56fda74d00970f117707995d0558aafe",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -310,7 +310,7 @@
       "given": "The registry fixes its application policy.",
       "when": "A folder supplies that policy, with or without inception evidence at hand, or substitutes a different policy.",
       "then": "The correct fold succeeds; a substituted application policy is refused.",
-      "scenarioSha256": "eed8f57d9082b13f46f6ac2da5f25603ebed5514f35c60a92233ac6bc63cb1ad",
+      "scenarioSha256": "cbc0278e78dc7a7991db0d396e9020257186b916aa521292c9573a7e7dabde69",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -353,7 +353,7 @@
       "given": "A live carrier retains its token, key and min-ADA, and nobody has convicted it.",
       "when": "Sam tries to book it as a termination.",
       "then": "The booking is refused because only a convicted carrier can be booked. There is no owner exit to collect, and waiting creates no sweep entitlement.",
-      "scenarioSha256": "16683513442f780c19651cb6d1b32568a457719d2a791de60830545cee86fb8e",
+      "scenarioSha256": "246b6e6cee2a1e37188d8dbe0ac8c76891a88dbf23e4fd5af53079491e627b93",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -394,7 +394,7 @@
       "given": "A live carrier has duplicity evidence at its current key.",
       "when": "Cora convicts it, Sam books its termination, and Hal processes that exact pending request.",
       "then": "Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.",
-      "scenarioSha256": "39d33a027e9be79c177e9e1b9103cfdc2d96316231820a5bd37c853d3271dccd",
+      "scenarioSha256": "111b945922ccd202fdf1f753050dc4523a04f23f85f43e61031e766c24ecc963",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -455,6 +455,24 @@
           "index": 1,
           "action": "fold",
           "expectationSha256": "9c7e3e066cc34d1868351ce307c6113fb83f203d9bb2e89c0060d4cf7b53351c"
+        },
+        {
+          "branch": "partial-other-committed-key",
+          "index": 0,
+          "action": "convictCkpt",
+          "expectationSha256": "8e1f3d2e61509760f48152226f98094847e0f07698d189771b85b92f8a47297b"
+        },
+        {
+          "branch": "rival-witness-change",
+          "index": 0,
+          "action": "convictCkpt",
+          "expectationSha256": "8e1f3d2e61509760f48152226f98094847e0f07698d189771b85b92f8a47297b"
+        },
+        {
+          "branch": "tip-keys-insufficient-own-threshold",
+          "index": 0,
+          "action": "convictCkpt",
+          "expectationSha256": "6b73f0b53a4ad561bc8654b351dbd4bf542afaf00b65af0726f38f2f7dcb6b7b"
         }
       ]
     },
@@ -463,7 +481,7 @@
       "given": "A convicted carrier has been booked into pending termination custody.",
       "when": "Other parties try local moves, or a return of the pending termination, before the actual consuming fold.",
       "then": "The pending request remains whole until the fold consumes it. The return applies to registrations only; it is not a termination exit.",
-      "scenarioSha256": "3c9d0d13ced7dcdbc7551e088713b5c6573b67d3e069b24632c0c8248dd1084f",
+      "scenarioSha256": "6939265c96cb072e4f1234041451e697fd5c8a08ab9cc28ad1ec9d6f9bce097b",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -530,7 +548,7 @@
       "given": "Complete pending requests retain their own references and custody.",
       "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.",
       "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.",
-      "scenarioSha256": "01ba7731d750dd4da6b5ca992a8965318ec44b32a4ce275a9f0e5d3532c87f7d",
+      "scenarioSha256": "e1e7e457cdd78528a0d9871b038ab41db9b5918fa16edd94afc0602b29eabb88",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",

@@ -38,7 +38,7 @@ def retention : Except String Unit := do
       Singular.worldSingularSupply pending.state.toWorld 11 = 1))
   check "pending-cannot-reconvict" (refused (convictCkpt env pending.state 11))
   check "missing-duplicity" (refused
-    (convictCkpt { env with conviction := fun _ => none } live.state 11))
+    (convictCkpt { env with presentedConviction := fun _ => none } live.state 11))
 
 def main : IO Unit := do
   match retention with

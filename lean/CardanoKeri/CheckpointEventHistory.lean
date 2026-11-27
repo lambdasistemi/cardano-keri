@@ -80,7 +80,7 @@ theorem rotated_duplicity_iff_rival_valid {aid : Nat} {previous : EventHistory}
   exact ⟨fun h => h.2.2.2.1,
     fun h => ⟨rfl, rfl, (stored_rotation_valid accepted).2, h, samePosition, conflict⟩⟩
 
-/-- The advance and enforcement observers interpret verification keys and
+/-- The advance and conviction mint interpret verification keys and
 next-key commitments in the same identity domain used by the authenticated
 history. A digest opening is a cryptographic assumption. Interpretation is
 required only for bytes actually read from the checkpoint. -/
@@ -88,73 +88,130 @@ structure KeyReads where
   verificationKey : List Nat → Option Nat
   nextCommitment : List Nat → Option Nat
 
-private def thresholdRead : CheckpointDatum.Threshold → Option Duplicity.Threshold
-  | .unweighted n => Duplicity.Threshold.count <$> n.toNat?
-  | .weighted clauses => do
-    let weights ← clauses.mapM fun clause => clause.mapM fun (n, d) => do
-      return Duplicity.Weight.key ⟨← n.toNat?, ← d.toNat?⟩
-    return .weighted weights
+/-- Decoded establishment data carried on a checkpoint. The current event
+content can be identified by its authenticated digest opening. No previous
+datum or log is a field of this structure. -/
+structure WriterDatum where
+  writer : Content
+  witnesses : List Nat
+  previous : Option Predecessor
+  deriving Repr, DecidableEq, Lean.ToJson, Lean.FromJson
 
-/-- The complete key material in the spent datum must describe the actual
-writer. The established witnesses are reconstructed from the inception and
-the rotations in order, including cuts and additions. -/
-def KeyReads.matches (reads : KeyReads) (aid : Nat) (history : EventHistory)
+def WriterDatum.inception (event : Content) (witnesses : List Nat) : WriterDatum :=
+  ⟨event, witnesses, none⟩
+
+def WriterDatum.commitments (datum : WriterDatum) : Predecessor :=
+  ⟨datum.writer.aid, datum.writer.sn, false, datum.writer.nextKeys,
+    datum.writer.nextThreshold, datum.witnesses⟩
+
+/-- An accepted advance constructs its successor from the one spent datum. -/
+def WriterDatum.advance (spent : WriterDatum) (event : Content) : WriterDatum :=
+  ⟨event, derivedWitnesses spent.commitments event, some spent.commitments⟩
+
+def EventHistory.datum : EventHistory → WriterDatum
+  | .inception event witnesses => .inception event.event witnesses
+  | .rotation previous event => previous.datum.advance event.event
+
+/-- The one-step writer agrees with the complete authenticated history used
+by a relying party. In particular the witness set includes earlier deltas. -/
+theorem EventHistory.datum_commitments (h : EventHistory) :
+    h.datum.commitments = h.predecessor := by
+  induction h with
+  | inception => rfl
+  | rotation previous writer ih =>
+    simp [datum, WriterDatum.advance, WriterDatum.commitments, predecessor] at ih ⊢
+    rw [ih]
+
+theorem inception_carries_no_previous (event witnesses) :
+    (EventHistory.inception event witnesses).datum.previous = none := rfl
+
+theorem rotation_replaces_previous (history event) :
+    (EventHistory.rotation history event).datum.previous = some history.predecessor :=
+  congrArg some history.datum_commitments
+
+/-- Different older predecessors cannot affect the next output once the
+current writer and its established witnesses agree. -/
+theorem advance_forgets_older (datum : WriterDatum) (older : Option Predecessor) (event : Content) :
+    ({datum with previous := older} : WriterDatum).advance event = datum.advance event := rfl
+
+theorem EventHistory.datum_writer (history : EventHistory) :
+    history.datum.writer = history.writer.event := by
+  cases history <;> rfl
+
+/-- The input datum is checked without traversing the historical event log. -/
+def KeyReads.matchesDatum (reads : KeyReads) (aid epoch : Nat) (datum : WriterDatum)
     (tip : CheckpointConviction.Tip) : Bool :=
-  let event := history.writer.event
-  tip.aid == aid && tip.aid == event.aid && tip.epoch == history.epoch && tip.sn == event.sn &&
+  let event := datum.writer
+  decide (tip.previous = datum.previous) && decide (tip.writer = event) &&
+    tip.aid == aid && tip.aid == event.aid && tip.epoch == epoch && tip.sn == event.sn &&
     tip.keys.curKeys.mapM reads.verificationKey == some event.keys &&
-    thresholdRead tip.keys.curThreshold == some event.threshold &&
+    decide (tip.keys.curThreshold = event.threshold) &&
     tip.keys.nextKeys.mapM reads.nextCommitment == some event.nextKeys &&
-    thresholdRead tip.keys.nextThreshold == some event.nextThreshold &&
-    tip.keys.witnesses.mapM reads.verificationKey == some history.predecessor.witnesses &&
+    decide (tip.keys.nextThreshold = event.nextThreshold) &&
+    tip.keys.witnesses.mapM reads.verificationKey == some datum.witnesses &&
     tip.keys.toad == (event.witnessThreshold : Int)
 
-/-- The correspondence of decoded histories with the raw key representation
-and indexed cryptographic observations. The enforcement observer reads the tip
-from its named input and binds the rival's fields to the presented event bytes
-(enforcement_observer.ak 68–94). A concrete interpretation must preserve the
-writer, the signature messages and the event contents of those observations. -/
-structure ComparisonReads where
-  tipOf : EventHistory → CheckpointConviction.Tip
-  rivalOf : CheckpointConviction.Tip → CheckpointConviction.Rival → SignedEvent
-  verify : CheckpointConviction.Verify
+def KeyReads.matches (reads : KeyReads) (aid : Nat) (history : EventHistory)
+    (tip : CheckpointConviction.Tip) : Bool :=
+  reads.matchesDatum aid history.epoch history.datum tip
 
-/-- The decoded representation of the four fields compared for conflict. -/
-abbrev ForwardFields :=
-  CheckpointDatum.Threshold × List (List Nat) × CheckpointDatum.Threshold × Int
+/-- Encoders for a particular interpretation of verification keys and digests.
+Only these primitive round trips are needed to present a decoded writer. -/
+structure KeyEncoding (reads : KeyReads) where
+  key : Nat → List Nat
+  commitment : Nat → List Nat
+  readKey : ∀ k, reads.verificationKey (key k) = some k
+  readCommitment : ∀ k, reads.nextCommitment (commitment k) = some k
 
-def tipFields (tip : CheckpointConviction.Tip) : ForwardFields :=
-  (tip.keys.curThreshold, tip.keys.nextKeys, tip.keys.nextThreshold, tip.keys.toad)
+/-- Symbolic identities used by the executable decoded comparison. -/
+def KeyReads.symbolic : KeyReads :=
+  ⟨(fun | [k] => some k | _ => none), (fun | [k] => some k | _ => none)⟩
 
-def rivalFields (rival : CheckpointConviction.Rival) : ForwardFields :=
-  (rival.threshold, rival.nextKeys, rival.nextThreshold, rival.toad)
+def KeyEncoding.symbolic : KeyEncoding KeyReads.symbolic :=
+  ⟨List.singleton, List.singleton, fun _ => rfl, fun _ => rfl⟩
 
-/-- The spent tip and the presented rival must be decoded consistently with
-the stored writer and signed message. The advance writes the accepted fields
-and the enforcement observer reads those fields from its named input and
-the rival bytes. This is a technical representation obligation. None of
-these equalities asserts that the rival meets a signature threshold. -/
-structure ComparisonReads.FieldsAgree (reads : ComparisonReads)
-    (history : EventHistory) (rival : CheckpointConviction.Rival)
-    (encode : Content → ForwardFields) : Prop where
-  epoch : (reads.tipOf history).epoch = history.epoch
-  writerPosition : (reads.tipOf history).sn = history.writer.event.sn
-  rivalPosition : (reads.rivalOf (reads.tipOf history) rival).event.sn = rival.sn
-  writerFields : tipFields (reads.tipOf history) = encode history.writer.event
-  rivalFields : rivalFields rival = encode (reads.rivalOf (reads.tipOf history) rival).event
+def WriterDatum.tip {reads : KeyReads} (datum : WriterDatum) (encoding : KeyEncoding reads)
+    (epoch : Nat) : CheckpointConviction.Tip :=
+  let e := datum.writer
+  ⟨e.aid, epoch, e.sn,
+    ⟨e.keys.map encoding.key, e.threshold, e.nextKeys.map encoding.commitment,
+      e.nextThreshold, datum.witnesses.map encoding.key, e.witnessThreshold⟩,
+    datum.previous, e⟩
 
-/-- Open conformance obligation at an authenticated inception. -/
-def InceptionRefusal (reads : ComparisonReads) : Prop :=
-  ∀ aid event witnesses rival, (EventHistory.inception event witnesses).authenticated aid = true →
-    CheckpointConviction.accepts reads.verify (reads.tipOf (.inception event witnesses)) rival = false
+private theorem read_encoded (read : List Nat → Option Nat) (encode : Nat → List Nat)
+    (roundTrip : ∀ k, read (encode k) = some k) (keys : List Nat) :
+    (keys.map encode).mapM read = some keys := by
+  induction keys with
+  | nil => rfl
+  | cons k ks ih => simp [List.mapM_cons, roundTrip, ih]
 
-/-- Open conformance obligation after a rotation. The earlier advance
-authenticates the stored writer. The following assertion about the later
-rival has no established discharge. -/
-def RotatedRivalValidity (reads : ComparisonReads) : Prop :=
-  ∀ aid previous writer rival, (EventHistory.rotation previous writer).authenticated aid = true →
-    let tip := reads.tipOf (.rotation previous writer)
-    CheckpointConviction.accepts reads.verify tip rival = true →
-    rotationValid previous.predecessor (reads.rivalOf tip rival) = true
+/-- Given faithfully interpreted keys, presenting the stored writer preserves
+every field checked by the conviction input, for all threshold constructors. -/
+theorem WriterDatum.matches_tip {reads : KeyReads} (datum : WriterDatum)
+    (encoding : KeyEncoding reads) (epoch : Nat) :
+    reads.matchesDatum datum.writer.aid epoch datum (datum.tip encoding epoch) = true := by
+  simp [KeyReads.matchesDatum, WriterDatum.tip, read_encoded _ _ encoding.readKey,
+    read_encoded _ _ encoding.readCommitment]
+
+/-- A history authenticated for an identifier ends in a writer for it. -/
+theorem EventHistory.authenticated_aid {aid : Nat} {history : EventHistory}
+    (h : history.authenticated aid = true) : history.writer.event.aid = aid := by
+  induction history with
+  | inception event witnesses =>
+    simp only [authenticated, inceptionWrites, Bool.and_eq_true, beq_iff_eq] at h
+    exact h.1.1.1.1.1.1.1.1
+  | rotation previous event ih =>
+    obtain ⟨auth, valid⟩ := stored_rotation_valid h
+    simp only [rotationValid, Bool.and_eq_true, beq_iff_eq] at valid
+    have idEq : previous.predecessor.aid = previous.writer.event.aid := by cases previous <;> rfl
+    exact valid.1.1.1.2.trans (idEq.trans (ih auth))
+
+/-- The spent datum binds the entire writer and the one carried predecessor. -/
+theorem KeyReads.matches_history {reads : KeyReads} {aid history tip}
+    (h : reads.matches aid history tip = true) :
+    tip.previous = history.datum.previous ∧ tip.writer = history.writer.event ∧
+    tip.aid = aid ∧ tip.aid = history.writer.event.aid ∧ tip.epoch = history.epoch ∧ tip.sn = history.writer.event.sn := by
+  simp only [KeyReads.matches, KeyReads.matchesDatum, EventHistory.datum_writer, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at h
+  grind
 
 end CardanoKeri.Checkpoint

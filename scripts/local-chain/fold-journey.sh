@@ -3,8 +3,8 @@
 #
 # The fixture is Singular's own `devnet` executable: a node and the Koios-shaped facade that follows
 # its blocks and serves the routes the installed commands read, `asset_txs` (the public history of a
-# token) included. The fixture starts at protocol version 10 and preprod runs 11 (the trial team's
-# read-only snapshot, epoch 327), so this script moves the local fixture to 11 with a test-side
+# token) included. The fixture starts at protocol version 10 and preprod runs 11 (a read-only
+# snapshot of its protocol parameters, epoch 327), so this script moves the local fixture to 11 with a test-side
 # governance helper before any command runs. Nothing here touches a public network: local chain only,
 # throwaway wallets whose passphrase is a development one.
 #

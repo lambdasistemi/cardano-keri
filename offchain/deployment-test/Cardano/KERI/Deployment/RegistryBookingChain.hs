@@ -112,6 +112,7 @@ import Cardano.KERI.Deployment.RegistryRegister (RegisterRequest (..))
 import Cardano.KERI.Deployment.RegistryTransactions (registryRootOf)
 import Cardano.KERI.Deployment.RegistryTransactions qualified as Tx
 import Cardano.KERI.Deployment.Script (Blueprint)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Api.Tx (bodyTxL)
@@ -265,6 +266,7 @@ runtimeOfUnder faults world readRef =
                     }
         , rtNowMs = clockNow world
         , rtValidityEnd = pure EndNotSet
+        , rtFunding = singularFundingRules
         }
 
 transactionsOf :: Faults -> World -> TransactionRuntime IO
@@ -414,14 +416,14 @@ bookFrom world payerAddress export = do
     -- the proof of the inception is preminted first, as the command does
     premint <-
         either (fail . show) pure $
-            Tx.mintHashProof pricedParameters deployment (Tx.Payer payerAddress wallet) export validity
+            Tx.mintHashProof pricedParameters deployment (Tx.Payer payerAddress wallet singularFundingRules) export validity
     premintId <- submit "the premint" premint
     chainAfter <- readIORef (worldChain world)
     let proofIn = (TxIn premintId (TxIx 0), fromJust (Map.lookup (TxIn premintId (TxIx 0)) (chainOutputs chainAfter)))
         walletAfter = [(ref, out) | (ref, out) <- Map.toList (chainOutputs chainAfter), out ^. addrTxOutL == payerAddress, ref /= fst proofIn]
     (tx, _) <-
         either (fail . show) pure $
-            Tx.bookRegistrations pricedParameters deployment references (Tx.Payer payerAddress walletAfter) [Tx.BookedRequest request export proofIn] validity 0 Map.empty
+            Tx.bookRegistrations pricedParameters deployment references (Tx.Payer payerAddress walletAfter singularFundingRules) [Tx.BookedRequest request export proofIn] validity 0 Map.empty
     txId <- submit "the booking" tx
     pure (TxIn txId (TxIx 0), request)
 

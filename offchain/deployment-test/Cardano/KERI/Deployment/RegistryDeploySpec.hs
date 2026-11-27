@@ -66,6 +66,7 @@ import Cardano.KERI.Deployment.Script (
     mkCageScript,
     scriptHashBytes,
  )
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionRuntime (..),
     transactionId,
@@ -301,6 +302,7 @@ chainRuntime faults chainRef =
         , rtObserve = fail "a deployment reads no time"
         , rtNowMs = fail "a deployment reads no time"
         , rtValidityEnd = pure EndNotSet
+        , rtFunding = singularFundingRules
         }
   where
     touch = modifyIORef' chainRef (\c -> c{chainCalls = chainCalls c + 1})
@@ -472,10 +474,10 @@ spec = describe "#351 deploying a registry" $ do
 
     describe "the seed" $ do
         it "is the output of lovelace alone with the least lovelace of at least ten ada" $ do
-            fmap fst (chooseSeed walletOutputs) `shouldBe` Just expectedSeedIn
-            fmap fst (chooseSeed (reverse walletOutputs)) `shouldBe` Just expectedSeedIn
+            fmap fst (chooseSeed singularFundingRules walletOutputs) `shouldBe` Just expectedSeedIn
+            fmap fst (chooseSeed singularFundingRules (reverse walletOutputs)) `shouldBe` Just expectedSeedIn
         it "does not exist in a wallet of dust and of outputs that hold a token" $
-            fmap fst (chooseSeed (take 2 walletOutputs)) `shouldBe` Nothing
+            fmap fst (chooseSeed singularFundingRules (take 2 walletOutputs)) `shouldBe` Nothing
 
     describe "a deployment that completes" $ beforeAll deployed $ do
         it "lands the seven transactions in order, the booking attestation policy published before the application, and reports each as it settles" $ \(outcome, chain) -> do

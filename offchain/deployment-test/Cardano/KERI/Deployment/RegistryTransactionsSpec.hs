@@ -95,6 +95,7 @@ import Cardano.KERI.Deployment.Script (
     mkCageScript,
     scriptHashBytes,
  )
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
 import Cardano.Ledger.Address (
     Addr (..),
@@ -244,6 +245,7 @@ walletOf :: Word8 -> Payer
 walletOf n =
     Payer
         { payerAddress = walletAddress n
+        , payerRules = singularFundingRules
         , payerFunds =
             [ (txIn (n + k), mkBasicTxOut (walletAddress n) (inject (ada size)))
             | (k, size) <- [(1, 5_000), (2, 4_000), (3, 3_000)]
@@ -718,6 +720,7 @@ spec = do
             walletWith funds =
                 Payer
                     { payerAddress = walletAddress 0x50
+                    , payerRules = singularFundingRules
                     , payerFunds =
                         [ (txIn (0x50 + n), mkBasicTxOut (walletAddress 0x50) value)
                         | (n, value) <- zip [1 ..] funds
@@ -751,7 +754,7 @@ spec = do
                     , (txIn 0x64, mkBasicTxOut address (inject (ada 1_900)))
                     , (txIn 0x65, mkBasicTxOut address (inject (ada 15)))
                     ]
-                payer = Payer{payerAddress = address, payerFunds = carrying <> ordinary}
+                payer = Payer{payerAddress = address, payerFunds = carrying <> ordinary, payerRules = singularFundingRules}
             tx <- booking payer
             let spent = tx ^. bodyTxL . inputsTxBodyL
                 collateral = tx ^. bodyTxL . collateralInputsTxBodyL

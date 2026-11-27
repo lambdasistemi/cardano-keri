@@ -116,6 +116,7 @@ import Cardano.KERI.Deployment.RegistrySnapshot (Snapshot (..), decodeSnapshot, 
 import Cardano.KERI.Deployment.RegistryTransactions (ValidityPlan (..))
 import Cardano.KERI.Deployment.Script (loadBlueprint)
 import Cardano.KERI.Deployment.SigningKeyCheck (checkSigningEnvelope, checkSigningKey)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId, transactionId)
 import Cardano.Ledger.Address (Addr, getNetwork, serialiseAddr)
 import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
@@ -741,7 +742,7 @@ openRegistryNodeBetween between access use = do
     checkKey (naSigningKey access) payer >>= either dieZero pure
     between
     begun <- newIORef False
-    opened <- try @IOException $ withNodeRuntime Unlinked access $ \(runtime, _) -> do
+    opened <- try @IOException $ withNodeRuntime singularFundingRules Unlinked access $ \(runtime, _) -> do
         -- from here the operation has begun: whatever follows is never a startup refusal
         writeIORef begun True
         use (runtime, payer)

@@ -47,6 +47,7 @@ import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, signingKe
 import Cardano.KERI.Deployment.RegistryProvider (Counterpart (..), Openers (..), ProviderChoice (..), counterpartOf, evidence, forCounterpart, nodeOnly, providerChoiceParser, reasonText, renderProviderRefusal, resolveProvider, transliterateReports, withProvider)
 import Cardano.KERI.Deployment.RegistryWindow (installNodeWindow)
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..), loadBlueprint)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -394,4 +395,4 @@ renderFilesError = \case
 openNode :: RegistryOpener
 openNode access use = do
     payer <- either die' pure (decodePaymentAddress (naFundingAddress access))
-    withNodeRuntime Linked access (\(runtime, _) -> use (installNodeWindow (naNetworkMagic access) (naNetworkTime access) runtime, payer))
+    withNodeRuntime singularFundingRules Linked access (\(runtime, _) -> use (installNodeWindow (naNetworkMagic access) (naNetworkTime access) runtime, payer))

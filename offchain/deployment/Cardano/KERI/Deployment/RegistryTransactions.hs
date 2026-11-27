@@ -25,6 +25,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     RegistryDeployment (..),
     RegistryReferences (..),
     Payer (..),
+    FundingRules (..),
     ValidityPlan (..),
     Budgets,
     BuiltTransaction,
@@ -233,7 +234,6 @@ import Data.Word (Word32)
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data (Data (..))
 import PlutusCore.Data qualified as PLC
-import Singular.Registry.TxBuilder.Publication (adaOnlyOut, selectFunding)
 
 -- | The registry a transaction is built against: the chain it runs on and what it is derived from.
 data RegistryDeployment = RegistryDeployment
@@ -256,10 +256,22 @@ data RegistryReferences = RegistryReferences
     -- ^ the hash-proof policy, published
     }
 
--- | Who pays a transaction: the address that receives the change and the outputs that fund it.
+{- | How the outputs that seed, fund and collateralise a transaction are chosen. The two functions are Singular's own
+('adaOnlyOut' and 'selectFunding' of its publication builder), handed in by the caller that already depends on Singular:
+this library takes no edge to Singular's package, which the write composition may not reach.
+-}
+data FundingRules = FundingRules
+    { ruleAdaOnly :: TxOut ConwayEra -> Bool
+    -- ^ whether an output holds lovelace alone and no reference script
+    , ruleSelect :: Maybe TxIn -> [(TxIn, TxOut ConwayEra)] -> Either String (TxIn, TxOut ConwayEra)
+    -- ^ the output a transaction is funded and collateralised from: the one chosen, or the largest of lovelace alone
+    }
+
+-- | Who pays a transaction: the address that receives the change, the outputs that fund it and how they are chosen.
 data Payer = Payer
     { payerAddress :: !Addr
     , payerFunds :: ![(TxIn, TxOut ConwayEra)]
+    , payerRules :: !FundingRules
     }
 
 -- | A validity interval: the slots the transaction declares and the instants they stand for.
@@ -598,7 +610,7 @@ createConfiguration ::
 createConfiguration end parameters deployment references payer seedUtxo configured budgets = do
     when (outputReferenceOf (fst seedUtxo) /= seedOf deployment) $
         Left SeedIsNotTheRegistrys
-    firstFunded budgets (fundings [fst seedUtxo] (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) [fst seedUtxo] (payerFunds payer)) attempt
   where
     stateName = stateTokenName (seedOf deployment)
     configName = configurationTokenName (registryOf deployment)
@@ -680,7 +692,7 @@ bookRegistrations parameters deployment references payer requests validity diffe
     forM_ requests $ \request ->
         unless (holdsProof request) $
             Left (ProofIsNotTheInceptions (fst (bookedProof request)))
-    firstFunded budgets (fundings (map (fst . bookedProof) requests) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map (fst . bookedProof) requests) (payerFunds payer)) attempt
   where
     indexed = zip [0 ..] requests
     hashProofPolicy = PolicyID (artifactScriptHash (hashProofArtifact deployment))
@@ -771,7 +783,7 @@ burnAttestations ::
     Either RegistryTransactionError BuiltTransaction
 burnAttestations parameters deployment references payer held budgets = do
     when (Map.null burning) $ Left NothingToBurn
-    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map fst held) (payerFunds payer)) attempt
   where
     policy = attestationPolicyId deployment
     burning = attestationsHeld deployment held
@@ -816,7 +828,7 @@ mintHashProof parameters deployment payer export validity = do
     if blake3Hash saidBlank == aid
         then Right ()
         else Left InceptionDoesNotBindItsIdentifier
-    firstFunded Map.empty (fundings [] (payerFunds payer)) (const attempt)
+    firstFunded Map.empty (fundings (payerRules payer) [] (payerFunds payer)) (const attempt)
   where
     artifact = hashProofArtifact deployment
     policy = PolicyID (artifactScriptHash artifact)
@@ -904,7 +916,7 @@ foldRegistration ::
     Either RegistryTransactionError BuiltTransaction
 foldRegistration parameters deployment references plan budgets = do
     foldGuard (foldRegistered plan) (foldTerminated plan) key (snd (foldState plan))
-    firstFunded budgets (fundings [] (payerFunds (foldPayer plan))) attempt
+    firstFunded budgets (fundings (payerRules (foldPayer plan)) [] (payerFunds (foldPayer plan))) attempt
   where
     (requestIn, _) = foldRequest plan
     record = foldBooked plan
@@ -1036,7 +1048,7 @@ returnRequestsBurning ::
     Either RegistryTransactionError BuiltTransaction
 returnRequestsBurning parameters deployment references payer booking validity refundTo held budgets = do
     when (not (null held) && Map.null burning) $ Left NothingToBurn
-    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map fst held) (payerFunds payer)) attempt
   where
     Booking{bookingOutput = (requestIn, requestOut), bookingRecord = record} = booking
     tip = minimumTip (parametersOf deployment)
@@ -1251,8 +1263,8 @@ isFundable out =
 {- | Whether an output may be the seed, the funding or the collateral: Singular's 'adaOnlyOut', which tests native assets and a
 reference script, and no datum, which Singular does not test and a published template carries.
 -}
-isPlainFunding :: TxOut ConwayEra -> Bool
-isPlainFunding out = adaOnlyOut out && out ^. datumTxOutL == Ledger.NoDatum
+isPlainFunding :: FundingRules -> TxOut ConwayEra -> Bool
+isPlainFunding rules out = ruleAdaOnly rules out && out ^. datumTxOutL == Ledger.NoDatum
 
 hasAssets :: TxOut ConwayEra -> Bool
 hasAssets = (/= mempty) . assetsOf
@@ -1285,11 +1297,11 @@ The collateral is the one of them that Singular's 'selectFunding' chooses: the l
 lovelace alone among those spent, so that one output of lovelace alone is the whole wallet
 needed. The outputs excluded are spent by the transaction already.
 -}
-fundings :: [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
-fundings excluded funds =
+fundings :: FundingRules -> [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
+fundings rules excluded funds =
     [ Funding inputs collateral
     | inputs <- spendingSets 1 (filter ((`notElem` excluded) . fst) funds)
-    , Right collateral <- [selectFunding Nothing (filter (isPlainFunding . snd) inputs)]
+    , Right collateral <- [ruleSelect rules Nothing (filter (isPlainFunding rules . snd) inputs)]
     ]
 
 -- | The first attempt that builds, or the failure of the first attempt.

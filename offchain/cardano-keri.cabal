@@ -176,7 +176,6 @@ library deployment
     , plutus-ledger-api
     , plutus-tx
     , scientific
-    , singular-registry
     , text
     , time
     , transformers
@@ -256,6 +255,7 @@ library deployment-koios
     Cardano.KERI.Deployment.RegistryFoldNamed
     Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
+    Cardano.KERI.Deployment.SingularFunding
 
 library indexer
   import:           warnings

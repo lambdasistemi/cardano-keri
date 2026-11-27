@@ -41,6 +41,7 @@ import Cardano.KERI.Deployment.KoiosSubmission (Handoff (..), HandoffResult (..)
 import Cardano.KERI.Deployment.NodeSocketRuntime (KeySource, keySourceEnvelope)
 import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..), TransactionUnconfirmed (..), ValidityEnd (..), tryNode)
 import Cardano.KERI.Deployment.RegistryWindow (koiosValidityEnd, resolveTimeSource)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionRuntime (..),
     TransactionSigningError,
@@ -189,6 +190,7 @@ koiosRegistryRuntime parts = do
             , rtObserve = readObservation reads'
             , rtNowMs = partClock parts
             , rtValidityEnd = partWindow parts
+            , rtFunding = singularFundingRules
             }
 
 {- | The instance over the live transport of an access: its token read by the

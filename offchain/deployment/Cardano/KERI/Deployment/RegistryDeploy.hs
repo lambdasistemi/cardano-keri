@@ -76,6 +76,7 @@ import Cardano.KERI.Deployment.RegistryFiles (
     ScriptReference (..),
  )
 import Cardano.KERI.Deployment.RegistryTransactions (
+    FundingRules,
     Payer (..),
     RegistryDeployment (..),
     RegistryTransactionError (..),
@@ -341,8 +342,8 @@ seedMinimumLovelace = 10_000_000
 nothing but lovelace and at least 'seedMinimumLovelace', the one with the
 least, so the larger ones remain to pay for the publications.
 -}
-chooseSeed :: [(TxIn, TxOut ConwayEra)] -> Maybe (TxIn, TxOut ConwayEra)
-chooseSeed wallet =
+chooseSeed :: FundingRules -> [(TxIn, TxOut ConwayEra)] -> Maybe (TxIn, TxOut ConwayEra)
+chooseSeed rules wallet =
     case sortOn (\(ref, out) -> (coinOf out, ref)) candidates of
         first : _ -> Just first
         [] -> Nothing
@@ -350,7 +351,7 @@ chooseSeed wallet =
     candidates =
         [ output
         | output@(_, out) <- wallet
-        , isPlainFunding out
+        , isPlainFunding rules out
         , coinOf out >= seedMinimumLovelace
         ]
 
@@ -443,7 +444,7 @@ deployRegistry runtime onLanded request = do
             either
                 (stop (Just step) . BuildRefused)
                 pure
-                (build params (Payer payerAddress' wallet) end)
+                (build params (Payer payerAddress' wallet (rtFunding runtime)) end)
         signed <- settle landedRef step Map.empty tx
         pure (TxIn (transactionId signed) (TxIx 0))
 
@@ -490,7 +491,7 @@ deployRegistry runtime onLanded request = do
         when (discriminator /= networkDiscriminator network) $
             stop Nothing (NetworkDisagrees discriminator)
         wallet0 <- onNode Nothing (rtUtxosAt runtime payerAddress')
-        (candidate, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed wallet0)
+        (candidate, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed (rtFunding runtime) wallet0)
         -- a wallet whose only output of lovelace alone is the seed candidate has nothing to pay the publications
         -- with once the seed is set aside: the publication of the template then makes the seed, as public
         -- Singular's chained seed does, and the registry is created from it
@@ -584,7 +585,7 @@ deployRegistry runtime onLanded request = do
                     params
                     deployment
                     references
-                    (Payer payerAddress' funds)
+                    (Payer payerAddress' funds (rtFunding runtime))
                     (seedIn, seedOut)
                     (registryParameters terms)
                     budgets

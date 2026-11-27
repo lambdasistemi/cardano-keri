@@ -80,9 +80,9 @@ library
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
     Cardano.KERI.AID.Checkpoint.EventDecoder
-    Cardano.KERI.AID.Checkpoint.InceptionPrefix
     Cardano.KERI.AID.Checkpoint.Freeze
     Cardano.KERI.AID.Checkpoint.FreezeBond
+    Cardano.KERI.AID.Checkpoint.InceptionPrefix
     Cardano.KERI.AID.Checkpoint.Message
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold

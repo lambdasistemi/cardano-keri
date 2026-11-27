@@ -225,6 +225,7 @@ assemble rest raw = do
     di <- case variant of
         VariantDip -> Just <$> req "di" rest
         _ -> Right Nothing
+    anchors <- req "a" rest
     dStart <- startOf "d" rest
     iStart <- startOf "i" rest
     require (BS.length said == 44 && BS.length aid == 44) ErrValueShape
@@ -245,7 +246,7 @@ assemble rest raw = do
             , deeBr = br
             , deeBa = ba
             , deeDi = di
-            , deeAnchors = mempty
+            , deeAnchors = anchors
             , deeSaidPreimage = preimage
             }
 

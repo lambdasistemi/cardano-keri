@@ -71,7 +71,8 @@ spec = describe "#590 inception prefix binding (keripy 1.3.5, draft #600)" $ do
             map
                 (classifyIdentifier . codeText)
                 ["B", "1AAA", "1AAC", "1AAI", "D", "1AAB", "1AAD", "1AAJ", "E", "F", "G", "H", "I", "0D", "0E", "0F", "0G"]
-                `shouldBe` map Just
+                `shouldBe` map
+                    Just
                     ( replicate 4 (BasicPrefix False)
                         <> replicate 4 (BasicPrefix True)
                         <> replicate 9 SelfAddressingPrefix
@@ -117,7 +118,7 @@ spec = describe "#590 inception prefix binding (keripy 1.3.5, draft #600)" $ do
                 ["D next", "D witness", "D seal"]
                 `shouldBe` replicate 3 (Right (BasicPrefix True))
         it "a self-addressing identifier that is not the digest of the body is refused" $ do
-            refuses IdentifierIsNotDerived e{deeAid = deeAid d, deeSaid = deeSaid e}
+            refuses IdentifierIsNotDerived e{deeAid = B8.init (deeAid e) <> (if B8.last (deeAid e) == 'A' then "B" else "A")}
             refuses IdentifierIsNotDerived e{deeSaidPreimage = deeSaidPreimage d}
         it "an event that is not an inception is refused" $
             refuses NotAnInception d{deeVariant = VariantRot}
@@ -153,4 +154,3 @@ loadCases fx = do
     optionalText c key = case lookupKey key c of
         Just (String t) -> Right (Just (TE.encodeUtf8 t))
         _ -> Right Nothing
-

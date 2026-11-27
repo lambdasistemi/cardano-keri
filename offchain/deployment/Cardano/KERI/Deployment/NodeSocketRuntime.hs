@@ -35,6 +35,7 @@ import Cardano.KERI.Deployment.LiveRuntime (
     withUnlinkedLiveContextEnvelope,
  )
 import Cardano.KERI.Deployment.RegistryChain (Observation (..), RegistryRuntime (..), ValidityEnd (..), whileConnected)
+import Cardano.KERI.Deployment.RegistryTransactions (FundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..))
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (Network (Testnet), TxIx (..))
@@ -99,8 +100,8 @@ data Connection = Linked | Unlinked
 {- | The runtime over the node's socket, and the address that pays, for the
 duration of an action. The connection is opened and closed around it.
 -}
-withNodeRuntime :: Connection -> NodeAccess -> ((RegistryRuntime, Addr) -> IO a) -> IO a
-withNodeRuntime connection access use = case naSigningKey access of
+withNodeRuntime :: FundingRules -> Connection -> NodeAccess -> ((RegistryRuntime, Addr) -> IO a) -> IO a
+withNodeRuntime rules connection access use = case naSigningKey access of
     KeyEnvelope envelope -> case connection of
         Linked -> withLiveContextEnvelope envelope (config "") (\_ -> pure ()) $ \context ->
             use (runtimeOf context, liveFundingAddress context)
@@ -132,6 +133,7 @@ withNodeRuntime connection access use = case naSigningKey access of
                 , rtObserve = observeNode provider
                 , rtNowMs = clockMs
                 , rtValidityEnd = pure EndNotSet
+                , rtFunding = rules
                 }
 
 -- | A transaction has settled when the node reports its first output unspent.

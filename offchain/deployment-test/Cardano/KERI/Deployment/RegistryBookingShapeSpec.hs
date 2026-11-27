@@ -392,7 +392,7 @@ shapeTests shapes = do
             `shouldBe` Just (PLC.List [actionData (BookRegistration position) | (position, _, _) <- claims])
         redeemerOf (scBooking s) hashProofPolicy
             `shouldBe` Just (PLC.Constr 0 [PLC.B "", PLC.B "", PLC.I 0, PLC.I 0])
-    it "pays the approvals with the requests and the attestations to ordinary change, and no output holds a hash proof" $ do
+    it "pays the approvals with the requests, the attestations to an output of their own and the rest to change that holds lovelace alone, and no output holds a hash proof" $ do
         s <- scenarioOf shapes
         let registry = scRegistry s
             outputs = outputsOf (scBooking s)
@@ -401,11 +401,11 @@ shapeTests shapes = do
             holds policy out = let MaryValue _ (MultiAsset assets) = out ^. valueTxOutL in Map.member policy assets
             hashProofPolicy = PolicyID (artifactScriptHash (observerHashProof (scriptsObservers (deploymentScripts registry))))
             payerAddress' = payerAddress (scPayer s)
-        length change `shouldBe` 1
+        length change `shouldBe` 2
         all (uncurry (holdsExactlyApproval registry)) (zip (scRecords s) requests) `shouldBe` True
         any (holds (attestationPolicyId registry)) requests `shouldBe` False
-        map (^. addrTxOutL) change `shouldBe` [payerAddress']
-        map (attestationsOf registry) change `shouldBe` [Map.fromList [(name, 1) | name <- attestationNames registry s]]
+        map (^. addrTxOutL) change `shouldBe` [payerAddress', payerAddress']
+        map (attestationsOf registry) change `shouldBe` [Map.fromList [(name, 1) | name <- attestationNames registry s], Map.empty]
         any (holds hashProofPolicy) outputs `shouldBe` False
     it "spends the proof of each inception, reads the registry's scripts by reference, and registers, withdraws and certifies nothing" $ do
         s <- scenarioOf shapes

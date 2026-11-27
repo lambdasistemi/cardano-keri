@@ -50,11 +50,10 @@ function assess(tree, rule) {
   const assessment = {...rule, ...rule[tree]};
   const model = assessment.models.find(s => read(tree, s.path)?.split('\n').some(line => line.trimStart().startsWith(s.text)));
   if (!model) throw Error('No model source for ' + rule.rule + ' on ' + tree);
-  return resolve(tree, model) + '<br>' + assessment.status + '. ' + assessment.sites.map(s => resolve(tree, s)).join(', ');
+  const text = resolve(tree, model) + '<br>' + assessment.status + '. ' + assessment.sites.map(s => resolve(tree, s)).join(', ');
+  return {coverage: assessment.coverage, text};
 }
 const ticketLinks = numbers => numbers.map(n => '[#' + n + '](' + github + '/issues/' + n + ')').join(', ');
-const table = rules.map(rule => '| ' + [rule.rule, assess('main', rule), assess('january', rule),
-  ticketLinks(rule.tickets) || '—'].join(' | ') + ' |');
 function projection(tree) {
   const producer = 'lean/ConsumerTraceDriver.lean';
   const consumer = 'scripts/consumer-vectors.mjs';
@@ -66,12 +65,37 @@ function projection(tree) {
   const schema = corpus.schema;
   const declaration = '("schema", toJson "' + schema + '"), ("version", toJson (' + ver + ' : Nat))';
   const gate = 'if (corpus.schema !== ' + JSON.stringify(schema).replaceAll('"', "'") + ' || corpus.version !== ';
-  return (ver === Number(accepted[1]) ? 'Schema matches' : 'not enforced: projection stops before generating Aiken') +
+  const matches = ver === Number(accepted[1]);
+  const text = (matches ? 'Schema matches' : 'not enforced: projection stops before generating Aiken') +
     '. Producer v' + ver + ' (' + corpus.fields.length + ' field cases), consumer v' + accepted[1] + '. ' +
     resolve(tree, {path: producer, text: declaration}) + ', ' + resolve(tree, {path: consumer, text: gate});
+  return {coverage: matches ? 'enforced' : 'missing', text};
 }
-const schemaRow = '| Project every consumer identity case into the Aiken suite. | ' + projection('main') +
-  ' | ' + projection('january') + ' | ' + ticketLinks([569,576]) + ' |';
+const assessed = rules.map(rule => ({
+  ...rule, main: assess('main', rule), january: assess('january', rule),
+}));
+assessed.push({
+  rule: 'Project every consumer identity case into the Aiken suite.', tickets: [576, 569],
+  main: projection('main'), january: projection('january'),
+});
+function formatRow(row) {
+  const gap = [row.main, row.january].some(cell => cell.coverage !== 'enforced');
+  if (gap && !row.tickets.length && !row.noTicket) {
+    throw Error('Name the tracking issue or set noTicket explicitly for: ' + row.rule);
+  }
+  const tracking = ticketLinks(row.tickets) || (gap ? 'None exists; ticket needed' : 'None (no open enforcement gap)');
+  return '| ' + [row.rule, row.main.text, row.january.text, tracking].join(' | ') + ' |';
+}
+function countLine(tree, label) {
+  const totals = {enforced: 0, partial: 0, missing: 0};
+  for (const row of assessed) {
+    const coverage = row[tree].coverage;
+    if (!Object.hasOwn(totals, coverage)) throw Error('Unknown coverage for ' + row.rule);
+    totals[coverage]++;
+  }
+  return '**' + label + '**: ' + totals.enforced + ' enforced, ' + totals.partial + ' partly enforced, ' +
+    totals.missing + ' not enforced (' + (totals.partial + totals.missing) + ' open of ' + assessed.length + ').';
+}
 const registrationOnMain = read('main','lean/CardanoKeri/ApplicationInceptionPrefix.lean') === null
   ? 'Main’s application model currently retains the economic inception premise. The standalone #590 draft supplies the signed opening.'
   : 'Main’s application model includes the indexed signed inception opening.';
@@ -91,12 +115,12 @@ function fingerprint(tree) {
   return hash.digest('hex').slice(0,16);
 }
 const output = [
-  '# Validator conformance', '',
+  '# Validator conformance', '', countLine('main', 'Main'), '', countLine('january', 'January'), '',
   'The December target is structural registration decoding and admission of key-derived identifiers. The first inventory covers registration, ordinary advance, conviction and the consumer-vector projection. Each cell links the Lean decision or premise and the Aiken decision that implements it or still needs to change. A source-level match describes that decision only. Transaction execution and budgets require separate evidence.', '',
   'Main is the checkout containing this report. January is the published [prefix-model draft](' + github + '/pull/592) at `' + january +
   '`. Both columns inspect the validator sources in their own tree. The January column excludes unpublished validator work.', '',
   '| Rule | Main model and enforcement | January model and enforcement | Tracking |', '| --- | --- | --- | --- |',
-  ...table, schemaRow, '',
+  ...assessed.map(formatRow), '',
   registrationOnMain + ' The January rotation model includes the #595, #596 and #598 corrections.' +
     (differences.length ? ' Main still differs on ' + differences.join(', ') + '.' : '') +
     ' A ticket alongside an enforced advance decision can track the corresponding model or conviction correction. The schema row is a build-time check. The #576 validator work carries the v2 conversion for the #569 model. #343 delivered the original v1 consumer.', '',
@@ -107,4 +131,4 @@ const output = [
 ].join('\n');
 if (args.includes('--write')) writeFileSync(target, output);
 else if (readFileSync(target, 'utf8') !== output) throw Error('Stale validator conformance table; review bindings and regenerate');
-console.log('Checked ' + (table.length + 1) + ' conformance rules on main and January ' + january.slice(0,8));
+console.log('Checked ' + assessed.length + ' conformance rules on main and January ' + january.slice(0,8));

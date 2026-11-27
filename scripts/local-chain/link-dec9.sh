@@ -19,7 +19,10 @@ INSPECT="${INSPECT:-$HERE/inspect-tx.sh}"
 mkdir -p "$WORK"
 log() { printf '%s\n' "$*" | tee -a "$WORK/link.log"; }
 STAGE=start
+first_failure=
 fail() { log "FIRST FAILING STAGE: $STAGE: $*"; exit 1; }
+# with CONTINUE=1 a refused identity is recorded and the next one is tried; the first refusal stays the first
+refused() { [[ -n "$first_failure" ]] || first_failure="$STAGE: $*"; log "REFUSED: $STAGE: $*"; }
 export SINGULAR_PASSPHRASE="$PASSPHRASE"
 MAGIC=42
 log "PROVISIONAL LINK RECEIPT: validator candidate retains the parsed fallback; binding attribution (reconstruction or fallback) is unresolved in these receipts"
@@ -27,7 +30,8 @@ log "binding: ckeri $CKERI sha256 $(sha256sum "$CKERI" | cut -c1-64)"
 log "binding: blueprint $BLUEPRINT sha256 $(sha256sum "$BLUEPRINT" | cut -c1-64)"
 log "binding: singular $SINGULAR sha256 $(sha256sum "$SINGULAR" | cut -c1-64); devnet $DEVNET sha256 $(sha256sum "$DEVNET" | cut -c1-64)"
 log "binding: this script sha256 $(sha256sum "${BASH_SOURCE[0]}" | cut -c1-64); NODE_ENV $NODE_ENV sha256 $(sha256sum "$NODE_ENV" | cut -c1-64)"
-for f in b-empty i01 i02 d-seal; do log "export: $f $(stat -c %s "$EXPORTS/$f.cesr") bytes sha256 $(sha256sum "$EXPORTS/$f.cesr" | cut -c1-64)"; done
+ENTRIES="${ENTRIES:-b-empty:empty i01:empty i02:empty d-seal:nested}"
+for f in $(for e in $ENTRIES; do echo "${e%%:*}"; done); do log "export: $f $(stat -c %s "$EXPORTS/$f.cesr") bytes sha256 $(sha256sum "$EXPORTS/$f.cesr" | cut -c1-64)"; done
 
 STAGE=wallets
 "$SINGULAR" wallet create --vault "$WORK/booker.vault" --network-magic $MAGIC >/dev/null 2>&1 || fail "wallet create booker"
@@ -69,13 +73,13 @@ sed 's/^/  reference-outputs: /' "$WORK/reference-outputs.json" | tee -a "$WORK/
 sed 's/^/  deploy: /' "$WORK/deploy.out" | tee -a "$WORK/link.log" >/dev/null
 
 txsize() { curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$1\"]}" | jq -r '.[0].cbor' >"$WORK/$2.hex"; log "  $2: signed size $(( $(wc -c <"$WORK/$2.hex") / 2 )) bytes"; ( source "$NODE_ENV"; $INSPECT "$WORK/$2.hex" ) >"$WORK/$2.inspect" 2>"$WORK/$2.inspect.err" || log "  $2: inspect failed: $(tail -2 "$WORK/$2.inspect.err")"; }
-for entry in b-empty:empty i01:empty i02:empty d-seal:nested; do
+for entry in $ENTRIES; do
     name=${entry%%:*}; kind=${entry##*:}
     STAGE="register $name"
     "$CKERI" registry register "${common[@]}" "${provider[@]}" --funding-address "$BOOKER" --vault "$WORK/booker.vault" \
         --release-identity "$WORK/release-identity.json" --reference-record "$WORK/reference-outputs.json" \
         --kli-export "$EXPORTS/$name.cesr" >"$WORK/register-$name.out" 2>"$WORK/register-$name.err" \
-        || fail "registry register $name ($kind anchors): $(tail -6 "$WORK/register-$name.err")"
+        || { if [[ "${CONTINUE:-0}" == 1 ]]; then refused "registry register $name ($kind anchors): $(head -c 600 "$WORK/register-$name.err")"; continue; else fail "registry register $name ($kind anchors): $(tail -6 "$WORK/register-$name.err")"; fi; }
     REQ=$(sed -n 's/^booking-output: //p' "$WORK/register-$name.out"); BOOKTX=$(sed -n 's/^booking-transaction: //p' "$WORK/register-$name.out"); PREMINT=$(sed -n 's/^premint-transaction: //p' "$WORK/register-$name.out")
     [[ -n "$REQ" ]] || fail "register $name reported no booking output"
     log "ok: booked $name ($kind anchors): premint $PREMINT booking $BOOKTX output $REQ"
@@ -84,7 +88,7 @@ for entry in b-empty:empty i01:empty i02:empty d-seal:nested; do
     "$CKERI" registry fold "${common[@]}" "${provider[@]}" --funding-address "$FOLDER" --vault "$WORK/folder.vault" \
         --release-identity "$WORK/release-identity.json" --reference-record "$WORK/reference-outputs.json" \
         --pending "$REQ" >"$WORK/fold-$name.out" 2>"$WORK/fold-$name.err" \
-        || fail "registry fold $name: $(tail -8 "$WORK/fold-$name.err")"
+        || { if [[ "${CONTINUE:-0}" == 1 ]]; then refused "registry fold $name: $(head -c 600 "$WORK/fold-$name.err")"; continue; else fail "registry fold $name: $(tail -8 "$WORK/fold-$name.err")"; fi; }
     FOLDTX=$(sed -n 's/^fold-transaction: //p' "$WORK/fold-$name.out")
     log "ok: folded $name: fold $FOLDTX consuming $REQ"
     txsize "$FOLDTX" "fold-$name"
@@ -101,8 +105,9 @@ readback() { # readback <command> <name> <aid> -> the output is kept
     [[ $code == 0 ]] || log "  stderr: $(tail -4 "$WORK/readback-$1-$2.err")"
     return $code
 }
-declare -A AID=( [b-empty]=BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw [i01]=DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ [i02]=EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA [d-seal]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 )
+declare -A AID=( [b-empty]=BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw [i01]=DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ [i02]=EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA [d-seal]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-empty]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-next]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-zero-next]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 )
 rc=0
-for name in b-empty i01 i02 d-seal; do for command in checkpoint status; do readback "$command" "$name" "${AID[$name]}" || { rc=1; log "FIRST FAILING STAGE: readback $command $name (exit $?)"; }; done; done
+for name in $(for e in $ENTRIES; do echo "${e%%:*}"; done); do for command in checkpoint status; do readback "$command" "$name" "${AID[$name]}" || { rc=1; log "FIRST FAILING STAGE: readback $command $name (exit $?)"; }; done; done
+[[ -z "$first_failure" ]] || log "FIRST REFUSAL OF THE RUN: $first_failure"
 log "PROVISIONAL LINK RUN ENDED (readback status $rc)"
 exit $rc

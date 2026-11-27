@@ -198,6 +198,15 @@ action. The standalone model carries the registration width and weight
 conditions shared with #595 and the positive signing condition from #596.
 The January rotation and conviction rules are separate.
 
-The reference check runs fifteen indexed bookings against keripy 1.3.5.
+At inception, a weighted next threshold must describe at most as many keys
+as there are signed commitments. Each clause and each nested member list
+must sum to at least one. Two weights of `2/4` meet that minimum. Two
+whole-weight clauses can cover two of three commitments. One whole weight
+requires at least one commitment.
+
+The reference check compares 24 indexed bookings with keripy 1.3.5. The
+nine future-declaration cases exercise the writer and verify its accepted
+events with signed reads. A separate signed read checks the literal `2/4`
+spelling, which the writer normally reduces to `1/2`.
 The derivation-code families and restrictions follow its
 [prefix validation](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L1564-L1610).

@@ -31,6 +31,7 @@ module Cardano.KERI.Deployment.RegistryDeploySpec (
     deployOn,
     loadTestBlueprint,
     pricedParameters,
+    chargedParameters,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes, hashToBytes)
@@ -65,6 +66,7 @@ import Cardano.KERI.Deployment.Script (
     mkCageScript,
     scriptHashBytes,
  )
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionRuntime (..),
     transactionId,
@@ -105,6 +107,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxCert (
     ConwayDelegCert (ConwayRegCert),
     ConwayTxCert (ConwayTxCertDeleg),
@@ -159,6 +162,8 @@ data Chain = Chain
     -- ^ how many transactions had been reported when each submission arrived, newest first
     , chainRegistered :: !(Set AccountAddress)
     -- ^ the reward accounts the chain holds registered
+    , chainParameters :: !(PParams ConwayEra)
+    -- ^ the protocol parameters it answers with
     }
 
 -- | What goes wrong, and when. Counts start at zero.
@@ -231,7 +236,7 @@ scriptHashOf :: Word8 -> ScriptHash
 scriptHashOf n = ScriptHash (fromJust (hashFromBytes (BS.replicate 28 n)))
 
 newChain :: [(TxIn, TxOut ConwayEra)] -> Chain
-newChain outputs = Chain (Map.fromList outputs) [] 0 0 0 0 [] [] Set.empty
+newChain outputs = Chain (Map.fromList outputs) [] 0 0 0 0 [] [] Set.empty pricedParameters
 
 {- | Protocol parameters whose prices are not zero, so a fee follows the units a
 transaction declares.
@@ -274,7 +279,7 @@ chainRuntime faults chainRef =
             pure (Map.restrictKeys (chainOutputs chain) wanted)
         , rtTransactions =
             TransactionRuntime
-                { trQueryProtocolParams = touch >> pure pricedParameters
+                { trQueryProtocolParams = touch >> (chainParameters <$> readIORef chainRef)
                 , trEvaluate = \tx -> do
                     touch
                     n <- atomicModifyIORef' chainRef (\c -> (c{chainEvaluations = chainEvaluations c + 1}, chainEvaluations c))
@@ -297,6 +302,7 @@ chainRuntime faults chainRef =
         , rtObserve = fail "a deployment reads no time"
         , rtNowMs = fail "a deployment reads no time"
         , rtValidityEnd = pure EndNotSet
+        , rtFunding = singularFundingRules
         }
   where
     touch = modifyIORef' chainRef (\c -> c{chainCalls = chainCalls c + 1})
@@ -468,10 +474,10 @@ spec = describe "#351 deploying a registry" $ do
 
     describe "the seed" $ do
         it "is the output of lovelace alone with the least lovelace of at least ten ada" $ do
-            fmap fst (chooseSeed walletOutputs) `shouldBe` Just expectedSeedIn
-            fmap fst (chooseSeed (reverse walletOutputs)) `shouldBe` Just expectedSeedIn
+            fmap fst (chooseSeed singularFundingRules walletOutputs) `shouldBe` Just expectedSeedIn
+            fmap fst (chooseSeed singularFundingRules (reverse walletOutputs)) `shouldBe` Just expectedSeedIn
         it "does not exist in a wallet of dust and of outputs that hold a token" $
-            fmap fst (chooseSeed (take 2 walletOutputs)) `shouldBe` Nothing
+            fmap fst (chooseSeed singularFundingRules (take 2 walletOutputs)) `shouldBe` Nothing
 
     describe "a deployment that completes" $ beforeAll deployed $ do
         it "lands the seven transactions in order, the booking attestation policy published before the application, and reports each as it settles" $ \(outcome, chain) -> do
@@ -699,7 +705,7 @@ spec = describe "#351 deploying a registry" $ do
                     other -> fail ("expected the funds named as too low, got " <> show other)
                 Right _ -> fail "a deployment went on with funds that cannot pay for it"
             chainSubmissions chain `shouldBe` 0
-        it "stops by name before any transaction when nothing but outputs that carry a script is left" $ do
+        it "stops by name before any transaction when one output of lovelace alone is left, less the seed it makes" $ do
             blueprint <- loadTestBlueprint
             carrier <- referenceCarrier blueprint
             let wallet =
@@ -709,7 +715,10 @@ spec = describe "#351 deploying a registry" $ do
             (outcome, chain) <- runOn noFaults blueprint testTerms wallet
             case outcome of
                 Left failure -> case failureCause failure of
-                    FundsBelowRequirement _ held -> held `shouldBe` 0
+                    FundsBelowRequirement needed held -> do
+                        -- the one output of lovelace alone makes the seed: what is left of it pays
+                        held `shouldBe` 12_000_000
+                        needed `shouldSatisfy` (> held)
                     other -> fail ("expected the funds named as too low, got " <> show other)
                 Right _ -> fail "a deployment went on with nothing to pay with"
             chainSubmissions chain `shouldBe` 0
@@ -939,3 +948,9 @@ carriesProgram outputs reference artifact =
 txInOfOutputReference :: OutputReference -> TxIn
 txInOfOutputReference (OutputReference transaction index) =
     TxIn (txIdOf transaction) (TxIx (fromInteger index))
+
+{- | The same parameters with a price on the scripts a transaction reads by reference, 44 lovelace per byte as preprod
+charges them, so that a fee follows the reference scripts a transaction resolves.
+-}
+chargedParameters :: PParams ConwayEra
+chargedParameters = pricedParameters & ppMinFeeRefScriptCostPerByteL .~ fromJust (boundRational 44)

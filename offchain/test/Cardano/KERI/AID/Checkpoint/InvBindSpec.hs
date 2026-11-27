@@ -155,8 +155,8 @@ eventMatches ev =
         Left _ -> False
         Right got -> projectionEq (ceExpected ev) got
 
-projectionEq
-    :: ExpectedProjection -> DecodedEstablishmentEvent -> Bool
+projectionEq ::
+    ExpectedProjection -> DecodedEstablishmentEvent -> Bool
 projectionEq e g =
     epVariant e == deeVariant g
         && epSaid e == deeSaid g
@@ -185,14 +185,14 @@ eventFromAdv fx key = do
     ev <- require "rot" sub
     eventFromNode ev key
 
-eventFromSimple
-    :: Value -> Text -> Text -> Either String CorpusEvent
+eventFromSimple ::
+    Value -> Text -> Text -> Either String CorpusEvent
 eventFromSimple fx key label = do
     ev <- require key fx
     eventFromNode ev label
 
-eventFromGrind
-    :: Value -> Text -> EventVariant -> Either String CorpusEvent
+eventFromGrind ::
+    Value -> Text -> EventVariant -> Either String CorpusEvent
 eventFromGrind fx key variant = do
     sub <- require key fx
     raw <- decodeHex =<< textField sub "raw_hex"
@@ -208,11 +208,11 @@ eventFromNode ev label = do
     expected <- expectedFromKed ked raw variant
     Right (CorpusEvent label raw expected)
 
-expectedFromKed
-    :: Value
-    -> ByteString
-    -> EventVariant
-    -> Either String ExpectedProjection
+expectedFromKed ::
+    Value ->
+    ByteString ->
+    EventVariant ->
+    Either String ExpectedProjection
 expectedFromKed ked raw variant = do
     aid <- textAscii ked "i"
     seqv <- textAscii ked "s"
@@ -247,8 +247,8 @@ expectedFromKed ked raw variant = do
             , epDi = di
             }
 
-expectedFromRaw
-    :: ByteString -> EventVariant -> Either String ExpectedProjection
+expectedFromRaw ::
+    ByteString -> EventVariant -> Either String ExpectedProjection
 expectedFromRaw raw variant =
     case decodeEstablishmentEvent raw of
         Left err -> Left (show err)
@@ -323,8 +323,8 @@ framingPositions raw = go 1 []
                         next = maybe i2 (+ 1) (commaPos raw i2)
                      in go next acc'
 
-parseString
-    :: ByteString -> Int -> Maybe (ByteString, Int, Int, Int)
+parseString ::
+    ByteString -> Int -> Maybe (ByteString, Int, Int, Int)
 parseString raw i
     | at raw i /= 0x22 = Nothing
     | otherwise = go (i + 1)
@@ -335,8 +335,8 @@ parseString raw i
             Just (BS.take (j - i - 1) (BS.drop (i + 1) raw), i + 1, j, j + 1)
         | otherwise = go (j + 1)
 
-valueIndices
-    :: ByteString -> ByteString -> Int -> ([Int], Int)
+valueIndices ::
+    ByteString -> ByteString -> Int -> ([Int], Int)
 valueIndices raw name i
     | at raw i == 0x22 =
         case parseString raw i of
@@ -411,11 +411,11 @@ textAsciiList v k =
 raw event. Independent of 'decodeEstablishmentEvent', so a wrong
 decoded @p@\/@di@ still mismatches.
 -}
-optionalAsciiOrRaw
-    :: Value
-    -> ByteString
-    -> Text
-    -> Either String (Maybe ByteString)
+optionalAsciiOrRaw ::
+    Value ->
+    ByteString ->
+    Text ->
+    Either String (Maybe ByteString)
 optionalAsciiOrRaw ked raw key = case lookupKey key ked of
     Just _ -> Just <$> textAscii ked key
     Nothing -> Right (quotedFieldFromRaw raw key)

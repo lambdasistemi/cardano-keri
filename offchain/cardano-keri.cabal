@@ -77,9 +77,9 @@ library
     Cardano.KERI.AID.Checkpoint.BountyCommitment
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Deposit
-    Cardano.KERI.AID.Checkpoint.EventDecoder
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
+    Cardano.KERI.AID.Checkpoint.EventDecoder
     Cardano.KERI.AID.Checkpoint.Freeze
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.Message
@@ -1140,11 +1140,11 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.EnforcementSpec
     Cardano.KERI.AID.Checkpoint.EntitlementSpec
     Cardano.KERI.AID.Checkpoint.FixtureLoader
-    Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec
-    Cardano.KERI.AID.Checkpoint.InvBindSpec
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.FreezeCorpus
     Cardano.KERI.AID.Checkpoint.FreezeSpec
+    Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec
+    Cardano.KERI.AID.Checkpoint.InvBindSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec

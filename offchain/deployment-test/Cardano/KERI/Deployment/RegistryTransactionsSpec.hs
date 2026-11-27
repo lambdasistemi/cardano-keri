@@ -82,7 +82,7 @@ import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     parseInceptionExport,
  )
-import Cardano.KERI.Deployment.ReferenceInception (referenceExport)
+import Cardano.KERI.Deployment.ReferenceInception (prefixCaseExport, referenceExport)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -368,6 +368,7 @@ independent reference inception of that id, built through the same decoder.
 load :: FilePath -> IO InceptionExport
 load name
     | Just reference <- stripPrefix "reference:" name = referenceExport (T.pack reference)
+    | Just label <- stripPrefix "case:" name = prefixCaseExport (T.pack label)
     | otherwise = do
         path <- getDataFileName ("deployment-test/fixtures/" <> name)
         stream <- BS.readFile path

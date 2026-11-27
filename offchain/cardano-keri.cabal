@@ -231,6 +231,7 @@ library deployment-koios
     , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-allegra
+    , cardano-ledger-alonzo
     , cardano-ledger-api
     , cardano-ledger-conway
     , cardano-ledger-core
@@ -255,6 +256,7 @@ library deployment-koios
     Cardano.KERI.Deployment.KoiosSubmission
     Cardano.KERI.Deployment.RegistryApplication
     Cardano.KERI.Deployment.RegistryFoldNamed
+    Cardano.KERI.Deployment.RegistryReadback
     Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
     Cardano.KERI.Deployment.SingularFunding
@@ -574,6 +576,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
     Cardano.KERI.Deployment.RegistryOneOutputSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
+    Cardano.KERI.Deployment.RegistryReadbackSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec
     Cardano.KERI.Deployment.RegistryReplaySpec

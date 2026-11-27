@@ -32,6 +32,7 @@ module Cardano.KERI.Deployment.RegistryBookingShapeSpec (
     attestationPolicyBytes,
     redeemerOf,
     foldOf,
+    firstRecord,
 ) where
 
 import Cardano.KERI.AID.Application (

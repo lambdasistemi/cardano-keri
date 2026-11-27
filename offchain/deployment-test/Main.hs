@@ -35,6 +35,7 @@ import Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec qualified as Registr
 import Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec qualified as RegistryLegacyRecordCommandSpec
 import Cardano.KERI.Deployment.RegistryOneOutputSpec qualified as RegistryOneOutputSpec
 import Cardano.KERI.Deployment.RegistryProviderSpec qualified as RegistryProviderSpec
+import Cardano.KERI.Deployment.RegistryReadbackSpec qualified as RegistryReadbackSpec
 import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
 import Cardano.KERI.Deployment.RegistryRegisterStagesSpec qualified as RegistryRegisterStagesSpec
 import Cardano.KERI.Deployment.RegistryReplaySpec qualified as RegistryReplaySpec
@@ -98,6 +99,7 @@ suite = hspec $ do
     TopUpTransactionSpec.spec
     KELSpec.spec
     RegistrationEvidenceSpec.spec
+    RegistryReadbackSpec.spec
     KoiosReadsSpec.spec
     KoiosRegistryRuntimeSpec.spec
     KoiosSettlementSpec.spec

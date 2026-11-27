@@ -24,11 +24,12 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.PParams (ppCollateralPercentageL)
 import Cardano.Ledger.Api.Tx (bodyTxL, txIdTx)
 import Cardano.Ledger.Api.Tx.Body (collateralInputsTxBodyL, collateralReturnTxBodyL, feeTxBodyL, inputsTxBodyL, outputsTxBodyL, totalCollateralTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (addrTxOutL, coinTxOutL, getMinCoinTxOut, mkBasicTxOut)
+import Cardano.Ledger.Api.Tx.Out (addrTxOutL, coinTxOutL, getMinCoinTxOut, mkBasicTxOut, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeReference (StakeRefNull))
 import Cardano.Ledger.Hashes (KeyHash (..), unsafeMakeSafeHash)
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Monad (forM_)
@@ -36,7 +37,7 @@ import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.IORef (newIORef, readIORef)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, listToMaybe)
 import Data.Set qualified as Set
 import Lens.Micro ((^.))
 import Test.Hspec
@@ -136,6 +137,22 @@ spec = describe "#558 a wallet of exactly one ada-only output runs every registr
         -- the booking is funded by what the premint left of the wallet, besides the proof output it spends
         Set.size (booking ^. bodyTxL . collateralInputsTxBodyL) `shouldBe` 1
         (booking ^. bodyTxL . collateralInputsTxBodyL) `shouldSatisfy` (`Set.isSubsetOf` (booking ^. bodyTxL . inputsTxBodyL))
+    it "leaves the payer an output of lovelace alone after a booking: the attestation is in an output of its own and the change carries no token" $ do
+        world <- newWorld 1_000
+        export <- loadExport "kli-export-single.cesr"
+        _ <- plantWallet world lonely 5_000_000_000
+        base <- length <$> accepted world
+        _ <- bookFrom world lonely export
+        transactions <- accepted world
+        booking <- case drop (base + 1) transactions of
+            [b] -> pure b
+            other -> fail ("expected the booking after the premint, found " <> show (length other))
+        let own = [out | out <- toList (booking ^. bodyTxL . outputsTxBodyL), out ^. addrTxOutL == lonely]
+            holdsTokens out = let MaryValue _ (MultiAsset m) = out ^. valueTxOutL in not (Map.null m)
+        -- the attestation still comes back to the payer, in an output that holds it
+        any holdsTokens own `shouldBe` True
+        -- the change, the last output, holds lovelace alone: the payer's next transaction has an output to fund and collateralise it
+        fmap holdsTokens (listToMaybe (reverse own)) `shouldBe` Just False
     it "deploys a registry: every transaction of the deployment lands from a wallet of one output" $ do
         blueprint <- loadTestBlueprint
         let seedRef = TxIn (TxId (unsafeMakeSafeHash (fromJust (hashFromBytes (BS.replicate 32 0xc8))))) (TxIx 0)

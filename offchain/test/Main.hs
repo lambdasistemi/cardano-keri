@@ -22,6 +22,7 @@ import Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec qualified as InceptionPre
 import Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec qualified as InvBindGrammarSpec
 import Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec qualified as InvBindPrefixSpec
 import Cardano.KERI.AID.Checkpoint.InvBindSpec qualified as InvBindSpec
+import Cardano.KERI.AID.Checkpoint.InvBindTopStringsSpec qualified as InvBindTopStringsSpec
 import Cardano.KERI.AID.Checkpoint.Keri68OracleSpec qualified as Keri68OracleSpec
 import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec qualified as NineFieldDatumSpec
@@ -66,6 +67,7 @@ main = hspec $ do
     InvBindGrammarSpec.spec
     InvBindPrefixSpec.spec
     InvBindSpec.spec
+    InvBindTopStringsSpec.spec
     FreezeBondSpec.spec
     FreezeSpec.spec
     TopUpSpec.spec

@@ -1148,6 +1148,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec
     Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec
     Cardano.KERI.AID.Checkpoint.InvBindSpec
+    Cardano.KERI.AID.Checkpoint.InvBindTopStringsSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec

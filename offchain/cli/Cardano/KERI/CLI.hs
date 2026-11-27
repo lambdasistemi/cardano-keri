@@ -14,6 +14,7 @@ runners; only @status@ is new, routed through the #177 backend seam
 module Cardano.KERI.CLI (
     Instructions (..),
     runInstructions,
+    runInstructionsWith,
 ) where
 
 import Cardano.KERI.CLI.Backend (
@@ -26,6 +27,7 @@ import Cardano.KERI.CLI.Backend (
     PayerSettings (..),
     PayerView (..),
     QueryBackend (..),
+    SelectedBackend (..),
     backendCommonSettings,
     backendSettingsParser,
     checkpointSettingsParser,
@@ -75,13 +77,20 @@ import Cardano.KERI.Deployment.EndpointBoardManifest (
  )
 import Cardano.KERI.Deployment.Manifest (Manifest, readManifest)
 import Cardano.KERI.Deployment.RegistryBookingCommand (
+    KoiosReadOpener,
     RegistryFoldSettings,
+    RegistryReadFlags,
+    RegistryReadMode (..),
     RegistryRegisterSettings,
     RegistryReturnSettings,
+    openRegistryKoiosRead,
     registryFoldSettingsParser,
+    registryReadFlagsParser,
+    registryReadMode,
     registryRegisterSettingsParser,
     registryReturnSettingsParser,
     runRegistryFold,
+    runRegistryReadbackOver,
     runRegistryRegister,
     runRegistryReturn,
  )
@@ -111,9 +120,9 @@ data Instructions
     | Advance !AdvanceSettings
     | Freeze !FreezeSettings
     | TopUp !TopUpSettings
-    | Status !BackendSettings
+    | Status !BackendSettings !RegistryReadFlags
     | List !ListSettings
-    | Checkpoint !CheckpointSettings
+    | Checkpoint !CheckpointSettings !RegistryReadFlags
     | Payer !PayerSettings
     | Board !BoardCommand
     | RegistryDeploy !RegistryDeploySettings
@@ -218,7 +227,7 @@ instance Opt.HasParser Instructions where
                 , Opt.command
                     "status"
                     "Report an AID's checkpoint from a selected backend"
-                    (Status <$> Opt.subConfig "status" backendSettingsParser)
+                    (Opt.subConfig "status" (Status <$> backendSettingsParser <*> registryReadFlagsParser))
                 , Opt.command
                     "list"
                     "List live checkpoints from a selected backend"
@@ -226,7 +235,7 @@ instance Opt.HasParser Instructions where
                 , Opt.command
                     "checkpoint"
                     "Report one checkpoint from a selected backend"
-                    (Checkpoint <$> Opt.subConfig "checkpoint" checkpointSettingsParser)
+                    (Opt.subConfig "checkpoint" (Checkpoint <$> checkpointSettingsParser <*> registryReadFlagsParser))
                 , Opt.command
                     "payer"
                     "List current payer UTxOs from a selected backend"
@@ -271,22 +280,48 @@ instance Opt.HasParser Instructions where
                 ]
 
 runInstructions :: Instructions -> IO ()
-runInstructions = \case
+runInstructions = runInstructionsWith openRegistryKoiosRead
+
+-- | The commands, with the way the rebuilt registry's provider is opened given.
+runInstructionsWith :: KoiosReadOpener -> Instructions -> IO ()
+runInstructionsWith opener = \case
     Deploy settings -> runDeploy settings
     ManifestVerify settings -> runVerify settings
     Register settings -> runRegister settings
     Advance settings -> runAdvance settings
     Freeze settings -> runFreeze settings
     TopUp settings -> runTopUp settings
-    Status settings -> runBackendStatusCLI settings
+    Status settings flags -> withRegistryMode opener flags (backendCommonSettings settings) (backendAid settings) (runBackendStatusCLI settings)
     List settings -> runBackendListCLI settings
-    Checkpoint settings -> runBackendCheckpointCLI settings
+    Checkpoint settings flags -> withRegistryMode opener flags (checkpointBackendSettings settings) (checkpointAid settings) (runBackendCheckpointCLI settings)
     Payer settings -> runBackendPayerCLI settings
     Board command -> runBoardCommand command
     RegistryDeploy settings -> runRegistryDeploy settings
     RegistryRegister settings -> runRegistryRegister settings
     RegistryFold settings -> runRegistryFold settings
     RegistryReturn settings -> runRegistryReturn settings
+
+{- | The rebuilt registry is read through the ledger provider, by the identifier as
+signed; every other invocation reads the first deployment on its pinned codecs.
+Both entry points, @status@ and @checkpoint@, come here. The rebuilt registry's
+design has no local store, no hosted endpoint and no manifest of the first
+deployment, so a flag for any of them is refused rather than ignored.
+-}
+withRegistryMode ::
+    KoiosReadOpener -> RegistryReadFlags -> BackendCommonSettings -> T.Text -> IO () -> IO ()
+withRegistryMode opener flags common aid firstDeployment =
+    case registryReadMode flags of
+        Left refusal -> dieConcisely refusal
+        Right ReadFirstDeployment -> firstDeployment
+        Right (ReadRegistry identity record blueprint) ->
+            case selectCommonBackend common of
+                Right (SelectedKoios url Nothing) ->
+                    runRegistryReadbackOver opener flags identity record blueprint url aid
+                _ -> refused
+  where
+    refused =
+        dieConcisely
+            "registry-read-needs-the-provider: the rebuilt registry is read through the ledger provider (--koios-url, with --koios-token-file); --endpoint, --store, --backend local or endpoint and --koios-token do not apply"
 
 {- | Select exactly one backend (FR-5) and render its answer or its closed
 error. Checkpoint\/board manifest loading is deferred into the local\/Koios

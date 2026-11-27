@@ -15,7 +15,16 @@ digest recomputed from the signed bytes in that booking's evidence. A provider
 that cannot show a link returns the stored state marked not linked and names the
 link; it never supplies a digest.
 -}
-module Cardano.KERI.Deployment.RegistryReadbackSpec (spec) where
+module Cardano.KERI.Deployment.RegistryReadbackSpec (
+    spec,
+    World (..),
+    worldOf,
+    worldAt,
+    honest,
+    providerOf,
+    shownBy,
+    rows,
+) where
 
 import Cardano.KERI.AID.Application (RegistrationData (..), activeTokenName)
 import Cardano.KERI.AID.CESR (qb64Aid)
@@ -23,8 +32,7 @@ import Cardano.KERI.Deployment.ReferenceInception (Reference (..), loadReference
 import Cardano.KERI.Deployment.Registry (RegistryScripts (..))
 import Cardano.KERI.Deployment.RegistryBookingShapeSpec (
     Scenario (..),
-    firstRecord,
-    foldOf,
+    foldAt,
     scenarioOf,
  )
 import Cardano.KERI.Deployment.RegistryReadback (
@@ -42,8 +50,11 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     statePolicyId,
  )
 import Cardano.KERI.Deployment.RegistryTransactionsSpec (deposit, outputAt, producedBy)
-import Cardano.Ledger.Api.Tx (txIdTx)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.Scripts.Data (Data (..))
+import Cardano.Ledger.Api.Tx (txIdTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Out (TxOut)
+import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID)
@@ -54,7 +65,10 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Map.Strict qualified as Map
 import Data.Text.Encoding qualified as TE
+import Lens.Micro ((%~), (&))
+import PlutusCore.Data qualified as PLC
 import Singular.Registry.Evidence (Evidenced (..), NoWitness, SessionBinding (..), SessionId (..))
 import Singular.Registry.LedgerProvider (
     HistoricalTransaction (..),
@@ -79,18 +93,24 @@ data World = World
     }
 
 worldOf :: FilePath -> IO World
-worldOf name = do
-    s <- scenarioOf [(name, deposit)]
-    foldTx <- foldOf s
+worldOf name = worldAt [(name, deposit)] 0
+
+{- | The world of the request at an output position of a booking of several requests: the
+fold that consumed that position's output, and the approval and active token of its record.
+-}
+worldAt :: [(FilePath, Integer)] -> Int -> IO World
+worldAt shapes position = do
+    s <- scenarioOf shapes
+    foldTx <- foldAt s position
     let booking = scBooking s
-        record = firstRecord s
+        record = scRecords s !! position
         registry = scRegistry s
         scripts = deploymentScripts registry
     pure
         World
             { wScenario = s
             , wBooking = historical booking []
-            , wFold = historical foldTx [outputAt booking 0]
+            , wFold = historical foldTx [outputAt booking position]
             , wHolding = outputAt foldTx 0
             , wActive =
                 ( statePolicyId registry
@@ -205,6 +225,24 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                     other -> fail ("a checkpoint was expected: " <> show (fmap (fmap readbackIdentifier) other))
             )
             rows
+    describe "a request that is not at the first output of its booking" $ do
+        it "is read at its own output index, with its own evidence among the two the booking issues" $ do
+            let shapes = [("case:B empty", deposit), ("reference:I01", deposit + 7_000_000)]
+                aid = "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
+            w <- worldAt shapes 1
+            result <- readOf w (honest w) aid
+            case result of
+                Right (Just rb) -> do
+                    readbackIdentifier rb `shouldBe` aid
+                    fmap (\l -> (linkedIndex l, linkedPending l, qb64Aid (linkedDigest l))) (readbackLinks rb)
+                        `shouldBe` Right (1, TxIn (historicalId (wBooking w)) (TxIx 1), "EFdfRKDdnvl3KoYGilKKR8p_ukC4sKLuf8YMJDPT9_8c")
+                other -> fail ("a checkpoint was expected: " <> show (fmap (fmap readbackIdentifier) other))
+        it "does not take the evidence of the other request of the booking" $ do
+            let shapes = [("case:B empty", deposit), ("reference:I01", deposit + 7_000_000)]
+            w <- worldAt shapes 1
+            result <- readOf w (honest w) "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
+            fmap (fmap (fmap (qb64Aid . linkedDigest) . readbackLinks)) result
+                `shouldBe` Right (Just (Right "EFdfRKDdnvl3KoYGilKKR8p_ukC4sKLuf8YMJDPT9_8c"))
     describe "a transaction in a later block of the history is found" $
         it "links the booking when the provider streams it after other transactions of the approval" $ do
             w <- worldOf "reference:I01"
@@ -232,7 +270,7 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
         unlinked
             "the fold transaction is not among the transactions shown for the active token"
             (\w -> providerOf [wHolding w] (shownBy w [] [wBooking w, wFold w]))
-            (failedAt FoldTransaction (NotShown FoldTransaction))
+            (failedAt AtFoldTransaction (NotShown AtFoldTransaction))
         unlinked
             "the fold shows no request of the identifier among its spent outputs"
             ( \w ->
@@ -240,11 +278,11 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                     [wHolding w]
                     (shownBy w [(wFold w){spentOutputs = []}] [wBooking w, wFold w])
             )
-            (failedAt PendingOutput (NotShown PendingOutput))
+            (failedAt AtPendingOutput (NotShown AtPendingOutput))
         unlinked
             "the booking transaction is not among the transactions shown for the approval"
             (\w -> providerOf [wHolding w] (shownBy w [wFold w] [wFold w]))
-            (failedAt BookingTransaction (NotShown BookingTransaction))
+            (failedAt AtBookingTransaction (NotShown AtBookingTransaction))
         unlinked
             "the booking transaction carries no evidence at the index of the request"
             ( \w ->
@@ -252,7 +290,7 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                     [wHolding w]
                     (shownBy w [wFold w] [(wBooking w){historicalTx = historicalTx (wFold w)}, wFold w])
             )
-            (failedAt BookingEvidence (NotShown BookingEvidence))
+            (failedAt AtBookingEvidence (NotShown AtBookingEvidence))
         unlinked
             "the provider refuses the history of the approval"
             ( \w ->
@@ -262,9 +300,23 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                         else shownBy w [wFold w] [] asset
             )
             ( \case
-                Left (BookingTransaction, ProviderRefused BookingTransaction _) -> pure ()
+                Left (AtBookingTransaction, ProviderRefused AtBookingTransaction _) -> pure ()
                 other -> fail ("a refused history of the approval was expected: " <> show other)
             )
+    describe "the evidence is not one complete inception" $ do
+        it "names the evidence of the booking, not the signed identifier, and supplies no digest" $ do
+            w <- worldOf "reference:I01"
+            let garbled = (wBooking w){historicalTx = garble (historicalTx (wBooking w))}
+            result <-
+                readOf
+                    w
+                    (providerOf [wHolding w] (shownBy w [wFold w] [garbled, wFold w]))
+                    "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
+            case result of
+                Right (Just rb) -> readbackLinks rb `shouldBe` Left (AtBookingEvidence, EvidenceUndecodable)
+                other -> fail ("stored state was expected: " <> show (fmap (fmap readbackIdentifier) other))
+        it "is the same result for bytes that are cut short" $
+            signedDigest "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ" "{\"v\":\"KERI10JSON" `shouldBe` Left EvidenceUndecodable
     describe "the evidence is for the identifier that is stored" $
         it "the signed identifier of the evidence differs from the stored one" $ do
             w <- worldOf "reference:I01"
@@ -276,7 +328,7 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                     (providerOf [wHolding w] (shownBy w [wFold w] [swapped, wFold w]))
                     "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
             case result of
-                Right (Just rb) -> readbackLinks rb `shouldBe` Left (SignedIdentifier, IdentifierDiffers)
+                Right (Just rb) -> readbackLinks rb `shouldBe` Left (AtSignedIdentifier, IdentifierDiffers)
                 other' -> fail ("stored state was expected: " <> show (fmap (fmap readbackIdentifier) other'))
     describe "the digest of the signed bytes" $ do
         it "is recomputed from them, and the digest they carry must be the one they bind" $ do
@@ -296,3 +348,14 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
             w <- worldOf "reference:I01"
             result <- readOf w (providerOf [] (shownBy w [] [])) "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
             fmap (fmap readbackIdentifier) result `shouldBe` Right Nothing
+
+-- | The same transaction with the signed bytes of every Issue entry replaced by bytes that are no event.
+garble :: ConwayTx -> ConwayTx
+garble tx = tx & witsTxL . rdmrsTxWitsL %~ (\(Redeemers m) -> Redeemers (Map.map (\(Data d, units) -> (Data (issue d), units)) m))
+  where
+    issue = \case
+        PLC.Constr 0 [application, PLC.List entries] -> PLC.Constr 0 [application, PLC.List (map entry entries)]
+        other -> other
+    entry = \case
+        PLC.Constr 0 [index, PLC.Constr 0 (PLC.B _ : rest)] -> PLC.Constr 0 [index, PLC.Constr 0 (PLC.B "not an event" : rest)]
+        other -> other

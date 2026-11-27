@@ -115,6 +115,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     checkpointDatumToData,
     convictedOf,
     keyMaterialOf,
+    liveOfInception,
     liveOfKeyState,
     rotatedLive,
  )
@@ -2096,7 +2097,11 @@ the validity interval, refunding the registering wallet.
 -}
 registeredFacts :: CheckpointEnv -> InceptionExport -> ValidityPlan -> CheckpointDatumV2
 registeredFacts env fixture validity =
-    liveOfKeyState (serialiseAddr (envOwner env)) (upperPosixMs validity) (inceptionDatum fixture)
+    liveOfInception
+        (serialiseAddr (envOwner env))
+        (upperPosixMs validity)
+        (inceptionDatum fixture)
+        (inceptionQualified fixture)
 
 {- | What differs between the transactions that present a rotation to the
 rotation observer: an Advance writes the rotated datum and pays the premium, a
@@ -4794,7 +4799,15 @@ registrySeed = scriptsSeed . envRegistry
 holdsRegistryToken :: CheckpointEnv -> ByteString -> TxOut ConwayEra -> Bool
 holdsRegistryToken env = hasAsset (statePolicyId env)
 
--- | Whether the output holds the checkpoint of the AID: its active token.
+-- | Whether the output holds the active token of a registration's identifier, as signed (B, D or E).
+holdsRegistrationToken :: CheckpointEnv -> InceptionExport -> TxOut ConwayEra -> Bool
+holdsRegistrationToken env fixture =
+    holdsRegistryToken env (activeTokenName (registryIdentity env) (checkpointKey env fixture))
+
+{- | Whether the output holds the checkpoint of the AID: its active token. The name is the E-code
+spelling of the key state's digest: it is the signed identifier only of a self-addressing
+fixture; a registration is checked with 'holdsRegistrationToken'.
+-}
 holdsCheckpointToken :: CheckpointEnv -> KeyStateView -> TxOut ConwayEra -> Bool
 holdsCheckpointToken env view =
     holdsRegistryToken env (checkpointToken env view)
@@ -5365,7 +5378,7 @@ duplicateRegistrationJourney env (heldIn, heldOut) heldKey fixture = do
             "first fold"
             (buildFoldTx env (planFor firstBooking folderParty [heldKey] Nothing firstValidity))
     (deliveredIn, deliveredOut) <-
-        pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (inceptionDatum fixture))
+        pollOutput (envProvider env) firstTxId [0] (holdsRegistrationToken env fixture)
             >>= requireJust "the delivered checkpoint of the first fold did not settle"
     dbg ("registration fold transaction " <> show firstTxId <> " (new key)")
     unless (extractDatum deliveredOut == Just (V2 (registeredFacts env fixture (bookingValidity firstBooking)))) $
@@ -5464,7 +5477,7 @@ productionRegisterScenarioUsingReferences env references fixture = do
             (envProvider env)
             foldTxId
             [0]
-            (holdsCheckpointToken env (inceptionDatum fixture))
+            (holdsRegistrationToken env fixture)
             >>= requireJust "the delivered checkpoint did not settle"
     dbg ("registration fold transaction " <> show foldTxId)
     dbg ("fold validity " <> show validity)
@@ -6604,7 +6617,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     foldId <- submitTwoPassBy folderParty env "registration fold" (buildFoldTx env plan)
     foldSubmitted <- nowMs
     (checkpointIn, checkpointOut) <-
-        pollOutput (envProvider env) foldId [0] (holdsCheckpointToken env (inceptionDatum fixture))
+        pollOutput (envProvider env) foldId [0] (holdsRegistrationToken env fixture)
             >>= requireJust "the fold did not settle"
     foldSettled <- nowMs
     snapshot <- withinSecs 30 "tip after the fold" (queryLedgerSnapshot (envProvider env))
@@ -6615,7 +6628,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
         fail "the delivered checkpoint does not hold the committed deposit"
     unless (extractDatum checkpointOut == Just (V2 (registeredFacts env fixture bookValidity))) $
         fail "the delivered checkpoint does not carry the initial datum of the request"
-    unless (holdsCheckpointToken env (inceptionDatum fixture) checkpointOut) $
+    unless (holdsRegistrationToken env fixture checkpointOut) $
         fail "the delivered checkpoint does not hold the active token of its AID"
     (_, stateAfter) <- currentState env
     unless (rawInlineData stateAfter == Just (stateDatumData (snd (registryProof [] [] key)))) $
@@ -6874,7 +6887,7 @@ registryBookingJourney foldKey startMs socket lsq ltxs = do
     unless (delivered ^. addrTxOutL == roleAddress env0 Active) $ fail "the delivered checkpoint is not at the checkpoint validator's address"
     unless (unCoin (delivered ^. coinTxOutL) == requestDeposit firstBooking) $ fail "the delivered checkpoint does not hold the committed deposit"
     unless (rawInlineData delivered == Just (requestInitialDatum firstBooking)) $ fail "the delivered checkpoint does not carry the committed datum"
-    unless (holdsCheckpointToken env0 (inceptionDatum export) delivered) $ fail "the delivered checkpoint does not hold the active token"
+    unless (holdsRegistrationToken env0 export delivered) $ fail "the delivered checkpoint does not hold the active token"
     stateOutputs <- withinSecs 30 "query the registry state" (queryUTxOs provider (Tx.stateAddress (deploymentOf env0)))
     unless (any (\(_, out) -> rawInlineData out == Just (stateDatumData (registryRoot [key]))) stateOutputs) $
         fail "the registry's root is not the root of the one registered key"

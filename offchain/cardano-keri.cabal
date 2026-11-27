@@ -576,6 +576,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
     Cardano.KERI.Deployment.RegistryOneOutputSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
+    Cardano.KERI.Deployment.RegistryReadbackCommandSpec
     Cardano.KERI.Deployment.RegistryReadbackSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec
@@ -608,6 +609,7 @@ test-suite deployment-tests
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
+    , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-keri:deployment-koios
     , cardano-keri:registry-commands
@@ -638,6 +640,7 @@ test-suite deployment-tests
     , microlens
     , mtl
     , network
+    , opt-env-conf                                 >=0.13   && <0.16
     , ouroboros-consensus
     , ouroboros-network:protocols
     , plutus-core
@@ -1149,6 +1152,7 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.FreezeCorpus
     Cardano.KERI.AID.Checkpoint.FreezeSpec
+    Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec
     Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec
     Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec
     Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec

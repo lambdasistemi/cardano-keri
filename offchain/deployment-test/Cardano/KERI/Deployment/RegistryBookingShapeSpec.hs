@@ -32,6 +32,7 @@ module Cardano.KERI.Deployment.RegistryBookingShapeSpec (
     attestationPolicyBytes,
     redeemerOf,
     foldOf,
+    foldAt,
     firstRecord,
 ) where
 
@@ -475,12 +476,16 @@ attestationNames registry s =
 
 -- | The fold of the first request of a scenario, by the wallet that booked it, before its deadline.
 foldOf :: Scenario -> IO ConwayTx
-foldOf s = do
+foldOf s = foldAt s 0
+
+-- | The fold of the request at an output position of the booking.
+foldAt :: Scenario -> Int -> IO ConwayTx
+foldAt s position = do
     let booking = scBooking s
         plan =
             FoldPlan
-                { foldRequest = outputAt booking 0
-                , foldBooked = firstRecord s
+                { foldRequest = outputAt booking position
+                , foldBooked = scRecords s !! position
                 , foldRegistered = []
                 , foldTerminated = []
                 , foldState = scState s

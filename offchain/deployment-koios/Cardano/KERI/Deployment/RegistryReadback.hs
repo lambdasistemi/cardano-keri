@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE RankNTypes #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.RegistryReadback
@@ -18,6 +18,7 @@ when a link cannot be followed through the provider the stored state is
 returned marked not linked, naming the link that failed.
 -}
 module Cardano.KERI.Deployment.RegistryReadback (
+    Acquirer (..),
     Readback (..),
     Link (..),
     Linked (..),
@@ -70,8 +71,9 @@ import Data.List (find)
 import Data.Map.Strict qualified as Map
 import Lens.Micro ((^.))
 import PlutusCore.Data qualified as PLC
-import Singular.Registry.Evidence (Evidenced (..))
+import Singular.Registry.Evidence (Evidenced (..), NoWitness)
 import Singular.Registry.LedgerProvider (
+    AcquireFailure,
     HistoricalTransaction (..),
     HistoryBlock (..),
     HistoryFailure,
@@ -82,13 +84,16 @@ import Singular.Registry.LedgerProvider (
     Session (..),
  )
 
+-- | A session of the latest chain state, for the length of an action.
+newtype Acquirer = Acquirer (forall a. (Session NoWitness IO -> IO a) -> IO (Either AcquireFailure a))
+
 -- | The links of the chain of evidence, in the order they are followed.
 data Link
-    = FoldTransaction
-    | PendingOutput
-    | BookingTransaction
-    | BookingEvidence
-    | SignedIdentifier
+    = AtFoldTransaction
+    | AtPendingOutput
+    | AtBookingTransaction
+    | AtBookingEvidence
+    | AtSignedIdentifier
     deriving stock (Eq, Show)
 
 -- | Why a link could not be followed.
@@ -97,6 +102,8 @@ data LinkFailure
       NotShown !Link
     | -- | the provider refused the read
       ProviderRefused !Link !String
+    | -- | the evidence of the booking is not one complete inception
+      EvidenceUndecodable
     | -- | the signed identifier differs from the stored one
       IdentifierDiffers
     | -- | the signed bytes do not bind their own digest
@@ -158,29 +165,29 @@ follow ::
     (PolicyID, AssetName) ->
     IO (Either (Link, LinkFailure) Linked)
 follow deployment session identifier (TxIn foldId _) activeAsset =
-    transactionsOf session FoldTransaction activeAsset >>= \case
+    transactionsOf session AtFoldTransaction activeAsset >>= \case
         Left failure -> pure (Left failure)
         Right folds -> case find ((== foldId) . historicalId) folds of
-            Nothing -> pure (Left (FoldTransaction, NotShown FoldTransaction))
+            Nothing -> pure (Left (AtFoldTransaction, NotShown AtFoldTransaction))
             Just foldTx -> case find (isRequestOf identifier) (spentOutputs foldTx) of
-                Nothing -> pure (Left (PendingOutput, NotShown PendingOutput))
+                Nothing -> pure (Left (AtPendingOutput, NotShown AtPendingOutput))
                 Just (pendingIn, pendingOut) -> case registrationOfOutput pendingOut of
-                    Nothing -> pure (Left (PendingOutput, NotShown PendingOutput))
+                    Nothing -> pure (Left (AtPendingOutput, NotShown AtPendingOutput))
                     Just record -> do
                         let TxIn bookingId ix = pendingIn
                             index = txIxToInt ix
                             approvalAsset = (applicationPolicyId deployment, AssetName (SBS.toShort (approval record)))
-                        transactionsOf session BookingTransaction approvalAsset >>= \case
+                        transactionsOf session AtBookingTransaction approvalAsset >>= \case
                             Left failure -> pure (Left failure)
                             Right bookings -> pure $ case find ((== bookingId) . historicalId) bookings of
-                                Nothing -> Left (BookingTransaction, NotShown BookingTransaction)
+                                Nothing -> Left (AtBookingTransaction, NotShown AtBookingTransaction)
                                 Just bookingTx -> do
                                     event <-
                                         maybe
-                                            (Left (BookingEvidence, NotShown BookingEvidence))
+                                            (Left (AtBookingEvidence, NotShown AtBookingEvidence))
                                             Right
                                             (issueEvidence deployment (historicalTx bookingTx) (fromIntegral index))
-                                    digest <- first (SignedIdentifier,) (signedDigest identifier event)
+                                    digest <- first atLink (signedDigest identifier event)
                                     Right
                                         Linked
                                             { linkedFold = foldId
@@ -191,6 +198,10 @@ follow deployment session identifier (TxIn foldId _) activeAsset =
                                             }
   where
     isRequestOf aid (_, out) = maybe False ((== aid) . requestKey) (registrationOfOutput out)
+    -- the failure belongs to the link it is about: bytes that are not an inception are a failure of the evidence
+    atLink = \case
+        EvidenceUndecodable -> (AtBookingEvidence, EvidenceUndecodable)
+        failure -> (AtSignedIdentifier, failure)
 
 -- | Every transaction the provider shows for an asset, in the order it gives them.
 transactionsOf ::
@@ -231,7 +242,7 @@ bind. Never inferred: any other case is a failure.
 -}
 signedDigest :: ByteString -> ByteString -> Either LinkFailure ByteString
 signedDigest identifier raw = do
-    event <- either (const (Left (NotShown BookingEvidence))) Right (decodeEstablishmentEvent raw)
+    event <- either (const (Left EvidenceUndecodable)) Right (decodeEstablishmentEvent raw)
     if deeAid event == identifier then Right () else Left IdentifierDiffers
     let recomputed = blake3Hash (deeSaidPreimage event)
     case parsePrimitive (deeSaid event) of

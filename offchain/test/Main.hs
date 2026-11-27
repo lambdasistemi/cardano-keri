@@ -18,6 +18,7 @@ import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
 import Cardano.KERI.AID.Checkpoint.FreezeSpec qualified as FreezeSpec
+import Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec qualified as FutureDeclarationSpec
 import Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec qualified as InceptionPrefixSpec
 import Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec qualified as InvBindGrammarSpec
 import Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec qualified as InvBindPrefixSpec
@@ -54,6 +55,7 @@ main = hspec $ do
     MpfProofMirrorSpec.spec
     SignSpec.spec
     ThresholdSpec.spec
+    FutureDeclarationSpec.spec
     AdvanceFixturesSpec.spec
     AdvanceSpec.spec
     DatumSpec.spec

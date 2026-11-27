@@ -49,13 +49,22 @@ module Cardano.KERI.Deployment.RegistryBookingCommand (
     dieChoice,
     openKey,
     parseRequestReference,
+    RegistryReadFlags (..),
+    RegistryReadMode (..),
+    registryReadFlagsParser,
+    registryReadMode,
+    KoiosReadOpener,
+    openRegistryKoiosRead,
+    runRegistryReadbackOver,
+    renderReadback,
 ) where
 
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (ApplicationParameters (..))
+import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Aid)
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
-import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..), openKoios, openKoiosRuntime, renderKoiosStartFailure)
+import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..), KoiosOpened (..), openKoios, openKoiosRuntime, renderKoiosStartFailure)
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
 import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), KeySource (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.RegistryChain (
@@ -64,6 +73,7 @@ import Cardano.KERI.Deployment.RegistryChain (
     Boundary (..),
     Refusal (..),
     SubmitError (..),
+    deriveDeployment,
     feeOf,
     renderBoundary,
     submitBoundary,
@@ -99,6 +109,7 @@ import Cardano.KERI.Deployment.RegistryProvider (
     transliterateReports,
     withProvider,
  )
+import Cardano.KERI.Deployment.RegistryReadback (Acquirer (..), Link (..), LinkFailure (..), Linked (..), Readback (..), readCheckpoint)
 import Cardano.KERI.Deployment.RegistryRegister (
     RegisterEvent (..),
     RegisterFailure (..),
@@ -135,6 +146,7 @@ import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
+import Data.Text.Encoding qualified as TE
 import OptEnvConf qualified as Opt
 import System.Directory (doesPathExist)
 import System.Exit (exitFailure)
@@ -1078,3 +1090,135 @@ renderNamedStop =
                 <> concat [attemptRows "fold" a | Just a <- [attempt]]
                 <> ["not retried: no transaction is sent again by this command"]
                 <> [zeroSpend | null attempt]
+
+-- ---------------------------------------------------------------------
+-- the readback of a checkpoint by its identifier
+-- ---------------------------------------------------------------------
+
+{- | What @ckeri status@ and @ckeri checkpoint@ are given beside their backend settings to read the rebuilt
+registry: the files @registry deploy@ wrote, the blueprint, and the provider settings @registry fold@ takes. With
+none of the three file settings the command reads the first deployment, as it always did.
+-}
+data RegistryReadFlags = RegistryReadFlags
+    { rrReleaseIdentity :: !(Maybe FilePath)
+    , rrReferenceRecord :: !(Maybe FilePath)
+    , rrBlueprint :: !(Maybe FilePath)
+    , rrNetworkMagic :: !Int
+    , rrKoiosTokenFile :: !(Maybe FilePath)
+    , rrNetworkTime :: !(Maybe FilePath)
+    }
+    deriving stock (Show, Eq)
+
+-- | Which design a command reads.
+data RegistryReadMode
+    = -- | the first deployment, through its manifest, as before
+      ReadFirstDeployment
+    | -- | the rebuilt registry, through the ledger provider
+      ReadRegistry !FilePath !FilePath !FilePath
+    deriving stock (Show, Eq)
+
+registryReadFlagsParser :: Opt.Parser RegistryReadFlags
+registryReadFlagsParser = do
+    rrReleaseIdentity <- Opt.optional (stringSetting "release-identity" "Read the rebuilt registry: the release identity file registry deploy wrote")
+    rrReferenceRecord <- Opt.optional (stringSetting "reference-record" "Read the rebuilt registry: the reference-output record registry deploy wrote")
+    rrBlueprint <- Opt.optional (stringSetting "blueprint" "Read the rebuilt registry: the immutable Aiken plutus.json")
+    rrNetworkMagic <- intSetting "network-magic" (Just 1) "Cardano network magic of the rebuilt registry's provider"
+    rrKoiosTokenFile <-
+        Opt.optional $
+            stringSetting "koios-token-file" "File holding the Koios bearer token, read by the transport (rebuilt registry)"
+    rrNetworkTime <-
+        Opt.optional $
+            stringSetting "network-time" "Directory of the network time, as public Singular reads it (rebuilt registry)"
+    pure RegistryReadFlags{..}
+
+-- | The design the flags choose: all three files, or none and no other registry flag.
+registryReadMode :: RegistryReadFlags -> Either String RegistryReadMode
+registryReadMode flags = case (rrReleaseIdentity flags, rrReferenceRecord flags, rrBlueprint flags) of
+    (Just identity, Just record, Just blueprint) -> Right (ReadRegistry identity record blueprint)
+    (Nothing, Nothing, Nothing)
+        | isJust (rrKoiosTokenFile flags) || isJust (rrNetworkTime flags) ->
+            Left "registry-flags-without-files: --koios-token-file and --network-time are for the rebuilt registry, which is chosen with --release-identity, --reference-record and --blueprint"
+        | otherwise -> Right ReadFirstDeployment
+    _ -> Left "registry-files-incomplete: reading the rebuilt registry needs --release-identity, --reference-record and --blueprint together"
+
+-- | How the readback opens the provider: no key and no payer, since nothing is signed.
+type KoiosReadOpener = KoiosAccess -> (Acquirer -> IO ()) -> IO ()
+
+-- | The opener the readback ships: the live Koios transport of the fold, without its key.
+openRegistryKoiosRead :: KoiosReadOpener
+openRegistryKoiosRead access use = do
+    opened <- openKoios printHandoffReport access
+    either (dieZero . renderKoiosStartFailure) (use . acquirerOf) opened
+  where
+    acquirerOf opened = Acquirer (openedAcquire opened)
+
+{- | Read the checkpoint of an identifier, exactly as signed and booked, through the ledger provider, and print
+what the registry stores for it with the references that tie it to the booking.
+-}
+runRegistryReadbackOver :: KoiosReadOpener -> RegistryReadFlags -> FilePath -> FilePath -> FilePath -> Text -> Text -> IO ()
+runRegistryReadbackOver open flags identityPath recordPath blueprintPath url aid = do
+    identifier <- case parsePrimitive (TE.encodeUtf8 aid) of
+        Right (Ed25519PublicKey _, rest) | B8.null rest -> pure (TE.encodeUtf8 aid)
+        Right (SelfAddressing _, rest) | B8.null rest -> pure (TE.encodeUtf8 aid)
+        _ -> dieZero "aid-invalid: the identifier must be one complete qualified B, D or E identifier, as it was signed"
+    blueprint <- loadBlueprint blueprintPath >>= either (dieZero . ("blueprint-invalid: " <>)) pure
+    (identity, _) <- readFiles "status" identityPath recordPath
+    deployment <- either (dieZero . ("deployment-refused: " <>) . renderRefusal) pure (deriveDeployment blueprint identity)
+    let access =
+            KoiosAccess
+                { koiosUrl = url
+                , koiosTokenFile = rrKoiosTokenFile flags
+                , koiosNetworkMagic = rrNetworkMagic flags
+                , koiosFundingAddress = ""
+                , koiosSigningKey = KeyFile ""
+                , koiosNetworkTime = rrNetworkTime flags
+                }
+    open access $ \(Acquirer acquire) ->
+        acquire (\session -> readCheckpoint deployment session identifier) >>= \case
+            Left failure -> dieZero ("provider-not-acquired: " <> show failure)
+            Right (Left failure) -> dieZero ("provider-read-failed: " <> show failure)
+            Right (Right readback) -> mapM_ putStrLn (renderReadback url aid readback) >> hFlush stdout
+
+-- | What the readback prints: the stored state, then the links, or the link that could not be followed.
+renderReadback :: Text -> Text -> Maybe Readback -> [String]
+renderReadback url aid = \case
+    Nothing ->
+        [ "source: " <> T.unpack url
+        , "identifier: " <> T.unpack aid
+        , "checkpoint: none (no output holds the active token of this identifier)"
+        ]
+    Just readback ->
+        ["source: " <> T.unpack url, "identifier: " <> B8.unpack (readbackIdentifier readback)]
+            <> ["current-key: " <> B8.unpack key | key <- readbackKeys readback]
+            <> ["checkpoint-output: " <> renderTxIn (readbackCheckpoint readback)]
+            <> case readbackLinks readback of
+                Right linked ->
+                    [ "fold-transaction: " <> T.unpack (renderTransactionId (linkedFold linked))
+                    , "pending-output: " <> renderTxIn (linkedPending linked)
+                    , "booking-transaction: " <> T.unpack (renderTransactionId (linkedBooking linked))
+                    , "booking-output-index: " <> show (linkedIndex linked)
+                    , "inception-digest: " <> B8.unpack (qb64Aid (linkedDigest linked))
+                    , "links: complete"
+                    ]
+                Left (link, failure) ->
+                    [ "links: not linked"
+                    , "failed-link: " <> renderLink link
+                    , "reason: " <> renderLinkFailure failure
+                    , "inception-digest: not established"
+                    ]
+
+renderLink :: Link -> String
+renderLink = \case
+    AtFoldTransaction -> "fold-transaction"
+    AtPendingOutput -> "pending-output"
+    AtBookingTransaction -> "booking-transaction"
+    AtBookingEvidence -> "booking-evidence"
+    AtSignedIdentifier -> "signed-identifier"
+
+renderLinkFailure :: LinkFailure -> String
+renderLinkFailure = \case
+    NotShown link -> "the provider does not show the " <> renderLink link
+    ProviderRefused link message -> "the provider refused the read of the " <> renderLink link <> ": " <> message
+    EvidenceUndecodable -> "the evidence of the booking at this output is not one complete inception"
+    IdentifierDiffers -> "the identifier in the signed bytes is not the stored one"
+    DigestDoesNotBind -> "the signed bytes do not bind the digest they carry"

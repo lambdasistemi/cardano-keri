@@ -63,8 +63,8 @@ function replayFold(context,start,c) {
   const result=registryStep(context,before,{fold:{expectedGen:before.gen,expectedPlugin:before.config.applicationPolicy,unspent:c.unspent,transaction:c.transaction}});
   return {before,...result,transaction:c.transaction};
 }
-function localStep(p,env,action,now,state) {
-  const result=C.step(p,env,action,now,state);
+function localStep(p,env,action,now,state,aid) {
+  const result=C.step(p,env,action,now,state,aid);
   if(!result.ok&&['invalid-nat','invalid-params','invalid-state','invalid-action','invalid-evidence'].includes(result.reason))throw Error('unsupported-checkpoint-input:'+result.reason+':'+result.field);
   require(result.ok,'checkpoint-local-refused');return result;
 }
@@ -86,48 +86,204 @@ function commitmentStep(state,kind,a) {
   else require(c.expiresAt<a.now,'commitment-not-expired');
   return retire(state,a.marker);
 }
-function transition(p,env,state,command) {
+function validateWriterTable(table) {
+  const invalid = () => { throw Error('invalid-system-wire:writer'); };
+  const list = (xs, check) => { if (!Array.isArray(xs)) invalid(); xs.forEach(check); };
+  const integer = x => localNat(x, 'writer');
+  const bool = x => { if (typeof x !== 'boolean') invalid(); };
+  function fraction(f) {
+    fields(f, ['numerator','denominator'], 'fraction');
+    integer(f.numerator);
+    integer(f.denominator);
+  }
+  function threshold(t) {
+    if (t?.count) {
+      fields(t, ['count'], 'threshold');
+      fields(t.count, ['required'], 'count');
+      integer(t.count.required);
+      return;
+    }
+    fields(t, ['weighted'], 'threshold');
+    fields(t.weighted, ['clauses'], 'weighted');
+    list(t.weighted.clauses, clause => list(clause, term => {
+      if (term?.key) {
+        fields(term, ['key'], 'weight');
+        fields(term.key, ['weight'], 'key');
+        fraction(term.key.weight);
+      } else {
+        fields(term, ['group'], 'weight');
+        fields(term.group, ['weight','members'], 'group');
+        fraction(term.group.weight);
+        list(term.group.members, fraction);
+      }
+    }));
+  }
+  function content(e) {
+    fields(e, ['aid','sn','kind','priorDigest','keys','threshold','nextKeys','nextThreshold',
+      'cuts','adds','witnessThreshold','extension'], 'event');
+    if (!['inception','rotation','interaction','delegatedInception','delegatedRotation'].includes(e.kind)) invalid();
+    for (const k of ['aid','sn','priorDigest','witnessThreshold']) integer(e[k]);
+    for (const k of ['keys','nextKeys','cuts','adds','extension']) list(e[k], integer);
+    threshold(e.threshold);
+    threshold(e.nextThreshold);
+  }
+  function signature(sig) {
+    fields(sig, ['signer','event','verified'], 'signature');
+    integer(sig.signer);
+    content(sig.event);
+    bool(sig.verified);
+  }
+  function signed(s) {
+    fields(s, ['event','structureVerified','signatures','receipts'], 'signed-event');
+    content(s.event);
+    bool(s.structureVerified);
+    list(s.signatures, signature);
+    list(s.receipts, signature);
+  }
+  fields(table, ['inceptions','rotations'], 'writers');
+  list(table.inceptions, row => {
+    fields(row, ['aid','datum','signed','witnesses'], 'inception-row');
+    integer(row.aid);
+    integer(row.datum);
+    signed(row.signed);
+    list(row.witnesses, integer);
+  });
+  list(table.rotations, row => {
+    fields(row, ['aid','epoch','sn','signed'], 'rotation-row');
+    integer(row.aid);
+    integer(row.epoch);
+    integer(row.sn);
+    signed(row.signed);
+  });
+}
+
+function inceptionWriter(writers, aid, datum) {
+  const row = writers.inceptions.find(r => E.equal(r.aid, aid) && E.equal(r.datum, datum));
+  require(row, 'checkpoint-inception-writer-mismatch');
+  const {signed, witnesses} = row;
+  const e = signed.event;
+  const receipts = C.verifiedSigners(e, signed.receipts);
+  require(E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
+    e.keys.length > 0 && new Set(e.keys).size === e.keys.length &&
+    new Set(witnesses).size === witnesses.length &&
+    C.thresholdSatisfied(e.threshold, e.keys, C.verifiedSigners(e, signed.signatures)) &&
+    (e.witnessThreshold === 0 ? signed.receipts.length === 0 :
+      witnesses.filter(w => receipts.includes(w)).length >= e.witnessThreshold),
+    'checkpoint-inception-writer-mismatch');
+  return {inception: {event: signed, witnesses}};
+}
+
+function readWriter(writer) {
+  const rotations = [];
+  let history = writer;
+  while (history?.rotation) {
+    rotations.push(history.rotation.event.event);
+    history = history.rotation.previous;
+  }
+  require(history?.inception, 'checkpoint-rotation-writer-mismatch');
+  let last = history.inception.event.event;
+  let witnesses = history.inception.witnesses;
+  for (const e of rotations.reverse()) {
+    witnesses = C.derivedWitnesses({witnesses}, e);
+    last = e;
+  }
+  return {last, witnesses, epoch: rotations.length};
+}
+
+// The trace driver decodes a key or a next-key commitment from a singleton list.
+function matchesWriter(aid, writer, tip) {
+  const {last, witnesses, epoch} = readWriter(writer);
+  const keys = tip.keys;
+  const singletonKeys = values => values.map(value => [value]);
+  function threshold(value) {
+    if (value.unweighted) return {count: {required: value.unweighted.m}};
+    return {weighted: {clauses: value.weighted.clauses.map(clause => clause.map(([numerator, denominator]) =>
+      ({key: {weight: {numerator, denominator}}})))}};
+  }
+  return E.equal(tip.aid, aid) && E.equal(tip.aid, last.aid) && tip.epoch === epoch && tip.sn === last.sn &&
+    E.equal(keys.curKeys, singletonKeys(last.keys)) && E.equal(threshold(keys.curThreshold), last.threshold) &&
+    E.equal(keys.nextKeys, singletonKeys(last.nextKeys)) && E.equal(threshold(keys.nextThreshold), last.nextThreshold) &&
+    E.equal(keys.witnesses, singletonKeys(witnesses)) && E.equal(keys.toad, last.witnessThreshold);
+}
+
+function rotationWriter(writers, row, action) {
+  const kind = C.actionKind(action);
+  if (kind !== 'rotate' && kind !== 'freeze') return row.writer;
+  const target = action[kind]["sn'"];
+  const live = row.state.present.l;
+  const {last, witnesses, epoch} = readWriter(row.writer);
+  require(live.epoch === epoch, 'checkpoint-rotation-writer-mismatch');
+  const next = writers.rotations.find(r => E.equal(r.aid, row.aid) && r.epoch === live.epoch &&
+    r.sn === live.sn && r.signed.event.sn === target);
+  const prior = {aid: last.aid, sn: last.sn, delegated: false,
+    nextKeys: last.nextKeys, nextThreshold: last.nextThreshold, witnesses};
+  require(last.sn === live.sn && next && C.rotationValid(prior, next.signed), 'checkpoint-rotation-writer-mismatch');
+  return kind === 'freeze' ? row.writer : {rotation: {previous: row.writer, event: next.signed}};
+}
+
+export function evidenceFor(table, aid) {
+  return table.find(([subject]) => E.equal(subject, aid))?.[1] ??
+    {rotationTo: [], depositAuthorized: [], quorum: [], duplicityAt: []};
+}
+function transition(p,table,state,command) {
   validateCommand(command);
   const kind=Object.keys(command)[0],a=command[kind];
   if(['openCommitment','reveal','sweep'].includes(kind))return {ok:{state:commitmentStep(state,kind,a),checkpointFlow:null,registryFlow:null}};
+  const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid);
   const row=state.aids.find(x=>E.equal(x.aid,a.aid))??{aid:a.aid,leaf:'absent',state:'absent',status:statusOf('absent'),origin:null,pending:null};
   let next=row,checkpointFlow=null,registryFlow=null;
   if(kind==='register') {
     require(row.leaf==='absent','checkpoint-registration-leaf');require(row.origin===null,'checkpoint-origin-already-bound');
-    const local=localStep(p,env,{register:{refund:a.refund,pool0:a.pool}},a.now,row.state);
+    const local=localStep(p,env,{register:{refund:a.refund,pool0:a.pool}},a.now,row.state,a.aid);
     const receipt=replayFold(a.context,R.init(a.context.configuration),a.certificate);
     const binding=receipt.state.bindings.find(([aid])=>E.equal(aid,a.aid));require(!!binding,'checkpoint-registration-alias-missing');
     const output=receipt.transaction.outputs[a.index];require(!!output,'checkpoint-registration-output-missing');
+    const booking = E.toInternal(a.booking.request);
+    const registry = E.toInternal(a.context.parameters);
+    require(booking.submittedAt === BigInt(a.now) && booking.refundAddress === BigInt(a.refund) &&
+      registry.D === BigInt(p.D) + BigInt(p.B) && booking.carrierAda === registry.Mc + registry.D + BigInt(a.pool),
+      'checkpoint-registration-facts-mismatch');
     const before=E.toInternal(receipt.before),tx=E.toInternal(receipt.transaction);
     const world={registry:{config:before.config,trie:before.trie,held:before.carriers.map(c=>c.original)},pending:before.registrations,terminations:before.terminations.map(e=>e.booking),treasury:before.treasury};
     const selected=E.foldMembers(world,tx).some(m=>m.kind==='registration'&&E.equal(m.booking,a.booking));
     require(selected&&E.equal(a.booking.request.key,a.aid)&&E.equal(output.singularTags,[E.singularTag(E.toInternal(receipt.before.config),E.toInternal(a.aid))])&&E.equal(output.output.address,a.booking.request.destination)&&E.equal(output.output.datumValue,a.booking.request.datum)&&E.equal(output.output.lovelace,a.booking.request.carrierAda),'checkpoint-registration-delivery-mismatch');
-    const origin={...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
-    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
+    const writer = inceptionWriter(writers, a.aid, a.booking.request.datum);
+    const origin={inception:writer,...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
+    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,conviction:null,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
-    const local=localStep(p,env,a.action,a.now,row.state);
+    const local=localStep(p,env,a.action,a.now,row.state,a.aid);
+    const writer = rotationWriter(writers, row, a.action);
+    let conviction = null;
     // a conviction also reveals its commitment: open, for this AID and this deployment, then burnt
     if(C.actionKind(a.action)==='convict') {
+      const {epoch, sn} = row.state.present.l;
+      conviction = C.observedSpend(env, a.aid, epoch, sn);
+      require(conviction && matchesWriter(a.aid, writer, conviction.comparison.tip), 'checkpoint-rotation-writer-mismatch');
       const c=a.action.convict.commitment;
       require(E.equal(openAt(state,c.marker),c)&&E.equal(c.aid,a.aid)&&c.deployment===state.deployment,'checkpoint-commitment-not-open');
       state=retire(state,c.marker);
     }
-    next={...row,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
+    next={...row,writer,conviction,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {
     require(C.stateKind(row.state)==='terminationPending','checkpoint-not-pending');
     require(row.origin!==null,'checkpoint-origin-missing');require(row.pending===null,'checkpoint-already-associated');
     const context=contextOf(row.origin),before=registryReplay(context,row.origin.registered,a.history);
     const result=registryStep(context,before,{bookTermination:{aid:a.aid,booker:a.booker,fee:a.fee,booking:a.booking}});
     const entry=pendingAt(result.state,a.booking.request.reference);require(entry!==null,'checkpoint-booking-entry-missing');
-    require(E.equal(entry.booking,a.booking)&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,row.origin.token),'checkpoint-booking-binding');
+    const {pendingReference, position, ...publicBooking} = a.booking;
+    const expectedSpend = {reference: pendingReference, aid: a.aid, position: row.state.terminationPending.h};
+    const economicConviction = context.environment.convictions.find(c => E.equal(c.comparison.tip.aid, a.aid));
+    require(row.conviction && E.equal(row.conviction.output, pendingReference) &&
+      E.equal(row.conviction, economicConviction), 'checkpoint-booking-binding');
+    require(E.equal(entry.booking,publicBooking)&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,row.origin.token)&&E.equal(entry.payload.spend,expectedSpend),'checkpoint-booking-binding');
     next={...row,pending:{origin:row.origin,keyState:row.state.terminationPending.h,reference:a.booking.request.reference,entry,booked:result.state}};registryFlow=result.flow;
   } else {
     const association=row.pending;require(association!==null,'checkpoint-association-missing');
     const receipt=replayFold(contextOf(association.origin),association.booked,a.certificate);
     const entry=pendingAt(receipt.before,association.reference);
     require(E.equal(row.state,{terminationPending:{h:association.keyState}})&&E.equal(receipt.before.config,{...association.origin.registered.config,root:receipt.before.config.root})&&E.equal(entry,association.entry)&&entry!==null&&E.equal(entry.payload.aid,a.aid)&&E.equal(entry.payload.token,association.origin.token)&&contains(receipt.transaction.transaction.inputs,association.reference),'checkpoint-receipt-mismatch');
-    next={...row,leaf:'retired',state:'convicted',pending:null};registryFlow=receipt.flow;
+    next={...row,leaf:'retired',state:'convicted',conviction:null,pending:null};registryFlow=receipt.flow;
   }
   next={...next,status:statusOf(next.state)};
   const aids=state.aids.some(x=>E.equal(x.aid,a.aid))?state.aids.map(x=>E.equal(x.aid,a.aid)?next:x):[...state.aids,next];
@@ -137,8 +293,17 @@ const sessions=new WeakSet();
 function freeze(value) {if(value&&typeof value==='object'&&!Object.isFrozen(value)){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 function session(value) {const copy=freeze(structuredClone(value));sessions.add(copy);return copy;}
 export function newSystem(params,env,deployment) {
-  fields(params,['D','B','P','W'],'params');fields(env,['rotationTo','depositAuthorized','quorum','duplicityAt'],'env');
-  if(C.validateParams(params)||C.validateEnv(env))throw Error('invalid-system-wire:checkpoint-context');
+  fields(params,['D','B','P','W'],'params');
+  if (C.validateParams(params) || !Array.isArray(env)) throw Error('invalid-system-wire:checkpoint-context');
+  for (const pair of env) {
+    if (!Array.isArray(pair) || pair.length !== 2) throw Error('invalid-system-wire:evidence-row');
+    const [aid, evidence] = pair;
+    nat(aid, 'evidence-aid');
+    const {writers, ...local} = evidence;
+    if (writers !== undefined) validateWriterTable(writers);
+    fields(local, ['rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
+    if (C.validateEnv(local)) throw Error('invalid-system-wire:checkpoint-context');
+  }
   localNat(deployment,'deployment');
   return session({params,env,state:{deployment,commitments:[],aids:[]},records:[]});
 }
@@ -151,7 +316,7 @@ export function attemptSystem(current,command) {
 }
 export function replaySystem(params,env,deployment,commands) {return commands.reduce((s,c)=>attemptSystem(s,c).session,newSystem(params,env,deployment));}
 export function checkSystemCorpus(corpus) {
-  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==1||corpus.traces.length!==6)throw Error('system-corpus-schema/roster');
+  if(corpus.schema!=='cardano-keri.checkpoint.system'||corpus.version!==3||corpus.traces.length!==10)throw Error('system-corpus-schema/roster');
   let cells=0,accepted=0,refused=0;
   for(const trace of corpus.traces) {
     if(!trace.cells.length)throw Error('empty-system-trace');

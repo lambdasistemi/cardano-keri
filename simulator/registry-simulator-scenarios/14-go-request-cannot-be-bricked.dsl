@@ -27,17 +27,8 @@ actors:
   7: "termination booker"
   42: "Alice, request refund address"
 env:
-  duplicity:
-    - [11, 0]
-    - [11, 1]
-    - [11, 2]
-    - [12, 0]
-    - [12, 1]
-    - [12, 2]
-    - [13, 0]
-    - [13, 1]
-    - [13, 2]
   inception: [11, 12, 13, 14, 15]
+  convictions: [{"comparison":{"rival":{"aid":11,"bytes":[11,1,1,1],"nextKeys":[[12]],"nextThreshold":{"unweighted":{"m":1}},"receipts":[],"revealedKeys":[[11]],"rotation":true,"signatures":[[0,[11,11,1,1,1]]],"sn":1,"threshold":{"unweighted":{"m":1}},"toad":0},"tip":{"aid":11,"epoch":1,"keys":{"curKeys":[[11]],"curThreshold":{"unweighted":{"m":1}},"nextKeys":[[11]],"nextThreshold":{"unweighted":{"m":1}},"toad":0,"witnesses":[]},"sn":1}},"output":{"index":0,"tx":105}},{"comparison":{"rival":{"aid":12,"bytes":[12,1,1,1],"nextKeys":[[13]],"nextThreshold":{"unweighted":{"m":1}},"receipts":[],"revealedKeys":[[12]],"rotation":true,"signatures":[[0,[12,12,1,1,1]]],"sn":1,"threshold":{"unweighted":{"m":1}},"toad":0},"tip":{"aid":12,"epoch":1,"keys":{"curKeys":[[12]],"curThreshold":{"unweighted":{"m":1}},"nextKeys":[[12]],"nextThreshold":{"unweighted":{"m":1}},"toad":0,"witnesses":[]},"sn":1}},"output":{"index":0,"tx":106}},{"comparison":{"rival":{"aid":13,"bytes":[13,1,1,1],"nextKeys":[[14]],"nextThreshold":{"unweighted":{"m":1}},"receipts":[],"revealedKeys":[[13]],"rotation":true,"signatures":[[0,[13,13,1,1,1]]],"sn":1,"threshold":{"unweighted":{"m":1}},"toad":0},"tip":{"aid":13,"epoch":1,"keys":{"curKeys":[[13]],"curThreshold":{"unweighted":{"m":1}},"nextKeys":[[13]],"nextThreshold":{"unweighted":{"m":1}},"toad":0,"witnesses":[]},"sn":1}},"output":{"index":0,"tx":107}}]
 step:
   now: 0
   actor: "anyone presenting the required evidence"
@@ -150,7 +141,7 @@ step:
         state:
           bindings:
             - [11, 0]
-          carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"live","token":0}]
+          carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
           config:
             activePolicy: 8
             applicationPolicy: 7
@@ -191,7 +182,7 @@ step:
         state:
           bindings:
             - [11, 0]
-          carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"terminationPending","token":0}]
+          carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
           config:
             activePolicy: 8
             applicationPolicy: 7
@@ -238,6 +229,12 @@ step:
           singularTags: [{"registryId":9,"token":{"name":11,"policy":8}}]
           submittedAt: null
         trieReadyTagsMinted: [{"name":"5600603241348410377","policy":9}]
+        pendingReference:
+          index: 0
+          tx: 105
+        position:
+          epoch: 1
+          sn: 1
       fee: 1
   expect:
     ok: true
@@ -268,7 +265,7 @@ step:
           gen: 1
           nextToken: 1
           registrations: []
-          terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+          terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
           treasury: 2
           trie:
             - [11,{"known":{"s":"active"}}]
@@ -361,7 +358,7 @@ fork:
     gen: 1
     nextToken: 1
     registrations: []
-    terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+    terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
     treasury: 2
     trie:
       - [11,{"known":{"s":"active"}}]

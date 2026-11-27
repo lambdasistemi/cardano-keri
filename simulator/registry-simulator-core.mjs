@@ -2,6 +2,7 @@
  * imported transaction judgments are in registry-economic-core.mjs. This is a
  * model simulator, with finite evidence tables, not production authorization.
  * Wire v3 carries whole states/transactions and exact integers. */
+import { acceptsComparison } from './checkpoint-conviction.mjs';
 import * as E from './registry-economic-core.mjs';
 import { decodeInput, validateState, validateConfig, validateEnv, validateResult } from './registry-wire.mjs';
 export const SCHEMA = 'cardano-keri.registry.trace';
@@ -32,16 +33,20 @@ function execute(p, env, s, action) {
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
   } else if (['convictCkpt', 'bookTermination'].includes(kind)) {
     const c = carrierAt(s, a.aid); require(c !== null, 'keri-carrier-missing');
-    const evidence = (name, second) => env[name].some(([aid, value]) => aid === a.aid && value === second);
     if (kind === 'convictCkpt') {
-      require(c.st !== 'terminationPending' && evidence('duplicity', c.k), 'keri-conviction-refused');
-      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, st: 'terminationPending' } : old) };
+      const observed = env.convictions.find(row => row.comparison.tip.aid === a.aid);
+      require(c.pendingSpend === null && observed && acceptsComparison(observed.comparison), 'keri-conviction-refused');
+      const {epoch, sn} = observed.comparison.tip;
+      const pendingSpend = {reference: observed.output, aid: a.aid, position: {epoch, sn}};
+      after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, pendingSpend } : old) };
     } else {
-      require(c.st === 'terminationPending', 'keri-conviction-required');
       const b = a.booking, r = b.request;
+      const { pendingReference, position, ...publicBooking } = b;
+      const spend = { reference: pendingReference, aid: r.key, position };
+      require(E.equal(c.pendingSpend, spend), 'keri-conviction-required');
       require(r.key === a.aid && r.destination === c.original.output && E.equal(b.custodyInputs, [c.original]) && c.minAda === p.Mc && r.carrierAda === p.Mr && r.declaredTip === p.tip && r.contents.lovelace === p.Mr + p.tip, 'keri-termination-binding-mismatch');
-      const next = E.bookTermination(world, b);
-      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: b, payload: { aid: a.aid, token: c.token, keyState: c.k, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
+      const next = E.bookTermination(world, publicBooking);
+      after = { ...s, carriers: s.carriers.filter(old => old.aid !== a.aid), terminations: [{ booking: publicBooking, payload: { spend, aid: a.aid, token: c.token, original: c.original, booker: a.booker, bookingFee: a.fee } }, ...s.terminations] };
       require(E.equal(toWorld(after), next), 'keri-termination-reconstruction-mismatch');
       moved = flow({ premium: [a.booker, p.Mc - p.Mr - p.tip], bookingFee: a.fee, intoRequest: p.Mr + p.tip });
     }
@@ -56,7 +61,7 @@ function execute(p, env, s, action) {
         require(E.equal(e.booking, b), 'keri-termination-metadata-mismatch');
       } else {
         require(s.registrations.some(old => E.equal(old, b)), 'keri-registration-metadata-missing');
-        const c = { aid: b.request.key, token: after.nextToken, original: { key: b.request.key, kind: 'active', output: b.request.destination, datum: b.request.datum }, k: 0n, st: 'live', minAda: p.Mc };
+        const c = { aid: b.request.key, token: after.nextToken, original: { key: b.request.key, kind: 'active', output: b.request.destination, datum: b.request.datum }, pendingSpend: null, minAda: p.Mc };
         after = { ...after, carriers: [c, ...after.carriers], bindings: [[c.aid, c.token], ...after.bindings], nextToken: after.nextToken + 1n };
       }
     }

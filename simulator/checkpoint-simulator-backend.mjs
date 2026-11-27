@@ -146,7 +146,7 @@ function offersFor(actorId, tree, nodeId) {
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
       break;
     case 'cora':
-      if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
+      if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'the observer checks the rival against the spent keys and witness threshold');
       // Cora's commitment, naming the current key state and the evidence at it, opened
       // by a transaction whose validity range ended in the slot before this one, so it is eligible now
       act('convict', 'convict on my commitment, D to Cora', { convict: { payee: 3,

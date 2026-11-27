@@ -43,12 +43,13 @@ instance : FromJson Params where
 
 structure EnvTable where
   inception : List Nat := []
-  duplicity : List (Nat × Nat) := []
+  convictions : List Conviction := []
   deriving ToJson, FromJson
 
 def EnvTable.toEnv (table : EnvTable) : Env := {
   inception := fun aid => table.inception.contains aid
-  duplicity := fun aid key => table.duplicity.contains (aid, key) }
+  conviction := fun aid => table.convictions.find? (fun observed => observed.comparison.tip.aid == aid)
+  verifyRival := CheckpointConviction.Fixtures.verify }
 
 partial def exactJson (j : Json) : Json := match j with
   | .num _ => match j.getInt? with

@@ -29,7 +29,7 @@ inductive Command where
       (certificate : FoldCertificate) (booking : Singular.RegistrationBooking) (index : Nat)
   | local (aid now : Nat) (action : Action)
   | book (aid booker fee : Nat) (history : List CardanoKeri.Registry.Action)
-      (booking : Singular.TerminationBooking)
+      (booking : CardanoKeri.Registry.TerminationBooking)
   | complete (aid : Nat) (certificate : FoldCertificate)
   | openCommitment (commitment : Commitment)
   | reveal (marker now : Nat)
@@ -44,7 +44,7 @@ structure Machine where
 
 def Machine.init (d : Deployment) : Machine := ⟨CertifiedSys.init d, [], []⟩
 
-def execute (machine : Machine) (p : Params) (env : Env) (command : Command) :
+def execute (machine : Machine) (p : Params) (env : SystemEnv) (command : Command) :
     Except String (Machine × Option Flow × Option CardanoKeri.Registry.Flow) := do
   let current := machine.certified
   let result ← match command with
@@ -71,7 +71,7 @@ def originJson (environment : CardanoKeri.Registry.TraceWire.EnvTable) (origin :
     ("parameters", toJson origin.parameters), ("environment", toJson environment),
     ("configuration", toJson origin.configuration), ("registered", toJson origin.registered),
     ("token", toJson origin.token), ("registrationRef", toJson origin.registrationRef),
-    ("carrierRef", toJson origin.carrierRef)]
+    ("carrierRef", toJson origin.carrierRef), ("inception", toJson origin.inception)]
 
 def stateJson (machine : Machine) : Json :=
   let s := machine.certified.state
@@ -81,6 +81,7 @@ def stateJson (machine : Machine) : Json :=
     ("aid", toJson aid), ("leaf", toJson (s.leaves aid)), ("state", toJson (s.states aid)),
     ("status", toJson (CardanoKeri.ReaderStatus.lifecycleStatus (s.states aid)).word),
     ("origin", match s.origins aid with | none => Json.null | some origin => originJson environment origin),
+    ("writer", toJson (s.writers aid)), ("conviction", toJson (s.convictions aid)),
     ("pending", match s.pending aid with
       | none => Json.null
       | some association => Json.mkObj [
@@ -88,15 +89,23 @@ def stateJson (machine : Machine) : Json :=
         ("reference", toJson association.reference), ("entry", toJson association.entry),
         ("booked", toJson association.booked)])]).toArray)]
 
-def cell (name : String) (p : Params) (table : EnvTable) (machine : Machine)
+/-- Each row supplies the evidence of one identifier. An unlisted identity has
+no witnessed rotation, deposit signature, poison quorum or conviction pair. -/
+abbrev EvidenceTable := List (AID × EnvTable)
+
+def evidenceFor (table : EvidenceTable) (aid : AID) : Env :=
+  ((table.lookup aid).getD ⟨[], [], [], [], {}⟩).toEnv aid
+
+def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine)
     (command : Command) : Json × Machine :=
-  let (result, next) := match execute machine p table.toEnv command with
+  let (result, next) := match execute machine p (evidenceFor table) command with
     | .error why => (Json.mkObj [("error", toJson why)], machine)
     | .ok (next, flow, registryFlow) =>
       (Json.mkObj [("ok", Json.mkObj [("state", stateJson next),
         ("checkpointFlow", toJson flow), ("registryFlow", toJson registryFlow)])], next)
   (CardanoKeri.Registry.TraceWire.exactJson (Json.mkObj [
-    ("name", toJson name), ("params", toJson p), ("env", toJson table),
+    ("name", toJson name), ("params", toJson p), ("env", toJson (table.map fun (aid, evidence) =>
+      (aid, (toJson evidence).setObjVal! "writers" (toJson evidence.writers)))),
     ("input", stateJson machine), ("command", toJson command), ("result", result)]), next)
 
 end CardanoKeri.Checkpoint.SystemWire

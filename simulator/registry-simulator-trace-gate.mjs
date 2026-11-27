@@ -45,7 +45,7 @@ async function selftest(fresh,page) {
   writeFileSync(join(temp,'coherent-forged-page.html'),forgedPage);console.log('REJECTED coherent false result by replay');
   assert.throws(()=>embedded(page.replace(/REGISTRY_LEAN_TRACES_SHA256 = '[a-f0-9]{64}'/,"REGISTRY_LEAN_TRACES_SHA256 = '"+'0'.repeat(64)+"'")),/embedded digest/);
   const mutant=join(temp,'mutant');mkdirSync(mutant);
-  for(const file of ['registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs'])cpSync(join(HERE,file),join(mutant,file));
+  for(const file of ['registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-conviction.mjs'])cpSync(join(HERE,file),join(mutant,file));
   const path=join(mutant,'registry-simulator-core.mjs'),source=readFileSync(path,'utf8'),needle="require(a.expectedGen === s.gen, 'keri-generation-mismatch');";
   assert(source.includes(needle),'guard mutation target');writeFileSync(path,source.replace(needle,''));
   const core=await import(pathToFileURL(path)); // Failure here is setup, not a kill.

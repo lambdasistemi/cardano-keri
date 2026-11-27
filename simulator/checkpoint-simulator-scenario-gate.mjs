@@ -225,10 +225,14 @@ function checkExactNat(core, corpus) {
   refusal('replay of a non-pair entry', () => core.replay(P, okEnv, 0, live(), [[1, NOP, 2]]), 'invalid-action', 'list[0]');
   verdict('consumable under a zero bond', () => core.consumable({ ...P, D: 0 }, 5, live()), 'invalid-params', 'D must be positive');
   // a boundary refusal exhibits no theorem: T5 / T8 / T12 must not read a non-state as a refused-with-evidence step
-  const brec = core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } }, 0).record;
-  const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
-  if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
-  if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
+  const brec = call(() => core.attempt({ ...core.newSession(P), state: live({ sn: 2 ** 53 }), registry: [1], env: { ...core.emptyEnv(), duplicityAt: [[1, 2 ** 53]] } }, { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } }, 0).record);
+  if (!brec.theorems || !brec.lamps) {
+    problems.push("boundary conviction produced no theorem report: " + got(brec));
+  } else {
+    const bviol = Object.keys(brec.theorems).filter(id => !brec.theorems[id].holds);
+    if (bviol.length) problems.push('a boundary-refused conviction violates ' + bviol.join(','));
+    if (Object.keys(brec.lamps).some(id => id !== 'T9' && brec.lamps[id].exhibited)) problems.push('a boundary-refused step exhibits ' + Object.keys(brec.lamps).filter(id => brec.lamps[id].exhibited).join(','));
+  }
   // arithmetic at the bound: refused by name, never rounded
   const M = core.MAX_NAT;
   const hp = { D: 1, B: 1, P: 0, W: 0 };
@@ -442,7 +446,8 @@ function goalsClasses(leanRoot) {
   if (!commitmentDeclared.length) problems.push('commitment theorem inventory is empty');
   for (const n of COMMITMENT_STEP_ROWS) if (!commitmentDeclared.includes(n)) problems.push('commitment theorem missing ' + n);
   const commitmentBound = commitmentDeclared.filter(n => COMMITMENT_STEP_ROWS.includes(n) || SYSTEM_THEOREMS.includes(n));
-  const declared = [...theoremInventory(goals.text), ...commitmentBound];
+  const checkpointBound = theoremInventory(chk.text).filter(n => SYSTEM_THEOREMS.includes(n));
+  const declared = [...theoremInventory(goals.text), ...commitmentBound, ...checkpointBound];
   if (!declared.length) problems.push('theorem inventory is empty');
   problems.push(...duplicateIdentityProblems(declared, 'theorem'));
   if (!declared.some(n => n.includes('.'))) problems.push('theorem inventory has no dotted identity');
@@ -1081,6 +1086,9 @@ function fabricatedViolations(core) {
     T10_inert_without_next_keys: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_only_deposit_restores: () => mk({ pre: frozen, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 } }),
     T10_current_quorum_never_restores: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, actor: 'currentQuorum', flow: { poolIn: 1 } }),
+    pending_only_by_conviction: () => mk({ pre: live, action: TOP, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
+    trace_pending_convicted: () => mk({ pre: live, origin: live, action: TOP, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
+    reachable_pending_convicted: () => mk({ pre: 'absent', origin: 'absent', action: {register:{refund:1,pool0:10}}, post: {terminationPending:{h:{epoch:1,sn:1}}} }),
     pending_step_impossible: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     pending_has_no_local_exit: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
@@ -1295,7 +1303,7 @@ async function selftest(work) {
   const leanScratch = (name, file, needle, repl) => {
     const root = join(work, name);
     mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
-    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) {
       let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
       if (f === file) {
         if (!s.includes(needle)) throw new Error(`selftest ${name}: needle not found: ${needle.slice(0, 80)}`);
@@ -1311,7 +1319,7 @@ async function selftest(work) {
   const leanDups = (name, edits) => {
     const root = join(work, name);
     mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true });
-    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) {
+    for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) {
       let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8');
       const e = edits.find(x => x.file === f);
       if (e) {
@@ -1354,7 +1362,7 @@ async function selftest(work) {
     { name: 'core effect changed: a paid rotation pays the premium to the refund address, not to the payee', expect: /flow mismatch|theorem VIOLATED: .*T(16|7)/,
       make: () => ({ core: mutant('m-rotate-payee', [["      if (p.P <= l.pool) return some({ bIn, hunter: payment(payee, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));", "      if (p.P <= l.pool) return some({ bIn, hunter: payment(l.refundTo, 0, 0, p.P) }, present({ ...next, pool: l.pool - p.P }));"]]), skipBuild: true }) },
     { name: 'core guard flipped: a checkpoint is convicted without a proof against its key state', expect: /expected ok=false, got ok=true|theorem VIOLATED: .*T(12|5|7)/,
-      make: () => ({ core: mutant('m-convict', [["      if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');\n", ""]]), skipBuild: true }) },
+      make: () => ({ core: mutant('m-convict', [["      if (!envAcceptsRival(env, l.epoch, l.sn, aid)) return refuse('no-duplicity-proof');\n", ""]]), skipBuild: true }) },
     { name: 'core guard flipped: pending custody takes a local step', expect: /expected reason «termination-pending»|expected ok=false, got ok=true|theorem VIOLATED: .*pending/,
       make: () => ({ core: mutant('m-pending-local', [["  if (sk === 'terminationPending') return refuse('termination-pending');\n", "  if (sk === 'terminationPending') return refuse('absent-needs-register');\n"]]), skipBuild: true }) },
     { name: 'core effect changed: a deposit restarts juvenility (D-040 says it does not)', expect: /live datum mismatch|theorem VIOLATED: .*T(5|10|7)/,
@@ -1445,7 +1453,7 @@ async function selftest(work) {
     { name: 'a clause the story does not contain', expect: /clause «that the pool is below `Q`» does not occur in the story/,
       make: () => withClauses('clauses-absent.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); c.clause = 'that the pool is below `Q`'; }) },
     { name: 'a Step guard hypothesis renamed in the Lean (scratch copy: hpool → hpoolx) that no refusal name claims', expect: /Step\.freeze\/hpoolx .* is a guard the refusal names do not claim|Step\.freeze .* has no binder hpool/,
-      make: () => { const root = join(work, 'lean-root'); mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true }); for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean']) { let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8'); if (f === 'Checkpoint.lean') { if (!s.includes('(hpool : l.pool < p.P)')) throw new Error('selftest: hpool binder not found'); s = s.replace('(hpool : l.pool < p.P)', '(hpoolx : l.pool < p.P)'); } writeFileSync(join(root, 'lean', 'CardanoKeri', f), s); } return { leanRoot: root, skipBuild: true }; } },
+      make: () => { const root = join(work, 'lean-root'); mkdirSync(join(root, 'lean', 'CardanoKeri'), { recursive: true }); for (const f of ['Checkpoint.lean', 'CheckpointGoals.lean', 'CheckpointCommitmentGoals.lean']) { let s = readFileSync(join(LEAN_ROOT, 'lean', 'CardanoKeri', f), 'utf8'); if (f === 'Checkpoint.lean') { if (!s.includes('(hpool : l.pool < p.P)')) throw new Error('selftest: hpool binder not found'); s = s.replace('(hpool : l.pool < p.P)', '(hpoolx : l.pool < p.P)'); } writeFileSync(join(root, 'lean', 'CardanoKeri', f), s); } return { leanRoot: root, skipBuild: true }; } },
     { name: 'a distinctive scenario step dropped (conviction from a poisoned state)', expect: /distinctive clause «convict-from-poisoned».*not exercised/,
       make: () => ({ scenarios: scenariosCopy(d => { const f = join(d, '09-cora-convicts.json'); const sc = JSON.parse(readFileSync(f, 'utf8')); const i = sc.steps.findIndex(s => s.action === 'poison'); if (i < 0) throw new Error('poison control missing'); sc.steps.splice(i, 1); sc.steps.forEach(s => { delete s.expect.exhibits; delete s.expect.verdict; }); writeFileSync(f, JSON.stringify(sc)); }), skipBuild: true }) },
   ];
@@ -1476,6 +1484,8 @@ async function selftest(work) {
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-scenario-gate-'));
+for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+  cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {
   if (process.argv.includes('--clauses-md')) {

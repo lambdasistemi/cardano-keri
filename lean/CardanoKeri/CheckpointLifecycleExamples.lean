@@ -11,11 +11,18 @@ set_option maxRecDepth 10000
 set_option maxHeartbeats 2000000
 
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
-def env : Env := {
-  rotationTo := fun epoch sn next => (epoch == 0 && sn == 0 && next == 1) ||
-    (epoch == 1 && sn == 1 && next == 2),
+def env (aid : AID) : Env := {
+  rotationTo := fun epoch sn next => aid == 11 && ((epoch == 0 && sn == 0 && next == 1) ||
+    (epoch == 1 && sn == 1 && next == 2)),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
+  inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
+    some (Duplicity.writerFixture aid 0 .inception, []) else none,
+  rotationWriter := fun subject _ _ target => if subject == aid then
+    some (Duplicity.writerFixture aid target .rotation) else none,
+  keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
+  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
+  convictionSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -28,25 +35,26 @@ def registrationReceipt : CardanoKeri.Registry.FoldReceipt CardanoKeri.Registry.
 def origin : Origin := {
   parameters := CardanoKeri.Registry.Examples.p, environment := CardanoKeri.Registry.Examples.env, configuration := CardanoKeri.Registry.Examples.cfg,
   registered := CardanoKeri.Registry.Examples.registered, token := 0, registrationRef := ⟨100, 0⟩,
-  carrierRef := ⟨102, 1⟩ }
+  carrierRef := ⟨102, 1⟩, inception := .inception (Duplicity.writerFixture 11 0 .inception) [] }
 
-def live : Live := ⟨0, 0, false, false, 2, 42, 5, false⟩
-def rotatedLive : Live := ⟨1, 1, false, false, 2, 42, 4, false⟩
+def live : Live := ⟨0, 0, false, false, 1, 42, 5, false⟩
+def rotatedLive : Live := ⟨1, 1, false, false, 1, 42, 4, false⟩
 /-- The deployment these examples run in. -/
 def deployment : Deployment := 21
 def registered : Sys := (Sys.init deployment).installOrigin 11 (.present live) origin
 def rotated : Sys := registered.set 11 (.present rotatedLive)
+  (some (.rotation origin.inception (Duplicity.writerFixture 11 1 .rotation)))
 /-- Cora's commitment: it names AID 11, this deployment, the key state after the
 rotation and the evidence
 the conviction shows there, naming payee 7, its opening transaction's
 validity range ending at slot 4, eligible from slot 5, expiring at slot 20. -/
 def commitment : Commitment := {
   aid := 11, deployment := deployment, keyState := rotatedLive.hash,
-  evidence := ((Duplicity.fixture 1 1).1, (Duplicity.fixture 1 1).2),
+  evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1).rival,
   payee := 7, openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
 def committed : Sys :=
   { rotated with commitments := fun k => if k = commitment.marker then some commitment else rotated.commitments k }
-def pending : Sys := (committed.set 11 (.terminationPending rotatedLive.hash)).retire commitment.marker
+def pending : Sys := (committed.set 11 (.terminationPending rotatedLive.hash) none ((env 11).convictionSpend 1 1)).retire commitment.marker
 
 def registryPending : CardanoKeri.Registry.Sys := CardanoKeri.Registry.Examples.pending
 def registryEntry : CardanoKeri.Registry.TerminationEntry := CardanoKeri.Registry.Examples.terminationEntry
@@ -85,9 +93,9 @@ SysStep p env (Sys.init deployment) registered
 -/
 theorem registered_step : SysStep p env (Sys.init deployment) registered := by
   apply SysStep.register
-  exact ⟨11, 2, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
+  exact ⟨11, 1, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
     CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.env, CardanoKeri.Registry.Examples.cfg, registrationReceipt, CardanoKeri.Registry.Examples.registration, origin,
-    rfl, rfl, Step.register 2 42 5 (by decide), delivered_origin, rfl⟩
+    rfl, rfl, Step.register 1 42 5 (by decide), delivered_origin, ⟨by decide, by decide⟩, rfl⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -104,7 +112,7 @@ theorem rotated_step : SysStep p env registered rotated := by
     .present rotatedLive, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
   · exact Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)
-  · rfl
+  · exact ⟨rfl, by decide⟩
 
 /-- Given the complete parameters and hypotheses:
 
@@ -136,8 +144,7 @@ theorem pending_step : SysStep p env committed pending := by
     .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
   · intro refund pool equal; cases equal
   · exact Step.convict 5 7 commitment (by decide) (by decide)
-  · simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, committed, commitment]
-    rfl
+  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
 
 
 /-- Given the complete parameters and hypotheses:
@@ -226,6 +233,12 @@ def completionReceipt : CardanoKeri.Registry.FoldReceipt CardanoKeri.Registry.Ex
   unspent := CardanoKeri.Registry.Examples.terminationUnspent, transaction := CardanoKeri.Registry.Examples.terminationTransaction,
   flow := {}, reachable := registry_booked_reachable, executed := registry_folded }
 
+/-- The observed booking associates the request with the prior checkpoint spend. -/
+theorem booked_event : BookingEvent pending booked := by
+  exact ⟨11, rotatedLive.hash, origin, registryPending, registryBooked, 7, 1,
+    CardanoKeri.Registry.Examples.termination, { premium := some (7, 1), intoRequest := 3, bookingFee := 1 },
+    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, ⟨rfl, rfl, by decide⟩, rfl⟩
+
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -235,11 +248,7 @@ Then the complete conclusion is:
 
 SysStep p env pending booked
 -/
-theorem booked_step : SysStep p env pending booked := by
-  apply SysStep.book
-  exact ⟨11, rotatedLive.hash, origin, registryPending, registryBooked, 7, 1,
-    CardanoKeri.Registry.Examples.termination, { premium := some (7, 1), intoRequest := 3, bookingFee := 1 },
-    registryEntry, rfl, rfl, rfl, origin_history, registry_booked, rfl, rfl, rfl, rfl, rfl⟩
+theorem booked_step : SysStep p env pending booked := .book booked_event
 
 /-- Given the complete parameters and hypotheses:
 
@@ -292,7 +301,7 @@ theorem connected_completion :
 
 
 -- A second actual history at the same context/AID/alias, with a different request.
-def otherTermination : Singular.TerminationBooking := {
+def otherTermination : CardanoKeri.Registry.TerminationBooking := {
   CardanoKeri.Registry.Examples.termination with request := { CardanoKeri.Registry.Examples.termination.request with reference := ⟨201, 0⟩ } }
 def otherEntry : CardanoKeri.Registry.TerminationEntry := { registryEntry with booking := otherTermination }
 def otherBooked : CardanoKeri.Registry.Sys := { registryPending with carriers := [], terminations := [otherEntry] }
@@ -313,7 +322,8 @@ CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPen
 theorem other_booked :
     CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 otherTermination =
       .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, otherBooked) := by
-  simp [otherTermination, otherEntry, otherBooked, registryPending, registryEntry, CardanoKeri.Registry.Examples.pending, CardanoKeri.Registry.bookTermination, CardanoKeri.Registry.carrierAt, CardanoKeri.Registry.Examples.registered, CardanoKeri.Registry.Examples.liveCarrier,
+  have read : Registry.Examples.env.pendingSpend 11 = some otherTermination.spend := by decide
+  simp [Registry.Carrier.convicted, Registry.Carrier.st, read, otherTermination, otherEntry, otherBooked, registryPending, registryEntry, CardanoKeri.Registry.Examples.pending, CardanoKeri.Registry.bookTermination, CardanoKeri.Registry.carrierAt, CardanoKeri.Registry.Examples.registered, CardanoKeri.Registry.Examples.liveCarrier,
     CardanoKeri.Registry.Examples.termination, CardanoKeri.Registry.Examples.terminationRequest, CardanoKeri.Registry.Examples.terminationEntry, CardanoKeri.Registry.Examples.p, CardanoKeri.Registry.Examples.cfg,
     Singular.bookTermination, Singular.terminationBookingRefusal, Singular.terminationContentsShape,
     Singular.terminationDeclaredLovelace, Singular.terminationCustody, CardanoKeri.Registry.Sys.toWorld, CardanoKeri.Registry.Sys.init,
@@ -437,7 +447,21 @@ theorem changed_pending_key_refused :
 /-- Given the same successful conviction source, replay under an environment with
 no conviction authorization actually refuses at the canonical function. -/
 theorem stored_context_conviction_refused :
-    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with duplicity := fun _ _ => false } CardanoKeri.Registry.Examples.registered 11 =
+    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
       .error "keri-conviction-refused" := by rfl
 
+
+/-- Given the reachable rotated checkpoint and its open commitment, when the
+convictor supplies the same observed rival with no separate two-event history
+lookup, then the local spend enters pending at the rotated position. -/
+theorem rotated_spend_uses_one_rival :
+    let localEnv := { env 11 with convictionContext := fun _ _ => none, convictionRival := fun _ _ => none }
+    stepFn p localEnv (.convict 7 commitment) 5 (.present rotatedLive) =
+      some ({ refund := some { addr := 42, b := 2, pool := 4 }, convictor := some { addr := 7, dreg := 3 } },
+        .terminationPending rotatedLive.hash) := by decide
+
+-- Keep the original commitment and two-event reader while removing the
+-- enforcement observer's successful signature read.
+example : stepFn p { env 11 with verifyRival := fun _ _ _ => false } (.convict 7 commitment) 5
+    (.present rotatedLive) = none := by decide
 end CardanoKeri.Checkpoint.Examples

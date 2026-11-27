@@ -506,6 +506,8 @@
 <pre id="selftest-out" hidden></pre>
 
 <script>
+/* @@EVIDENCE@@ */
+/* @@EVIDENCE:END@@ */
 /* @@CORE:model@@ */
 /* @@CORE:model:END@@ */
 /* @@CORE:session@@ */
@@ -645,7 +647,7 @@ function offersFor(actorId, tree, nodeId) {
       act('freeze', 'freeze her on the old keys, take B', { freeze: { "sn'": sn2, payee: 2 } });
       break;
     case 'cora':
-      if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'example branches with partial and augmented keys, each checked against its own threshold and derived witnesses');
+      if (ksn > 0) ev('try a second receipted rotation at sequence ' + ksn, { duplicityAt: [ke, ksn] }, 'the observer checks the rival against the spent keys and witness threshold');
       // Cora's commitment, naming the current key state and the evidence at it, opened
       // by a transaction whose validity range ended in the slot before this one, so it is eligible now
       act('convict', 'convict on my commitment, D to Cora', { convict: { payee: 3,
@@ -989,7 +991,7 @@ function drawScene() {
   [-56, 0, 56].forEach((dx, i) => { wg.append(s('circle', { class: 'wit', cx: dx, cy: 0, r: 13 }), s('text', { class: 'witlbl', x: dx, y: 4 }, 'W' + (i + 1))); });
   wg.append(s('text', { class: 'witlbl', y: 30 }, 'her witnesses · receipts'));
   parts.push(wg);
-  parts.push(actor('actor:cora', 'cora', 'Cora', 'a convictor', envHas(sess.env, 'duplicityAt', [e, sn]) ? 'holds two rotations' : ''));
+  parts.push(actor('actor:cora', 'cora', 'Cora', 'a convictor', envHas(sess.env, 'duplicityAt', [e, sn]) ? 'holds a rival rotation' : ''));
   const stole = envHas(sess.env, 'quorum', [e]);
   parts.push(actor('actor:mallory', 'mallory', 'Mallory', 'a thief', stole && l ? `has the epoch-${e} keys` : ''));
   parts.push(actor('actor:anyone', 'anyone', 'Sponsor', 'pays for her presence', ''));
@@ -1055,7 +1057,7 @@ function drawScene() {
   trg.append(s('rect', { class: 'tray', x: -170, y: -34, width: 340, height: 74, rx: 8 }), s('text', { class: 'hint', x: -162, y: -20 }, 'evidence presented (the Env): what the validator verifies over the bytes'));
   const receipts = [];
   const rw = { rotationTo: r => `rot e${r[0]} sn${r[1]}→${r[2]}`, depositAuthorized: r => `e${r[0]} signs deposit`, quorum: r => `quorum e${r[0]}`, duplicityAt: r => `dup e${r[0]} sn${r[1]}` };
-  trg.append(s('text', { class: 'hint', x: -162, y: 36 }, 'rot = witnessed rotation · dup = duplicity proof · e = key epoch · sn = sequence number of the KERI event'));
+  trg.append(s('text', { class: 'hint', x: -162, y: 36 }, 'rot = witnessed rotation · dup = rival comparison · e = key epoch · sn = sequence number of the KERI event'));
   for (const kd of EV_KINDS) for (const r of sess.env[kd]) receipts.push(rw[kd](r));
   receipts.slice(0, 8).forEach((txt, i) => { const x = -162 + (i % 4) * 84, y = -8 + Math.floor(i / 4) * 22; trg.append(s('rect', { class: 'receipt', x, y, width: 78, height: 17, rx: 4 }), s('text', { class: 'receipt-t', x: x + 4, y: y + 12 }, txt.slice(0, 15))); });
   if (receipts.length > 8) trg.append(s('text', { class: 'hint', x: 100, y: 34 }, '+' + (receipts.length - 8) + ' more'));
@@ -1268,7 +1270,7 @@ const INTEREST = {
   alice: 'holds the keys, current and next; wants her checkpoint live and her money hers',
   hal: 'holds a watcher on her witnesses; wants the premium for landing her rotations, or the freeze bond when the pool cannot pay',
   treasury: 'holds a payment to authorize; wants to pay only against keys that are current',
-  cora: 'holds two of Alice’s rotations at one sequence, both receipted; wants the conviction bond',
+  cora: 'holds a rival rotation for Alice’s spent checkpoint; wants the conviction bond',
   mallory: 'holds keys she should not — the current ones, sometimes the next; wants Alice’s bonds',
   anyone: 'holds money and Alice’s public inception; wants her served — registers, tops up — gaining nothing but her presence',
 };
@@ -1279,7 +1281,7 @@ function needsOf(action) {
   if (actorOf(action) === 'currentQuorum') return { cls: 'keys', text: 'the current keys sign' };
   if (k === 'rotate' && d.op !== 'keep') return { cls: 'keys', text: 'public rotation · the new keys sign the deposit' };
   if (k === 'rotate' || k === 'freeze') return { cls: 'public', text: 'a public witnessed rotation' };
-  if (k === 'convict') return { cls: 'public', text: 'a public duplicity proof' };
+  if (k === 'convict') return { cls: 'public', text: 'a public rival comparison' };
   return { cls: 'public', text: 'no signature' };
 }
 // what happened on the edge into a node, in one or two words: the action (with
@@ -1362,7 +1364,7 @@ function renderPots() {
   const p = cur().params;
   const dl = clear($('pots-dl'));
   const row = (t, d) => dl.append(h('dt', {}, t), h('dd', {}, d));
-  row('D · conviction bond (' + p.D + ')', 'Alice’s stake against duplicity: two receipted rotations at one sequence. Whoever proves it takes D; the rest goes back to her refund address.');
+  row('D · conviction bond (' + p.D + ')', 'A successful checkpoint spend pays D to the committed payee. The remaining bonds and pool go to the registration refund address.');
   row('B · freeze bond (' + p.B + ')', 'the bounty for freezing a checkpoint whose pool can no longer pay for its own rotation: a hunter presents the later rotation, takes B, and the checkpoint stays on stale keys until the owner deposits again.');
   row('pool', 'the premium fund: whoever lands a rotation is paid P (' + p.P + ') from it. Anyone can top it up; it never mixes with D or B.');
   row('W · juvenility (' + p.W + ' slots)', 'a freshly registered checkpoint is not consumable for W slots, so a stolen registration cannot be spent at once. A deposit (the unfreeze) does not restart it. The treasury alone reads W; no transition does. The registry’s grace window, if any, is not this W.');
@@ -1570,14 +1572,14 @@ function renderEvidence() {
   const labels = EV_LABELS[kind];
   [['ev-la', 'ev-a'], ['ev-lb', 'ev-b'], ['ev-lc', 'ev-c']].forEach(([lid], i) => { const lab = $(lid); lab.hidden = !labels[i]; if (labels[i]) lab.firstChild.textContent = labels[i] + ' '; });
   const rows = clear($('ev-rows'));
-  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, depositAuthorized: r => `keys of epoch ${r[0]} signed the deposit`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `duplicity at epoch ${r[0]}, sn ${r[1]}` };
+  const words = { rotationTo: r => `witnessed rotation: epoch ${r[0]}, sn ${r[1]} → ${r[2]}`, depositAuthorized: r => `keys of epoch ${r[0]} signed the deposit`, quorum: r => `the quorum of epoch ${r[0]} signed`, duplicityAt: r => `rival for epoch ${r[0]}, sn ${r[1]}` };
   let n = 0;
   for (const k of EV_KINDS) for (const r of sess.env[k]) {
     n++;
     rows.append(h('div', { class: 'ev-row' }, h('span', { class: 'k' }, k), h('span', {}, words[k](r)),
       h('button', { type: 'button', class: 'ev-rm', title: 'remove this evidence', onclick: () => { adoptTree(treeRemoveEvidence(currentTree(), { [k]: r }).tree, true); render(); } }, '✕')));
   }
-  if (!n) rows.append(h('div', { class: 'empty' }, 'No evidence presented. Rotations, quorum signatures and duplicity proofs are rows here; the machine is enabled exactly when its row is present.'));
+  if (!n) rows.append(h('div', { class: 'empty' }, 'No evidence presented. Add a row to present the corresponding fixture to the checkpoint.'));
 }
 function addEvidenceFromForm() {
   const kind = $('ev-kind').value;
@@ -1719,7 +1721,7 @@ const CHALLENGES = {
     goal: 'You are Mallory. Get D — Alice’s 1000 — into your wallet. Register her to yourself, freeze, wait out W, land her rotations: her later public rotations are on her witnesses already.',
     env: [{ rotationTo: [0, 0, 1] }, { rotationTo: [1, 1, 2] }, { rotationTo: [2, 2, 3] }],
     won: () => { const b = balancesAlong(pathTo(app.cursor).map(node))[CAST.mallory.addr]; return !!(b && b.dreg > 0); },
-    why: 'There is no owner exit: D leaves the checkpoint only whole, at a conviction, to a convictor holding a duplicity proof: two rotations Alice’s own keys signed at one sequence. Without her keys there is no road to the 1000. With her current keys the one road is to make her duplicitous — and that seals the identity for good (T6b, T12, T16).' } };
+    why: 'There is no owner exit: D leaves the checkpoint only whole, at a conviction, to the committed payee after the rival is checked against the spent tip. The accepted spend creates a pending output; the matching booking and fold retire the identifier (T6b, T12, T16).' } };
 const _playChallenge = playChallenge;
 playChallenge = function(id) {
   const c = CHALLENGES[id]; if (!c) { startFresh(); render(); return; }

@@ -1,4 +1,4 @@
-import CardanoKeri.Duplicity
+import CardanoKeri.CheckpointEventHistory
 import CardanoKeri.Registry
 
 /-! Checkpoint lifecycle: alive until convicted, then explicit pending termination.
@@ -18,6 +18,10 @@ abbrev Value := Nat
 
 abbrev AID := Nat
 
+/-- The deployer fixes the two positive bonds, relay premium and waiting time
+when publishing the checkpoint validator. Booking checks the locked bonds and
+pool, checkpoint spends account for them, and the consuming party checks age
+with the validity time of its consuming transaction. -/
 structure Params where
 
   D : Value
@@ -35,6 +39,13 @@ inductive BondOp where
   | deposit
   deriving DecidableEq, Repr
 
+/-- Evidence at one checkpoint spend. For keep, deposit and freeze, the party
+relaying the later rotation supplies its public event, signatures and receipts
+to the checkpoint observer. For deposit, the controller additionally signs the
+spend-bound intent with the successor keys. For poison, the controller presents
+the current-key quorum in the modeled poison spend. For conviction, the
+convictor presents one rival. The enforcement observer checks it against the
+spent tip. The separate two-event read serves the KERI conformance question. -/
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool
@@ -44,23 +55,59 @@ structure Env where
 
   quorum : Epoch → Bool
 
+  -- The enforcement observer decodes the spent active datum and the rival in
+  -- the same checkpoint transaction. Signature verification is a primitive.
+  convictionSpend : Epoch → Seq → Option Registry.Conviction := fun _ _ => none
+  verifyRival : CheckpointConviction.Verify := fun _ _ _ => false
+  keyReads : KeyReads := ⟨fun _ => none, fun _ => none⟩
+
+  -- A history reader can independently evaluate the KERI two-event definition.
   convictionContext : Epoch → Seq → Option CardanoKeri.Duplicity.Context
 
   convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
+
+  -- The registration observer reads the identified inception from the event
+  -- and datum admitted at booking. The advance observer reads the signed
+  -- rotation presented for the spent identifier and the proposed successor.
+  inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
+  rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
+
+/-- The comparison and the indexed output are reads of one conviction transaction. -/
+def Env.comparison (env : Env) (epoch : Epoch) (sn : Seq) :=
+  (env.convictionSpend epoch sn).map Registry.Conviction.comparison
+
+def Env.initialHistory (env : Env) (aid : AID) (datum : Option Nat) : Option EventHistory :=
+  match datum with
+  | none => none
+  | some raw => match env.inceptionWriter aid raw with
+    | none => none
+    | some (event, witnesses) =>
+      let history := EventHistory.inception event witnesses
+      if history.authenticated aid then some history else none
+
+/-- The checkpoint spend selects its identifier before consulting any evidence.
+A rotation relayer or a hunter supplies the witnessed event for that identifier.
+A deposit additionally carries its successor-key intent. For a poison spend
+the controller supplies that identifier’s current-key threshold authorization. -/
+abbrev SystemEnv := AID → Env
 
 def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   match env.convictionContext epoch sn, env.convictionRival epoch sn with
   | some context, some rival => CardanoKeri.Duplicity.duplicityAt epoch sn context rival
   | _, _ => false
 
-/-- The evidence a conviction shows at a key state: the authenticated first-seen
-context and the rival event. The environment supplies at most one per key state. -/
-abbrev Evidence := CardanoKeri.Duplicity.Context × CardanoKeri.Duplicity.SignedEvent
+/-- The local enforcement decision checks the spent native position. -/
+def Env.acceptsRival (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
+  ((env.comparison epoch sn).map (fun c => c.acceptsAt env.verifyRival epoch sn)).getD false
 
-def Env.evidenceAt (env : Env) (epoch : Epoch) (sn : Seq) : Option Evidence :=
-  match env.convictionContext epoch sn, env.convictionRival epoch sn with
-  | some context, some rival => some (context, rival)
-  | _, _ => none
+/-- The commitment binds the decoded observer evidence for one rival. The
+wire offsets and canonical encoding of the complete evidence digest are
+technical representation obligations of the enforcement observer. -/
+abbrev Evidence := CheckpointConviction.Rival
+
+def Env.evidenceAt (env : Env) (aid : AID) (epoch : Epoch) (sn : Seq) : Option Evidence := do
+  let comparison ← env.comparison epoch sn
+  if comparison.rival.aid = aid then some comparison.rival else none
 
 def Env.bondOpOk (env : Env) (e : Epoch) : BondOp → Bool
   | .keep => true
@@ -72,11 +119,6 @@ inductive Actor where
   | proof
   | anyone
   deriving DecidableEq, Repr
-
-structure KeyState where
-  epoch : Epoch
-  sn : Seq
-  deriving Repr, DecidableEq
 
 abbrev Hash := KeyState
 
@@ -144,7 +186,7 @@ it names `l`'s key state, the evidence the conviction shows there, this payee,
 and `now` is inside its window. The identifier and the deployment are checked by
 the system, which knows them (`Sys.revealOpen`). -/
 def Commitment.entitles (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) : Prop :=
-  c.keyState = l.hash ∧ env.evidenceAt l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
+  c.keyState = l.hash ∧ env.evidenceAt c.aid l.epoch l.sn = some c.evidence ∧ c.payee = payee ∧
     c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt
 
 instance (env : Env) (c : Commitment) (l : Live) (payee : Addr) (now : Slot) :
@@ -311,7 +353,7 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
         (.present { l with pool := l.pool + x, toppedUp := true })
 
   | convict {l : Live} (now : Slot) (payee : Addr) (c : Commitment)
-      (hdup : env.duplicityAt l.epoch l.sn = true)
+      (hdup : env.acceptsRival l.epoch l.sn = true)
       (hent : c.entitles env l payee now) :
       Step p env (.convict payee c) now (.present l)
         { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
@@ -361,7 +403,7 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
         some ({ poolIn := x }, .present { l with pool := l.pool + x, toppedUp := true })
       else none
   | .convict payee c, .present l =>
-      if env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now then
+      if env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now then
         some ({ refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
                 convictor := some { addr := payee, dreg := p.D } },
               .terminationPending l.hash)
@@ -445,6 +487,7 @@ structure Origin where
   token : Nat
   registrationRef : Singular.OutRef
   carrierRef : Singular.OutRef
+  inception : EventHistory
 
 structure PendingAssociation where
   origin : Origin
@@ -463,18 +506,30 @@ structure Sys where
   pending : AID → Option PendingAssociation
   -- The open commitments of the release's commitment program, by marker.
   commitments : Marker → Option Commitment
+  writers : AID → Option EventHistory
+  -- Historical observation of the producing spend while the carrier is pending.
+  convictions : AID → Option Registry.Conviction := fun _ => none
 
 def Sys.init (d : Deployment) : Sys :=
   { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
-    origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none }
+    origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none, writers := fun _ => none }
 
-def Sys.set (s : Sys) (aid : AID) (st : State) : Sys :=
+def Sys.set (s : Sys) (aid : AID) (st : State) (writer : Option EventHistory := none)
+    (spend : Option Registry.Conviction := none) : Sys :=
   { s with
     leaves := fun a => if a = aid then st.leaf else s.leaves a,
-    states := fun a => if a = aid then st else s.states a }
+    states := fun a => if a = aid then st else s.states a,
+    convictions := fun a => if a = aid then spend else s.convictions a,
+    writers := fun a => if a = aid then writer.orElse (fun _ => s.writers a) else s.writers a }
+
+/-- Only the local transition producing a pending carrier records a conviction. -/
+def State.producingSpend (state : State) (env : Env) : Option Registry.Conviction :=
+  match state with
+  | .terminationPending key => env.convictionSpend key.epoch key.sn
+  | _ => none
 
 def Sys.installOrigin (s : Sys) (aid : AID) (st : State) (origin : Origin) : Sys :=
-  { s.set aid st with
+  { s.set aid st (some origin.inception) with
     origins := fun a => if a = aid then some origin else s.origins a,
     pending := fun a => if a = aid then none else s.pending a }
 
@@ -502,16 +557,49 @@ def DeliveredOrigin {rp : CardanoKeri.Registry.Params} {re : CardanoKeri.Registr
     output.output.datumValue = b.request.datum ∧
     output.output.lovelace = b.request.carrierAda
 
+/-- At the booking mint the controller commits the refund address, the upper
+time bound and the entire carrier value. In the economic model addresses have
+a common abstract identity. The carrier pays minimum ADA, both bonds and the
+initial pool exactly. The Singular folder copies the admitted holding. -/
+def BookedFacts (p : Params) (rp : CardanoKeri.Registry.Params)
+    (b : Singular.RegistrationBooking) (now : Slot) (refund : Addr) (pool : Value) : Prop :=
+  now = b.request.submittedAt ∧ refund = b.request.refundAddress ∧
+  rp.D = p.D + p.B ∧ b.request.carrierAda = rp.Mc + rp.D + pool
+
+instance (p : Params) (rp : CardanoKeri.Registry.Params) (b : Singular.RegistrationBooking)
+    (now : Slot) (refund : Addr) (pool : Value) : Decidable (BookedFacts p rp b now refund pool) :=
+  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _))
+
 -- Registration is the only event that creates an origin. Existing ordinary
 -- local operations preserve the already stored origin/pending map.
-def RegistrationEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
+def RegistrationEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (now : Slot) (refund : Addr) (pool0 : Value) (f : Flow) (st : State)
     (rp : CardanoKeri.Registry.Params) (re : CardanoKeri.Registry.Env) (cfg : Singular.Config)
     (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg) (b : Singular.RegistrationBooking) (origin : Origin),
     s.leaves aid = .absent ∧ s.origins aid = none ∧
-    Step p env (.register refund pool0) now (s.states aid) f st ∧
-    DeliveredOrigin receipt b aid origin ∧
+    Step p (env aid) (.register refund pool0) now (s.states aid) f st ∧
+    DeliveredOrigin receipt b aid origin ∧ (BookedFacts p rp b now refund pool0 ∧
+      (env aid).initialHistory aid b.request.datum = some origin.inception) ∧
     s' = s.installOrigin aid st origin
+
+/-- Given a system registration, when its delivered holding is installed, then
+the same booking and receipt identify the stored origin and the new live state.
+Its birth time and refund address are the booked ones. Its pool accounts for
+all carrier value above minimum ADA and the two checkpoint bonds. -/
+theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' : Sys}
+    (event : RegistrationEvent p env s s') :
+    ∃ aid origin rp re cfg, ∃ (receipt : CardanoKeri.Registry.FoldReceipt rp re cfg)
+      (booking : Singular.RegistrationBooking) (live : Live),
+      DeliveredOrigin receipt booking aid origin ∧ s'.origins aid = some origin ∧
+      s'.states aid = .present live ∧ live.bornAt = booking.request.submittedAt ∧
+      live.refundTo = booking.request.refundAddress ∧ rp.D = p.D + p.B ∧
+      booking.request.carrierAda = rp.Mc + rp.D + live.pool := by
+  obtain ⟨aid, now, refund, pool, flow, st, rp, re, cfg, receipt, booking, origin,
+    _, _, step, delivered, facts, rfl⟩ := event
+  generalize h : s.states aid = before at step
+  cases step
+  exact ⟨aid, origin, rp, re, cfg, receipt, booking, ⟨0, 0, false, false, now, refund, pool, false⟩, delivered,
+    by simp [Sys.installOrigin], by simp [Sys.installOrigin, Sys.set], facts.1⟩
 
 /-- The commitment an action reveals: a conviction reveals the one it carries. -/
 def Action.revealed : Action → Option Commitment
@@ -543,6 +631,11 @@ theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
       (s.retireRevealed a).origins = s.origins ∧ (s.retireRevealed a).pending = s.pending := by
   unfold Sys.retireRevealed; cases a.revealed <;> exact ⟨rfl, rfl, rfl, rfl⟩
 
+@[simp] theorem Sys.retireRevealed_convictions (s : Sys) (a : Action) :
+    (s.retireRevealed a).convictions = s.convictions := by
+  unfold Sys.retireRevealed
+  cases a.revealed <;> rfl
+
 @[simp] theorem Sys.retireRevealed_leaves (s : Sys) (a : Action) :
     (s.retireRevealed a).leaves = s.leaves := (s.retireRevealed_frame a).1
 @[simp] theorem Sys.retireRevealed_states (s : Sys) (a : Action) :
@@ -552,14 +645,75 @@ theorem Sys.retireRevealed_frame (s : Sys) (a : Action) :
 @[simp] theorem Sys.retireRevealed_pending (s : Sys) (a : Action) :
     (s.retireRevealed a).pending = s.pending := (s.retireRevealed_frame a).2.2.2
 
+/-- An advance reads the event for this spent writer. Freeze verifies the
+same evidence but retains the old key state. A missing or mismatched event
+refuses the local certificate before a new history can be installed. -/
+def Sys.rotationHistory (s : Sys) (env : Env) (aid : AID) (sn : Seq) : Option EventHistory :=
+  match s.writers aid, s.states aid with
+  | some previous, .present live =>
+    match env.rotationWriter aid live.epoch live.sn sn with
+    | some event =>
+      if previous.epoch == live.epoch && previous.writer.event.sn == live.sn &&
+          event.event.sn == sn && Duplicity.rotationValid previous.predecessor event then
+        some (.rotation previous event)
+      else none
+    | none => none
+  | _, _ => none
+
+/-- At the conviction spend the retained writer supplies the identity,
+position and established keys of the first event. The observer takes the
+raw material from the spent datum and the rival from the redeemer. -/
+def Sys.comparisonMatchesWriter (s : Sys) (env : Env) (aid : AID) : Bool :=
+  match s.writers aid, s.states aid with
+  | some writer, .present live =>
+    ((env.comparison live.epoch live.sn).map (fun comparison =>
+      env.keyReads.matches aid writer comparison.tip)).getD false
+  | _, _ => false
+
+def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Option EventHistory)
+  | .rotate sn _ _ => (s.rotationHistory env aid sn).map some
+  | .freeze sn _ => (s.rotationHistory env aid sn).map (fun _ => none)
+  | .convict .. => if s.comparisonMatchesWriter env aid then some none else none
+  | _ => some none
+
+@[simp] theorem Sys.conviction_keeps_writer (s : Sys) (env : Env) (aid payee : Nat) (c : Commitment) :
+    (s.localWriter env aid (.convict payee c)).join = none := by
+  simp [Sys.localWriter]; split <;> rfl
+
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.
-def LocalEvent (p : Params) (env : Env) (s s' : Sys) : Prop :=
+def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
   ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
-    Step p env a now (s.states aid) f st ∧
-    s.revealOpen aid a ∧
-    s' = (s.set aid st).retireRevealed a
+    Step p (env aid) a now (s.states aid) f st ∧
+    (s.revealOpen aid a ∧ (s.localWriter (env aid) aid a).isSome = true) ∧
+    s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a
+
+/-- The identity and key-state evidence required by a local action. A deposit
+uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
+def Action.authorizedFor (a : Action) (env : SystemEnv) (aid : AID) (s : State) : Prop :=
+  match a, s with
+  | .rotate target .keep _, .present l | .freeze target _, .present l =>
+    (env aid).rotationTo l.epoch l.sn target = true
+  | .rotate target .deposit _, .present l =>
+    (env aid).rotationTo l.epoch l.sn target = true ∧
+    (env aid).depositAuthorized (l.epoch + 1) = true
+  | .poison, .present l => (env aid).quorum l.epoch = true
+  | .rotate .., _ | .freeze .., _ | .poison, _ => False
+  | _, _ => True
+
+/-- Given a local system event, when it updates a checkpoint, then the very
+action and identifier producing the successor have that identifier's required
+rotation, deposit or poison authorization for its prior live state. -/
+theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' : Sys}
+    (event : LocalEvent p env s s') :
+    ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧
+      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧
+      s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a := by
+  obtain ⟨aid, a, now, flow, st, _, step, opened, installed⟩ := event
+  refine ⟨aid, a, now, flow, st, step, ?_, opened.1, installed⟩
+  generalize h : s.states aid = before at step ⊢
+  cases step <;> simp_all [Action.authorizedFor]
 
 /-- Opening a commitment. The commitment program reads no checkpoint: it can be
 opened over any identifier, key state and deployment, whether or not a checkpoint
@@ -582,19 +736,29 @@ def SweepEvent (s s' : Sys) : Prop :=
   ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
     c.expiresAt < now ∧ s' = s.retire c.marker
 
+/-- A certificate presents two projections of the earlier spend. Compare their
+ledger outpoint and full observer evidence before associating the histories.
+The termination mint itself only spends the named pending output. -/
+def bookingSharesConviction (s : Sys) (aid : AID) (origin : Origin) (ref : Singular.OutRef) : Bool :=
+  match s.convictions aid with
+  | some observed => decide (observed.output = ref ∧ origin.environment.conviction aid = some observed)
+  | none => false
+
 -- The request association is fixed by an actual booking in this origin's
 -- extending Registry history, while this checkpoint is already pending.
 def BookingEvent (s s' : Sys) : Prop :=
   ∃ (aid : AID) (h : Hash) (origin : Origin)
     (before booked : CardanoKeri.Registry.Sys)
-    (booker fee : Nat) (b : Singular.TerminationBooking) (f : CardanoKeri.Registry.Flow)
+    (booker fee : Nat) (b : CardanoKeri.Registry.TerminationBooking) (f : CardanoKeri.Registry.Flow)
     (entry : CardanoKeri.Registry.TerminationEntry),
     s.states aid = .terminationPending h ∧ s.origins aid = some origin ∧
     s.pending aid = none ∧
     CardanoKeri.Registry.History origin.parameters origin.environment origin.registered before ∧
     CardanoKeri.Registry.bookTermination origin.parameters before aid booker fee b = .ok (f, booked) ∧
     CardanoKeri.Registry.pendingAt booked b.request.reference = some entry ∧
-    entry.booking = b ∧ entry.payload.aid = aid ∧ entry.payload.token = origin.token ∧
+    entry.booking = b ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
+      entry.payload.spend = ⟨b.pendingReference, aid, h⟩ ∧
+      bookingSharesConviction s aid origin b.pendingReference = true) ∧
     s' = s.associate aid {
       origin := origin, keyState := h, reference := b.request.reference,
       entry := entry, booked := booked }
@@ -621,7 +785,7 @@ def CompletionEvent (s s' : Sys) : Prop :=
       association.origin.environment association.origin.configuration),
     ReceiptMatches s aid association receipt ∧ s' = s.finish aid
 
-inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
+inductive SysStep (p : Params) (env : SystemEnv) : Sys → Sys → Prop where
   | register {s s' : Sys} : RegistrationEvent p env s s' → SysStep p env s s'
   | local {s s' : Sys} : LocalEvent p env s s' → SysStep p env s s'
   | book {s s' : Sys} : BookingEvent s s' → SysStep p env s s'
@@ -630,7 +794,7 @@ inductive SysStep (p : Params) (env : Env) : Sys → Sys → Prop where
   | reveal {s s' : Sys} : RevealEvent s s' → SysStep p env s s'
   | sweep {s s' : Sys} : SweepEvent s s' → SysStep p env s s'
 
-inductive SysReach (p : Params) (env : Env) : Sys → Prop where
+inductive SysReach (p : Params) (env : SystemEnv) : Sys → Prop where
   | init (d : Deployment) : SysReach p env (Sys.init d)
   | step {s s' : Sys} : SysReach p env s → SysStep p env s s' → SysReach p env s'
 

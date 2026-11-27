@@ -40,7 +40,7 @@ const outcomes = {
   ], forks: [
     { id: 'control-3-key-exists', steps: [{ expect: { ok: false, result: { error: 'key-exists' } } }] },
     { id: 'duplicate-return-before-deadline', steps: [{ expect: { ok: false, result: { error: 'keri-return-before-deadline' } } }] },
-  ], expectFinal: { bindings: [[11,0]], carriers: [{ aid:11, token:0, k:0, st:'live', minAda:4 }],
+  ], expectFinal: { bindings: [[11,0]], carriers: [{ aid:11, token:0, pendingSpend:null, minAda:4 }],
     registrations: [], nextToken:1, treasury:2 } },
 };
 

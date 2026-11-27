@@ -19,8 +19,9 @@ itself. It verifies the event evidence supplied in a transaction.
 One rule sits above everything else on this page: **the chain projects the
 KEL and never originates identity state.** Every arrow points one way. The
 design is built only against what a controller and its witnesses already
-publish; the chain never asks KERI for anything, and never pronounces a
-verdict KERI itself would not. Where KERI says a verdict is formed is
+publish. A terminal conviction requires agreement with KERI duplicity. The
+[witness assumptions](#keri-witnesses) describe the two outstanding conditions
+for that agreement. KERI describes where a verdict is formed in
 [validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality).
 
 Two consequences that shape the whole trust boundary:
@@ -33,9 +34,14 @@ Two consequences that shape the whole trust boundary:
   event that un-duplicates an identifier. What KERI leaves to each validator is
   the trust decision, which it may take either way (the
   [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
-  **This project's selected policy is that conviction is terminal**: the
-  convicted (terminal after a duplicity proof) leaf never reopens and the
-  conviction bond, the stake posted against that proof, is seized. The reasons
+  **This project's selected policy is that conviction is terminal.** The
+  checkpoint spend compares one conflicting rival with the spent tip. When
+  it accepts, the conviction bond is seized. Once the fold retires the leaf,
+  it never reopens. At a rotated checkpoint, a finding of KERI duplicity also
+  requires the rival to be valid under the predecessor’s rotation rules.
+  Whether every accepted rival meets that requirement remains open in this model,
+  and [#573](https://github.com/lambdasistemi/cardano-keri/issues/573)
+  will discharge it by checking the rival against the previous event’s commitments. The reasons
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.
@@ -240,10 +246,18 @@ is served at the consumer's risk: `toad` is on the consumer surface precisely
 so an application requiring public KERI acceptance can reject such identities
 by policy.
 
-A colluding quorum at or above `toad` can do one thing worse than lying about
-liveness: it can receipt two rotations at one sequence. That is part of the
-duplicity a conviction proves, which also needs both rotations valid against the same previous commitments, one native sequence and different content, and it is why the conviction's exposure is
-bounded by `D_reg` and by the witness set the controller chose.
+A colluding quorum at or above `toad` can receipt two rotations at one native
+sequence. KERI duplicity requires different content and two rotations valid
+against the same previous commitments, each with its own signing threshold
+and receipts from its derived witnesses. The exposure is bounded by `D_reg`
+and by the witness set the controller chose.
+
+At the checkpoint spend, the observer compares one rival with the spent tip
+and checks its signatures and receipts under the tip’s thresholds. After
+rotation, concluding KERI duplicity from an accepted comparison still requires
+the rival to validate against the predecessor under its own rules. Refusal at
+a never-rotated checkpoint also remains open. The termination booker spends
+the pending output, and the folder processes the booked request.
 
 ### Relayers and hunters
 
@@ -330,13 +344,15 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-The conviction step checks the commitment it reveals against the output it
-convicts; the system checks that the commitment is open and belongs here, and
-burns it. The table lists every condition and the step that states it.
+At the checkpoint spend, the observer compares the committed rival with the
+spent tip. The system binds the tip to the event that wrote the checkpoint
+and burns the open commitment. The [witness assumptions](#keri-witnesses)
+describe what remains to establish KERI duplicity.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|
-| the checkpoint has duplicity at its current key state | the conviction step |
+| the rival names the same identifier and sequence, reveals the spent keys, meets the spent signing and witness thresholds, and conflicts on a forward field | the checkpoint spend (`Env.acceptsRival`) |
+| the spent position and key material match the authenticated writer for this identifier | the system step (`Sys.comparisonMatchesWriter`) |
 | the commitment names the key state this checkpoint output carries | the conviction step (`Commitment.entitles`) |
 | the commitment names the evidence the conviction shows | the conviction step |
 | the commitment names the payee the conviction pays | the conviction step |
@@ -404,7 +420,16 @@ not match. An unavailable indexer affects liveness only.
 
 ### The registry
 
-Registration and terminal completion use actual registry folds. Rotations,
+Registration and terminal completion use actual registry folds. In a proved
+system registration, the checkpoint is born at the booking time and carries
+the booked refund address. The initial pool is exactly what remains of the
+delivered carrier after minimum ADA and both bonds. A folder obtains these
+facts from the booking on chain.
+
+A local rotation, deposit or poison step reads the authorization for the
+identifier it changes. Two checkpoints at the same sequence and epoch can
+have different authorizations. The modeled poison spend requires the current
+keys of that identifier. Rotations,
 poison, freezing, top-ups and conviction are local Checkpoint
 transitions. Pending custody remains until its recorded request is consumed
 by a matching fold. The consumer authenticates the holding against its fixed
@@ -447,7 +472,7 @@ The **State** column marks whether the response is that of the earlier deployed 
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without an accepted conviction | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
-| Convict without two witnessed rotations at one sequence | Reject: both rotations must be valid against the same previous commitments, with their own thresholds and the receipts of their own derived witnesses, at one sequence and with different content; and the commitment must be open, eligible, name this payee, identifier and deployment | designed |
+| Convict without two valid witnessed rotations at one sequence | KERI duplicity requires different content and two rotations valid against the same previous commitments under their own signing and witness thresholds. The modeled spend refuses a rival below the spent tip’s thresholds and requires an open, eligible commitment naming the payee, identifier and deployment. | designed |
 | Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
 | Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |

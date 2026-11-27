@@ -1,3 +1,4 @@
+import CardanoKeri.CheckpointConviction
 import CardanoKeri.Duplicity
 
 namespace CardanoKeri.Duplicity
@@ -8,6 +9,12 @@ def sign (event : Content) (keys : List Nat) : List Signature :=
 
 def signed (event : Content) (keys witnesses : List Nat) : SignedEvent :=
   ⟨event, true, sign event keys, sign event witnesses⟩
+
+/-- An ordinary history fixture with one controller throughout and no witnesses.
+Each event carries its own full signed content; a successor can use the one
+committed key from the preceding event. -/
+def writerFixture (aid sn : Nat) (kind : EventKind) : SignedEvent :=
+  signed ⟨aid, sn, kind, 0, [aid], .count 1, [aid], .count 1, [], [], 0, []⟩ [aid] []
 
 /-- A concrete partial/augmented sibling pair; row (epoch,sn) selects this
 fixture in the lifecycle simulator. Zero sequence deliberately fails validation. -/
@@ -193,3 +200,21 @@ def scenarioJson (scenario : Scenario) : Lean.Json :=
     ("accepted", Lean.toJson (duplicityAt scenario.epoch scenario.sn scenario.context scenario.rival))]
 
 end CardanoKeri.Duplicity
+
+
+namespace CardanoKeri.CheckpointConviction.Fixtures
+
+/-- The connected writer has one key, one next-key commitment and no
+witnesses. The finite signatures below are modeled cryptographic reads. -/
+def comparison (aid epoch sn : Nat) (agrees : Bool := false) : Comparison :=
+  let tip : Tip := ⟨aid, epoch, sn, ⟨[[aid]], .unweighted 1, [[aid]], .unweighted 1, [], 0⟩⟩
+  let bytes := [aid, epoch, sn, if agrees then 0 else 1]
+  let rival : Rival := {
+    bytes, rotation := sn != 0, aid, sn, revealedKeys := tip.keys.curKeys,
+    threshold := tip.keys.curThreshold, nextKeys := if agrees then tip.keys.nextKeys else [[aid + 1]],
+    nextThreshold := tip.keys.nextThreshold, toad := 0, signatures := [(0, aid :: bytes)], receipts := [] }
+  ⟨tip, rival⟩
+
+def verify : Verify := fun key bytes signature => key ++ bytes == signature
+
+end CardanoKeri.CheckpointConviction.Fixtures

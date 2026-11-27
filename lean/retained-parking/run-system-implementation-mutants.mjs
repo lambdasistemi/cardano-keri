@@ -11,9 +11,18 @@ const sha=value=>createHash('sha256').update(value).digest('hex');
 const source=readFileSync(join(root,'simulator/checkpoint-system-core.mjs'),'utf8');
 const cases=[
   {id:'own-request',before:'&&contains(receipt.transaction.transaction.inputs,association.reference)',after:''},
-  {id:'stored-context',before:'const context=contextOf(row.origin),before=registryReplay(context,row.origin.registered,a.history);',after:'const context={...contextOf(row.origin),environment:{...row.origin.environment,duplicity:[[11,2]]}},before=registryReplay(context,row.origin.registered,a.history);'},
+  {id:'stored-context',before:'const context=contextOf(row.origin),before=registryReplay(context,row.origin.registered,a.history);',after:'const context={...contextOf(row.origin),environment:{...row.origin.environment,convictions:[row.conviction]}},before=registryReplay(context,row.origin.registered,a.history);'},
+  {id:'compared-rival',before:'E.equal(row.conviction, economicConviction)',after:'E.equal(row.conviction.output, economicConviction.output)'},
+  {id:'producing-output',before:'E.equal(row.conviction.output, pendingReference) &&\n      E.equal(row.conviction, economicConviction)',after:'E.equal(row.conviction.comparison, economicConviction.comparison)'},
+  {id:'booked-birth',before:'booking.submittedAt === BigInt(a.now)',after:'true'},
+  {id:'booked-refund',before:'booking.refundAddress === BigInt(a.refund)',after:'true'},
+  {id:'booked-pool',before:'booking.carrierAda === registry.Mc + registry.D + BigInt(a.pool)',after:'true'},
+  ...[['subject-rotation','rotationTo'],['subject-quorum','quorum'],['subject-deposit','depositAuthorized']].map(([id,field])=>({
+    id, before:'const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid);',
+    after:`const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid); env.${field} = table.flatMap(([, row]) => row.${field});`,
+  })),
 ];
-const files=['checkpoint-system-core.mjs','checkpoint-system-mutation-subject.mjs','checkpoint-system-corpus.json','checkpoint-simulator-core.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs'];
+const files=['checkpoint-system-core.mjs','checkpoint-system-mutation-subject.mjs','checkpoint-system-corpus.json','checkpoint-simulator-core.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-conviction.mjs'];
 const results=[];
 for(const test of cases)for(const baseline of [true,false]) {
   const id=(baseline?'baseline-':'')+test.id,dir=join(campaign,id);mkdirSync(dir);
@@ -28,7 +37,19 @@ for(const test of cases)for(const baseline of [true,false]) {
   }
   const syntax=run('compile',['--check',files[0]]);if(syntax.status!==0)throw Error(id+': setup failed');
   const result=run('execute',['checkpoint-system-mutation-subject.mjs',test.id]);
-  if(baseline?result.status!==0:result.status!==1||!result.stderr.includes('SEMANTIC-REFUSAL:'+test.id))throw Error(id+': wrong outcome');
-  results.push({id,verdict:baseline?'PASS':'KILLED',evidence:'implementation-runtime',sourceSha256:sha(candidate)});
+  let verdict;
+  if (baseline) {
+    if (result.status !== 0) throw Error(id + ': baseline failed');
+    verdict = 'PASS';
+  } else if (result.status === 0) {
+    verdict = 'SURVIVED';
+    process.exitCode = 1;
+  } else {
+    if (result.status !== 1 || !result.stderr.includes('SEMANTIC-REFUSAL:' + test.id)) {
+      throw Error(id + ': failed outside the bound refusal');
+    }
+    verdict = 'KILLED';
+  }
+  results.push({id,verdict,evidence:'implementation-runtime',sourceSha256:sha(candidate)});
   writeFileSync(join(campaign,'results.json'),JSON.stringify(results,null,2));console.log(id+': '+results.at(-1).verdict);
 }

@@ -38,7 +38,11 @@ const termination = record({ ...fields('registryId key destination declaredTip c
 const nonceOmitted = f => (x, p) => { const out = f(x, p); if (out.nonce === 0n) delete out.nonce; return out; };
 const regRequest = nonceOmitted(registration), termRequest = nonceOmitted(termination);
 const regBooking = record({ request: regRequest, interval, trieReadyTagsMinted: list(token), applicationTagsMinted: list(approval) });
-const termBooking = record({ request: termRequest, custodyInputs: list(holding), trieReadyTagsMinted: list(token) });
+const termFields = { request: termRequest, custodyInputs: list(holding), trieReadyTagsMinted: list(token) };
+const termBooking = record(termFields);
+const position = record(fields('epoch sn'));
+const localBooking = record({ ...termFields, pendingReference: ref, position });
+const spend = record({ reference: ref, aid: nat, position });
 const request = variant({ registration: record({ request: regRequest }), termination: record({ request: termRequest }) });
 // The historical transaction asset vocabulary is retained exactly.
 const asset = pair(enumeration(['active']), nat);
@@ -51,14 +55,23 @@ const economicOutput = record({ output, contents, singularTags: list(singular), 
 const economicTx = record({ transaction: tx, identity: nat, outputs: list(economicOutput), trieReadyMint: list(pair(token, integer)), applicationMint: list(pair(token, integer)), stateMint: list(pair(token, integer)), singularMint: list(pair(singular, integer)) });
 const utxo = list(pair(ref, economicOutput));
 const rejection = record({ transaction: economicTx, stateReference: ref, members: list(pair(ref, variant({ mismatch: record({ leaf }) }, ['expired']))) });
-const carrier = record({ ...fields('aid token k minAda'), original: holding, st: enumeration(['live', 'terminationPending']) });
-const payload = record({ ...fields('aid token keyState booker bookingFee'), original: holding });
+const carrier = record({ ...fields('aid token minAda'), original: holding, pendingSpend: option(spend) });
+const payload = record({ ...fields('aid token booker bookingFee'), original: holding, spend });
 const sys = record({ ...fields('gen treasury nextToken'), config, trie: list(pair(nat, leaf)), carriers: list(carrier), registrations: list(regBooking), terminations: list(record({ booking: termBooking, payload })), bindings: list(pair(nat, nat)) });
 const params = record(fields('D tip Mc Mr'));
-const env = record({ inception: list(nat), duplicity: list(pair(nat, nat)) });
+const threshold = variant({ unweighted: record({m: integer}), weighted: record({clauses: list(list(pair(integer, integer)))}) });
+const keys = list(list(nat));
+const signatures = list(pair(nat, list(nat)));
+const keyMaterial = record({curKeys: keys, curThreshold: threshold, nextKeys: keys, nextThreshold: threshold,
+  witnesses: keys, toad: integer});
+const tip = record({...fields('aid epoch sn'), keys: keyMaterial});
+const rival = record({...fields('aid sn'), bytes: list(nat), rotation: (x, p) => typeof x === 'boolean' ? x : error(p),
+  revealedKeys: keys, threshold, nextKeys: keys, nextThreshold: threshold, toad: integer, signatures, receipts: signatures});
+const conviction = record({output: ref, comparison: record({tip, rival})});
+const env = record({ inception: list(nat), convictions: list(conviction) });
 const action = variant({
   bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
-  bookTermination: record({ ...fields('aid booker fee'), booking: termBooking }),
+  bookTermination: record({ ...fields('aid booker fee'), booking: localBooking }),
   fold: record({ ...fields('expectedGen expectedPlugin'), unspent: utxo, transaction: economicTx }),
   returnRequests: record({ unspent: utxo, transaction: rejection }),
 });
@@ -75,9 +88,10 @@ export const validateParams = value => {
   if(p.D===0n||p.Mr+p.tip>p.Mc)error('params.proofs');
   return toWire(p);
 };
+export const validateRival = value => toWire(rival(toInternal(value), 'rival'));
 export const validateAction = value => toWire(action(toInternal(value),'action'));
 export const validateRegistrationBooking = value => toWire(regBooking(toInternal(value),'registration'));
-export const validateTerminationBooking = value => toWire(termBooking(toInternal(value),'termination'));
+export const validateTerminationBooking = value => toWire(localBooking(toInternal(value),'termination'));
 export const validateEconomicTransaction = value => toWire(economicTx(toInternal(value),'transaction'));
 export const validateUtxo = value => toWire(utxo(toInternal(value),'unspent'));
 const flow = record({ ...fields('deposited intoRequest bookingFee'), locked: list(pair(nat, nat)), bondReturn: option(pair(nat, nat)), premium: option(pair(nat, nat)) });

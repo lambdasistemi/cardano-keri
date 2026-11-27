@@ -10,7 +10,7 @@
      "open": [1, 2],
      "name": "open-for-another-aid",
      "checkpoint": "live"},
-    {"outcome": "checkpoint-commitment-not-open",
+    {"outcome": "checkpoint-local-refused",
      "name": "convict-revealing-the-other-aid-commitment"},
     {"outcome": "accepted",
      "open": [2],
@@ -121,7 +121,7 @@
  {"system":
   "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now",
   "conviction":
-  "accepted iff duplicity at the output's key state and the commitment names that key state, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt; no other fact of the output is read"},
+  "the spent-tip comparison must accept the rival at the live epoch and sequence. The commitment must name that position, the evidence read for its identifier and this payee, with eligibleAfter <= now <= expiresAt"},
  "params": {"P": 1, "D": 3, "B": 2},
  "model":
  "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, Sys.revealOpen, LocalEvent, OpenEvent, RevealEvent, SweepEvent)",
@@ -427,7 +427,8 @@
     "bornAt": 3},
    "outcome": {"accepted": false},
    "now": 6,
-   "note": "the evidence shown and committed proves no duplicity: refused",
+   "note":
+   "the committed rival and spent tip agree on their forward fields: refused",
    "id": "refused-no-duplicity",
    "commitment":
    {"payee": 8,

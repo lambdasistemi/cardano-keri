@@ -3,24 +3,23 @@ import CardanoKeri.RegistryBurns
 /-! Reachable pending custody retains an actual prior application conviction. -/
 namespace CardanoKeri.Registry
 
-/-- Provenance at the coarse Registry evidence boundary. It records actual
-execution at the retained key and does not identify that premise with the
-Checkpoint concrete duplicity predicate. -/
+/-- The economic history records the carrier and the receipt observed when
+the checkpoint was convicted. -/
 def ConvictionOrigin (p : Params) (env : Env) (cfg : Singular.Config)
-    (aid token key : Nat) (original : Singular.Holding) : Prop :=
+    (aid token : Nat) (spend : Option Application.PendingSpend) (original : Singular.Holding) : Prop :=
   ∃ before after : Sys, ∃ c : Carrier,
     Reach p env cfg before ∧ carrierAt before aid = some c ∧
-    c.token = token ∧ c.k = key ∧ c.original = original ∧
-    c.st = .live ∧ env.duplicity aid c.k = true ∧
+    c.token = token ∧ env.pendingSpend aid = spend ∧ c.original = original ∧
+    c.st = .live ∧ (env.pendingSpend aid).isSome = true ∧
     convictCkpt env before aid = .ok ({}, after)
 
 /-- Both prebooking convicted carriers and complete booked records carry the
 same historical authorization fact. This is an inductive proof property. -/
 def AuthorizationHistory (p : Params) (env : Env) (cfg : Singular.Config) (s : Sys) : Prop :=
   (∀ c ∈ s.carriers, c.st = .terminationPending →
-    ConvictionOrigin p env cfg c.aid c.token c.k c.original) ∧
+    ConvictionOrigin p env cfg c.aid c.token c.pendingSpend c.original) ∧
   (∀ e ∈ s.terminations,
-    ConvictionOrigin p env cfg e.payload.aid e.payload.token e.payload.keyState e.payload.original)
+    ConvictionOrigin p env cfg e.payload.aid e.payload.token (some e.payload.spend) e.payload.original)
 
 /-- Key uniqueness makes a present carrier's lookup return that exact carrier. -/
 theorem carrier_lookup_of_mem (p : Params) {s : Sys} (hw : WellFormed p s)
@@ -102,11 +101,12 @@ theorem authorization_step (p : Params) (env : Env) (cfg : Singular.Config)
       have same : source = old := Option.some.inj oldLookup
       subst source
       refine ⟨s, { s with carriers := s.carriers.map (fun carrier =>
-        if carrier.aid == aid then { carrier with st := .terminationPending } else carrier) },
-        old, hr, ?_, rfl, rfl, rfl, state, ?_, ?_⟩
-      · simpa [key] using lookup
-      · simpa [key] using evidence
-      · simpa [key] using actual
+        if carrier.aid == aid then (carrier.convicted env aid) else carrier) },
+        old, hr, ?_, rfl, ?_, rfl, state, ?_, ?_⟩
+      · simpa [Carrier.convicted, key] using lookup
+      · simp [Carrier.convicted, key]
+      · simpa [Carrier.convicted, key] using evidence
+      · simpa [Carrier.convicted, key] using actual
     · rename_i notSelected
       simpa only [if_neg notSelected] using history.1 old oldMem pending
   | bookTermination aid booker fee b =>
@@ -118,7 +118,7 @@ theorem authorization_step (p : Params) (env : Env) (cfg : Singular.Config)
     · intro e member
       rcases List.mem_cons.mp member with rfl | old
       · have key : c.aid = aid := by simpa using List.find?_some lookup
-        simpa [key] using history.1 c (List.mem_of_find?_eq_some lookup) pending
+        simpa [key, pending.2] using history.1 c (List.mem_of_find?_eq_some lookup) pending.1
       · exact history.2 e old
   | fold gen plugin u tx =>
     obtain ⟨_, _, world, _, reconstructed⟩ := (fold_iff p s s' gen plugin u tx f).mp hs
@@ -142,27 +142,17 @@ theorem reachable_authorization (p : Params) (env : Env) (cfg : Singular.Config)
   | init => simp [AuthorizationHistory, Sys.init]
   | next before executed ih => exact authorization_step p env cfg before ih executed
 
-/-- Given the exact inputs and actual success, plus actual Reach history where
-stated; when booking the convicted carrier or inspecting a reachable pending
-record; then the iff includes every application field constraint, actual
-imported admission and complete successor, premium, request and external fee
-observation. Each reachable booked payload has a real prior reachable KERI
-conviction at its retained key, using the existing opaque premise. This is
-not a proof that the opaque predicate equals concrete Checkpoint duplicity.
-All earlier pending records survive wholly; actual supply remains one and
-custody moves exactly once. Required refusals: live without prior
-conviction, invalid coarse proof, wrong holding/key/token, duplicate reference
-in either store, second booking of the same carrier, and a tail-drop mutant
-that otherwise still admits both bookings. Full concrete Checkpoint evidence
-controls are exercised separately from the whole-record preservation claim. -/
+/-- Given a reachable registry and one of its termination entries, when its
+economic history is inspected, then a reachable live carrier with the same
+token and original holding underwent conviction with the exact booked receipt. -/
 theorem pending_has_keri_authorization
     (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys}
     (hr : Reach p env cfg s) (e : TerminationEntry) (he : e ∈ s.terminations) :
     ∃ before after : Sys, ∃ c : Carrier,
       Reach p env cfg before ∧ carrierAt before e.payload.aid = some c ∧
-      c.token = e.payload.token ∧ c.k = e.payload.keyState ∧
+      c.token = e.payload.token ∧ env.pendingSpend e.payload.aid = some e.payload.spend ∧
       c.original = e.payload.original ∧ c.st = .live ∧
-      env.duplicity e.payload.aid c.k = true ∧
+      (env.pendingSpend e.payload.aid).isSome = true ∧
       convictCkpt env before e.payload.aid = .ok ({}, after) := by
   exact (reachable_authorization p env cfg hr).2 e he
 

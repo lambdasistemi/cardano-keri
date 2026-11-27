@@ -20,15 +20,22 @@ const member = (xs, x) => xs.some(y => equal(x, y));
 export function properties(record) {
   const out = Object.fromEntries(THEOREMS.map(t => [t.id, { v: 'unshown' }]));
   if (!record.result.ok) return out;
-  const { params: p, input: s, action, result: { ok: { state: n, flow: f } } } = toInternal(record);
+  const { params: p, env, input: s, action, result: { ok: { state: n, flow: f } } } = toInternal(record);
   const kind = Object.keys(action)[0], a = action[kind], before = carrier(s, a.aid), after = carrier(n, a.aid);
   const check = (id, premise, conclusion) => { if (premise) out[id] = { v: conclusion() ? 'holds' : 'fails' }; };
   const local = kind === 'convictCkpt';
-  check('pending-conviction', kind === 'convictCkpt' && !!before, () =>
-    equal(after, { ...before, st: 'terminationPending' }) && getLeaf(n, a.aid) === 'active');
-  check('booking-custody', kind === 'bookTermination' && before?.st === 'terminationPending', () => {
+  check('pending-conviction', local && !!before, () => {
+    const read = env.convictions.find(r => r.comparison.tip.aid === a.aid);
+    if (!read) return false;
+    const {epoch, sn} = read.comparison.tip;
+    return equal(after, {...before, pendingSpend: {reference: read.output, aid: a.aid, position: {epoch, sn}}}) &&
+      getLeaf(n, a.aid) === 'active';
+  });
+  check('booking-custody', kind === 'bookTermination' && !!before?.pendingSpend, () => {
     const e = entry(n, a.booking.request.reference);
-    return !after && !!e && equal(e, { booking: a.booking, payload: { aid: a.aid, token: before.token, keyState: before.k, original: before.original, booker: a.booker, bookingFee: a.fee } }) &&
+    const {pendingReference, position, ...booking} = a.booking;
+    const spend = {reference: pendingReference, aid: a.aid, position};
+    return equal(spend, before.pendingSpend) && !after && !!e && equal(e, { booking, payload: { spend, aid: a.aid, token: before.token, original: before.original, booker: a.booker, bookingFee: a.fee } }) &&
       equal(f.premium, [a.booker, p.Mc - p.Mr - p.tip]) && f.intoRequest === p.Mr + p.tip && f.bookingFee === a.fee && getLeaf(n, a.aid) === 'active';
   });
   const consumed = kind === 'fold' ? a.transaction.transaction.inputs.map(i => i.ref) : [];

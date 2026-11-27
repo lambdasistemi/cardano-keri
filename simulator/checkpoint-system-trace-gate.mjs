@@ -12,7 +12,7 @@ import{equal}from'./registry-economic-core.mjs';
 import{checkSystemPage}from'./checkpoint-system-page-checks.mjs';
 const root=resolve(import.meta.dirname,'..'),here=import.meta.dirname;
 const sha=s=>createHash('sha256').update(s).digest('hex');
-const sources=['lean/CardanoKeri/Checkpoint.lean','lean/CardanoKeri/CheckpointCertificate.lean','lean/CardanoKeri/CheckpointSystemEvidence.lean','lean/CardanoKeri/CheckpointSystemWire.lean','lean/CardanoKeri/CheckpointSystemFixtures.lean','lean/CardanoKeri/RegistryReplay.lean','lean/CardanoKeri/CheckpointReceiptCheck.lean','lean/CheckpointSystemDriver.lean',...['checkpoint-system-core.mjs','checkpoint-system-properties.mjs','checkpoint-system-page.mjs','checkpoint-system-bundle.mjs','checkpoint-system-cli.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-simulator-core.mjs'].map(f=>'simulator/'+f)];
+const sources=['lean/CardanoKeri/Checkpoint.lean','lean/CardanoKeri/CheckpointCertificate.lean','lean/CardanoKeri/CheckpointSystemEvidence.lean','lean/CardanoKeri/CheckpointSystemWire.lean','lean/CardanoKeri/CheckpointSystemFixtures.lean','lean/CardanoKeri/RegistryReplay.lean','lean/CardanoKeri/CheckpointReceiptCheck.lean','lean/CheckpointSystemDriver.lean',...['checkpoint-system-core.mjs','checkpoint-system-properties.mjs','checkpoint-conviction.mjs','checkpoint-system-page.mjs','checkpoint-system-bundle.mjs','checkpoint-system-cli.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-simulator-core.mjs'].map(f=>'simulator/'+f)];
 function fresh(base=root,build=true) {
   const run=args=>execFileSync(process.env.LAKE_BIN||'lake',args,{cwd:join(base,'lean'),encoding:'utf8',maxBuffer:128*1024*1024});
   if(build)run(['build','CardanoKeri.CheckpointSystemFixtures']);
@@ -35,8 +35,8 @@ try {
       ['missing-trace',c=>c.traces.pop(),/schema\/roster/],
       ['empty-trace',c=>c.traces[0].cells=[],/empty-system-trace/],
       ['disconnected',c=>c.traces[0].cells[1].input.aids=[],/system-disconnected/],
-      ['false-success',c=>c.traces[1].cells[5].result=c.traces[1].cells[6].result,/system-result-mismatch/],
-      ['false-context',c=>c.traces[0].cells[0].result.ok.state.aids[0].origin.environment.duplicity=[],/system-result-mismatch/],
+      ['false-success',c=>c.traces[1].cells[5].result=c.traces[0].cells.find(cell=>cell.name==='book').result,/system-result-mismatch/],
+      ['false-context',c=>c.traces[0].cells[0].result.ok.state.aids[0].origin.environment.convictions=[],/system-result-mismatch/],
       ['false-final',c=>c.traces[0].final.aids=[],/system-final-mismatch/],
     ]) {
       const bad=structuredClone(corpus);change(bad);writeFileSync(join(work,name+'.json'),JSON.stringify(bad));

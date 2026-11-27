@@ -37,50 +37,260 @@
     "42": "Alice, request refund address"
   },
   "env": {
-    "duplicity": [
-      [
-        11,
-        0
-      ],
-      [
-        11,
-        1
-      ],
-      [
-        11,
-        2
-      ],
-      [
-        12,
-        0
-      ],
-      [
-        12,
-        1
-      ],
-      [
-        12,
-        2
-      ],
-      [
-        13,
-        0
-      ],
-      [
-        13,
-        1
-      ],
-      [
-        13,
-        2
-      ]
-    ],
     "inception": [
       11,
       12,
       13,
       14,
       15
+    ],
+    "convictions": [
+      {
+        "comparison": {
+          "rival": {
+            "aid": 11,
+            "bytes": [
+              11,
+              1,
+              1,
+              1
+            ],
+            "nextKeys": [
+              [
+                12
+              ]
+            ],
+            "nextThreshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "receipts": [],
+            "revealedKeys": [
+              [
+                11
+              ]
+            ],
+            "rotation": true,
+            "signatures": [
+              [
+                0,
+                [
+                  11,
+                  11,
+                  1,
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "sn": 1,
+            "threshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "toad": 0
+          },
+          "tip": {
+            "aid": 11,
+            "epoch": 1,
+            "keys": {
+              "curKeys": [
+                [
+                  11
+                ]
+              ],
+              "curThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "nextKeys": [
+                [
+                  11
+                ]
+              ],
+              "nextThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "toad": 0,
+              "witnesses": []
+            },
+            "sn": 1
+          }
+        },
+        "output": {
+          "index": 0,
+          "tx": 105
+        }
+      },
+      {
+        "comparison": {
+          "rival": {
+            "aid": 12,
+            "bytes": [
+              12,
+              1,
+              1,
+              1
+            ],
+            "nextKeys": [
+              [
+                13
+              ]
+            ],
+            "nextThreshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "receipts": [],
+            "revealedKeys": [
+              [
+                12
+              ]
+            ],
+            "rotation": true,
+            "signatures": [
+              [
+                0,
+                [
+                  12,
+                  12,
+                  1,
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "sn": 1,
+            "threshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "toad": 0
+          },
+          "tip": {
+            "aid": 12,
+            "epoch": 1,
+            "keys": {
+              "curKeys": [
+                [
+                  12
+                ]
+              ],
+              "curThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "nextKeys": [
+                [
+                  12
+                ]
+              ],
+              "nextThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "toad": 0,
+              "witnesses": []
+            },
+            "sn": 1
+          }
+        },
+        "output": {
+          "index": 0,
+          "tx": 106
+        }
+      },
+      {
+        "comparison": {
+          "rival": {
+            "aid": 13,
+            "bytes": [
+              13,
+              1,
+              1,
+              1
+            ],
+            "nextKeys": [
+              [
+                14
+              ]
+            ],
+            "nextThreshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "receipts": [],
+            "revealedKeys": [
+              [
+                13
+              ]
+            ],
+            "rotation": true,
+            "signatures": [
+              [
+                0,
+                [
+                  13,
+                  13,
+                  1,
+                  1,
+                  1
+                ]
+              ]
+            ],
+            "sn": 1,
+            "threshold": {
+              "unweighted": {
+                "m": 1
+              }
+            },
+            "toad": 0
+          },
+          "tip": {
+            "aid": 13,
+            "epoch": 1,
+            "keys": {
+              "curKeys": [
+                [
+                  13
+                ]
+              ],
+              "curThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "nextKeys": [
+                [
+                  13
+                ]
+              ],
+              "nextThreshold": {
+                "unweighted": {
+                  "m": 1
+                }
+              },
+              "toad": 0,
+              "witnesses": []
+            },
+            "sn": 1
+          }
+        },
+        "output": {
+          "index": 0,
+          "tx": 107
+        }
+      }
     ]
   },
   "steps": [
@@ -728,7 +938,6 @@
               "carriers": [
                 {
                   "aid": 11,
-                  "k": 0,
                   "minAda": 4,
                   "original": {
                     "datum": 711,
@@ -736,7 +945,7 @@
                     "kind": "active",
                     "output": 111
                   },
-                  "st": "live",
+                  "pendingSpend": null,
                   "token": 0
                 }
               ],
@@ -1510,50 +1719,260 @@
       "title": "Process one identity while another remains pending",
       "at": 0,
       "env": {
-        "duplicity": [
-          [
-            11,
-            0
-          ],
-          [
-            11,
-            1
-          ],
-          [
-            11,
-            2
-          ],
-          [
-            12,
-            0
-          ],
-          [
-            12,
-            1
-          ],
-          [
-            12,
-            2
-          ],
-          [
-            13,
-            0
-          ],
-          [
-            13,
-            1
-          ],
-          [
-            13,
-            2
-          ]
-        ],
         "inception": [
           11,
           12,
           13,
           14,
           15
+        ],
+        "convictions": [
+          {
+            "comparison": {
+              "rival": {
+                "aid": 11,
+                "bytes": [
+                  11,
+                  1,
+                  1,
+                  1
+                ],
+                "nextKeys": [
+                  [
+                    12
+                  ]
+                ],
+                "nextThreshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "receipts": [],
+                "revealedKeys": [
+                  [
+                    11
+                  ]
+                ],
+                "rotation": true,
+                "signatures": [
+                  [
+                    0,
+                    [
+                      11,
+                      11,
+                      1,
+                      1,
+                      1
+                    ]
+                  ]
+                ],
+                "sn": 1,
+                "threshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "toad": 0
+              },
+              "tip": {
+                "aid": 11,
+                "epoch": 1,
+                "keys": {
+                  "curKeys": [
+                    [
+                      11
+                    ]
+                  ],
+                  "curThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "nextKeys": [
+                    [
+                      11
+                    ]
+                  ],
+                  "nextThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "toad": 0,
+                  "witnesses": []
+                },
+                "sn": 1
+              }
+            },
+            "output": {
+              "index": 0,
+              "tx": 105
+            }
+          },
+          {
+            "comparison": {
+              "rival": {
+                "aid": 12,
+                "bytes": [
+                  12,
+                  1,
+                  1,
+                  1
+                ],
+                "nextKeys": [
+                  [
+                    13
+                  ]
+                ],
+                "nextThreshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "receipts": [],
+                "revealedKeys": [
+                  [
+                    12
+                  ]
+                ],
+                "rotation": true,
+                "signatures": [
+                  [
+                    0,
+                    [
+                      12,
+                      12,
+                      1,
+                      1,
+                      1
+                    ]
+                  ]
+                ],
+                "sn": 1,
+                "threshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "toad": 0
+              },
+              "tip": {
+                "aid": 12,
+                "epoch": 1,
+                "keys": {
+                  "curKeys": [
+                    [
+                      12
+                    ]
+                  ],
+                  "curThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "nextKeys": [
+                    [
+                      12
+                    ]
+                  ],
+                  "nextThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "toad": 0,
+                  "witnesses": []
+                },
+                "sn": 1
+              }
+            },
+            "output": {
+              "index": 0,
+              "tx": 106
+            }
+          },
+          {
+            "comparison": {
+              "rival": {
+                "aid": 13,
+                "bytes": [
+                  13,
+                  1,
+                  1,
+                  1
+                ],
+                "nextKeys": [
+                  [
+                    14
+                  ]
+                ],
+                "nextThreshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "receipts": [],
+                "revealedKeys": [
+                  [
+                    13
+                  ]
+                ],
+                "rotation": true,
+                "signatures": [
+                  [
+                    0,
+                    [
+                      13,
+                      13,
+                      1,
+                      1,
+                      1
+                    ]
+                  ]
+                ],
+                "sn": 1,
+                "threshold": {
+                  "unweighted": {
+                    "m": 1
+                  }
+                },
+                "toad": 0
+              },
+              "tip": {
+                "aid": 13,
+                "epoch": 1,
+                "keys": {
+                  "curKeys": [
+                    [
+                      13
+                    ]
+                  ],
+                  "curThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "nextKeys": [
+                    [
+                      13
+                    ]
+                  ],
+                  "nextThreshold": {
+                    "unweighted": {
+                      "m": 1
+                    }
+                  },
+                  "toad": 0,
+                  "witnesses": []
+                },
+                "sn": 1
+              }
+            },
+            "output": {
+              "index": 0,
+              "tx": 107
+            }
+          }
         ]
       },
       "steps": [
@@ -1626,50 +2045,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -1848,50 +2477,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -2656,50 +3495,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -2761,7 +3810,6 @@
                   "carriers": [
                     {
                       "aid": 12,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 712,
@@ -2769,12 +3817,11 @@
                         "kind": "active",
                         "output": 112
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 1
                     },
                     {
                       "aid": 11,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 711,
@@ -2782,7 +3829,7 @@
                         "kind": "active",
                         "output": 111
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 0
                     }
                   ],
@@ -2838,57 +3885,267 @@
           "now": 0,
           "actor": "anyone",
           "as": "Cora",
-          "note": "Cora proves duplicity at Alice’s current key.",
+          "note": "Cora presents one conflicting rival. Alice’s checkpoint spend accepts the comparison with its spent tip and creates her pending termination output.",
           "action": {
             "convictCkpt": {
               "aid": 11
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -2941,7 +4198,6 @@
                   "carriers": [
                     {
                       "aid": 12,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 712,
@@ -2949,12 +4205,11 @@
                         "kind": "active",
                         "output": 112
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 1
                     },
                     {
                       "aid": 11,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 711,
@@ -2962,7 +4217,17 @@
                         "kind": "active",
                         "output": 111
                       },
-                      "st": "terminationPending",
+                      "pendingSpend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 0
                     }
                   ],
@@ -3018,57 +4283,267 @@
           "now": 0,
           "actor": "anyone",
           "as": "Cora",
-          "note": "Cora proves duplicity at Bob’s current key.",
+          "note": "Cora presents one conflicting rival. Bob’s checkpoint spend accepts the comparison with its spent tip and creates his pending termination output.",
           "action": {
             "convictCkpt": {
               "aid": 12
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -3121,7 +4596,6 @@
                   "carriers": [
                     {
                       "aid": 12,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 712,
@@ -3129,12 +4603,21 @@
                         "kind": "active",
                         "output": 112
                       },
-                      "st": "terminationPending",
+                      "pendingSpend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 106
+                        }
+                      },
                       "token": 1
                     },
                     {
                       "aid": 11,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 711,
@@ -3142,7 +4625,17 @@
                         "kind": "active",
                         "output": 111
                       },
-                      "st": "terminationPending",
+                      "pendingSpend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
                       "token": 0
                     }
                   ],
@@ -3250,56 +4743,274 @@
                     "name": "5600603241348410377",
                     "policy": 9
                   }
-                ]
+                ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 105
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                }
               },
               "fee": 1
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -3355,7 +5066,6 @@
                   "carriers": [
                     {
                       "aid": 12,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 712,
@@ -3363,7 +5073,17 @@
                         "kind": "active",
                         "output": 112
                       },
-                      "st": "terminationPending",
+                      "pendingSpend": {
+                        "aid": 12,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 106
+                        }
+                      },
                       "token": 1
                     }
                   ],
@@ -3445,12 +5165,22 @@
                         "aid": 11,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 711,
                           "key": 11,
                           "kind": "active",
                           "output": 111
+                        },
+                        "spend": {
+                          "aid": 11,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 105
+                          }
                         },
                         "token": 0
                       }
@@ -3536,56 +5266,274 @@
                     "name": "2457363527023764289",
                     "policy": 9
                   }
-                ]
+                ],
+                "pendingReference": {
+                  "index": 0,
+                  "tx": 106
+                },
+                "position": {
+                  "epoch": 1,
+                  "sn": 1
+                }
               },
               "fee": 1
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -3717,12 +5665,22 @@
                         "aid": 12,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 712,
                           "key": 12,
                           "kind": "active",
                           "output": 112
+                        },
+                        "spend": {
+                          "aid": 12,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 106
+                          }
                         },
                         "token": 1
                       }
@@ -3781,12 +5739,22 @@
                         "aid": 11,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 711,
                           "key": 11,
                           "kind": "active",
                           "output": 111
+                        },
+                        "spend": {
+                          "aid": 11,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 105
+                          }
                         },
                         "token": 0
                       }
@@ -3885,50 +5853,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -4117,12 +6295,22 @@
                         "aid": 12,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 712,
                           "key": 12,
                           "kind": "active",
                           "output": 112
+                        },
+                        "spend": {
+                          "aid": 12,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 106
+                          }
                         },
                         "token": 1
                       }
@@ -4181,12 +6369,22 @@
                         "aid": 11,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 711,
                           "key": 11,
                           "kind": "active",
                           "output": 111
+                        },
+                        "spend": {
+                          "aid": 11,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 105
+                          }
                         },
                         "token": 0
                       }
@@ -4834,50 +7032,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -4950,7 +7358,6 @@
                   "carriers": [
                     {
                       "aid": 13,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 713,
@@ -4958,7 +7365,7 @@
                         "kind": "active",
                         "output": 113
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 2
                     }
                   ],
@@ -5040,12 +7447,22 @@
                         "aid": 12,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 712,
                           "key": 12,
                           "kind": "active",
                           "output": 112
+                        },
+                        "spend": {
+                          "aid": 12,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 106
+                          }
                         },
                         "token": 1
                       }
@@ -5152,50 +7569,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -5263,7 +7890,6 @@
                   "carriers": [
                     {
                       "aid": 13,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 713,
@@ -5271,7 +7897,7 @@
                         "kind": "active",
                         "output": 113
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 2
                     }
                   ],
@@ -5413,12 +8039,22 @@
                         "aid": 12,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 712,
                           "key": 12,
                           "kind": "active",
                           "output": 112
+                        },
+                        "spend": {
+                          "aid": 12,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 106
+                          }
                         },
                         "token": 1
                       }
@@ -5830,50 +8466,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -5941,7 +8787,6 @@
                   "carriers": [
                     {
                       "aid": 13,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 713,
@@ -5949,7 +8794,7 @@
                         "kind": "active",
                         "output": 113
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 2
                     }
                   ],
@@ -6031,12 +8876,22 @@
                         "aid": 12,
                         "booker": 7,
                         "bookingFee": 1,
-                        "keyState": 0,
                         "original": {
                           "datum": 712,
                           "key": 12,
                           "kind": "active",
                           "output": 112
+                        },
+                        "spend": {
+                          "aid": 12,
+                          "position": {
+                            "epoch": 1,
+                            "sn": 1
+                          },
+                          "reference": {
+                            "index": 0,
+                            "tx": 106
+                          }
                         },
                         "token": 1
                       }
@@ -6448,50 +9303,260 @@
             }
           },
           "env": {
-            "duplicity": [
-              [
-                11,
-                0
-              ],
-              [
-                11,
-                1
-              ],
-              [
-                11,
-                2
-              ],
-              [
-                12,
-                0
-              ],
-              [
-                12,
-                1
-              ],
-              [
-                12,
-                2
-              ],
-              [
-                13,
-                0
-              ],
-              [
-                13,
-                1
-              ],
-              [
-                13,
-                2
-              ]
-            ],
             "inception": [
               11,
               12,
               13,
               14,
               15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 11,
+                    "bytes": [
+                      11,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        11
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          11,
+                          11,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          11
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 12,
+                    "bytes": [
+                      12,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        12
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          12,
+                          12,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 12,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          12
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 106
+                }
+              },
+              {
+                "comparison": {
+                  "rival": {
+                    "aid": 13,
+                    "bytes": [
+                      13,
+                      1,
+                      1,
+                      1
+                    ],
+                    "nextKeys": [
+                      [
+                        14
+                      ]
+                    ],
+                    "nextThreshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "receipts": [],
+                    "revealedKeys": [
+                      [
+                        13
+                      ]
+                    ],
+                    "rotation": true,
+                    "signatures": [
+                      [
+                        0,
+                        [
+                          13,
+                          13,
+                          1,
+                          1,
+                          1
+                        ]
+                      ]
+                    ],
+                    "sn": 1,
+                    "threshold": {
+                      "unweighted": {
+                        "m": 1
+                      }
+                    },
+                    "toad": 0
+                  },
+                  "tip": {
+                    "aid": 13,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "curThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          13
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "unweighted": {
+                          "m": 1
+                        }
+                      },
+                      "toad": 0,
+                      "witnesses": []
+                    },
+                    "sn": 1
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 107
+                }
+              }
             ]
           },
           "expect": {
@@ -6559,7 +9624,6 @@
                   "carriers": [
                     {
                       "aid": 13,
-                      "k": 0,
                       "minAda": 4,
                       "original": {
                         "datum": 713,
@@ -6567,7 +9631,7 @@
                         "kind": "active",
                         "output": 113
                       },
-                      "st": "live",
+                      "pendingSpend": null,
                       "token": 2
                     }
                   ],
@@ -6646,7 +9710,6 @@
         "carriers": [
           {
             "aid": 13,
-            "k": 0,
             "minAda": 4,
             "original": {
               "datum": 713,
@@ -6654,7 +9717,7 @@
               "kind": "active",
               "output": 113
             },
-            "st": "live",
+            "pendingSpend": null,
             "token": 2
           }
         ],
@@ -6722,7 +9785,6 @@
     "carriers": [
       {
         "aid": 11,
-        "k": 0,
         "minAda": 4,
         "original": {
           "datum": 711,
@@ -6730,7 +9792,7 @@
           "kind": "active",
           "output": 111
         },
-        "st": "live",
+        "pendingSpend": null,
         "token": 0
       }
     ],

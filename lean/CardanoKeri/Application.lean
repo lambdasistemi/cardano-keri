@@ -90,7 +90,13 @@ and the state facts a version 2 checkpoint datum carries), and the refund
 address a checkpoint datum records for a request's refund address (its ledger
 bytes on the chain the transaction runs on; `none` when no payable refund can
 carry it). All are inputs here;
-the concrete choices live with the vectors. -/
+their concrete choices live with the vectors. At genesis the deployer supplies
+the seed and published configuration. At booking the controller supplies the
+request, initial datum and inception evidence. The mint derives names, decodes
+the configuration and checkpoint, and converts the refund address. The Singular
+folder burns approvals and delivers public holdings. A returner spends an
+expired request and pays its recorded refund. A termination booker spends the
+pending checkpoint and the application mint reads its identifier. -/
 structure Interpretation where
   hash : Hash
   code : Codec
@@ -102,7 +108,9 @@ structure Interpretation where
 
 /-- The opaque KERI premise the economic model already uses: the key has its
 inception evidence. A booking mints an approval only for such a key; no other
-action reads it. -/
+action reads it. In the controller's registration booking the application mint
+checks the controller signatures and witness receipts on the inception event
+against the initial datum. The folder obtains the approved request on chain. -/
 structure Env where
   inception : Key → Bool
 
@@ -371,19 +379,22 @@ def checkpointDatum (i : Interpretation) (output : ObservedOutput) :
     Option CardanoKeri.ConsumerIdentity.DecodedDatum :=
   match output.datum with | .application raw => i.decodeCheckpoint raw | _ => none
 
-/-- The pending output a conviction leaves for `key` of `registry`
-(`Checkpoint.Step.convict`, `pending_holds_minimum_ada`): at the checkpoint
-validator's credential the configuration record names, carrying the
-pending-termination datum of an AID whose key is `key`, holding exactly the
-registry's minimum ADA and the one active token of the key. -/
-def convictedPending (i : Interpretation) (rp : CardanoKeri.Registry.Params) (c : Configuration)
+/-- The pending input admitted at booking. Read the native position from the
+named input after checking its credential, minimum ADA, active asset, key and
+pending datum. The application needs no conviction evidence at this mint. -/
+def readPendingSpend (i : Interpretation) (rp : Registry.Params) (c : Configuration)
+    (registry : TokenId) (key : Key) (input : ObservedOutput) : Option PendingSpend :=
+  match checkpointDatum i input with
+  | some ⟨aid, .terminationPending position⟩ =>
+    if input.credential == c.checkpointCredential && input.lovelace == rp.Mc &&
+        exactAssets input [(activeAsset i.hash i.code registry key, 1)] && i.keyOf aid == key then
+      some ⟨input.reference, aid, position⟩
+    else none
+  | _ => none
+
+def convictedPending (i : Interpretation) (rp : Registry.Params) (c : Configuration)
     (registry : TokenId) (key : Key) (input : ObservedOutput) : Bool :=
-  input.credential == c.checkpointCredential &&
-  (match checkpointDatum i input with
-    | some d => i.keyOf d.aid == key && pendingState d.state
-    | none => false) &&
-  input.lovelace == rp.Mc &&
-  exactAssets input [(activeAsset i.hash i.code registry key, 1)]
+  (readPendingSpend i rp c registry key input).isSome
 
 /-- The exact lovelace a termination request holds: the economic termination
 carrier `Mr` and the registry's minimum tip (`Registry.bookTermination`). -/

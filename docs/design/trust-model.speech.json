@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish; the chain never asks KERI for anything, and never pronounces a verdict KERI itself would not. Where KERI says a verdict is formed is validator roles and event locality.",
+      "text": "One rule sits above everything else on this page: the chain projects the KEL and never originates identity state. Every arrow points one way. The design is built only against what a controller and its witnesses already publish. A terminal conviction requires agreement with KERI duplicity. The witness assumptions describe the two outstanding conditions for that agreement. KERI describes where a verdict is formed in validator roles and event locality.",
       "pause": 400
     },
     {
@@ -35,7 +35,7 @@
       "pause": 300
     },
     {
-      "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal: the convicted (terminal after a duplicity proof) leaf never reopens and the conviction bond, the stake posted against that proof, is seized. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
+      "text": "Proven duplicity cannot be unseen: two receipted rotations at one sequence are a fact of the record for ever, and KERI has no event that un-duplicates an identifier. What KERI leaves to each validator is the trust decision, which it may take either way (the review's reading of the specification's own text). This project's selected policy is that conviction is terminal. The checkpoint spend compares one conflicting rival with the spent tip. When it accepts, the conviction bond is seized. Once the fold retires the leaf, it never reopens. At a rotated checkpoint, a finding of KERI duplicity also requires the rival to be valid under the predecessor’s rotation rules. Whether every accepted rival meets that requirement remains open in this model, and #573 will discharge it by checking the rival against the previous event’s commitments. The reasons are ours, not KERI's: a bond that could be recovered would not deter, and inventing a recovery event KERI lacks would be the chain originating identity state.",
       "pause": 300
     }
   ],
@@ -277,7 +277,11 @@
       "pause": 400
     },
     {
-      "text": "A colluding quorum at or above toad can do one thing worse than lying about liveness: it can receipt two rotations at one sequence. That is part of the duplicity a conviction proves, which also needs both rotations valid against the same previous commitments, one native sequence and different content, and it is why the conviction's exposure is bounded by D_reg and by the witness set the controller chose.",
+      "text": "A colluding quorum at or above toad can receipt two rotations at one native sequence. KERI duplicity requires different content and two rotations valid against the same previous commitments, each with its own signing threshold and receipts from its derived witnesses. The exposure is bounded by D_reg and by the witness set the controller chose.",
+      "pause": 400
+    },
+    {
+      "text": "At the checkpoint spend, the observer compares one rival with the spent tip and checks its signatures and receipts under the tip’s thresholds. After rotation, concluding KERI duplicity from an accepted comparison still requires the rival to validate against the predecessor under its own rules. Refusal at a never-rotated checkpoint also remains open. The termination booker spends the pending output, and the folder processes the booked request.",
       "pause": 400
     }
   ],
@@ -321,7 +325,7 @@
       "pause": 400
     },
     {
-      "text": "The conviction step checks the commitment it reveals against the output it convicts; the system checks that the commitment is open and belongs here, and burns it. The table lists every condition and the step that states it.",
+      "text": "At the checkpoint spend, the observer compares the committed rival with the spent tip. The system binds the tip to the event that wrote the checkpoint and burns the open commitment. The witness assumptions describe what remains to establish KERI duplicity.",
       "pause": 400
     },
     {
@@ -369,7 +373,11 @@
       "pause": 500
     },
     {
-      "text": "Registration and terminal completion use actual registry folds. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
+      "text": "Registration and terminal completion use actual registry folds. In a proved system registration, the checkpoint is born at the booking time and carries the booked refund address. The initial pool is exactly what remains of the delivered carrier after minimum ADA and both bonds. A folder obtains these facts from the booking on chain.",
+      "pause": 400
+    },
+    {
+      "text": "A local rotation, deposit or poison step reads the authorization for the identifier it changes. Two checkpoints at the same sequence and epoch can have different authorizations. The modeled poison spend requires the current keys of that identifier. Rotations, poison, freezing, top-ups and conviction are local Checkpoint transitions. Pending custody remains until its recorded request is consumed by a matching fold. The consumer authenticates the holding against its fixed registry identity; it need not spend the registry state.",
       "pause": 400
     }
   ],
@@ -405,6 +413,6 @@
   ],
   "_source": {
     "file": "trust-model.md",
-    "sha256": "f354cc86fce9363b42f9f0337d3a2b9de03ced0cab8a57bb7c8ebcfd47eb47b9"
+    "sha256": "eccbc99c2b97ce437dca4939042d6bde2a899563910960cfd0907190d9a65e59"
   }
 }

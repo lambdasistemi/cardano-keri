@@ -285,19 +285,7 @@ inceptionOf top = do
     nexts <- field "n" ked >>= list >>= traverse (text >=> digest)
     kt <- field "kt" ked >>= text >>= hexInt
     nt <- field "nt" ked >>= text >>= hexInt
-    offs <- field "offsets" sub
-    let off f = field f offs >>= int
-        offs' f = field f offs >>= list >>= traverse int
     sigs <- field "event_sigs" sub >>= list >>= traverse sigOf
-    offT <- off "t"
-    offI <- off "i"
-    offS <- off "s"
-    offKt <- off "kt"
-    offNt <- off "nt"
-    offBt <- off "bt"
-    offK <- offs' "k"
-    offN <- offs' "n"
-    offB <- offs' "b"
     pure
         Inception
             { inceptionView =
@@ -315,15 +303,6 @@ inceptionOf top = do
             , inceptionEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = sigs
                     , reWitReceipts = []
                     }

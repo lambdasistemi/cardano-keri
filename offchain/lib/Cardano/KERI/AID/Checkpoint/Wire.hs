@@ -263,21 +263,14 @@ second copy here would be a second thing to keep in step.
 enforcementEvidenceData :: EnforcementEvidence -> Data
 enforcementEvidenceData = asPlcData
 
--- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 12 fields.
+{- | The Aiken @RegistrationEvidence@ record: @Constr 0@ of 3 fields: the exact
+event bytes, the indexed controller signatures and the indexed witness receipts.
+-}
 registrationEvidenceData :: RegistrationEvidence -> Data
 registrationEvidenceData RegistrationEvidence{..} =
     Constr
         0
         [ B reEventBytes
-        , I (fromIntegral reOffT)
-        , I (fromIntegral reOffI)
-        , I (fromIntegral reOffS)
-        , intListData reOffK
-        , I (fromIntegral reOffKt)
-        , intListData reOffN
-        , I (fromIntegral reOffNt)
-        , intListData reOffB
-        , I (fromIntegral reOffBt)
         , signatureListData reCtrlSigs
         , signatureListData reWitReceipts
         ]

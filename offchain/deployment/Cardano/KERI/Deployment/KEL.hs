@@ -27,6 +27,15 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     KeyStateView (..),
     keyStateWellFormed,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (
+    DecodedEstablishmentEvent (..),
+    EventVariant (..),
+    decodeEstablishmentEvent,
+ )
+import Cardano.KERI.AID.Checkpoint.InceptionPrefix (
+    PrefixKind,
+    verifyPrefixBinding,
+ )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
  )
@@ -44,7 +53,8 @@ import Data.Aeson (
     withObject,
     (.:),
  )
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Parser, parseEither)
+import Data.Bifunctor (first)
 import Data.Bits (shiftL, shiftR, (.&.))
 import Data.ByteArray.Encoding (
     Base (Base64URLUnpadded),
@@ -66,14 +76,18 @@ import Text.Read (readMaybe)
 
 {- | Registration material derived from one inception message.
 
-The AID remains available in qb64 form for CLI output while the datum stores
-the decoded 32-byte self-addressing digest expected on-chain.
+The identifier remains available in qb64 form for CLI output while the datum
+stores its decoded 32 bytes: the digest of a self-addressing identifier, the
+public key of a key-derived one. The event's own digest ('inceptionDigest') is a
+separate value: it is the identifier only for a self-addressing prefix.
 -}
 data InceptionExport = InceptionExport
     { inceptionAid :: !Text
+    , inceptionKind :: !PrefixKind
+    , inceptionDigest :: !ByteString
+    -- ^ the event's own SAID, 32 raw bytes
     , inceptionDatum :: !KeyStateView
     , inceptionEvidence :: !RegistrationEvidence
-    , inceptionDigestOffset :: !Int
     }
     deriving stock (Show, Eq)
 
@@ -90,33 +104,6 @@ data RotationExport = RotationExport
     , rotationEventSignatures :: ![(Int, ByteString)]
     }
     deriving stock (Show, Eq)
-
-data InceptionEvent = InceptionEvent
-    { eventType :: !Text
-    , eventDigest :: !Text
-    , eventAid :: !Text
-    , eventSequence :: !Text
-    , eventCurrentThreshold :: !Threshold
-    , eventCurrentKeys :: ![Text]
-    , eventNextThreshold :: !Threshold
-    , eventNextKeys :: ![Text]
-    , eventToad :: !Text
-    , eventWitnesses :: ![Text]
-    }
-
-instance FromJSON InceptionEvent where
-    parseJSON = withObject "KERI inception event" $ \o -> do
-        eventType <- o .: "t"
-        eventDigest <- o .: "d"
-        eventAid <- o .: "i"
-        eventSequence <- o .: "s"
-        eventCurrentThreshold <- o .: "kt" >>= parseThreshold
-        eventCurrentKeys <- o .: "k"
-        eventNextThreshold <- o .: "nt" >>= parseThreshold
-        eventNextKeys <- o .: "n"
-        eventToad <- o .: "bt"
-        eventWitnesses <- o .: "b"
-        pure InceptionEvent{..}
 
 data RotationEvent = RotationEvent
     { rotationType :: !Text
@@ -151,71 +138,55 @@ instance FromJSON RotationEvent where
 
 {- | Parse the first complete inception message in a @kli export@ stream.
 
-The function rejects non-inception events, malformed version framing,
-unsupported indexed-signature encodings, missing signature groups, invalid
-qb64 material, and a self-addressing digest that does not bind the exact raw
-event bytes.
+The event is read from its exact bytes by the structural decoder; no position
+is searched for and none is kept. The function rejects non-inception events,
+any event the decoder refuses (framing, field order, grammar), an identifier
+that is not bound to its prefix kind (a basic prefix is the sole signing key
+with numeric threshold one and a non-transferable one carries no next keys,
+witnesses or seals; a self-addressing prefix is the digest of the signed body),
+unsupported indexed-signature encodings, missing signature groups, invalid qb64
+material, and an own SAID that does not bind the exact event bytes.
 -}
 parseInceptionExport :: ByteString -> Either String InceptionExport
 parseInceptionExport stream = do
     (raw, attachments, _) <- splitMessage stream
-    event <- eitherDecodeStrict' raw
-    unless (eventType event == "icp") $
+    event <-
+        first (("KEL inception failed total parse: " <>) . show) $
+            decodeEstablishmentEvent raw
+    unless (deeVariant event == VariantIcp) $
         Left "KEL first event is not an icp inception"
-    unless
-        (eventAid event == eventDigest event)
-        (Left "inception i and d fields differ")
-    sequenceNumber <- parseHexText "s" (eventSequence event)
-    toad <- parseHexText "bt" (eventToad event)
-    aid <- decodeSelfAddressing "i" (eventAid event)
-    digest <- decodeSelfAddressing "d" (eventDigest event)
-    unless (digest == aid) $
-        Left "inception i and d digests differ"
-    currentKeys <-
-        traverse (decodePublicKey "k") (eventCurrentKeys event)
-    nextKeys <-
-        traverse (decodeSelfAddressing "n") (eventNextKeys event)
-    witnesses <-
-        traverse (decodePublicKey "b") (eventWitnesses event)
+    kind <-
+        first (("KEL inception prefix binding refused: " <>) . show) $
+            verifyPrefixBinding event
+    let text = TE.decodeUtf8
+    sequenceNumber <- parseHexText "s" (text (deeSeq event))
+    toad <- parseHexText "bt" (text (deeBt event))
+    aid <- decodeIdentifier "i" (text (deeAid event))
+    digest <- decodeSelfAddressing "d" (text (deeSaid event))
+    unless (blake3Hash (deeSaidPreimage event) == digest) $
+        Left "KEL inception SAID does not bind the exact event bytes"
+    currentThreshold <- thresholdFromSpelling (deeKt event)
+    nextThreshold <- thresholdFromSpelling (deeNt event)
+    currentKeys <- traverse (decodePublicKey "k" . text) (deeK event)
+    nextKeys <- traverse (decodeSelfAddressing "n" . text) (deeN event)
+    witnesses <- traverse (decodePublicKey "b" . text) (deeB event)
     (controllerSignatures, witnessReceipts) <-
         parseAttachments attachments
     when (null controllerSignatures) $
         Left "KEL inception has no controller indexed signatures"
-    let offD = scalarOffset raw "d" (eventDigest event)
-        offI = scalarOffset raw "i" (eventAid event)
-    digestOffset <- offD
-    aidOffset <- offI
-    unless (blake3Hash (blankSaid raw digestOffset aidOffset) == aid) $
-        Left "KEL inception SAID does not bind the exact event bytes"
-    evidence <-
-        RegistrationEvidence
-            raw
-            <$> scalarOffset raw "t" (eventType event)
-            <*> pure aidOffset
-            <*> scalarOffset raw "s" (eventSequence event)
-            <*> traverse (arrayOffset raw "k") (eventCurrentKeys event)
-            <*> thresholdOffset
-                raw
-                "kt"
-                (eventCurrentThreshold event)
-                (thresholdSpelling $ eventCurrentThreshold event)
-            <*> traverse (arrayOffset raw "n") (eventNextKeys event)
-            <*> thresholdOffset
-                raw
-                "nt"
-                (eventNextThreshold event)
-                (thresholdSpelling $ eventNextThreshold event)
-            <*> traverse (arrayOffset raw "b") (eventWitnesses event)
-            <*> scalarOffset raw "bt" (eventToad event)
-            <*> pure controllerSignatures
-            <*> pure witnessReceipts
-    let datum =
+    let evidence =
+            RegistrationEvidence
+                { reEventBytes = raw
+                , reCtrlSigs = controllerSignatures
+                , reWitReceipts = witnessReceipts
+                }
+        datum =
             KeyStateView
                 { cdCesrAid = aid
                 , cdCurKeys = currentKeys
-                , cdCurThreshold = eventCurrentThreshold event
+                , cdCurThreshold = currentThreshold
                 , cdNextKeys = nextKeys
-                , cdNextThreshold = eventNextThreshold event
+                , cdNextThreshold = nextThreshold
                 , cdWitnesses = witnesses
                 , cdToad = toad
                 , cdSeq = 0
@@ -223,10 +194,11 @@ parseInceptionExport stream = do
                 }
     pure
         InceptionExport
-            { inceptionAid = eventAid event
+            { inceptionAid = text (deeAid event)
+            , inceptionKind = kind
+            , inceptionDigest = digest
             , inceptionDatum = datum
             , inceptionEvidence = evidence
-            , inceptionDigestOffset = digestOffset
             }
 
 {- | Parse the first rotation in a complete inception-to-rotation export.
@@ -551,6 +523,23 @@ decodePublicKey field text =
             | BS.null rest -> pure raw
         _ -> Left (field <> " is not one complete Ed25519 qb64 key")
 
+{- | The 32 raw bytes of a qualified identifier: the key of a basic prefix (codes
+B and D) or the digest of a self-addressing one (code E).
+-}
+decodeIdentifier :: String -> Text -> Either String ByteString
+decodeIdentifier field text =
+    case parsePrimitive (TE.encodeUtf8 text) of
+        Right (Ed25519PublicKey raw, rest) | BS.null rest -> pure raw
+        Right (SelfAddressing raw, rest) | BS.null rest -> pure raw
+        _ -> Left (field <> " is not one complete B, D or E qb64 identifier")
+
+-- | A threshold from its signed spelling: a hexadecimal string or a weighted array.
+thresholdFromSpelling :: ByteString -> Either String Threshold
+thresholdFromSpelling spelling
+    | "[" `BS.isPrefixOf` spelling =
+        eitherDecodeStrict' spelling >>= parseEither parseThreshold
+    | otherwise = Unweighted <$> parseHexText "threshold" (TE.decodeUtf8 spelling)
+
 decodeSelfAddressing :: String -> Text -> Either String ByteString
 decodeSelfAddressing field text =
     case parsePrimitive (TE.encodeUtf8 text) of
@@ -697,16 +686,6 @@ findBytes label needle haystack =
      in if BS.null match
             then Left (label <> " not found")
             else pure (BS.length before)
-
-blankSaid :: ByteString -> Int -> Int -> ByteString
-blankSaid raw digestOffset aidOffset =
-    BS.take digestOffset raw
-        <> B8.replicate 44 '#'
-        <> BS.take
-            (aidOffset - digestOffset - 44)
-            (BS.drop (digestOffset + 44) raw)
-        <> B8.replicate 44 '#'
-        <> BS.drop (aidOffset + 44) raw
 
 blankDigest :: ByteString -> Int -> ByteString
 blankDigest raw digestOffset =

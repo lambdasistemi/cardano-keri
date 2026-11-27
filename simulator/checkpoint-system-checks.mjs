@@ -120,6 +120,19 @@ assert.equal(observed.writer.rotation.event.event.sn, observed.state.present.l.s
 // match that writer, including the witnesses accumulated along its history.
 const journey = corpus.traces.find(trace => trace.name === 'retained-associated-completion');
 const comparedPrefix = journey.cells.slice(0, journey.cells.findIndex(cell => cell.name === 'convict') + 1);
+const beforeClosing = replaySystem(first.params, first.env, journey.deployment,
+  comparedPrefix.slice(0, -1).map(cell => cell.command));
+assert(beforeClosing.records.every(record => record.result.ok));
+assert.deepEqual(beforeClosing.state, convict.input);
+const revealedAtTen = attemptSystem(beforeClosing, {reveal: {marker: 1, now: 10}}).record;
+const sweptAtTwentyOne = attemptSystem(beforeClosing, {sweep: {marker: 1, now: 21}}).record;
+assert(revealedAtTen.result.ok && sweptAtTwentyOne.result.ok);
+assert.deepEqual(revealedAtTen.result.ok.state, sweptAtTwentyOne.result.ok.state);
+assert.equal(revealedAtTen.command.reveal.now, 10);
+assert.equal(sweptAtTwentyOne.command.sweep.now, 21);
+assert.equal(attemptSystem(beforeClosing, beforeEligibility.command).record.result.error,
+  'checkpoint-local-refused', 'conviction before eligibility');
+assert(attemptSystem(beforeClosing, convict.command).record.result.ok, 'conviction at eligibility');
 const writerChanges = {
   'current keys': event => event.keys.push(19),
   'current threshold': event => { event.threshold = {weighted: {clauses: [[{key: {weight: {numerator:1,denominator:1}}}]]}}; },

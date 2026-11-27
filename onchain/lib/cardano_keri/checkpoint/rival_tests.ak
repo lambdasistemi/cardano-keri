@@ -279,3 +279,40 @@ test zero_receipt_threshold_counts_eligible_receipts_without_an_empty_list_rule(
     !rotation_valid(base_previous(), short),
   }
 }
+
+// Signer membership of the previous quorum (Lean `signingValid`,
+// Duplicity.lean:170-176: the previous next threshold counts the committed
+// keys that the rival both reveals and signs with). The rival reveals one
+// committed key (1) and one uncommitted key (3) and meets its own count-1 rule
+// whichever of the two signs; only the signature of the committed key meets
+// the previous rule. Expected: accepted when key 1 signs, refused when only
+// key 3 signs although key 1 is revealed.
+fn two_key_rival(signer: Int) -> Rotation {
+  Rotation {
+    ..base_rival(),
+    keys: [key_of(1), key_of(3)],
+    signers: [key_of(signer)],
+  }
+}
+
+test previous_quorum_follows_the_signer_not_the_revealed_key() {
+  and {
+    rotation_valid(base_previous(), two_key_rival(1)),
+    !rotation_valid(base_previous(), two_key_rival(3)),
+  }
+}
+
+// Witness derivation (Lean `derivedWitnesses`, Duplicity.lean:161-166: an
+// addition already in the resulting list is not repeated). The previous
+// witness set is [10] and the rival adds 10 again: the set stays one witness,
+// so a receipt threshold of one is met and a threshold of two is not. Whether
+// keripy itself admits re-adding a present witness is outside this decoded
+// check; the model's rule is what is bound here.
+test an_addition_already_in_the_set_is_not_repeated() {
+  let one_witness = Rotation { ..base_rival(), adds: [key_of(10)], toad: 1 }
+  let two_witnesses = Rotation { ..one_witness, toad: 2 }
+  and {
+    rotation_valid(base_previous(), one_witness),
+    !rotation_valid(base_previous(), two_witnesses),
+  }
+}

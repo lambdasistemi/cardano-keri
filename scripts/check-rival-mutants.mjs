@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-// One mutation control per clause of the conviction predicate (draft #582,
-// Lean `rotationValid` and `CheckpointConviction.accepts`).
+// Mutation controls for the listed clauses of the conviction predicate (draft
+// #582, Lean `rotationValid` and `CheckpointConviction.accepts`), over the flat
+// decoded domain the rival tests exercise. The list is not an exhaustive
+// decomposition of the predicate: a clause with no entry is not claimed.
 //
 //   nix shell github:NixOS/nixpkgs/<pin>#aiken github:NixOS/nixpkgs/<pin>#nodejs \
-//     --command node scripts/check-rival-mutants.mjs
+//     github:NixOS/nixpkgs/<pin>#util-linux --command node scripts/check-rival-mutants.mjs
 //
-// Each mutant is a copy of `onchain/` with exactly one clause of
-// `checkpoint/rival.ak` removed or weakened, and the rival tests are run over
-// it. A mutant is KILLED when the copy still compiles and a test fails; it
+// Each mutant is a copy of `onchain/` with exactly one listed edit applied to
+// `checkpoint/rival.ak` (a clause removed or weakened), and the rival tests are
+// run over it. A mutant is KILLED when the copy still compiles and a test fails; it
 // SURVIVES when every test passes; a copy that does not compile proves nothing
 // and is an error. The harness is controlled: the unmutated copy must pass, an
 // edit that changes no behaviour must survive, and every edit must change one
@@ -17,6 +19,11 @@
 // witnesses are a subset of the witnesses, so the receipted bound implies it)
 // and `clauses` nonempty in the weighted rule (an empty clause list has width
 // zero, which the partition check against the nonempty key list refuses).
+//
+// The compiler prints no diagnostics without a terminal, so the harness needs
+// `script` (util-linux) to name the failed tests, and stops without it rather
+// than degrade. Every run must also select exactly the tests written in
+// rival_tests.ak and rival_vectors.ak; a different count is an error.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -51,6 +58,8 @@ const mutants = [
   { name: 'cuts-removed', clause: 'derivedWitnesses cuts', from: 'fn(w) { !list.has(rival.cuts, w) }', to: 'fn(_) { True }' },
   { name: 'adds-appended', clause: 'derivedWitnesses adds', from: 'list.concat(witnesses, [add])', to: 'witnesses' },
   { name: 'receipts-from-derived-witnesses', clause: 'witnesses.filter receipts', from: 'list.filter(witnesses, fn(w) { list.has(rival.receipts, w) })', to: 'list.filter(previous.witnesses, fn(w) { list.has(rival.receipts, w) })' },
+  { name: 'previous-quorum-from-signers-not-revealed-keys', clause: 'signers.filter exposed.contains', from: 'list.filter(rival.keys, fn(key) { list.has(rival.signers, key) }),\n        next_key_digest,', to: 'rival.keys,\n        next_key_digest,' },
+  { name: 'already-present-addition-not-repeated', clause: 'adds not already in the resulting list', from: 'if list.has(witnesses, add) {', to: 'if False {' },
   { name: 'previous-threshold-met', clause: 'prior.nextThreshold.satisfied', from: '      satisfied(\n        previous.next_threshold,', to: '      satisfied(\n        Unweighted(0),' },
   { name: 'own-threshold-met', clause: 'event.threshold.satisfied', from: '    satisfied(\n      rival.threshold,', to: '    satisfied(\n      Unweighted(0),' },
   { name: 'count-is-natural-and-bounded', clause: 'count n: n <= keys.length', from: 'm >= 0 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'evaluate(threshold, key_count, signed)' },
@@ -69,13 +78,15 @@ const mutants = [
 const survivorControl = { name: 'comment-only-edit', from: 'pub fn derived_witnesses(', to: '// an edit that changes no behaviour\npub fn derived_witnesses(' };
 
 const WORKERS = Math.max(1, Number(process.env.RIVAL_MUTANT_WORKERS ?? Math.min(4, availableParallelism())));
-const haveScript = spawnSync('script', ['--version'], { encoding: 'utf8' }).status === 0;
+if (spawnSync('script', ['--version'], { encoding: 'utf8' }).status !== 0) {
+  console.error('script (util-linux) is required: without a terminal the pinned compiler names no failed test');
+  process.exit(2);
+}
+const countTests = (file) => (readFileSync(join(onchain, file), 'utf8').match(/^test /gm) ?? []).length;
+const expectedChecks = countTests('lib/cardano_keri/checkpoint/rival_tests.ak') + countTests('lib/cardano_keri/checkpoint/rival_vectors.ak');
 
 const aiken = (cwd, filter) => new Promise((done) => {
-  const [command, args] = haveScript
-    ? ['script', ['-qec', `aiken check -m '${filter}'`, '/dev/null']]
-    : ['aiken', ['check', '-m', filter]];
-  const child = spawn(command, args, { cwd });
+  const child = spawn('script', ['-qec', `aiken check -m '${filter}'`, '/dev/null'], { cwd });
   let out = '';
   child.stdout.on('data', (chunk) => { out += chunk; });
   child.on('close', (status) => {
@@ -97,6 +108,8 @@ async function run(edit) {
     const compiled = await aiken(copy, 'checkpoint/__no_such_test__');
     if (compiled.status !== 0) return { error: 'does not compile' };
     const tests = await aiken(copy, 'checkpoint/rival');
+    if (Number(tests.checks) !== expectedChecks) return { error: `selected ${tests.checks} tests, expected ${expectedChecks}` };
+    if (tests.status !== 0 && tests.failed.length === 0) return { error: 'the run failed and names no failed test' };
     return { failed: tests.failed, checks: tests.checks, status: tests.status };
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -123,5 +136,5 @@ jobs.forEach((job, i) => {
   if (r.error || (job.control ? !verdict.startsWith('PASSES') : !verdict.startsWith('KILLED'))) bad++;
   console.log(`${job.name}${job.clause ? ` [${job.clause}]` : ''}: ${verdict}`);
 });
-console.log(`${jobs.length - 2} mutants, ${bad} not killed or broken`);
+console.log(`${jobs.length - 2} listed edits over ${expectedChecks} selected tests, ${bad} not killed or broken`);
 process.exit(bad === 0 ? 0 : 1);

@@ -434,10 +434,12 @@ gen-rival-vectors:
 check-rival-vectors: gen-rival-vectors
     git diff --exit-code onchain/lib/cardano_keri/checkpoint/rival_vectors.ak
 
-# One mutation control per clause of the conviction predicate: each removed
-# clause must make a rival test fail, and the harness's own controls must behave.
+# Mutation controls for the listed clauses of the conviction predicate (not an
+# exhaustive decomposition): each listed edit must make a rival test fail, the
+# selected test count must be the written one, and the harness's own controls
+# must behave. It needs `script` (util-linux) for the compiler's diagnostics.
 check-rival-mutants: stage-onchain
-    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-rival-mutants.mjs
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#util-linux --command node scripts/check-rival-mutants.mjs
 
 # --- the bounded top-up (#346, #522) ---
 

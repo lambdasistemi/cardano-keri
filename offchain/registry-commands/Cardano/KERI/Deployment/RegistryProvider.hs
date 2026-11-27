@@ -17,16 +17,15 @@ module Cardano.KERI.Deployment.RegistryProvider (
     Provider (..),
     ProviderRefusal (..),
     resolveProvider,
-    resolveNodeProvider,
     renderProviderRefusal,
     providerChoiceParser,
-    providerChoiceWithoutTimeParser,
     Counterpart (..),
     counterpartOf,
     forCounterpart,
     evidence,
     reasonText,
     KoiosOpener,
+    KoiosFoldOpener,
     Openers (..),
     nodeOnly,
     withProvider,
@@ -34,7 +33,7 @@ module Cardano.KERI.Deployment.RegistryProvider (
     transliterateReports,
 ) where
 
-import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..))
+import Cardano.KERI.Deployment.KoiosRegistryRuntime (KoiosAccess (..), KoiosOpened)
 import Cardano.KERI.Deployment.KoiosSubmission (Handoff, renderHandoff)
 import Cardano.KERI.Deployment.NodeSocketRuntime (KeySource, NodeAccess (..), RegistryOpener)
 import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime)
@@ -69,7 +68,6 @@ data ProviderRefusal
     = BothProviders
     | NoProvider
     | TokenFileWithoutKoios
-    | FoldRunsOnTheNodeOnly
     deriving stock (Show, Eq)
 
 {- | Exactly one provider: a node socket alone, or a Koios URL with an optional
@@ -82,28 +80,20 @@ resolveProvider ProviderChoice{..} = case (chosenNodeSocket, chosenKoiosUrl) of
     (Just socket, Nothing) -> maybe (Right (OnNode socket)) (const (Left TokenFileWithoutKoios)) chosenKoiosTokenFile
     (Nothing, Just url) -> Right (OnKoios url chosenKoiosTokenFile)
 
--- | The node socket a command that runs on the node only is given; anything that names Koios is refused.
-resolveNodeProvider :: ProviderChoice -> Either ProviderRefusal FilePath
-resolveNodeProvider ProviderChoice{..} = case (chosenKoiosUrl, chosenKoiosTokenFile) of
-    (Nothing, Nothing) -> maybe (Left NoProvider) Right chosenNodeSocket
-    _ -> Left FoldRunsOnTheNodeOnly
-
 -- | The refusal, beginning with its name.
 renderProviderRefusal :: ProviderRefusal -> String
 renderProviderRefusal = \case
     BothProviders -> "provider-both-given: give --koios-url (with an optional --koios-token-file) or --node-socket, not both"
     NoProvider -> "provider-none-given: give --koios-url (with an optional --koios-token-file) or --node-socket"
     TokenFileWithoutKoios -> "koios-token-file-without-koios-url: --koios-token-file goes with --koios-url"
-    FoldRunsOnTheNodeOnly -> "fold-runs-on-the-node-only: registry fold runs on the node socket only; give --node-socket and no Koios option"
 
 -- | A directory that is named: an empty value is refused, as public Singular refuses it.
 nonEmptyDirectory :: String -> Either String FilePath
 nonEmptyDirectory "" = Left "--network-time needs a nonempty value"
 nonEmptyDirectory directory = Right directory
 
-{- | The provider options of a command that reads no network time: the node socket, or a Koios URL with its token
-file. The fold is one; its settings hold no directory of the network time, and neither its help nor its environment
-mention one.
+{- | The node socket, or a Koios URL with its token file: the options every provider command shares, before the
+directory of the network time.
 -}
 providerChoiceWithoutTimeParser :: Opt.Parser ProviderChoice
 providerChoiceWithoutTimeParser = do
@@ -127,7 +117,7 @@ providerChoiceWithoutTimeParser = do
                 , Opt.env "CKERI_KOIOS_URL"
                 , Opt.conf "koios-url"
                 , Opt.metavar "URL"
-                , Opt.help "Koios API base URL (give this or --node-socket, not both; registry fold runs on the node socket only)"
+                , Opt.help "Koios API base URL (give this or --node-socket, not both)"
                 ]
     chosenKoiosTokenFile <-
         Opt.optional $
@@ -225,15 +215,21 @@ transliterateReports = forM_ [stdout, stderr] $ \handle ->
 -- | How a command reaches Koios: the runtime and the paying address.
 type KoiosOpener = KoiosAccess -> ((RegistryRuntime, Addr) -> IO ()) -> IO ()
 
--- | The two ways a command may be opened; it uses the one its settings choose.
+{- | How the fold reaches Koios: the runtime that signs and hands over, the way to read the chain as one
+session through Singular, and the paying address.
+-}
+type KoiosFoldOpener = KoiosAccess -> (KoiosOpened -> Addr -> IO ()) -> IO ()
+
+-- | The ways a command may be opened; it uses the one its settings choose.
 data Openers = Openers
     { openersNode :: RegistryOpener
     , openersKoios :: KoiosOpener
+    , openersKoiosFold :: KoiosFoldOpener
     }
 
 -- | Openers of which only the node's is meant to be reached.
 nodeOnly :: RegistryOpener -> Openers
-nodeOnly open = Openers{openersNode = open, openersKoios = \_ _ -> fail "no Koios opener was given"}
+nodeOnly open = Openers{openersNode = open, openersKoios = \_ _ -> fail "no Koios opener was given", openersKoiosFold = \_ _ -> fail "no Koios opener was given"}
 
 -- | Open the provider chosen, with what every command is given besides it.
 withProvider ::

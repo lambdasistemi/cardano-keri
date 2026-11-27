@@ -49,6 +49,7 @@ import Cardano.KERI.Deployment.RegistryChain (
 import Cardano.KERI.Deployment.RegistryDeploySpec (Chain (..), noFaults)
 import Cardano.KERI.Deployment.RegistryRegister (registerRegistration)
 import Cardano.KERI.Deployment.RegistryTransactions (Payer (..), ValidityPlan (..), publishReferenceScript)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TestNetworkTime (TestNetwork (..), testNetworkTime)
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
 import Cardano.Ledger.Address (Addr (..))
@@ -1057,7 +1058,7 @@ recordedReferenceScriptSpec = describe "the wallet's outputs that carry a refere
             readProtocolParameters reads'
         publication parameters funds lovelace =
             either (Left . show) Right $
-                publishReferenceScript Nothing parameters (Payer address funds) (Coin lovelace) standIn
+                publishReferenceScript Nothing parameters (Payer address funds singularFundingRules) (Coin lovelace) standIn
         stripped = map (second (referenceScriptTxOutL .~ SNothing))
         spentBy tx = Set.fromList (toList (tx ^. bodyTxL . inputsTxBodyL))
     it "keep their reference scripts through the Koios read: six of fifteen, at the references the recording states" $ do

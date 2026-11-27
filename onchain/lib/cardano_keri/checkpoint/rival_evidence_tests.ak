@@ -1,32 +1,34 @@
 //// The signed-byte layer of the conviction predicate over real keripy 1.3.5
 //// events (rival_bytes_vectors.ak): every event, signature, receipt and SAID is
-//// keripy's. A rival is opened from its exact bytes, its own SAID is opened from
-//// the same bytes, and the conviction predicate runs over what was opened.
+//// keripy's. A rival is opened from its exact bytes: every value it consumes is
+//// bound to its canonical top-level field of the signed event, the own digest is
+//// opened from the same bytes, and the conviction predicate runs over what was
+//// opened. The defensive tests build tampered bytes to show that field
+//// selection is by the canonical structure and not by a supplied position.
 
+use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/message.{qb64_aid}
+use cardano_keri/checkpoint/registration.{respell_hex}
 use cardano_keri/checkpoint/rival.{
   Rotation, Tip, conviction_accepts, rotation_valid,
 }
 use cardano_keri/checkpoint/rival_bytes_vectors.{
-  Case, advance_witnessed_2key, fork_recorded, fork_rival,
+  Case, advance_witnessed_2key, all, fork_recorded, fork_rival,
   fork_witnessed_recorded, fork_witnessed_rival, honest_2key_rotation,
 }
 use cardano_keri/checkpoint/rival_evidence.{
-  RivalClaim, event_said, open_rival, signed_event_digest,
+  RivalClaim, canonical_structure, open_digest, open_rival,
 }
+use cardano_keri/checkpoint/threshold.{Unweighted}
 
 fn opened(c: Case) -> Option<Rotation> {
-  open_rival(c.previous, c.claim, c.evidence)
+  open_rival(c.previous, c.claim, c.event_bytes, c.ctrl_sigs, c.wit_receipts)
 }
 
 /// The checkpoint a conviction spends when `writer` is the installed event.
 fn tip_of(writer: Case) -> Tip {
-  expect Some(digest) = signed_event_digest(
-    writer.evidence.event_bytes,
-    writer.claim.off_d,
-  )
+  expect Some(digest) = open_digest(writer.claim, writer.event_bytes)
   Tip {
     aid: writer.claim.aid,
     epoch: 1,
@@ -50,12 +52,23 @@ fn valid(c: Case) -> Bool {
   }
 }
 
-fn with_evidence(c: Case, e: AdvanceEvidence) -> Case {
-  Case { ..c, evidence: e }
+fn with_sigs(c: Case, sigs: List<(Int, ByteArray)>) -> Case {
+  Case { ..c, ctrl_sigs: sigs }
+}
+
+fn with_receipts(c: Case, receipts: List<(Int, ByteArray)>) -> Case {
+  Case { ..c, wit_receipts: receipts }
 }
 
 fn with_claim(c: Case, claim: RivalClaim) -> Case {
   Case { ..c, claim }
+}
+
+fn first_of(xs: List<a>) -> List<a> {
+  when xs is {
+    [first, ..] -> [first]
+    [] -> []
+  }
 }
 
 // ---------------------------------------------------------
@@ -63,10 +76,7 @@ fn with_claim(c: Case, claim: RivalClaim) -> Case {
 // ---------------------------------------------------------
 
 fn said_is_keripys(c: Case) -> Bool {
-  expect Some(digest) = signed_event_digest(
-    c.evidence.event_bytes,
-    c.claim.off_d,
-  )
+  expect Some(digest) = open_digest(c.claim, c.event_bytes)
   qb64_aid(digest) == c.said
 }
 
@@ -150,102 +160,82 @@ test the_witnessed_recorded_writer_does_not_convict_itself() {
 // Signatures, receipts and thresholds are checked over the exact bytes
 // ---------------------------------------------------------
 
-// The signature of the sibling does not verify over these bytes.
 test a_signature_of_another_event_does_not_count() {
-  let swapped = AdvanceEvidence {
-    ..fork_rival.evidence,
-    ctrl_sigs: fork_recorded.evidence.ctrl_sigs,
-  }
   and {
     valid(fork_rival),
-    !valid(with_evidence(fork_rival, swapped)),
+    !valid(with_sigs(fork_rival, fork_recorded.ctrl_sigs)),
   }
 }
 
 test a_witness_receipt_of_another_event_does_not_count() {
-  let swapped = AdvanceEvidence {
-    ..fork_witnessed_rival.evidence,
-    wit_receipts: fork_witnessed_recorded.evidence.wit_receipts,
-  }
   and {
     valid(fork_witnessed_rival),
-    !valid(with_evidence(fork_witnessed_rival, swapped)),
+    !valid(
+      with_receipts(fork_witnessed_rival, fork_witnessed_recorded.wit_receipts),
+    ),
   }
 }
 
 test a_missing_witness_receipt_leaves_the_threshold_unmet() {
-  let none = AdvanceEvidence {
-    ..fork_witnessed_rival.evidence,
-    wit_receipts: [],
-  }
-  !valid(with_evidence(fork_witnessed_rival, none))
+  !valid(with_receipts(fork_witnessed_rival, []))
 }
 
 test one_signature_of_two_leaves_the_own_threshold_unmet() {
-  let one = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    ctrl_sigs: when advance_witnessed_2key.evidence.ctrl_sigs is {
-      [first, ..] -> [first]
-      [] -> []
-    },
-  }
   and {
     valid(advance_witnessed_2key),
-    !valid(with_evidence(advance_witnessed_2key, one)),
+    !valid(
+      with_sigs(
+        advance_witnessed_2key,
+        first_of(advance_witnessed_2key.ctrl_sigs),
+      ),
+    ),
   }
 }
 
 test one_receipt_of_two_leaves_the_receipt_threshold_unmet() {
-  let one = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    wit_receipts: when advance_witnessed_2key.evidence.wit_receipts is {
-      [first, ..] -> [first]
-      [] -> []
-    },
-  }
-  !valid(with_evidence(advance_witnessed_2key, one))
+  !valid(
+    with_receipts(
+      advance_witnessed_2key,
+      first_of(advance_witnessed_2key.wit_receipts),
+    ),
+  )
 }
 
 // ---------------------------------------------------------
-// The claim is bound to the bytes
+// The claim is bound to the canonical fields of the bytes
 // ---------------------------------------------------------
 
+test every_genuine_event_has_the_canonical_structure() {
+  list.all(all, fn(c) { canonical_structure(c.claim, c.event_bytes) })
+}
+
 test a_claim_that_hides_a_witness_cut_is_refused() {
-  let hidden = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    off_br: [],
-    wit_cut: [],
-  }
+  let claim = RivalClaim { ..advance_witnessed_2key.claim, cuts: [] }
   and {
     valid(advance_witnessed_2key),
-    opened(with_evidence(advance_witnessed_2key, hidden)) == None,
+    opened(with_claim(advance_witnessed_2key, claim)) == None,
   }
+}
+
+test a_claim_that_hides_a_witness_addition_is_refused() {
+  let claim = RivalClaim { ..advance_witnessed_2key.claim, adds: [] }
+  opened(with_claim(advance_witnessed_2key, claim)) == None
 }
 
 test a_claim_that_hides_a_key_is_refused() {
   let claim = RivalClaim {
     ..advance_witnessed_2key.claim,
-    cur_keys: when advance_witnessed_2key.claim.cur_keys is {
-      [first, ..] -> [first]
-      [] -> []
-    },
+    cur_keys: first_of(advance_witnessed_2key.claim.cur_keys),
   }
-  let evidence = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    off_k: when advance_witnessed_2key.evidence.off_k is {
-      [first, ..] -> [first]
-      [] -> []
-    },
-  }
-  opened(Case { ..advance_witnessed_2key, claim, evidence }) == None
+  opened(with_claim(advance_witnessed_2key, claim)) == None
 }
 
-test a_misdirected_offset_is_refused() {
-  let misdirected = AdvanceEvidence {
-    ..fork_rival.evidence,
-    off_s: fork_rival.evidence.off_s + 1,
+test a_claim_that_hides_a_next_key_is_refused() {
+  let claim = RivalClaim {
+    ..advance_witnessed_2key.claim,
+    next_keys: first_of(advance_witnessed_2key.claim.next_keys),
   }
-  opened(with_evidence(fork_rival, misdirected)) == None
+  opened(with_claim(advance_witnessed_2key, claim)) == None
 }
 
 test a_claim_of_another_sequence_is_refused() {
@@ -253,41 +243,147 @@ test a_claim_of_another_sequence_is_refused() {
   opened(with_claim(fork_rival, claim)) == None
 }
 
+test a_claim_of_another_identifier_is_refused() {
+  let claim = RivalClaim {
+    ..fork_rival.claim,
+    aid: fork_witnessed_rival.claim.aid,
+  }
+  opened(with_claim(fork_rival, claim)) == None
+}
+
+test a_claim_of_another_threshold_is_refused() {
+  let claim = RivalClaim {
+    ..advance_witnessed_2key.claim,
+    cur_threshold: Unweighted(1),
+  }
+  opened(with_claim(advance_witnessed_2key, claim)) == None
+}
+
+test a_prior_that_is_not_a_qualified_digest_is_refused() {
+  let claim = RivalClaim {
+    ..fork_rival.claim,
+    prior: bytearray.concat("\"", bytearray.drop(fork_rival.claim.prior, 1)),
+  }
+  !canonical_structure(claim, fork_rival.event_bytes)
+}
+
+// ---------------------------------------------------------
+// Field selection is by the canonical structure, not by a supplied position
+// ---------------------------------------------------------
+
+fn splice(
+  bytes: ByteArray,
+  at: Int,
+  drop_length: Int,
+  put: ByteArray,
+) -> ByteArray {
+  bytearray.concat(
+    bytearray.concat(bytearray.take(bytes, at), put),
+    bytearray.drop(bytes, at + drop_length),
+  )
+}
+
+fn zeros(n: Int) -> ByteArray {
+  if n <= 0 {
+    ""
+  } else {
+    bytearray.push(zeros(n - 1), 48)
+  }
+}
+
+/// The version string size field (6 hexadecimal digits at offset 16).
+fn resized(bytes: ByteArray) -> ByteArray {
+  let size = respell_hex(bytearray.length(bytes))
+  splice(
+    bytes,
+    16,
+    6,
+    bytearray.concat(zeros(6 - bytearray.length(size)), size),
+  )
+}
+
+test a_renamed_label_is_not_the_canonical_structure() {
+  let c = fork_rival
+  let renamed = splice(c.event_bytes, c.off_kt + 2, 1, "T")
+  and {
+    canonical_structure(c.claim, c.event_bytes),
+    !canonical_structure(c.claim, renamed),
+  }
+}
+
+test a_smuggled_top_level_field_is_not_the_canonical_structure() {
+  let c = fork_rival
+  let smuggled = resized(splice(c.event_bytes, c.off_a - 4, 0, "\"x\":\"y\","))
+  and {
+    bytearray.length(smuggled) == bytearray.length(c.event_bytes) + 8,
+    !canonical_structure(c.claim, smuggled),
+    opened(Case { ..c, event_bytes: smuggled }) == None,
+  }
+}
+
+test a_repeated_top_level_field_is_not_the_canonical_structure() {
+  let c = fork_rival
+  let repeated = resized(splice(c.event_bytes, c.off_a - 4, 0, "\"s\":\"1\","))
+  !canonical_structure(c.claim, repeated)
+}
+
+test an_anchor_tail_that_is_not_a_list_is_not_the_canonical_structure() {
+  let c = fork_rival
+  !canonical_structure(c.claim, splice(c.event_bytes, c.off_a, 1, "{"))
+}
+
+test an_unclosed_anchor_tail_is_not_the_canonical_structure() {
+  let c = fork_rival
+  let length = bytearray.length(c.event_bytes)
+  !canonical_structure(c.claim, splice(c.event_bytes, length - 2, 2, "}}"))
+}
+
+// The own digest sits in the top-level d: a genuine SAID moved into the anchors
+// leaves the structure intact (the anchors are free text) but the top-level d is
+// then not the digest of the bytes.
+test a_digest_moved_into_the_anchors_is_not_the_events_digest() {
+  let c = fork_rival
+  let blank = splice(
+    c.event_bytes,
+    c.off_d,
+    44,
+    "############################################",
+  )
+  let moved = resized(
+    splice(
+      blank,
+      c.off_a + 1,
+      0,
+      bytearray.concat("\"", bytearray.concat(c.said, "\"")),
+    ),
+  )
+  and {
+    canonical_structure(c.claim, moved),
+    open_digest(c.claim, moved) == None,
+    open_digest(c.claim, c.event_bytes) != None,
+  }
+}
+
 // ---------------------------------------------------------
 // The digest is recomputed from the bytes, never declared
 // ---------------------------------------------------------
 
-// The d span carries the SAID of another genuine event: a declared digest.
 test a_declared_digest_that_is_not_the_bytes_digest_is_refused() {
-  let off = fork_rival.claim.off_d
-  let declared = bytearray.concat(
-    bytearray.concat(
-      bytearray.take(fork_rival.evidence.event_bytes, off),
-      fork_recorded.said,
-    ),
-    bytearray.drop(fork_rival.evidence.event_bytes, off + 44),
-  )
-  let evidence = AdvanceEvidence {
-    ..fork_rival.evidence,
-    event_bytes: declared,
-  }
+  let c = fork_rival
+  let declared = splice(c.event_bytes, c.off_d, 44, fork_recorded.said)
   and {
-    signed_event_digest(fork_rival.evidence.event_bytes, off) != None,
-    signed_event_digest(declared, off) == None,
-    opened(with_evidence(fork_rival, evidence)) == None,
+    open_digest(c.claim, c.event_bytes) != None,
+    open_digest(c.claim, declared) == None,
+    opened(Case { ..c, event_bytes: declared }) == None,
   }
 }
 
 test a_changed_byte_changes_the_digest_and_is_refused() {
-  let bytes = fork_rival.evidence.event_bytes
+  let c = fork_rival
   let at = 12
-  let changed = bytearray.concat(
-    bytearray.concat(bytearray.take(bytes, at), #"58"),
-    bytearray.drop(bytes, at + 1),
-  )
   and {
-    bytearray.at(bytes, at) != 88,
-    signed_event_digest(changed, fork_rival.claim.off_d) == None,
+    bytearray.at(c.event_bytes, at) != 88,
+    open_digest(c.claim, splice(c.event_bytes, at, 1, "X")) == None,
   }
 }
 
@@ -300,54 +396,9 @@ fn padding(n: Int) -> ByteArray {
 }
 
 test bytes_over_the_hash_limit_are_refused_without_a_hash() {
-  let long = bytearray.concat(fork_rival.evidence.event_bytes, padding(700))
+  let long = bytearray.concat(fork_rival.event_bytes, padding(700))
   and {
     bytearray.length(long) > 1024,
-    signed_event_digest(long, fork_rival.claim.off_d) == None,
+    open_digest(fork_rival.claim, long) == None,
   }
-}
-
-test a_span_outside_the_bytes_is_refused() {
-  and {
-    event_said(fork_rival.evidence.event_bytes, -1) == None,
-    event_said(
-      fork_rival.evidence.event_bytes,
-      bytearray.length(fork_rival.evidence.event_bytes) - 10,
-    ) == None,
-    signed_event_digest(fork_rival.evidence.event_bytes, -1) == None,
-    signed_event_digest(
-      fork_rival.evidence.event_bytes,
-      bytearray.length(fork_rival.evidence.event_bytes) - 10,
-    ) == None,
-  }
-}
-
-test a_claim_that_hides_a_next_key_is_refused() {
-  let claim = RivalClaim {
-    ..advance_witnessed_2key.claim,
-    next_keys: when advance_witnessed_2key.claim.next_keys is {
-      [first, ..] -> [first]
-      [] -> []
-    },
-  }
-  let evidence = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    off_n: when advance_witnessed_2key.evidence.off_n is {
-      [first, ..] -> [first]
-      [] -> []
-    },
-  }
-  and {
-    valid(advance_witnessed_2key),
-    opened(Case { ..advance_witnessed_2key, claim, evidence }) == None,
-  }
-}
-
-test a_claim_that_hides_a_witness_addition_is_refused() {
-  let hidden = AdvanceEvidence {
-    ..advance_witnessed_2key.evidence,
-    off_ba: [],
-    wit_add: [],
-  }
-  opened(with_evidence(advance_witnessed_2key, hidden)) == None
 }

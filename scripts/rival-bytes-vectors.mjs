@@ -6,15 +6,15 @@
 // witness receipt is its own, and the expected SAID is the one keripy computed.
 // Per case: the previous establishment the rotation follows (from the
 // inception), the decoded claim of the rotation, the wire evidence (exact bytes,
-// value offsets, signatures, receipts) and keripy's SAID text.
+// signatures, receipts) and keripy's SAID text.
 //
 //   node scripts/rival-bytes-vectors.mjs   # write the module; `aiken fmt` canonicalizes it
 //
 // Mapping, written once here: a qualified base64 value (key, digest, witness) is
 // its 32 raw bytes; thresholds and numbers are the hexadecimal text keripy
-// writes; offsets are computed from the exact bytes (value text after the opening
-// quote), and the offset of the opening bracket of each of k, n, br and ba is
-// added, so that a whole list can be bound to the bytes.
+// writes. No offsets are supplied to the code under test: the canonical field
+// positions are derived there. The generator adds probe offsets (labels and the
+// anchor list) that only the defensive tests use to build tampered bytes.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,17 +44,9 @@ const threshold = (s) => { if (typeof s !== 'string') throw new Error('weighted 
 const bytesList = (xs) => `[${xs.map((x) => `#"${x}"`).join(', ')}]`;
 const intList = (xs) => `[${xs.join(', ')}]`;
 
-function offsets(text, ked) {
-  const at = (label) => { const i = text.indexOf(`"${label}":`); if (i < 0 || text.indexOf(`"${label}":`, i + 1) >= 0) throw new Error(`label ${label}`); return i + label.length + 3; };
-  const str = (label) => { const o = at(label); if (text[o] !== '"') throw new Error(`${label} not a string`); return o + 1; };
-  const list = (label) => {
-    const open = at(label);
-    if (text[open] !== '[') throw new Error(`${label} not a list`);
-    let cursor = open + 1;
-    const items = ked[label].map((value) => { const o = text.indexOf(`"${value}"`, cursor); if (o < 0) throw new Error(`${label} item`); cursor = o + value.length + 2; return o + 1; });
-    return { open, items };
-  };
-  return { t: str('t'), i: str('i'), s: str('s'), d: str('d'), kt: str('kt'), nt: str('nt'), bt: str('bt'), k: list('k'), n: list('n'), br: list('br'), ba: list('ba') };
+function probes(text) {
+  const at = (needle) => { const i = text.indexOf(needle); if (i < 0 || text.indexOf(needle, i + 1) >= 0) throw new Error(`probe ${needle}`); return i; };
+  return { kt: at('"kt":'), s: at('"s":'), a: at('"a":') + 4, d: at('"d":"') + 5 };
 }
 
 const rows = cases.map(([file, name, icpKey, rotKey, sigKey, receiptKey]) => {
@@ -66,13 +58,13 @@ const rows = cases.map(([file, name, icpKey, rotKey, sigKey, receiptKey]) => {
   const text = Buffer.from(rot.raw_hex, 'hex').toString('latin1');
   const ked = JSON.parse(text);
   if (ked.t !== 'rot' || text.length !== rot.raw_len || ked.d !== rot.said) throw new Error(`${name} is not the fixture's rotation`);
-  const o = offsets(text, ked);
+  const o = probes(text);
   const sig = (s) => `(${s.index}, #"${s.sig_hex}")`;
   const sigs = family[sigKey].map(sig);
   const receipts = (receiptKey ? family[receiptKey] : []).map(sig);
   const aid = raw32(ked.i);
-  const cut = ked.br.map(raw32);
-  const add = ked.ba.map(raw32);
+  if (ked.p.length !== 44) throw new Error('p spelling');
+  if (text.slice(o.a, o.a + 1) !== '[' || !text.endsWith(']}')) throw new Error('anchor tail');
   return `
 pub const ${name}: Case =
   Case {
@@ -87,34 +79,22 @@ pub const ${name}: Case =
     claim: RivalClaim {
       aid: #"${aid}",
       sn: ${hex(ked.s)},
+      prior: "${ked.p}",
       cur_keys: ${bytesList(ked.k.map(raw32))},
       cur_threshold: ${threshold(ked.kt)},
       next_keys: ${bytesList(ked.n.map(raw32))},
       next_threshold: ${threshold(ked.nt)},
       toad: ${hex(ked.bt)},
-      off_d: ${o.d},
-      off_k_list: ${o.k.open},
-      off_n_list: ${o.n.open},
-      off_br_list: ${o.br.open},
-      off_ba_list: ${o.ba.open},
+      cuts: ${bytesList(ked.br.map(raw32))},
+      adds: ${bytesList(ked.ba.map(raw32))},
     },
-    evidence: AdvanceEvidence {
-      event_bytes: #"${rot.raw_hex}",
-      off_t: ${o.t},
-      off_i: ${o.i},
-      off_s: ${o.s},
-      off_k: ${intList(o.k.items)},
-      off_kt: ${o.kt},
-      off_n: ${intList(o.n.items)},
-      off_nt: ${o.nt},
-      off_br: ${intList(o.br.items)},
-      off_ba: ${intList(o.ba.items)},
-      off_bt: ${o.bt},
-      wit_cut: ${bytesList(cut)},
-      wit_add: ${bytesList(add)},
-      ctrl_sigs: [${sigs.join(', ')}],
-      wit_receipts: [${receipts.join(', ')}],
-    },
+    event_bytes: #"${rot.raw_hex}",
+    ctrl_sigs: [${sigs.join(', ')}],
+    wit_receipts: [${receipts.join(', ')}],
+    off_d: ${o.d},
+    off_kt: ${o.kt},
+    off_s: ${o.s},
+    off_a: ${o.a},
     said: "${rot.said}",
   }
 `;
@@ -125,11 +105,10 @@ const header = `//// GENERATED by scripts/rival-bytes-vectors.mjs from the kerip
 //// \`just check-rival-bytes-vectors\` regenerates it and rejects drift.
 ////
 //// One signed rotation per case: the previous establishment it follows, its
-//// decoded claim, the wire evidence (exact bytes, offsets, controller
+//// decoded claim, the wire evidence (exact bytes, controller
 //// signatures, witness receipts) and the SAID keripy computed for it. Nothing
 //// here is derived by the code under test.
 
-use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/rival.{Previous}
 use cardano_keri/checkpoint/rival_evidence.{RivalClaim}
 use cardano_keri/checkpoint/threshold.{Unweighted}
@@ -138,8 +117,30 @@ pub type Case {
   name: ByteArray,
   previous: Previous,
   claim: RivalClaim,
-  evidence: AdvanceEvidence,
+  event_bytes: ByteArray,
+  ctrl_sigs: List<(Int, ByteArray)>,
+  wit_receipts: List<(Int, ByteArray)>,
+  /// Offsets used only to build tampered bytes in the defensive tests.
+  off_d: Int,
+  off_kt: Int,
+  off_s: Int,
+  off_a: Int,
   said: ByteArray,
 }
 `;
-writeFileSync(out, header + rows.join(''));
+const names = cases.map((c) => c[1]);
+const wrapped = [];
+let line = '   ';
+for (const n of names) {
+  const piece = ` ${n},`;
+  if ((line + piece).length > 80) { wrapped.push(line); line = '   '; }
+  line += piece;
+}
+wrapped.push(line);
+const all = `
+pub const all: List<Case> =
+  [
+${wrapped.join('\n')}
+  ]
+`;
+writeFileSync(out, header + rows.join('') + all);

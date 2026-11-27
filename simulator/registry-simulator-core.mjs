@@ -148,7 +148,7 @@ export function checkCorpus(doc) {
         if (!equal(result, fork.final)) fail(`story ${story.id}/${fork.id}: final mismatch`);
       }
     }
-    if (forks !== 19) throw Error(`fork census ${forks}`);
+    if (forks !== 22) throw Error(`fork census ${forks}`);
     if (!applied || !refused) throw Error('missing positive or refusal controls');
   } catch (error) { fail(error.message); }
   return { ok: !reasons.length, cells, applied, refused, reasons };

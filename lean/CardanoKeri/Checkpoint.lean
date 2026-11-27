@@ -44,8 +44,8 @@ relaying the later rotation supplies its public event, signatures and receipts
 to the checkpoint observer. For deposit, the controller additionally signs the
 spend-bound intent with the successor keys. For poison, the controller presents
 the current-key quorum in the modeled poison spend. For conviction, the
-convictor presents one rival. The enforcement observer checks it against the
-spent tip. The separate two-event read serves the KERI conformance question. -/
+convictor presents one rival. The conviction mint checks it against the
+previous commitments carried in the spent tip. The separate two-event read serves the KERI conformance question. -/
 structure Env where
 
   rotationTo : Epoch → Seq → Seq → Bool
@@ -55,10 +55,10 @@ structure Env where
 
   quorum : Epoch → Bool
 
-  -- The enforcement observer decodes the spent active datum and the rival in
+  -- The conviction mint decodes the spent active datum and the rival in
   -- the same checkpoint transaction. Signature verification is a primitive.
-  convictionSpend : Epoch → Seq → Option Registry.Conviction := fun _ _ => none
-  verifyRival : CheckpointConviction.Verify := fun _ _ _ => false
+  presentedSpend : Epoch → Seq → Option Registry.Conviction := fun _ _ => none
+  attestationMinted : Registry.Conviction → Bool := fun _ => false
   keyReads : KeyReads := ⟨fun _ => none, fun _ => none⟩
 
   -- A history reader can independently evaluate the KERI two-event definition.
@@ -71,6 +71,17 @@ structure Env where
   -- rotation presented for the spent identifier and the proposed successor.
   inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
   rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
+
+/-- The convictor mints the attestation in this transaction for this
+specific output and claim. A held or previously burned token supplies no mint. -/
+def Env.convictionSpend (env : Env) (epoch : Epoch) (sn : Seq) : Option Registry.Conviction :=
+  (env.presentedSpend epoch sn).filter env.attestationMinted
+
+/-- An observed conviction spend has a matching mint at use. -/
+theorem Env.convictionSpend_attested {env : Env} {epoch sn observation}
+    (found : env.convictionSpend epoch sn = some observation) :
+    env.presentedSpend epoch sn = some observation ∧ env.attestationMinted observation = true := by
+  simpa [convictionSpend, Option.filter_eq_some_iff] using found
 
 /-- The comparison and the indexed output are reads of one conviction transaction. -/
 def Env.comparison (env : Env) (epoch : Epoch) (sn : Seq) :=
@@ -98,7 +109,7 @@ def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
 
 /-- The local enforcement decision checks the spent native position. -/
 def Env.acceptsRival (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
-  ((env.comparison epoch sn).map (fun c => c.acceptsAt env.verifyRival epoch sn)).getD false
+  ((env.comparison epoch sn).map (fun c => c.acceptsAt epoch sn)).getD false
 
 /-- The commitment binds the decoded observer evidence for one rival. The
 wire offsets and canonical encoding of the complete evidence digest are
@@ -107,7 +118,7 @@ abbrev Evidence := CheckpointConviction.Rival
 
 def Env.evidenceAt (env : Env) (aid : AID) (epoch : Epoch) (sn : Seq) : Option Evidence := do
   let comparison ← env.comparison epoch sn
-  if comparison.rival.aid = aid then some comparison.rival else none
+  if comparison.rival.event.aid = aid then some comparison.rival else none
 
 def Env.bondOpOk (env : Env) (e : Epoch) : BondOp → Bool
   | .keep => true
@@ -506,6 +517,7 @@ structure Sys where
   pending : AID → Option PendingAssociation
   -- The open commitments of the release's commitment program, by marker.
   commitments : Marker → Option Commitment
+  writerData : AID → Option WriterDatum := fun _ => none
   writers : AID → Option EventHistory
   -- Historical observation of the producing spend while the carrier is pending.
   convictions : AID → Option Registry.Conviction := fun _ => none
@@ -514,12 +526,27 @@ def Sys.init (d : Deployment) : Sys :=
   { deployment := d, leaves := fun _ => .absent, states := fun _ => .absent,
     origins := fun _ => none, pending := fun _ => none, commitments := fun _ => none, writers := fun _ => none }
 
+/-- Only a live checkpoint exposes establishment data. The retained writer
+history after a spend is separate from the pending output's datum. -/
+def Sys.activeWriterDatum (s : Sys) (aid : AID) : Option WriterDatum :=
+  match s.states aid with
+  | .present _ => s.writerData aid
+  | _ => none
+
+/-- Registration initializes the live datum. A rotation advances the spent
+datum by one writer, irrespective of the length of the ledger history. -/
+def updateWriterDatum (old : Option WriterDatum) : Option EventHistory → Option WriterDatum
+  | none => old
+  | some (.inception event witnesses) => some (.inception event.event witnesses)
+  | some (.rotation _ event) => old.map (·.advance event.event)
+
 def Sys.set (s : Sys) (aid : AID) (st : State) (writer : Option EventHistory := none)
     (spend : Option Registry.Conviction := none) : Sys :=
   { s with
     leaves := fun a => if a = aid then st.leaf else s.leaves a,
     states := fun a => if a = aid then st else s.states a,
     convictions := fun a => if a = aid then spend else s.convictions a,
+    writerData := fun a => if a = aid then updateWriterDatum (s.writerData a) writer else s.writerData a,
     writers := fun a => if a = aid then writer.orElse (fun _ => s.writers a) else s.writers a }
 
 /-- Only the local transition producing a pending carrier records a conviction. -/
@@ -654,20 +681,19 @@ def Sys.rotationHistory (s : Sys) (env : Env) (aid : AID) (sn : Seq) : Option Ev
     match env.rotationWriter aid live.epoch live.sn sn with
     | some event =>
       if previous.epoch == live.epoch && previous.writer.event.sn == live.sn &&
-          event.event.sn == sn && Duplicity.rotationValid previous.predecessor event then
+          event.event.sn == sn && Duplicity.rotationValid previous.datum.commitments event then
         some (.rotation previous event)
       else none
     | none => none
   | _, _ => none
 
-/-- At the conviction spend the retained writer supplies the identity,
-position and established keys of the first event. The observer takes the
-raw material from the spent datum and the rival from the redeemer. -/
+/-- The conviction mint reads the carried commitments from the actual live
+input. It never consults the historical writer log to grade the rival. -/
 def Sys.comparisonMatchesWriter (s : Sys) (env : Env) (aid : AID) : Bool :=
-  match s.writers aid, s.states aid with
-  | some writer, .present live =>
+  match s.writerData aid, s.states aid with
+  | some datum, .present live =>
     ((env.comparison live.epoch live.sn).map (fun comparison =>
-      env.keyReads.matches aid writer comparison.tip)).getD false
+      env.keyReads.matchesDatum aid live.epoch datum comparison.tip)).getD false
   | _, _ => false
 
 def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Option EventHistory)

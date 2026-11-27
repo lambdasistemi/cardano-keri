@@ -42,6 +42,6 @@ Booking and observer entry points on main: [keri_application.ak L54](../onchain/
 
 Booking and observer entry points in January: [keri_application.ak L54](https://github.com/lambdasistemi/cardano-keri/blob/b4f62b653d70653ba022a82fb935ced131b853db/onchain/validators/keri_application.ak#L54), [attestation.ak L118](https://github.com/lambdasistemi/cardano-keri/blob/b4f62b653d70653ba022a82fb935ced131b853db/onchain/lib/cardano_keri/application/attestation.ak#L118), [attestation.ak L150](https://github.com/lambdasistemi/cardano-keri/blob/b4f62b653d70653ba022a82fb935ced131b853db/onchain/lib/cardano_keri/application/attestation.ak#L150), [observer.ak L157](https://github.com/lambdasistemi/cardano-keri/blob/b4f62b653d70653ba022a82fb935ced131b853db/onchain/lib/cardano_keri/checkpoint/observer.ak#L157), [enforcement_observer.ak L94](https://github.com/lambdasistemi/cardano-keri/blob/b4f62b653d70653ba022a82fb935ced131b853db/onchain/lib/cardano_keri/checkpoint/enforcement_observer.ak#L94).
 
-Source fingerprints: main `4ea98ef3af78c942`, January `af0ef96fc85ccac2`.
+Source fingerprints: main `dd4091e397585675`, January `af0ef96fc85ccac2`.
 
 To refresh after a merge, run `node scripts/validator-conformance.mjs --write --published`. Review changed decisions in `lean/conformance/rules.mjs` and commit the regenerated table. The Lean traceability check regenerates and compares the report on every PR and main push. For offline verification with the recorded January Git object, run `node scripts/validator-conformance.mjs --check`.

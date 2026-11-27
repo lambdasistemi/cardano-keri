@@ -28,7 +28,7 @@ actors:
   42: "Alice, request refund address"
 env:
   inception: [11]
-  convictions: [{"comparison":{"rival":{"aid":11,"bytes":[11,1,1,1],"nextKeys":[[12]],"nextThreshold":{"unweighted":{"m":1}},"receipts":[],"revealedKeys":[[11]],"rotation":true,"signatures":[[0,[11,11,1,1,1]]],"sn":1,"threshold":{"unweighted":{"m":1}},"toad":0},"tip":{"aid":11,"epoch":1,"keys":{"curKeys":[[11]],"curThreshold":{"unweighted":{"m":1}},"nextKeys":[[11]],"nextThreshold":{"unweighted":{"m":1}},"toad":0,"witnesses":[]},"sn":1}},"output":{"index":0,"tx":105}}]
+  convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}}]
 step:
   now: 0
   actor: "anyone presenting the required evidence"

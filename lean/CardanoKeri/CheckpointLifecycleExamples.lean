@@ -1,4 +1,4 @@
-import CardanoKeri.Checkpoint
+import CardanoKeri.CheckpointSystemHistory
 import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.DuplicityExamples
 
@@ -20,9 +20,9 @@ def env (aid : AID) : Env := {
     some (Duplicity.writerFixture aid 0 .inception, []) else none,
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
-  keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
-  verifyRival := CardanoKeri.CheckpointConviction.Fixtures.verify,
-  convictionSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
+  keyReads := KeyReads.symbolic
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
 
@@ -447,7 +447,7 @@ theorem changed_pending_key_refused :
 /-- Given the same successful conviction source, replay under an environment with
 no conviction authorization actually refuses at the canonical function. -/
 theorem stored_context_conviction_refused :
-    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with conviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
+    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with presentedConviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =
       .error "keri-conviction-refused" := by rfl
 
 
@@ -462,6 +462,69 @@ theorem rotated_spend_uses_one_rival :
 
 -- Keep the original commitment and two-event reader while removing the
 -- enforcement observer's successful signature read.
-example : stepFn p { env 11 with verifyRival := fun _ _ _ => false } (.convict 7 commitment) 5
+/-- The minted claim must match the exact pending output and rival of the
+spend. A claim for the same identifier and position at the other index fails. -/
+theorem conviction_mint_bound_to_output :
+    let exactClaim : Registry.Conviction :=
+      ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩
+    let other := {exactClaim with output.index := 1}
+    let atUse := fun (claim : Registry.Conviction) =>
+      ({env 11 with attestationMinted := fun observed => decide (observed = claim)} : Env)
+    (atUse exactClaim).acceptsRival 1 1 = true ∧
+      (atUse other).acceptsRival 1 1 = false := by decide
+
+example : stepFn p { env 11 with attestationMinted := fun _ => false } (.convict 7 commitment) 5
     (.present rotatedLive) = none := by decide
+
+namespace NestedWriter
+
+private def threshold : Duplicity.Threshold := .weighted [[.group ⟨1, 1⟩ [⟨1, 1⟩]]]
+
+private def writer (aid sn : Nat) : Duplicity.SignedEvent :=
+  let content := { (Duplicity.writerFixture aid sn .rotation).event with
+    threshold := threshold, nextThreshold := threshold }
+  Duplicity.signed content [aid] []
+
+private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1] } [11] []
+private def history := EventHistory.rotation origin.inception (writer 11 1)
+private def comparison : CheckpointConviction.Comparison :=
+  ⟨history.datum.tip KeyEncoding.symbolic 1, sibling⟩
+
+private def environment (aid : Nat) : Env :=
+  { env aid with
+    rotationWriter := fun subject _ _ sn => some (writer subject sn)
+    presentedSpend := fun _ _ => some ⟨⟨105, 0⟩, comparison⟩ }
+
+private def state := registered.set 11 (.present rotatedLive) (some history)
+
+private theorem reachable : SysReach p environment state := by
+  have reg : SysStep p environment (Sys.init deployment) registered := by
+    apply SysStep.register
+    exact ⟨11, 1, 42, 5, { dregIn := 3, bIn := 2, poolIn := 5 }, .present live,
+      Registry.Examples.p, Registry.Examples.env, Registry.Examples.cfg, registrationReceipt,
+      Registry.Examples.registration, origin, rfl, rfl, Step.register 1 42 5 (by decide),
+      delivered_origin, ⟨by decide, by decide⟩, rfl⟩
+  refine .step (.step (.init deployment) reg) (.local ?_)
+  refine ⟨11, .rotate 1 .keep 6, 3, { hunter := some { addr := 6, pool := 1 } },
+    .present rotatedLive, ?_, ?_, ?_, rfl⟩
+  · intro refund pool equal
+    cases equal
+  · exact Step.rotateKeepPaid 3 1 6 (by decide) (by decide) (by decide)
+  · exact ⟨rfl, by decide⟩
+
+/-- Registration and advance reach a writer with nested signing and next
+thresholds. Its seal-only sibling binds to that live input and passes both
+comparison gates in the environment of the same execution. -/
+theorem reachable_nested_writer_accepts_sibling :
+    SysReach p environment state ∧ state.writers 11 = some history ∧
+    comparison.tip.keys.curThreshold = threshold ∧ comparison.tip.keys.nextThreshold = threshold ∧
+    Duplicity.duplicityAt 1 1 ⟨1, origin.inception.predecessor, writer 11 1⟩ sibling = true ∧
+    state.comparisonMatchesWriter (environment 11) 11 = true ∧
+    (environment 11).acceptsRival 1 1 = true := by
+  have gates := presented_conflict_passes_system_comparison (aid := 11) (live := rotatedLive)
+    (previous := origin.inception) (writer := writer 11 1) (rival := sibling)
+    reachable rfl rfl (by decide) rfl (by decide) KeyEncoding.symbolic ⟨105, 0⟩ rfl rfl
+  exact ⟨reachable, rfl, rfl, rfl, by decide, gates⟩
+
+end NestedWriter
 end CardanoKeri.Checkpoint.Examples

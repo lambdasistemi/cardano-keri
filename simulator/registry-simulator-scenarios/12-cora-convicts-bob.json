@@ -47,54 +47,10 @@
     "convictions": [
       {
         "comparison": {
-          "rival": {
-            "aid": 11,
-            "bytes": [
-              11,
-              1,
-              1,
-              1
-            ],
-            "nextKeys": [
-              [
-                12
-              ]
-            ],
-            "nextThreshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "receipts": [],
-            "revealedKeys": [
-              [
-                11
-              ]
-            ],
-            "rotation": true,
-            "signatures": [
-              [
-                0,
-                [
-                  11,
-                  11,
-                  1,
-                  1,
-                  1
-                ]
-              ]
-            ],
-            "sn": 1,
-            "threshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "toad": 0
-          },
           "tip": {
             "aid": 11,
             "epoch": 1,
+            "sn": 1,
             "keys": {
               "curKeys": [
                 [
@@ -102,8 +58,8 @@
                 ]
               ],
               "curThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
               "nextKeys": [
@@ -112,14 +68,115 @@
                 ]
               ],
               "nextThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
-              "toad": 0,
+              "witnesses": [],
+              "toad": 0
+            },
+            "previous": {
+              "aid": 11,
+              "sn": 0,
+              "delegated": false,
+              "nextKeys": [
+                11
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
               "witnesses": []
             },
-            "sn": 1
+            "writer": {
+              "aid": 11,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                11
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                11
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            }
+          },
+          "rival": {
+            "event": {
+              "aid": 11,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                11
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                12
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            },
+            "structureVerified": true,
+            "signatures": [
+              {
+                "signer": 11,
+                "event": {
+                  "aid": 11,
+                  "sn": 1,
+                  "kind": "rotation",
+                  "priorDigest": 0,
+                  "keys": [
+                    11
+                  ],
+                  "threshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "nextKeys": [
+                    12
+                  ],
+                  "nextThreshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "cuts": [],
+                  "adds": [],
+                  "witnessThreshold": 0,
+                  "extension": []
+                },
+                "verified": true
+              }
+            ],
+            "receipts": []
           }
         },
         "output": {
@@ -129,54 +186,10 @@
       },
       {
         "comparison": {
-          "rival": {
-            "aid": 12,
-            "bytes": [
-              12,
-              1,
-              1,
-              1
-            ],
-            "nextKeys": [
-              [
-                13
-              ]
-            ],
-            "nextThreshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "receipts": [],
-            "revealedKeys": [
-              [
-                12
-              ]
-            ],
-            "rotation": true,
-            "signatures": [
-              [
-                0,
-                [
-                  12,
-                  12,
-                  1,
-                  1,
-                  1
-                ]
-              ]
-            ],
-            "sn": 1,
-            "threshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "toad": 0
-          },
           "tip": {
             "aid": 12,
             "epoch": 1,
+            "sn": 1,
             "keys": {
               "curKeys": [
                 [
@@ -184,8 +197,8 @@
                 ]
               ],
               "curThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
               "nextKeys": [
@@ -194,14 +207,115 @@
                 ]
               ],
               "nextThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
-              "toad": 0,
+              "witnesses": [],
+              "toad": 0
+            },
+            "previous": {
+              "aid": 12,
+              "sn": 0,
+              "delegated": false,
+              "nextKeys": [
+                12
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
               "witnesses": []
             },
-            "sn": 1
+            "writer": {
+              "aid": 12,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                12
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                12
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            }
+          },
+          "rival": {
+            "event": {
+              "aid": 12,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                12
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                13
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            },
+            "structureVerified": true,
+            "signatures": [
+              {
+                "signer": 12,
+                "event": {
+                  "aid": 12,
+                  "sn": 1,
+                  "kind": "rotation",
+                  "priorDigest": 0,
+                  "keys": [
+                    12
+                  ],
+                  "threshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "nextKeys": [
+                    13
+                  ],
+                  "nextThreshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "cuts": [],
+                  "adds": [],
+                  "witnessThreshold": 0,
+                  "extension": []
+                },
+                "verified": true
+              }
+            ],
+            "receipts": []
           }
         },
         "output": {
@@ -211,54 +325,10 @@
       },
       {
         "comparison": {
-          "rival": {
-            "aid": 13,
-            "bytes": [
-              13,
-              1,
-              1,
-              1
-            ],
-            "nextKeys": [
-              [
-                14
-              ]
-            ],
-            "nextThreshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "receipts": [],
-            "revealedKeys": [
-              [
-                13
-              ]
-            ],
-            "rotation": true,
-            "signatures": [
-              [
-                0,
-                [
-                  13,
-                  13,
-                  1,
-                  1,
-                  1
-                ]
-              ]
-            ],
-            "sn": 1,
-            "threshold": {
-              "unweighted": {
-                "m": 1
-              }
-            },
-            "toad": 0
-          },
           "tip": {
             "aid": 13,
             "epoch": 1,
+            "sn": 1,
             "keys": {
               "curKeys": [
                 [
@@ -266,8 +336,8 @@
                 ]
               ],
               "curThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
               "nextKeys": [
@@ -276,14 +346,115 @@
                 ]
               ],
               "nextThreshold": {
-                "unweighted": {
-                  "m": 1
+                "count": {
+                  "required": 1
                 }
               },
-              "toad": 0,
+              "witnesses": [],
+              "toad": 0
+            },
+            "previous": {
+              "aid": 13,
+              "sn": 0,
+              "delegated": false,
+              "nextKeys": [
+                13
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
               "witnesses": []
             },
-            "sn": 1
+            "writer": {
+              "aid": 13,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                13
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                13
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            }
+          },
+          "rival": {
+            "event": {
+              "aid": 13,
+              "sn": 1,
+              "kind": "rotation",
+              "priorDigest": 0,
+              "keys": [
+                13
+              ],
+              "threshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "nextKeys": [
+                14
+              ],
+              "nextThreshold": {
+                "count": {
+                  "required": 1
+                }
+              },
+              "cuts": [],
+              "adds": [],
+              "witnessThreshold": 0,
+              "extension": []
+            },
+            "structureVerified": true,
+            "signatures": [
+              {
+                "signer": 13,
+                "event": {
+                  "aid": 13,
+                  "sn": 1,
+                  "kind": "rotation",
+                  "priorDigest": 0,
+                  "keys": [
+                    13
+                  ],
+                  "threshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "nextKeys": [
+                    14
+                  ],
+                  "nextThreshold": {
+                    "count": {
+                      "required": 1
+                    }
+                  },
+                  "cuts": [],
+                  "adds": [],
+                  "witnessThreshold": 0,
+                  "extension": []
+                },
+                "verified": true
+              }
+            ],
+            "receipts": []
           }
         },
         "output": {
@@ -2508,6 +2679,1042 @@
             {
               "known": {
                 "s": "terminal"
+              }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "partial-other-committed-key",
+      "at": 2,
+      "title": "Cora presents a different committed key",
+      "steps": [
+        {
+          "now": 0,
+          "actor": "anyone presenting the required evidence",
+          "as": "Cora",
+          "action": {
+            "convictCkpt": {
+              "aid": 11
+            }
+          },
+          "expect": {
+            "ok": true,
+            "result": {
+              "ok": {
+                "flow": {
+                  "bondReturn": null,
+                  "bookingFee": 0,
+                  "deposited": 0,
+                  "intoRequest": 0,
+                  "locked": [],
+                  "premium": null
+                },
+                "observations": [
+                  {
+                    "aid": 11,
+                    "binding": 0,
+                    "leaf": {
+                      "known": {
+                        "s": "active"
+                      }
+                    },
+                    "minAda": 4,
+                    "supply": 1
+                  }
+                ],
+                "state": {
+                  "bindings": [
+                    [
+                      11,
+                      0
+                    ]
+                  ],
+                  "carriers": [
+                    {
+                      "aid": 11,
+                      "minAda": 4,
+                      "original": {
+                        "datum": 711,
+                        "key": 11,
+                        "kind": "active",
+                        "output": 111
+                      },
+                      "pendingSpend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
+                      "token": 0
+                    }
+                  ],
+                  "config": {
+                    "activePolicy": 8,
+                    "applicationPolicy": 7,
+                    "bookingWidth": 1,
+                    "maxFee": 1,
+                    "processTime": 5,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "retractTime": 0,
+                    "root": [
+                      187,
+                      43,
+                      111,
+                      81,
+                      131,
+                      142,
+                      177,
+                      246
+                    ]
+                  },
+                  "gen": 1,
+                  "nextToken": 1,
+                  "registrations": [],
+                  "terminations": [],
+                  "treasury": 2,
+                  "trie": [
+                    [
+                      11,
+                      {
+                        "known": {
+                          "s": "active"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          },
+          "note": "Cora presents a different committed key",
+          "env": {
+            "inception": [
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "event": {
+                      "adds": [],
+                      "aid": 11,
+                      "cuts": [],
+                      "extension": [
+                        99
+                      ],
+                      "keys": [
+                        2
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "witnessThreshold": 1
+                    },
+                    "receipts": [
+                      {
+                        "event": {
+                          "adds": [],
+                          "aid": 11,
+                          "cuts": [],
+                          "extension": [
+                            99
+                          ],
+                          "keys": [
+                            2
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 10,
+                        "verified": true
+                      }
+                    ],
+                    "signatures": [
+                      {
+                        "event": {
+                          "adds": [],
+                          "aid": 11,
+                          "cuts": [],
+                          "extension": [
+                            99
+                          ],
+                          "keys": [
+                            2
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 2,
+                        "verified": true
+                      }
+                    ],
+                    "structureVerified": true
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          1
+                        ]
+                      ],
+                      "curThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          4
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "toad": 1,
+                      "witnesses": [
+                        [
+                          10
+                        ]
+                      ]
+                    },
+                    "previous": {
+                      "aid": 11,
+                      "delegated": false,
+                      "nextKeys": [
+                        1,
+                        2
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "sn": 0,
+                      "witnesses": [
+                        10
+                      ]
+                    },
+                    "sn": 1,
+                    "writer": {
+                      "adds": [],
+                      "aid": 11,
+                      "cuts": [],
+                      "extension": [],
+                      "keys": [
+                        1
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "witnessThreshold": 1
+                    }
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "expectFinal": {
+        "bindings": [
+          [
+            11,
+            0
+          ]
+        ],
+        "carriers": [
+          {
+            "aid": 11,
+            "minAda": 4,
+            "original": {
+              "datum": 711,
+              "key": 11,
+              "kind": "active",
+              "output": 111
+            },
+            "pendingSpend": {
+              "aid": 11,
+              "position": {
+                "epoch": 1,
+                "sn": 1
+              },
+              "reference": {
+                "index": 0,
+                "tx": 105
+              }
+            },
+            "token": 0
+          }
+        ],
+        "config": {
+          "activePolicy": 8,
+          "applicationPolicy": 7,
+          "bookingWidth": 1,
+          "maxFee": 1,
+          "processTime": 5,
+          "registrationCost": 2,
+          "registryId": 9,
+          "retractTime": 0,
+          "root": [
+            187,
+            43,
+            111,
+            81,
+            131,
+            142,
+            177,
+            246
+          ]
+        },
+        "gen": 1,
+        "nextToken": 1,
+        "registrations": [],
+        "terminations": [],
+        "treasury": 2,
+        "trie": [
+          [
+            11,
+            {
+              "known": {
+                "s": "active"
+              }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "rival-witness-change",
+      "at": 2,
+      "title": "Cora presents receipts from the rival’s new witness",
+      "steps": [
+        {
+          "now": 0,
+          "actor": "anyone presenting the required evidence",
+          "as": "Cora",
+          "action": {
+            "convictCkpt": {
+              "aid": 11
+            }
+          },
+          "expect": {
+            "ok": true,
+            "result": {
+              "ok": {
+                "flow": {
+                  "bondReturn": null,
+                  "bookingFee": 0,
+                  "deposited": 0,
+                  "intoRequest": 0,
+                  "locked": [],
+                  "premium": null
+                },
+                "observations": [
+                  {
+                    "aid": 11,
+                    "binding": 0,
+                    "leaf": {
+                      "known": {
+                        "s": "active"
+                      }
+                    },
+                    "minAda": 4,
+                    "supply": 1
+                  }
+                ],
+                "state": {
+                  "bindings": [
+                    [
+                      11,
+                      0
+                    ]
+                  ],
+                  "carriers": [
+                    {
+                      "aid": 11,
+                      "minAda": 4,
+                      "original": {
+                        "datum": 711,
+                        "key": 11,
+                        "kind": "active",
+                        "output": 111
+                      },
+                      "pendingSpend": {
+                        "aid": 11,
+                        "position": {
+                          "epoch": 1,
+                          "sn": 1
+                        },
+                        "reference": {
+                          "index": 0,
+                          "tx": 105
+                        }
+                      },
+                      "token": 0
+                    }
+                  ],
+                  "config": {
+                    "activePolicy": 8,
+                    "applicationPolicy": 7,
+                    "bookingWidth": 1,
+                    "maxFee": 1,
+                    "processTime": 5,
+                    "registrationCost": 2,
+                    "registryId": 9,
+                    "retractTime": 0,
+                    "root": [
+                      187,
+                      43,
+                      111,
+                      81,
+                      131,
+                      142,
+                      177,
+                      246
+                    ]
+                  },
+                  "gen": 1,
+                  "nextToken": 1,
+                  "registrations": [],
+                  "terminations": [],
+                  "treasury": 2,
+                  "trie": [
+                    [
+                      11,
+                      {
+                        "known": {
+                          "s": "active"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            }
+          },
+          "note": "Cora presents receipts from the rival’s new witness",
+          "env": {
+            "inception": [
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "event": {
+                      "adds": [
+                        11
+                      ],
+                      "aid": 11,
+                      "cuts": [
+                        10
+                      ],
+                      "extension": [
+                        99
+                      ],
+                      "keys": [
+                        1
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "witnessThreshold": 1
+                    },
+                    "receipts": [
+                      {
+                        "event": {
+                          "adds": [
+                            11
+                          ],
+                          "aid": 11,
+                          "cuts": [
+                            10
+                          ],
+                          "extension": [
+                            99
+                          ],
+                          "keys": [
+                            1
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 11,
+                        "verified": true
+                      }
+                    ],
+                    "signatures": [
+                      {
+                        "event": {
+                          "adds": [
+                            11
+                          ],
+                          "aid": 11,
+                          "cuts": [
+                            10
+                          ],
+                          "extension": [
+                            99
+                          ],
+                          "keys": [
+                            1
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 1,
+                        "verified": true
+                      }
+                    ],
+                    "structureVerified": true
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          1
+                        ]
+                      ],
+                      "curThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          4
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "toad": 1,
+                      "witnesses": [
+                        [
+                          10
+                        ]
+                      ]
+                    },
+                    "previous": {
+                      "aid": 11,
+                      "delegated": false,
+                      "nextKeys": [
+                        1,
+                        2
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "sn": 0,
+                      "witnesses": [
+                        10
+                      ]
+                    },
+                    "sn": 1,
+                    "writer": {
+                      "adds": [],
+                      "aid": 11,
+                      "cuts": [],
+                      "extension": [],
+                      "keys": [
+                        1
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "witnessThreshold": 1
+                    }
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "expectFinal": {
+        "bindings": [
+          [
+            11,
+            0
+          ]
+        ],
+        "carriers": [
+          {
+            "aid": 11,
+            "minAda": 4,
+            "original": {
+              "datum": 711,
+              "key": 11,
+              "kind": "active",
+              "output": 111
+            },
+            "pendingSpend": {
+              "aid": 11,
+              "position": {
+                "epoch": 1,
+                "sn": 1
+              },
+              "reference": {
+                "index": 0,
+                "tx": 105
+              }
+            },
+            "token": 0
+          }
+        ],
+        "config": {
+          "activePolicy": 8,
+          "applicationPolicy": 7,
+          "bookingWidth": 1,
+          "maxFee": 1,
+          "processTime": 5,
+          "registrationCost": 2,
+          "registryId": 9,
+          "retractTime": 0,
+          "root": [
+            187,
+            43,
+            111,
+            81,
+            131,
+            142,
+            177,
+            246
+          ]
+        },
+        "gen": 1,
+        "nextToken": 1,
+        "registrations": [],
+        "terminations": [],
+        "treasury": 2,
+        "trie": [
+          [
+            11,
+            {
+              "known": {
+                "s": "active"
+              }
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "tip-keys-insufficient-own-threshold",
+      "at": 2,
+      "title": "The rival lacks its own signing quorum",
+      "steps": [
+        {
+          "now": 0,
+          "actor": "anyone presenting the required evidence",
+          "as": "Cora",
+          "action": {
+            "convictCkpt": {
+              "aid": 11
+            }
+          },
+          "expect": {
+            "ok": false,
+            "reason": "keri-conviction-refused",
+            "result": {
+              "error": "keri-conviction-refused"
+            }
+          },
+          "note": "The rival lacks its own signing quorum",
+          "env": {
+            "inception": [
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "convictions": [
+              {
+                "comparison": {
+                  "rival": {
+                    "event": {
+                      "adds": [],
+                      "aid": 11,
+                      "cuts": [],
+                      "extension": [
+                        1
+                      ],
+                      "keys": [
+                        1
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 2
+                        }
+                      },
+                      "witnessThreshold": 1
+                    },
+                    "receipts": [
+                      {
+                        "event": {
+                          "adds": [],
+                          "aid": 11,
+                          "cuts": [],
+                          "extension": [
+                            1
+                          ],
+                          "keys": [
+                            1
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 2
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 10,
+                        "verified": true
+                      }
+                    ],
+                    "signatures": [
+                      {
+                        "event": {
+                          "adds": [],
+                          "aid": 11,
+                          "cuts": [],
+                          "extension": [
+                            1
+                          ],
+                          "keys": [
+                            1
+                          ],
+                          "kind": "rotation",
+                          "nextKeys": [
+                            4
+                          ],
+                          "nextThreshold": {
+                            "count": {
+                              "required": 1
+                            }
+                          },
+                          "priorDigest": 50,
+                          "sn": 1,
+                          "threshold": {
+                            "count": {
+                              "required": 2
+                            }
+                          },
+                          "witnessThreshold": 1
+                        },
+                        "signer": 1,
+                        "verified": true
+                      }
+                    ],
+                    "structureVerified": true
+                  },
+                  "tip": {
+                    "aid": 11,
+                    "epoch": 1,
+                    "keys": {
+                      "curKeys": [
+                        [
+                          1
+                        ]
+                      ],
+                      "curThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "nextKeys": [
+                        [
+                          4
+                        ]
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "toad": 1,
+                      "witnesses": [
+                        [
+                          10
+                        ]
+                      ]
+                    },
+                    "previous": {
+                      "aid": 11,
+                      "delegated": false,
+                      "nextKeys": [
+                        1,
+                        2
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "sn": 0,
+                      "witnesses": [
+                        10
+                      ]
+                    },
+                    "sn": 1,
+                    "writer": {
+                      "adds": [],
+                      "aid": 11,
+                      "cuts": [],
+                      "extension": [],
+                      "keys": [
+                        1
+                      ],
+                      "kind": "rotation",
+                      "nextKeys": [
+                        4
+                      ],
+                      "nextThreshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "priorDigest": 50,
+                      "sn": 1,
+                      "threshold": {
+                        "count": {
+                          "required": 1
+                        }
+                      },
+                      "witnessThreshold": 1
+                    }
+                  }
+                },
+                "output": {
+                  "index": 0,
+                  "tx": 105
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "expectFinal": {
+        "bindings": [
+          [
+            11,
+            0
+          ]
+        ],
+        "carriers": [
+          {
+            "aid": 11,
+            "minAda": 4,
+            "original": {
+              "datum": 711,
+              "key": 11,
+              "kind": "active",
+              "output": 111
+            },
+            "pendingSpend": null,
+            "token": 0
+          }
+        ],
+        "config": {
+          "activePolicy": 8,
+          "applicationPolicy": 7,
+          "bookingWidth": 1,
+          "maxFee": 1,
+          "processTime": 5,
+          "registrationCost": 2,
+          "registryId": 9,
+          "retractTime": 0,
+          "root": [
+            187,
+            43,
+            111,
+            81,
+            131,
+            142,
+            177,
+            246
+          ]
+        },
+        "gen": 1,
+        "nextToken": 1,
+        "registrations": [],
+        "terminations": [],
+        "treasury": 2,
+        "trie": [
+          [
+            11,
+            {
+              "known": {
+                "s": "active"
               }
             }
           ]

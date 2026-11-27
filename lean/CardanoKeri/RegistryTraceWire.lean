@@ -48,8 +48,8 @@ structure EnvTable where
 
 def EnvTable.toEnv (table : EnvTable) : Env := {
   inception := fun aid => table.inception.contains aid
-  conviction := fun aid => table.convictions.find? (fun observed => observed.comparison.tip.aid == aid)
-  verifyRival := CheckpointConviction.Fixtures.verify }
+  presentedConviction := fun aid => table.convictions.find? (fun observed => observed.comparison.tip.aid == aid)
+  attestationMinted := fun observed => table.convictions.contains observed }
 
 partial def exactJson (j : Json) : Json := match j with
   | .num _ => match j.getInt? with

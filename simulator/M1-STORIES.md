@@ -210,12 +210,12 @@ on chain and take its conviction bond.*
 - **Before**: `Present`, any bonded or poisoned state.
 - **Action**: a transaction carrying the second rotation with its receipts,
   naming Cora as payee.
-- **The chain checks**: the rival rotation names the spent sequence, names the spent identifier, reveals the spent keys, meets the spent signing threshold, meets the spent witness threshold, and differs on a forward field.
+- **The chain checks**: the rival rotation names the spent sequence, names the spent identifier, satisfies the previous next-key commitment and threshold, meets its own signing threshold, meets its own receipt threshold using its derived witnesses, and differs from the complete writer event.
 - **After**: `terminationPending`, retaining the representative and key state.
   `D_reg` goes to Cora and `B` plus pool to the refund
   address. The whole booked request remains pending until its associated
   consuming Registry fold burns the representative and marks the key retired.
-- **Conformance**: at a rotated tip, the KERI conclusion also requires the rival to validate against the predecessor under its own rules. That obligation and refusal at a never-rotated tip remain open.
+- **Conformance**: the accepted conviction in a reachable execution establishes KERI duplicity. Lean refuses a never-rotated tip because it has no predecessor. Validator evidence for inception refusal remains outstanding.
 - **Local limit**: no local action leaves pending custody. The connected
   system player shows booking and actual fold completion.
 

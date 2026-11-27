@@ -59,14 +59,22 @@ const carrier = record({ ...fields('aid token minAda'), original: holding, pendi
 const payload = record({ ...fields('aid token booker bookingFee'), original: holding, spend });
 const sys = record({ ...fields('gen treasury nextToken'), config, trie: list(pair(nat, leaf)), carriers: list(carrier), registrations: list(regBooking), terminations: list(record({ booking: termBooking, payload })), bindings: list(pair(nat, nat)) });
 const params = record(fields('D tip Mc Mr'));
-const threshold = variant({ unweighted: record({m: integer}), weighted: record({clauses: list(list(pair(integer, integer)))}) });
+const flag = (x, p) => typeof x === 'boolean' ? x : error(p);
+const fraction = record(fields('numerator denominator'));
+const weight = variant({key: record({weight: fraction}), group: record({weight: fraction, members: list(fraction)})});
+const threshold = variant({count: record({required: nat}), weighted: record({clauses: list(list(weight))})});
 const keys = list(list(nat));
-const signatures = list(pair(nat, list(nat)));
 const keyMaterial = record({curKeys: keys, curThreshold: threshold, nextKeys: keys, nextThreshold: threshold,
   witnesses: keys, toad: integer});
-const tip = record({...fields('aid epoch sn'), keys: keyMaterial});
-const rival = record({...fields('aid sn'), bytes: list(nat), rotation: (x, p) => typeof x === 'boolean' ? x : error(p),
-  revealedKeys: keys, threshold, nextKeys: keys, nextThreshold: threshold, toad: integer, signatures, receipts: signatures});
+const content = record({...fields('aid sn priorDigest witnessThreshold'),
+  kind: enumeration(['inception', 'rotation', 'interaction', 'delegatedInception', 'delegatedRotation']),
+  keys: list(nat), threshold, nextKeys: list(nat), nextThreshold: threshold,
+  cuts: list(nat), adds: list(nat), extension: list(nat)});
+const predecessor = record({...fields('aid sn'), delegated: flag, nextKeys: list(nat),
+  nextThreshold: threshold, witnesses: list(nat)});
+const signature = record({signer: nat, event: content, verified: flag});
+const tip = record({...fields('aid epoch sn'), keys: keyMaterial, previous: option(predecessor), writer: content});
+const rival = record({event: content, structureVerified: flag, signatures: list(signature), receipts: list(signature)});
 const conviction = record({output: ref, comparison: record({tip, rival})});
 const env = record({ inception: list(nat), convictions: list(conviction) });
 const action = variant({

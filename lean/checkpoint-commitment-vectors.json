@@ -121,7 +121,7 @@
  {"system":
   "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now",
   "conviction":
-  "the spent-tip comparison must accept the rival at the live epoch and sequence. The commitment must name that position, the evidence read for its identifier and this payee, with eligibleAfter <= now <= expiresAt"},
+  "The mint compares one rival at the live epoch and sequence. It must differ from the writer and validate against the carried predecessor under its own signing and receipt rules. The commitment must name that position, the evidence read for its identifier and this payee, with eligibleAfter <= now <= expiresAt"},
  "params": {"P": 1, "D": 3, "B": 2},
  "model":
  "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, Sys.revealOpen, LocalEvent, OpenEvent, RevealEvent, SweepEvent)",
@@ -427,8 +427,7 @@
     "bornAt": 3},
    "outcome": {"accepted": false},
    "now": 6,
-   "note":
-   "the committed rival and spent tip agree on their forward fields: refused",
+   "note": "the committed rival is identical to the writer event: refused",
    "id": "refused-no-duplicity",
    "commitment":
    {"payee": 8,

@@ -173,37 +173,25 @@ function inceptionWriter(writers, aid, datum) {
   return {inception: {event: signed, witnesses}};
 }
 
-function readWriter(writer) {
-  const rotations = [];
-  let history = writer;
-  while (history?.rotation) {
-    rotations.push(history.rotation.event.event);
-    history = history.rotation.previous;
-  }
-  require(history?.inception, 'checkpoint-rotation-writer-mismatch');
-  let last = history.inception.event.event;
-  let witnesses = history.inception.witnesses;
-  for (const e of rotations.reverse()) {
-    witnesses = C.derivedWitnesses({witnesses}, e);
-    last = e;
-  }
-  return {last, witnesses, epoch: rotations.length};
+function commitments(datum) {
+  const {aid, sn, nextKeys, nextThreshold} = datum.writer;
+  return {aid, sn, delegated: false, nextKeys, nextThreshold, witnesses: datum.witnesses};
 }
 
-// The trace driver decodes a key or a next-key commitment from a singleton list.
-function matchesWriter(aid, writer, tip) {
-  const {last, witnesses, epoch} = readWriter(writer);
-  const keys = tip.keys;
+function advanceDatum(spent, event) {
+  const previous = commitments(spent);
+  return {writer: event, witnesses: C.derivedWitnesses(previous, event), previous};
+}
+
+// The live datum carries one predecessor. The conviction does not walk the log.
+function matchesWriter(aid, epoch, datum, tip) {
+  const last = datum.writer, keys = tip.keys;
   const singletonKeys = values => values.map(value => [value]);
-  function threshold(value) {
-    if (value.unweighted) return {count: {required: value.unweighted.m}};
-    return {weighted: {clauses: value.weighted.clauses.map(clause => clause.map(([numerator, denominator]) =>
-      ({key: {weight: {numerator, denominator}}})))}};
-  }
-  return E.equal(tip.aid, aid) && E.equal(tip.aid, last.aid) && tip.epoch === epoch && tip.sn === last.sn &&
-    E.equal(keys.curKeys, singletonKeys(last.keys)) && E.equal(threshold(keys.curThreshold), last.threshold) &&
-    E.equal(keys.nextKeys, singletonKeys(last.nextKeys)) && E.equal(threshold(keys.nextThreshold), last.nextThreshold) &&
-    E.equal(keys.witnesses, singletonKeys(witnesses)) && E.equal(keys.toad, last.witnessThreshold);
+  return E.equal(tip.previous, datum.previous) && E.equal(tip.writer, last) &&
+    E.equal(tip.aid, aid) && E.equal(tip.aid, last.aid) && tip.epoch === epoch && tip.sn === last.sn &&
+    E.equal(keys.curKeys, singletonKeys(last.keys)) && E.equal(keys.curThreshold, last.threshold) &&
+    E.equal(keys.nextKeys, singletonKeys(last.nextKeys)) && E.equal(keys.nextThreshold, last.nextThreshold) &&
+    E.equal(keys.witnesses, singletonKeys(datum.witnesses)) && E.equal(keys.toad, last.witnessThreshold);
 }
 
 function rotationWriter(writers, row, action) {
@@ -211,12 +199,10 @@ function rotationWriter(writers, row, action) {
   if (kind !== 'rotate' && kind !== 'freeze') return row.writer;
   const target = action[kind]["sn'"];
   const live = row.state.present.l;
-  const {last, witnesses, epoch} = readWriter(row.writer);
-  require(live.epoch === epoch, 'checkpoint-rotation-writer-mismatch');
+  const last = row.writerDatum.writer;
   const next = writers.rotations.find(r => E.equal(r.aid, row.aid) && r.epoch === live.epoch &&
     r.sn === live.sn && r.signed.event.sn === target);
-  const prior = {aid: last.aid, sn: last.sn, delegated: false,
-    nextKeys: last.nextKeys, nextThreshold: last.nextThreshold, witnesses};
+  const prior = commitments(row.writerDatum);
   require(last.sn === live.sn && next && C.rotationValid(prior, next.signed), 'checkpoint-rotation-writer-mismatch');
   return kind === 'freeze' ? row.writer : {rotation: {previous: row.writer, event: next.signed}};
 }
@@ -249,7 +235,7 @@ function transition(p,table,state,command) {
     require(selected&&E.equal(a.booking.request.key,a.aid)&&E.equal(output.singularTags,[E.singularTag(E.toInternal(receipt.before.config),E.toInternal(a.aid))])&&E.equal(output.output.address,a.booking.request.destination)&&E.equal(output.output.datumValue,a.booking.request.datum)&&E.equal(output.output.lovelace,a.booking.request.carrierAda),'checkpoint-registration-delivery-mismatch');
     const writer = inceptionWriter(writers, a.aid, a.booking.request.datum);
     const origin={inception:writer,...a.context,registered:receipt.state,token:binding[1],registrationRef:a.booking.request.reference,carrierRef:{tx:receipt.transaction.identity,index:a.index}};
-    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,conviction:null,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
+    next={aid:a.aid,leaf:C.leafOf(local.state),state:local.state,origin,writer,writerDatum:{writer:writer.inception.event.event,witnesses:writer.inception.witnesses,previous:null},conviction:null,pending:null};checkpointFlow=local.flow;registryFlow=receipt.flow;
   } else if(kind==='local') {
     require(C.actionKind(a.action)!=='register','checkpoint-registration-receipt-required');
     const local=localStep(p,env,a.action,a.now,row.state,a.aid);
@@ -259,12 +245,14 @@ function transition(p,table,state,command) {
     if(C.actionKind(a.action)==='convict') {
       const {epoch, sn} = row.state.present.l;
       conviction = C.observedSpend(env, a.aid, epoch, sn);
-      require(conviction && matchesWriter(a.aid, writer, conviction.comparison.tip), 'checkpoint-rotation-writer-mismatch');
+      require(conviction && matchesWriter(a.aid, epoch, row.writerDatum, conviction.comparison.tip), 'checkpoint-rotation-writer-mismatch');
       const c=a.action.convict.commitment;
       require(E.equal(openAt(state,c.marker),c)&&E.equal(c.aid,a.aid)&&c.deployment===state.deployment,'checkpoint-commitment-not-open');
       state=retire(state,c.marker);
     }
-    next={...row,writer,conviction,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
+    const writerDatum = !local.state.present ? null : writer === row.writer ? row.writerDatum :
+      advanceDatum(row.writerDatum, writer.rotation.event.event);
+    next={...row,writer,writerDatum,conviction,state:local.state,leaf:C.leafOf(local.state)};checkpointFlow=local.flow;
   } else if(kind==='book') {
     require(C.stateKind(row.state)==='terminationPending','checkpoint-not-pending');
     require(row.origin!==null,'checkpoint-origin-missing');require(row.pending===null,'checkpoint-already-associated');

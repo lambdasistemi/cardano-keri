@@ -302,7 +302,7 @@ theorem rotated_booking_compares_its_writer :
       (env 11).comparison 1 1 = some comparison ∧
       (env 11).keyReads.matches 11 writer comparison.tip = true ∧
       comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧
-      CheckpointConviction.accepts (env 11).verifyRival comparison.tip comparison.rival = true := by
+      CheckpointConviction.accepts comparison.tip comparison.rival = true := by
   have reach : SysReach p env committed := .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
   exact conviction_compares_authenticated_writer reach witnessed_termination_booking.2.2.2
 
@@ -334,7 +334,7 @@ theorem witnessed_terminal_fold :
       (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧
       association.origin.environment.conviction 11 = some observed ∧
       association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧
-      CheckpointConviction.accepts (env 11).verifyRival observed.comparison.tip observed.comparison.rival = true := by
+      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true := by
   exact terminal_fold_traces_to_conviction (aid := 11) (association := association)
     (.step (.step (.step (.step (.step .init registered_step) rotated_step)
       committed_step) pending_step) booked_step) completionReceipt receipt_matches
@@ -353,4 +353,21 @@ example :
     let bad := {env 11 with keyReads.nextCommitment := fun _ => none}
     bad.acceptsRival 1 1 = true ∧ committed.comparisonMatchesWriter bad 11 = false ∧
       (committed.localWriter bad 11 (.convict 7 commitment)).isNone = true := by decide
+/-- Registration, advance and commitment opening reach the checkpoint consumed
+by transaction 105. Its decoded environment supplies the mint premise.
+The transaction observation records an empty mint field. -/
+theorem rotated_journey_establishes_duplicity :
+    ∃ previous writer, ∃ (observed : Registry.Conviction),
+      committed.writers 11 = some (.rotation previous writer) ∧
+      (env 11).presentedSpend 1 1 = some observed ∧ (env 11).attestationMinted observed = true ∧
+      observed.comparison.tip.previous = some previous.predecessor ∧
+      Duplicity.duplicityAt 1 1 ⟨previous.epoch + 1, previous.predecessor, writer⟩
+        observed.comparison.rival = true := by
+  have reach : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  exact conviction_establishes_duplicity reach witnessed_termination_booking.2.2.2
+
+#guard convictionTx.identity == 105 && convictionTx.observation.assets.mint.isEmpty
+#guard ((env 11).presentedSpend 1 1).any (env 11).attestationMinted
+
 end CardanoKeri.Application.Custody.Examples

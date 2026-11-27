@@ -87,6 +87,10 @@
       "module": "CardanoKeri.Registry"
     },
     {
+      "declaration": "CardanoKeri.Registry.Env.attestationMinted",
+      "module": "CardanoKeri.Registry"
+    },
+    {
       "declaration": "CardanoKeri.Registry.Env.conviction",
       "module": "CardanoKeri.Registry"
     },
@@ -99,7 +103,7 @@
       "module": "CardanoKeri.Registry"
     },
     {
-      "declaration": "CardanoKeri.Registry.Env.verifyRival",
+      "declaration": "CardanoKeri.Registry.Env.presentedConviction",
       "module": "CardanoKeri.Registry"
     },
     {
@@ -2527,7 +2531,7 @@
     {
       "module": "CardanoKeri.Registry",
       "path": "lean/CardanoKeri/Registry.lean",
-      "sha256": "a9c4a4305ee2c05695759ce449afef8b520add49a44af4a66d1ec5faacc7e08a"
+      "sha256": "fbd7fed7a778e85a79a353c363787b625891abba2adc57d3b9b2dd63a9472e53"
     },
     {
       "module": "Singular.Economics.Booking",
@@ -2627,149 +2631,156 @@
   ],
   "definitions": [
     {
+      "declaration": "CardanoKeri.Registry.Env.conviction",
+      "module": "CardanoKeri.Registry",
+      "line": 39,
+      "sha256": "1703466e549ce33fe3c299bbfbfaab7813244c9d6b639712c66fb880984a3f8d",
+      "source": "def Env.conviction (env : Env) (aid : Nat) : Option Conviction :=\n  (env.presentedConviction aid).filter env.attestationMinted"
+    },
+    {
       "declaration": "CardanoKeri.Registry.Env.pendingSpend",
       "module": "CardanoKeri.Registry",
-      "line": 37,
-      "sha256": "33a5c0e4444678e1126eac0b1ff363011d85b4d19283ab0196bab2b924570b08",
-      "source": "def Env.pendingSpend (env : Env) (aid : Nat) : Option Application.PendingSpend := do\n  let observed ← env.conviction aid\n  let tip := observed.comparison.tip\n  if tip.aid = aid ∧ CheckpointConviction.accepts env.verifyRival tip observed.comparison.rival = true then\n    some ⟨observed.output, aid, ⟨tip.epoch, tip.sn⟩⟩\n  else none"
+      "line": 42,
+      "sha256": "e67283c92065e0ad01c469d0db83c2a6af0e9e9bfbc1b087fc03683ad262df4d",
+      "source": "def Env.pendingSpend (env : Env) (aid : Nat) : Option Application.PendingSpend := do\n  let observed ← env.conviction aid\n  let tip := observed.comparison.tip\n  if tip.aid = aid ∧ CheckpointConviction.accepts tip observed.comparison.rival = true then\n    some ⟨observed.output, aid, ⟨tip.epoch, tip.sn⟩⟩\n  else none"
     },
     {
       "declaration": "CardanoKeri.Registry.Carrier.st",
       "module": "CardanoKeri.Registry",
-      "line": 75,
+      "line": 80,
       "sha256": "7204903f7a51a57fcad7ed3dd59f1a70239b691795fa24c40fd6c90e75efa0a5",
       "source": "def Carrier.st (c : Carrier) : CkState :=\n  if c.pendingSpend.isSome then .terminationPending else .live"
     },
     {
       "declaration": "CardanoKeri.Registry.Carrier.convicted",
       "module": "CardanoKeri.Registry",
-      "line": 78,
+      "line": 83,
       "sha256": "e46ae08cd4b200107854bf6f5b184f301ecd65db5f016cb0c15f8ab32b7bb3e8",
       "source": "def Carrier.convicted (c : Carrier) (env : Env) (aid : Nat) : Carrier :=\n  {c with pendingSpend := env.pendingSpend aid}"
     },
     {
       "declaration": "CardanoKeri.Registry.TerminationBooking.spend",
       "module": "CardanoKeri.Registry",
-      "line": 90,
+      "line": 95,
       "sha256": "4a1fdc7e614ca273f35749454c14850a18293d3c3c7444da0da1e90018cf7dbf",
       "source": "def TerminationBooking.spend (b : TerminationBooking) : Application.PendingSpend :=\n  ⟨b.pendingReference, b.request.key, b.position⟩"
     },
     {
       "declaration": "CardanoKeri.Registry.Sys.toWorld",
       "module": "CardanoKeri.Registry",
-      "line": 119,
+      "line": 124,
       "sha256": "f7af6604af3e6235e5dce73e4532f42155106f588b6d862b9b9605461cbbe755",
       "source": "def Sys.toWorld (s : Sys) : Singular.World :=\n  { registry := { config := s.config, trie := s.trie,\n                  held := s.carriers.map (·.original) },\n    pending := s.registrations,\n    terminations := s.terminations.map (·.booking), treasury := s.treasury }"
     },
     {
       "declaration": "CardanoKeri.Registry.carrierAt",
       "module": "CardanoKeri.Registry",
-      "line": 130,
+      "line": 135,
       "sha256": "522b580eeb79c5c8294b5bb124d66d3809616931b6a03255d16fd9b891d48481",
       "source": "def carrierAt (s : Sys) (aid : Nat) : Option Carrier :=\n  s.carriers.find? (fun c => c.aid == aid)"
     },
     {
       "declaration": "CardanoKeri.Registry.pendingAt",
       "module": "CardanoKeri.Registry",
-      "line": 133,
+      "line": 138,
       "sha256": "9d6fd9eb7efa935d4cf5f0a3f6accf0133b654b7ff5990e74fbe8e9e17824d65",
       "source": "def pendingAt (s : Sys) (ref : Singular.OutRef) : Option TerminationEntry :=\n  s.terminations.find? (fun e => e.booking.request.reference == ref)"
     },
     {
       "declaration": "CardanoKeri.Registry.Result",
       "module": "CardanoKeri.Registry",
-      "line": 154,
+      "line": 159,
       "sha256": "caf59aa2ac79db5323e70816d9205564c5e9a40cb622f0e1a3b2f9ed8c5c3a61",
       "source": "abbrev Result := Flow × Sys\n\n-- The application carrier holds the minimum ADA `Mc`, the checkpoint's deposit and\n-- freeze bond `D`, and above them the initial premium pool the registrant chooses.\n-- A carrier short of `Mc + D` is refused."
     },
     {
       "declaration": "CardanoKeri.Registry.registrationShape",
       "module": "CardanoKeri.Registry",
-      "line": 159,
+      "line": 164,
       "sha256": "704312b7eb72b061f225d8cb688c8f714da333268c7c5a4d5ce3757849df7597",
       "source": "def registrationShape (p : Params) (b : Singular.RegistrationBooking) : Prop :=\n  p.Mc + p.D ≤ b.request.carrierAda ∧ b.request.declaredTip = p.tip"
     },
     {
       "declaration": "CardanoKeri.Registry.bookRegistration",
       "module": "CardanoKeri.Registry",
-      "line": 168,
+      "line": 173,
       "sha256": "41429778bfb248a19649fd720dc616c0a45c753dcf2b0e9373a031980e401f18",
       "source": "def bookRegistration (p : Params) (env : Env) (s : Sys)\n    (b : Singular.RegistrationBooking) : Except String Result := do\n  if ¬ registrationShape p b then throw \"keri-registration-value-mismatch\"\n  if !env.inception b.request.key then throw \"keri-inception-refused\"\n  let world ← Singular.book s.toWorld b\n  let after := { s with registrations := b :: s.registrations }\n  if after.toWorld ≠ world then throw \"keri-registration-reconstruction-mismatch\"\n  pure ({ deposited := b.request.contents.lovelace }, after)\n\n-- Rename the old tomb stage to explicit pending: it is an extant convicted\n-- carrier awaiting booking, not a retired registry key. This retains the\n-- two-stage transport boundary and does not invent atomic CP equivalence."
     },
     {
       "declaration": "CardanoKeri.Registry.convictCkpt",
       "module": "CardanoKeri.Registry",
-      "line": 180,
+      "line": 185,
       "sha256": "e2b0e4339bbf46104d6de482ba0e14fbeefc36d0964a823c18727f40920c098d",
       "source": "def convictCkpt (env : Env) (s : Sys) (aid : Nat) : Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if c.st == .terminationPending || !(env.pendingSpend aid).isSome then\n    throw \"keri-conviction-refused\"\n  let carriers := s.carriers.map (fun old =>\n    if old.aid == aid then (old.convicted env aid) else old)\n  pure ({}, { s with carriers := carriers })"
     },
     {
       "declaration": "CardanoKeri.Registry.bookTermination",
       "module": "CardanoKeri.Registry",
-      "line": 188,
+      "line": 193,
       "sha256": "f8bd176090cdd060c4826ebeaa3a57aaf55a388b42d2deed2cbf28c569c1c4c3",
       "source": "def bookTermination (p : Params) (s : Sys)\n    (aid booker fee : Nat) (b : TerminationBooking) : Except String Result := do\n  let some c := carrierAt s aid | throw \"keri-carrier-missing\"\n  if ¬(c.st = .terminationPending ∧ c.pendingSpend = some b.spend) then throw \"keri-conviction-required\"\n  if ¬ (b.request.key = aid ∧ b.request.destination = c.original.output ∧\n      b.custodyInputs = [c.original] ∧ c.minAda = p.Mc ∧\n      b.request.carrierAda = p.Mr ∧ b.request.declaredTip = p.tip ∧\n      b.request.contents.lovelace = p.Mr + p.tip) then\n    throw \"keri-termination-binding-mismatch\"\n  let world ← Singular.bookTermination s.toWorld b\n  let e : TerminationEntry := { booking := b, payload := {\n    spend := b.spend, aid := aid, token := c.token, original := c.original,\n    booker := booker, bookingFee := fee } }\n  let after := { s with\n    carriers := s.carriers.filter (fun old => old.aid != aid),\n    terminations := e :: s.terminations }\n  if after.toWorld ≠ world then throw \"keri-termination-reconstruction-mismatch\"\n  pure ({\n    premium := some (booker, p.Mc - p.Mr - p.tip),\n    bookingFee := fee, intoRequest := p.Mr + p.tip }, after)"
     },
     {
       "declaration": "CardanoKeri.Registry.installMember",
       "module": "CardanoKeri.Registry",
-      "line": 209,
+      "line": 214,
       "sha256": "dadb061039eea965dce1d423b482b934756ee181336b28a983708b178c558723",
       "source": "def installMember (p : Params) (before : Sys) (acc : Sys)\n    (member : Singular.FoldMember) : Except String Sys := do\n  letI : BEq Singular.RegistrationBooking := instBEqOfDecidableEq\n  match member with\n  | .termination b => do\n    let some e := pendingAt before b.request.reference\n      | throw \"keri-termination-metadata-missing\"\n    if e.booking ≠ b then throw \"keri-termination-metadata-mismatch\"\n    pure acc\n  | .registration b => do\n    if b ∉ before.registrations then throw \"keri-registration-metadata-missing\"\n    let c : Carrier := {\n      aid := b.request.key, token := acc.nextToken,\n      original := { key := b.request.key, kind := .active,\n                    output := b.request.destination, datum := b.request.datum },\n      pendingSpend := none, minAda := p.Mc }\n    pure { acc with\n      carriers := c :: acc.carriers,\n      bindings := (c.aid, c.token) :: acc.bindings, nextToken := acc.nextToken + 1 }"
     },
     {
       "declaration": "CardanoKeri.Registry.foldResult",
       "module": "CardanoKeri.Registry",
-      "line": 229,
+      "line": 234,
       "sha256": "8a339edff3fc8892204c1c8166a38250b50a940c5ff2f138a83b3385d9e9077a",
       "source": "def foldResult (p : Params) (s : Sys) (tx : Singular.EconomicTransaction)\n    (world : Singular.World) : Except String Result := do\n  let members := Singular.foldMembers s.toWorld tx\n  let acc ← members.foldlM (installMember p s) s\n  let after := { acc with\n    gen := s.gen + 1,\n    config := world.registry.config, trie := world.registry.trie, treasury := world.treasury,\n    registrations := s.registrations.filter (fun b =>\n      !Singular.inputsContainReference tx.transaction.inputs b.request.reference),\n    terminations := s.terminations.filter (fun e =>\n      !Singular.inputsContainReference tx.transaction.inputs e.booking.request.reference) }\n  if after.toWorld ≠ world then throw \"keri-fold-reconstruction-mismatch\"\n  let locked := members.filterMap (fun m => match m with\n    | .registration b => some (b.request.key, b.request.carrierAda - p.Mc)\n    | .termination _ => none)\n  pure ({ locked := locked }, after)\n\n-- A fold reads no inception evidence. Every registration it folds was booked\n-- (`installMember`), and the booking required the evidence."
     },
     {
       "declaration": "CardanoKeri.Registry.fold",
       "module": "CardanoKeri.Registry",
-      "line": 248,
+      "line": 253,
       "sha256": "6840d06ca96fef061815192dd165547c5f6bcd21cb6f22705e8087a466de64a4",
       "source": "def fold (p : Params) (s : Sys) (expectedGen expectedPlugin : Nat)\n    (u : Singular.EconomicUtxo) (tx : Singular.EconomicTransaction) : Except String Result := do\n  if expectedGen != s.gen then throw \"keri-generation-mismatch\"\n  if expectedPlugin != s.config.applicationPolicy then throw \"keri-plugin-mismatch\"\n  let world ← Singular.foldAccepted s.toWorld u tx\n  foldResult p s tx world\n\n-- A returned registration leaves the registration pool and nothing else."
     },
     {
       "declaration": "CardanoKeri.Registry.recoverRegistrations",
       "module": "CardanoKeri.Registry",
-      "line": 256,
+      "line": 261,
       "sha256": "3d34d24511c0712f02c5d27dcfd8ae7b6507978aa105241929bb1394b16a7ac6",
       "source": "def recoverRegistrations (s : Sys) (world : Singular.World) : Except String Sys := do\n  let after := { s with registrations := s.registrations.filter (fun b =>\n    world.pending.contains b) }\n  if after.toWorld ≠ world then throw \"keri-recovery-reconstruction-mismatch\"\n  pure after"
     },
     {
       "declaration": "CardanoKeri.Registry.deadline",
       "module": "CardanoKeri.Registry",
-      "line": 266,
+      "line": 271,
       "sha256": "ea24f4fe02c10cdf98f0ddf0432398b6d7c0d18176c1da60fc498e8d4ec9f96b",
       "source": "def deadline (c : Singular.Config) (r : Singular.RegistrationRequest) : Nat :=\n  r.submittedAt + c.processTime"
     },
     {
       "declaration": "CardanoKeri.Registry.returnedRegistration",
       "module": "CardanoKeri.Registry",
-      "line": 273,
+      "line": 278,
       "sha256": "0519434a98330e13487798e1bb3eaae217325a7f6892e50dc2b4bef5a165fb9c",
       "source": "def returnedRegistration (s : Sys) (member : Singular.OutRef × Singular.RejectReason) :\n    Option Singular.RegistrationBooking :=\n  s.registrations.find? (fun b => b.request.reference == member.1)"
     },
     {
       "declaration": "CardanoKeri.Registry.returnMemberReady",
       "module": "CardanoKeri.Registry",
-      "line": 279,
+      "line": 284,
       "sha256": "7daeca23604f50e550f3359e5478740d963135e13f2f139ba712135b282e43be",
       "source": "def returnMemberReady (s : Sys) (interval : Singular.Interval)\n    (member : Singular.OutRef × Singular.RejectReason) : Bool :=\n  match returnedRegistration s member with\n  | some b => decide (deadline s.config b.request ≤ interval.lower)\n  | none => false"
     },
     {
       "declaration": "CardanoKeri.Registry.returnRequests",
       "module": "CardanoKeri.Registry",
-      "line": 291,
+      "line": 296,
       "sha256": "a29b2f47e4b4094845e41fd5b290002cc03ca492acfaf7d7be32e4c9e7486fe8",
       "source": "def returnRequests (s : Sys) (u : Singular.EconomicUtxo) (r : Singular.Rejection) :\n    Except String Result := do\n  let some interval := r.transaction.transaction.validity\n    | throw \"keri-return-interval-missing\"\n  if !r.members.all (fun m => (returnedRegistration s m).isSome) then\n    throw \"keri-return-registration-only\"\n  if !r.members.all (returnMemberReady s interval) then\n    throw \"keri-return-before-deadline\"\n  if !Singular.balanced u.ledger r.transaction.transaction then\n    throw \"keri-return-unbalanced\"\n  let world ← Singular.rejectionAccepted s.toWorld u r\n  let after ← recoverRegistrations s world\n  pure ({}, after)"
     },
     {
       "declaration": "CardanoKeri.Registry.stepFn",
       "module": "CardanoKeri.Registry",
-      "line": 313,
+      "line": 318,
       "sha256": "6e3d114a5daac467367904d1e865cdb74cf2e7937a2071204675a581048025e3",
       "source": "def stepFn (p : Params) (env : Env) (action : Action) (s : Sys) : Except String Result :=\n  match action with\n  | .bookRegistration b => bookRegistration p env s b\n  | .convictCkpt aid => convictCkpt env s aid\n  | .bookTermination aid booker fee b => bookTermination p s aid booker fee b\n  | .fold gen plugin u tx => fold p s gen plugin u tx\n  | .returnRequests u tx => returnRequests s u tx"
     },

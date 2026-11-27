@@ -30,7 +30,7 @@ theorem conviction_has_spent_tip_comparison (p : Params) (env : Env)
     (h : Step p env a t (.present l) f (.terminationPending key)) :
     ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧
       comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧
-      CheckpointConviction.accepts env.verifyRival comparison.tip comparison.rival = true := by
+      CheckpointConviction.accepts comparison.tip comparison.rival = true := by
   have accepted := (T12_convict_exact p env h).2.2
   cases found : env.comparison l.epoch l.sn with
   | none => simp [Env.acceptsRival, found] at accepted

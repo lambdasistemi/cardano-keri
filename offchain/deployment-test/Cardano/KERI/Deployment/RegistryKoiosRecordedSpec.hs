@@ -134,7 +134,7 @@ deployOver reads' = do
                         , partWindow = pure EndNotSet
                         }
             use (runtime, payer)
-        openers = Openers{openersNode = \_ _ -> fail "the node was reached", openersKoios = koiosOpener}
+        openers = Openers{openersNode = \_ _ -> fail "the node was reached", openersKoios = koiosOpener, openersKoiosFold = \_ _ -> fail "the fold opener was reached"}
     withSystemTempDirectory "registry-koios-recorded" $ \directory -> do
         ((outcome, out), err) <-
             capturing stderr $

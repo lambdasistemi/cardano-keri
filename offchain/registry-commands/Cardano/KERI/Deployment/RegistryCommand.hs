@@ -31,7 +31,7 @@ import Cardano.KERI.AID.Application (ApplicationParameters (..), OutputReference
 import Cardano.KERI.Deployment.LiveRuntime (decodePaymentAddress)
 import Cardano.KERI.Deployment.NodeSocketRuntime (Connection (..), NodeAccess (..), RegistryOpener, withNodeRuntime)
 import Cardano.KERI.Deployment.Registry (RegistryTerms (..))
-import Cardano.KERI.Deployment.RegistryBookingCommand (openKey, openRegistryKoios)
+import Cardano.KERI.Deployment.RegistryBookingCommand (openKey, openRegistryKoios, openRegistryKoiosFold)
 import Cardano.KERI.Deployment.RegistryDeploy (
     DeployError (..),
     DeployFailure (..),
@@ -47,6 +47,7 @@ import Cardano.KERI.Deployment.RegistryKeySource (passphraseFdSetting, signingKe
 import Cardano.KERI.Deployment.RegistryProvider (Counterpart (..), Openers (..), ProviderChoice (..), counterpartOf, evidence, forCounterpart, nodeOnly, providerChoiceParser, reasonText, renderProviderRefusal, resolveProvider, transliterateReports, withProvider)
 import Cardano.KERI.Deployment.RegistryWindow (installNodeWindow)
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..), loadBlueprint)
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (renderTransactionId)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -227,7 +228,7 @@ integerSetting optionName environmentName configName description defaultValue =
 -- ---------------------------------------------------------------------
 
 runRegistryDeploy :: RegistryDeploySettings -> IO ()
-runRegistryDeploy = runRegistryDeployOver Openers{openersNode = openNode, openersKoios = openRegistryKoios}
+runRegistryDeploy = runRegistryDeployOver Openers{openersNode = openNode, openersKoios = openRegistryKoios, openersKoiosFold = openRegistryKoiosFold}
 
 {- | Deploy a registry through the node the opener reaches, write the two files
 and print what landed.
@@ -394,4 +395,4 @@ renderFilesError = \case
 openNode :: RegistryOpener
 openNode access use = do
     payer <- either die' pure (decodePaymentAddress (naFundingAddress access))
-    withNodeRuntime Linked access (\(runtime, _) -> use (installNodeWindow (naNetworkMagic access) (naNetworkTime access) runtime, payer))
+    withNodeRuntime singularFundingRules Linked access (\(runtime, _) -> use (installNodeWindow (naNetworkMagic access) (naNetworkTime access) runtime, payer))

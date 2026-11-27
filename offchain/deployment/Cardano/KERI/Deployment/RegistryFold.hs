@@ -201,7 +201,7 @@ foldBookedRequest rt report input = do
                     , foldTerminated = snapshotTerminal snapshot
                     , foldState = (stateIn, stateOut)
                     , foldValidity = planned
-                    , foldPayer = Payer payer []
+                    , foldPayer = Payer payer [] (rtFunding rt)
                     }
         foldTx <-
             withExceptT FoldTransaction . ExceptT $

@@ -25,6 +25,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     RegistryDeployment (..),
     RegistryReferences (..),
     Payer (..),
+    FundingRules (..),
     ValidityPlan (..),
     Budgets,
     BuiltTransaction,
@@ -43,9 +44,12 @@ module Cardano.KERI.Deployment.RegistryTransactions (
 
     -- * Transactions
     publishTemplate,
+    publishTemplateAndSeed,
     publishReferenceScript,
     endOnly,
     createConfiguration,
+    balanced,
+    Funding (..),
     BookedRequest (..),
     bookRegistrations,
     burnAttestations,
@@ -75,6 +79,7 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     mintingIndex,
     outputReferenceOf,
     isFundable,
+    isPlainFunding,
     plutusAddressOf,
     scriptExUnits,
     hashProofBurnExUnits,
@@ -146,7 +151,6 @@ import Cardano.Ledger.Address (
     serialiseAddr,
  )
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.PParams (ppCollateralPercentageL)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxBody (scriptIntegrityHashTxBodyL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
@@ -154,7 +158,6 @@ import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (bodyTxL, mkBasicTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
     collateralInputsTxBodyL,
-    feeTxBodyL,
     inputsTxBodyL,
     mintTxBodyL,
     mkBasicTxBody,
@@ -203,10 +206,9 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Provider (SlotNo)
 import Cardano.Tx.Balance (
+    BalanceError (..),
     BalanceResult (..),
     CollateralUtxos (..),
-    FeeLoopError (..),
-    balanceFeeLoop,
     balanceTx,
     balanceTxWith,
     computeScriptIntegrity,
@@ -220,6 +222,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
 import Data.Either (lefts, rights)
+import Data.Foldable (toList)
 import Data.List (elemIndex, sortOn, tails)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -254,10 +257,22 @@ data RegistryReferences = RegistryReferences
     -- ^ the hash-proof policy, published
     }
 
--- | Who pays a transaction: the address that receives the change and the outputs that fund it.
+{- | How the outputs that seed, fund and collateralise a transaction are chosen. The two functions are Singular's own
+('adaOnlyOut' and 'selectFunding' of its publication builder), handed in by the caller that already depends on Singular:
+this library takes no edge to Singular's package, which the write composition may not reach.
+-}
+data FundingRules = FundingRules
+    { ruleAdaOnly :: TxOut ConwayEra -> Bool
+    -- ^ whether an output holds lovelace alone and no reference script
+    , ruleSelect :: Maybe TxIn -> [(TxIn, TxOut ConwayEra)] -> Either String (TxIn, TxOut ConwayEra)
+    -- ^ the output a transaction is funded and collateralised from: the one chosen, or the largest of lovelace alone
+    }
+
+-- | Who pays a transaction: the address that receives the change, the outputs that fund it and how they are chosen.
 data Payer = Payer
     { payerAddress :: !Addr
     , payerFunds :: ![(TxIn, TxOut ConwayEra)]
+    , payerRules :: !FundingRules
     }
 
 -- | A validity interval: the slots the transaction declares and the instants they stand for.
@@ -523,7 +538,41 @@ publishOutput ::
     Payer ->
     TxOut ConwayEra ->
     Either RegistryTransactionError ConwayTx
-publishOutput end parameters payer output =
+publishOutput end parameters payer output = publishOutputs end parameters payer [output]
+
+{- | The publication of the template that also creates the output the registry will be created
+from, for a wallet that holds one output of lovelace alone: it is the output after the
+template's, so the wallet keeps the change to pay for the rest, as public Singular's chained
+seed does. The seed holds the given lovelace.
+-}
+publishTemplateAndSeed ::
+    -- | the exclusive upper slot of the transaction
+    Maybe SlotNo ->
+    PParams ConwayEra ->
+    Payer ->
+    -- | the lovelace of the published output
+    Coin ->
+    -- | the lovelace of the seed
+    Coin ->
+    ByteString ->
+    Either RegistryTransactionError ConwayTx
+publishTemplateAndSeed end parameters payer lovelace seedLovelace template =
+    publishOutputs
+        end
+        parameters
+        payer
+        [ mkBasicTxOut (payerAddress payer) (inject lovelace)
+            & datumTxOutL .~ mkInlineDatum (B template)
+        , mkBasicTxOut (payerAddress payer) (inject seedLovelace)
+        ]
+
+publishOutputs ::
+    Maybe SlotNo ->
+    PParams ConwayEra ->
+    Payer ->
+    [TxOut ConwayEra] ->
+    Either RegistryTransactionError ConwayTx
+publishOutputs end parameters payer outputs =
     firstSuccess
         [ balancedTx
             <$> first
@@ -535,7 +584,7 @@ publishOutput end parameters payer output =
     skeleton =
         mkBasicTx
             ( mkBasicTxBody
-                & outputsTxBodyL .~ StrictSeq.singleton output
+                & outputsTxBodyL .~ StrictSeq.fromList outputs
                 & vldtTxBodyL .~ endOnly end
             )
 
@@ -562,7 +611,7 @@ createConfiguration ::
 createConfiguration end parameters deployment references payer seedUtxo configured budgets = do
     when (outputReferenceOf (fst seedUtxo) /= seedOf deployment) $
         Left SeedIsNotTheRegistrys
-    firstFunded budgets (fundings [fst seedUtxo] (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) [fst seedUtxo] (payerFunds payer)) attempt
   where
     stateName = stateTokenName (seedOf deployment)
     configName = configurationTokenName (registryOf deployment)
@@ -644,7 +693,7 @@ bookRegistrations parameters deployment references payer requests validity diffe
     forM_ requests $ \request ->
         unless (holdsProof request) $
             Left (ProofIsNotTheInceptions (fst (bookedProof request)))
-    firstFunded budgets (fundings (map (fst . bookedProof) requests) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map (fst . bookedProof) requests) (payerFunds payer)) attempt
   where
     indexed = zip [0 ..] requests
     hashProofPolicy = PolicyID (artifactScriptHash (hashProofArtifact deployment))
@@ -735,7 +784,7 @@ burnAttestations ::
     Either RegistryTransactionError BuiltTransaction
 burnAttestations parameters deployment references payer held budgets = do
     when (Map.null burning) $ Left NothingToBurn
-    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map fst held) (payerFunds payer)) attempt
   where
     policy = attestationPolicyId deployment
     burning = attestationsHeld deployment held
@@ -780,7 +829,7 @@ mintHashProof parameters deployment payer export validity = do
     if blake3Hash saidBlank == aid
         then Right ()
         else Left InceptionDoesNotBindItsIdentifier
-    firstFunded Map.empty (fundings [] (payerFunds payer)) (const attempt)
+    firstFunded Map.empty (fundings (payerRules payer) [] (payerFunds payer)) (const attempt)
   where
     artifact = hashProofArtifact deployment
     policy = PolicyID (artifactScriptHash artifact)
@@ -868,7 +917,7 @@ foldRegistration ::
     Either RegistryTransactionError BuiltTransaction
 foldRegistration parameters deployment references plan budgets = do
     foldGuard (foldRegistered plan) (foldTerminated plan) key (snd (foldState plan))
-    firstFunded budgets (fundings [] (payerFunds (foldPayer plan))) attempt
+    firstFunded budgets (fundings (payerRules (foldPayer plan)) [] (payerFunds (foldPayer plan))) attempt
   where
     (requestIn, _) = foldRequest plan
     record = foldBooked plan
@@ -1000,7 +1049,7 @@ returnRequestsBurning ::
     Either RegistryTransactionError BuiltTransaction
 returnRequestsBurning parameters deployment references payer booking validity refundTo held budgets = do
     when (not (null held) && Map.null burning) $ Left NothingToBurn
-    firstFunded budgets (fundings (map fst held) (payerFunds payer)) attempt
+    firstFunded budgets (fundings (payerRules payer) (map fst held) (payerFunds payer)) attempt
   where
     Booking{bookingOutput = (requestIn, requestOut), bookingRecord = record} = booking
     tip = minimumTip (parametersOf deployment)
@@ -1212,11 +1261,18 @@ isFundable out =
     out ^. referenceScriptTxOutL == SNothing
         && out ^. datumTxOutL == Ledger.NoDatum
 
+{- | Whether an output may be the seed, the funding or the collateral: Singular's 'adaOnlyOut', which tests native assets and a
+reference script, and no datum, which Singular does not test and a published template carries.
+-}
+isPlainFunding :: FundingRules -> TxOut ConwayEra -> Bool
+isPlainFunding rules out = ruleAdaOnly rules out && out ^. datumTxOutL == Ledger.NoDatum
+
 hasAssets :: TxOut ConwayEra -> Bool
 hasAssets = (/= mempty) . assetsOf
 
-{- | The outputs that fund a transaction: the ones that pay its fee and the
-change, and the one that is its collateral.
+{- | The outputs that fund a transaction: the ones that pay its fee and the change, one of
+which is its collateral, as in public Singular: a transaction is funded and collateralised from
+the same ada-only output of the wallet.
 -}
 data Funding = Funding
     { fundingInputs :: ![(TxIn, TxOut ConwayEra)]
@@ -1236,19 +1292,18 @@ spendingSets least funds =
   where
     ordered = spendOrder funds
 
-{- | What a payer's outputs can fund, best first: a collateral without native
-assets, the smallest first, and for each every other output that pays the fee,
-in the spending order, one more at a time and without a limit on their number.
-The outputs excluded are spent by the transaction already.
+{- | What a payer's outputs can fund, best first: the outputs of the spending order, one more at a
+time and without a limit on their number, the first of them alone when it covers the transaction.
+The collateral is the one of them that Singular's 'selectFunding' chooses: the largest output of
+lovelace alone among those spent, so that one output of lovelace alone is the whole wallet
+needed. The outputs excluded are spent by the transaction already.
 -}
-fundings :: [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
-fundings excluded funds =
+fundings :: FundingRules -> [TxIn] -> [(TxIn, TxOut ConwayEra)] -> [Funding]
+fundings rules excluded funds =
     [ Funding inputs collateral
-    | collateral <- sortOn (coinOf . snd) (filter (not . hasAssets . snd) usable)
-    , inputs <- spendingSets 0 (filter ((/= fst collateral) . fst) usable)
+    | inputs <- spendingSets 1 (filter ((`notElem` excluded) . fst) funds)
+    , Right collateral <- [ruleSelect rules Nothing (filter (isPlainFunding rules . snd) inputs)]
     ]
-  where
-    usable = filter (\(ref, out) -> ref `notElem` excluded && isFundable out) funds
 
 -- | The first attempt that builds, or the failure of the first attempt.
 firstSuccess :: [Either RegistryTransactionError a] -> Either RegistryTransactionError a
@@ -1299,47 +1354,49 @@ balanced ::
     ConwayTx ->
     Either RegistryTransactionError ConwayTx
 balanced parameters resolved spent fixed changeAddress funding template = do
-    tx <- first feeRefused (balanceFeeLoop parameters outputsFor 1 resolved withInputs)
-    let Coin fee = tx ^. bodyTxL . feeTxBodyL
-        percentage = fromIntegral (parameters ^. ppCollateralPercentageL)
-    when (coinOf (snd (fundingCollateral funding)) * 100 < fee * percentage) $
-        Left (NotEnoughFunds "the collateral does not cover the fee")
+    result <-
+        first balanceRefused $
+            balanceTxWith parameters spent (CollateralUtxos []) resolved changeAddress Nothing withOutputs
+    let tx = balancedTx result
+    case reverse (toList (tx ^. bodyTxL . outputsTxBodyL)) of
+        change : _
+            | change ^. coinTxOutL < getMinCoinTxOut parameters change -> Left (FeeRefused insufficient)
+        _ -> pure ()
     let size = fromIntegral (tx ^. sizeTxF) + signatureAllowance
         limit = fromIntegral (parameters ^. ppMaxTxSizeL)
     when (size > limit) $
         Left (TransactionTooLarge size limit)
     pure tx
   where
-    withInputs =
+    -- the public builder takes the inputs, adds the change, prices the fee with the reference scripts resolved, takes
+    -- the donation out of the change and, at the fee it ends with, declares the total collateral and returns the rest
+    -- of the collateral input to the payer
+    withOutputs =
         template
-            & bodyTxL . inputsTxBodyL .~ Set.fromList (map fst spent)
+            & bodyTxL . outputsTxBodyL .~ StrictSeq.fromList (fixed <> tokenOutputs)
             & bodyTxL . collateralInputsTxBodyL .~ Set.singleton (fst (fundingCollateral funding))
-    minted = template ^. bodyTxL . mintTxBodyL
-    Coin donation = template ^. bodyTxL . treasuryDonationTxBodyL
-    unspent =
+    -- what the transaction leaves of the tokens its inputs hold and it mints: an output of its own, so that the change holds
+    -- lovelace alone, as the change of public Singular's builders does and the payer's next transaction needs
+    leftover =
         filterMultiAsset
             (\_ _ quantity -> quantity > 0)
             ( foldMap (assetsOf . snd) spent
-                <> minted
+                <> (template ^. bodyTxL . mintTxBodyL)
                 <> mapMaybeMultiAsset (\_ _ quantity -> Just (negate quantity)) (foldMap assetsOf fixed)
             )
-    outputsFor (Coin fee)
-        | change < 0 = Left insufficient
-        | change < unCoin (getMinCoinTxOut parameters changeOut) = Left insufficient
-        | otherwise = Right (StrictSeq.fromList (fixed <> [changeOut]))
-      where
-        change =
-            sum (map (coinOf . snd) spent)
-                - sum (map coinOf fixed)
-                - donation
-                - fee
-        changeOut = mkBasicTxOut changeAddress (MaryValue (Coin change) unspent)
-        insufficient = "the outputs that fund the transaction do not hold its payments, its fee and a change output"
-
-feeRefused :: FeeLoopError -> RegistryTransactionError
-feeRefused = \case
-    FeeDidNotConverge -> FeeRefused "the fee did not settle"
-    OutputError message -> FeeRefused message
+    tokenOutputs
+        | leftover == mempty = []
+        | otherwise = [carrying]
+    carrying =
+        let probe = mkBasicTxOut changeAddress (MaryValue (Coin 0) leftover)
+            atFirst = getMinCoinTxOut parameters probe
+            atSecond = getMinCoinTxOut parameters (probe & coinTxOutL .~ atFirst)
+         in probe & coinTxOutL .~ max atFirst atSecond
+    insufficient = "the outputs that fund the transaction do not hold its payments, its fee and a change output"
+    balanceRefused = \case
+        InsufficientFee{} -> FeeRefused insufficient
+        FeeNotConverged -> FeeRefused "the fee did not settle"
+        CollateralShortfall{} -> NotEnoughFunds "the collateral does not cover the fee"
 
 -- | The name of the hash-proof token of an inception: the hash of its event and its identifier.
 inceptionProofName :: InceptionExport -> ByteString

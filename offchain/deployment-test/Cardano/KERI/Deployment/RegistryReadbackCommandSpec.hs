@@ -127,6 +127,16 @@ spec = describe "ckeri checkpoint and ckeri status over the rebuilt registry" $ 
                     runWith unreached (["checkpoint", "--aid", "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ", "--endpoint", "http://127.0.0.1:9"] <> arguments)
             outcome `shouldBe` ExitFailure 1
             err `shouldSatisfy` ("registry-read-needs-the-provider" `isInfixOf`)
+        it "names a blueprint that cannot be read, and a release identity that cannot be read" $ do
+            (blueprintOutcome, _, blueprintErr) <-
+                runWith unreached ["checkpoint", "--aid", "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ", "--release-identity", "absent-identity.json", "--reference-record", "absent-record.json", "--blueprint", "absent-blueprint.json"]
+            blueprintOutcome `shouldBe` ExitFailure 1
+            blueprintErr `shouldSatisfy` ("blueprint-invalid: absent-blueprint.json" `isInfixOf`)
+            blueprint <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+            (filesOutcome, _, filesErr) <-
+                runWith unreached ["checkpoint", "--aid", "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ", "--release-identity", "absent-identity.json", "--reference-record", "absent-record.json", "--blueprint", blueprint]
+            filesOutcome `shouldBe` ExitFailure 1
+            filesErr `shouldSatisfy` ("deployment-files-invalid" `isInfixOf`)
         it "refuses an identifier that is not one complete qualified identifier" $ do
             w <- worldOf "reference:I01"
             (outcome, _, err) <- withFiles w $ \arguments -> runWith (stub (honest w)) (["checkpoint", "--aid", "not-an-identifier"] <> arguments)

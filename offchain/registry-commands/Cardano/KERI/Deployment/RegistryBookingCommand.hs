@@ -1161,7 +1161,9 @@ runRegistryReadbackOver open flags identityPath recordPath blueprintPath url aid
         Right (Ed25519PublicKey _, rest) | B8.null rest -> pure (TE.encodeUtf8 aid)
         Right (SelfAddressing _, rest) | B8.null rest -> pure (TE.encodeUtf8 aid)
         _ -> dieZero "aid-invalid: the identifier must be one complete qualified B, D or E identifier, as it was signed"
-    blueprint <- loadBlueprint blueprintPath >>= either (dieZero . ("blueprint-invalid: " <>)) pure
+    blueprint <-
+        try @IOException (loadBlueprint blueprintPath)
+            >>= either (\failure -> dieZero ("blueprint-invalid: " <> blueprintPath <> ": " <> show failure)) (either (dieZero . ("blueprint-invalid: " <>)) pure)
     (identity, _) <- readFiles "status" identityPath recordPath
     deployment <- either (dieZero . ("deployment-refused: " <>) . renderRefusal) pure (deriveDeployment blueprint identity)
     let access =

@@ -4,7 +4,7 @@
 # Pairs one builder binary with one validator blueprint, deploys a registry on Singular's local fixture (a node and the
 # Koios-shaped facade), books four inceptions with the installed commands, folds each, reads each checkpoint back with the
 # installed `ckeri checkpoint` and `ckeri status`, and keeps what each transaction declares. Every receipt it writes is
-# provisional: the validator candidate retains its parsed fallback. Nothing touches a public network.
+# provisional: the run traces no validator branch. Nothing touches a public network.
 #
 # usage (all required; the paths are the caller's), inside the development shell of offchain/:
 #   CKERI SINGULAR DEVNET NODE_ENV BLUEPRINT WORK PASSPHRASE   as in fold-journey.sh
@@ -25,7 +25,7 @@ fail() { log "FIRST FAILING STAGE: $STAGE: $*"; exit 1; }
 refused() { [[ -n "$first_failure" ]] || first_failure="$STAGE: $*"; log "REFUSED: $STAGE: $*"; }
 export SINGULAR_PASSPHRASE="$PASSPHRASE"
 MAGIC=42
-log "PROVISIONAL LINK RECEIPT: validator candidate retains the parsed fallback; binding attribution (reconstruction or fallback) is unresolved in these receipts"
+log "PROVISIONAL LINK RECEIPT: this run records no branch trace of the validator; which path accepted a booking is by source inspection, not observed here"
 log "binding: ckeri $CKERI sha256 $(sha256sum "$CKERI" | cut -c1-64)"
 log "binding: blueprint $BLUEPRINT sha256 $(sha256sum "$BLUEPRINT" | cut -c1-64)"
 log "binding: singular $SINGULAR sha256 $(sha256sum "$SINGULAR" | cut -c1-64); devnet $DEVNET sha256 $(sha256sum "$DEVNET" | cut -c1-64)"

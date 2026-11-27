@@ -106,6 +106,7 @@ readback() { # readback <command> <name> <aid> -> the output is kept
     return $code
 }
 declare -A AID=( [b-empty]=BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw [i01]=DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ [i02]=EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA [d-seal]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-empty]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-next]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 [d-zero-next]=DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3 )
+for kv in ${ENTRY_AIDS:-}; do AID[${kv%%=*}]=${kv#*=}; done
 rc=0
 for name in $(for e in $ENTRIES; do echo "${e%%:*}"; done); do for command in checkpoint status; do readback "$command" "$name" "${AID[$name]}" || { rc=1; log "FIRST FAILING STAGE: readback $command $name (exit $?)"; }; done; done
 [[ -z "$first_failure" ]] || log "FIRST REFUSAL OF THE RUN: $first_failure"

@@ -455,6 +455,10 @@ check-rival-bytes-vectors: gen-rival-bytes-vectors
 check-rival-evidence-mutants: stage-onchain
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#util-linux --command node scripts/check-rival-mutants.mjs evidence
 
+# Drift check of the rival label regression tests (D09, D10) against their retained rows.
+check-rival-label-tests:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-rival-label-tests.mjs
+
 # --- the bounded top-up (#346, #522) ---
 
 # Regenerate the top-up and registration cells of the Lean corpus, for both
@@ -777,7 +781,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-rival-vectors check-rival-mutants check-rival-bytes-vectors check-rival-evidence-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-rival-vectors check-rival-mutants check-rival-bytes-vectors check-rival-evidence-mutants check-rival-label-tests check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.

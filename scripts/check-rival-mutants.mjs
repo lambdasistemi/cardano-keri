@@ -23,6 +23,11 @@
 // witnesses are a subset of the witnesses, so the receipted bound implies it)
 // and `clauses` nonempty in the weighted rule (an empty clause list has width
 // zero, which the partition check against the nonempty key list refuses).
+// Equivalent since the corrected rule (#595, #596, #598) and no longer listed: the
+// nonempty checks of the previous commitments and of the rival keys (a count of
+// zero is never satisfied and a weighted rule must partition the keys), and the
+// repeated-addition guard of the witness derivation (an addition of a present
+// witness is refused before the derivation).
 //
 // The compiler prints no diagnostics without a terminal, so the harness needs
 // `script` (util-linux) to name the failed tests, and stops without it rather
@@ -59,16 +64,21 @@ const predicateMutants = [
   { name: 'adds-distinct', clause: 'distinct event.adds', ...drop('    distinct(rival.adds),') },
   { name: 'previous-commitments-distinct', clause: 'distinct prior.nextKeys', ...drop('    distinct(previous.next_keys),') },
   { name: 'rival-keys-distinct', clause: 'distinct event.keys', ...drop('    distinct(rival.keys),') },
-  { name: 'previous-commitments-nonempty', clause: '!prior.nextKeys.isEmpty', ...drop('    !list.is_empty(previous.next_keys),') },
-  { name: 'rival-keys-nonempty', clause: '!event.keys.isEmpty', ...drop('    !list.is_empty(rival.keys),') },
   { name: 'cuts-removed', clause: 'derivedWitnesses cuts', from: 'fn(w) { !list.has(rival.cuts, w) }', to: 'fn(_) { True }' },
   { name: 'adds-appended', clause: 'derivedWitnesses adds', from: 'list.concat(witnesses, [add])', to: 'witnesses' },
   { name: 'receipts-from-derived-witnesses', clause: 'witnesses.filter receipts', from: 'list.filter(witnesses, fn(w) { list.has(rival.receipts, w) })', to: 'list.filter(previous.witnesses, fn(w) { list.has(rival.receipts, w) })' },
   { name: 'previous-quorum-from-signers-not-revealed-keys', clause: 'signers.filter exposed.contains', from: 'list.filter(rival.keys, fn(key) { list.has(rival.signers, key) }),\n        next_key_digest,', to: 'rival.keys,\n        next_key_digest,' },
-  { name: 'already-present-addition-not-repeated', clause: 'adds not already in the resulting list', from: 'if list.has(witnesses, add) {', to: 'if False {' },
   { name: 'previous-threshold-met', clause: 'prior.nextThreshold.satisfied', from: '      satisfied(\n        previous.next_threshold,', to: '      satisfied(\n        Unweighted(0),' },
   { name: 'own-threshold-met', clause: 'event.threshold.satisfied', from: '    satisfied(\n      rival.threshold,', to: '    satisfied(\n      Unweighted(0),' },
-  { name: 'count-is-natural-and-bounded', clause: 'count n: n <= keys.length', from: 'm >= 0 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'evaluate(threshold, key_count, signed)' },
+  { name: 'count-is-natural-and-bounded', clause: 'count n: n <= keys.length', from: 'm >= 1 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'evaluate(threshold, key_count, signed)' },
+  { name: 'zero-count-never-satisfied', clause: 'count 0 is never satisfied (#596)', from: 'm >= 1 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'm >= 0 && m <= key_count && evaluate(threshold, key_count, signed)' },
+  { name: 'next-rule-fits-checked', clause: 'fitsNextKeys (#595)', ...drop('    fits_next_keys(rival.next_threshold, rival.next_key_count),') },
+  { name: 'next-count-fits-keys', clause: 'fitsNextKeys count width (#595)', from: 'Unweighted(m) -> m >= 0 && m <= key_count', to: 'Unweighted(m) -> m >= 0' },
+  { name: 'next-weighted-width-fits-keys', clause: 'fitsNextKeys weighted width (#595)', from: ' <= key_count && !list.is_empty(', to: ' >= 0 && !list.is_empty(' },
+  { name: 'next-weighted-clauses-total-one', clause: 'fitsNextKeys clause totals (#595)', from: ') && list.all(clauses, clause_total_at_least_one)', to: ') && True' },
+  { name: 'cuts-are-members', clause: 'cuts are prior witnesses (#598)', ...drop('    list.all(rival.cuts, fn(w) { list.has(previous.witnesses, w) }),') },
+  { name: 'adds-are-new', clause: 'adds are not prior witnesses (#598)', ...drop('    list.all(rival.adds, fn(w) { !list.has(previous.witnesses, w) }),') },
+  { name: 'nonempty-set-needs-threshold', clause: 'nonempty resulting set has positive receipt threshold (#598)', ...drop('    list.is_empty(witnesses) || rival.toad > 0,') },
   { name: 'weighted-clauses-partition-keys', clause: 'clauseWidth sum == keys.length', from: ') == key_count && evaluate(threshold, key_count, signed)', to: ') >= 0 && evaluate(threshold, key_count, signed)' },
   { name: 'weighted-denominators-positive', clause: 'Weight.wellFormed', from: '!list.is_empty(clause) && list.all(clause, fn(w) { w.den > 0 })', to: '!list.is_empty(clause)' },
   { name: 'weight-ceiling', clause: 'weightsAtMostOne', from: 'list.all(clause, fn(w) { w.num <= w.den })', to: 'list.all(clause, fn(_) { True })' },

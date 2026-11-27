@@ -6,7 +6,7 @@
 use aiken/collection/list
 use cardano_keri/checkpoint/message.{next_key_digest}
 use cardano_keri/checkpoint/threshold.{
-  Threshold, Unweighted, Weighted, evaluate,
+  Threshold, Unweighted, Weight, Weighted, evaluate,
 }
 
 /// What the previous establishment committed to (Lean `Predecessor`). The
@@ -77,13 +77,14 @@ fn positive_denominators(threshold: Threshold) -> Bool {
   }
 }
 
-/// Lean `Threshold.satisfied`: a count is met by that many signers; a weighted
+/// Lean `Threshold.satisfied`: a count of at least one is met by that many
+/// signers (a count of zero is never satisfied, #596); a weighted
 /// rule needs a nonempty list of nonempty clauses with positive denominators
 /// that partition the keys, each clause summing to at least one.
 fn satisfied(threshold: Threshold, key_count: Int, signed: List<Int>) -> Bool {
   when threshold is {
     Unweighted(m) ->
-      m >= 0 && m <= key_count && evaluate(threshold, key_count, signed)
+      m >= 1 && m <= key_count && evaluate(threshold, key_count, signed)
     Weighted(clauses) ->
       !list.is_empty(clauses) && list.all(
         clauses,
@@ -95,6 +96,34 @@ fn satisfied(threshold: Threshold, key_count: Int, signed: List<Int>) -> Bool {
         0,
         fn(clause, width) { width + list.length(clause) },
       ) == key_count && evaluate(threshold, key_count, signed)
+  }
+}
+
+/// Whether the weights of one clause total at least one, exactly (Lean
+/// `sumAtLeastOne` over `Fraction.add` from zero).
+fn clause_total_at_least_one(clause: List<Weight>) -> Bool {
+  let (num, den) = list.foldl(
+    clause,
+    (0, 1),
+    fn(w, total) {
+      let (n, d) = total
+      (n * w.den + w.num * d, d * w.den)
+    },
+  )
+  den > 0 && num >= den
+}
+
+/// A declared next rule fits the next keys it declares (Lean
+/// `Threshold.fitsNextKeys`, #595): its width is at most the key count and a
+/// weighted rule is a nonempty list of clauses each totalling at least one. A
+/// count of zero over no keys (abandonment) fits.
+fn fits_next_keys(threshold: Threshold, key_count: Int) -> Bool {
+  when threshold is {
+    Unweighted(m) -> m >= 0 && m <= key_count
+    Weighted(clauses) ->
+      list.foldl(clauses, 0, fn(clause, width) { width + list.length(clause) }) <= key_count && !list.is_empty(
+        clauses,
+      ) && list.all(clauses, clause_total_at_least_one)
   }
 }
 
@@ -180,6 +209,11 @@ fn receipts_valid(previous: Previous, rival: Rotation) -> Bool {
     distinct(previous.witnesses),
     distinct(rival.cuts),
     distinct(rival.adds),
+    // witness changes (#598): a cut is a member of the previous set, an addition
+    // is not, and a nonempty resulting set needs a positive receipt threshold
+    list.all(rival.cuts, fn(w) { list.has(previous.witnesses, w) }),
+    list.all(rival.adds, fn(w) { !list.has(previous.witnesses, w) }),
+    list.is_empty(witnesses) || rival.toad > 0,
     rival.toad >= 0,
     rival.toad <= list.length(witnesses),
     rival.toad <= list.length(receipted),
@@ -194,6 +228,7 @@ pub fn rotation_valid(previous: Previous, rival: Rotation) -> Bool {
   and {
     rival.is_rotation,
     rival.structure_ok,
+    fits_next_keys(rival.next_threshold, rival.next_key_count),
     weights_at_most_one(previous.next_threshold),
     weights_at_most_one(rival.threshold),
     weights_at_most_one(rival.next_threshold),

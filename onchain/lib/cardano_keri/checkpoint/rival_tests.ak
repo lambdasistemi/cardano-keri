@@ -125,12 +125,14 @@ test zero_denominator_in_the_declared_next_rule_is_refused() {
 test unreduced_and_large_denominators_in_the_declared_next_rule_are_admitted() {
   let unreduced = Rotation {
     ..base_rival(),
+    next_key_count: 2,
     next_threshold: Weighted(
       [[Weight { num: 2, den: 4 }, Weight { num: 1, den: 2 }]],
     ),
   }
   let large = Rotation {
     ..base_rival(),
+    next_key_count: 2,
     next_threshold: Weighted(
       [
         [

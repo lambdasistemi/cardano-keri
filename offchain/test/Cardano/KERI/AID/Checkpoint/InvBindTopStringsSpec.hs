@@ -24,11 +24,11 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     lookupKey,
     textField,
  )
+import Control.Monad (void)
 import Data.Aeson (Value (..))
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Test.Hspec (Spec, describe, it, runIO, shouldBe)
 
 data Row = Row
@@ -58,13 +58,13 @@ spec = describe "#291 top-level string validity" $ do
                         <> T.unpack (rowSha r)
             )
             rows
-    it "has the twelve rows" $ length rows `shouldBe` 12
+    it "has the twelve base rows and the 76 rows of the four lexical paths" $ length rows `shouldBe` 88
     describe "gives the named verdict on every row" $
         mapM_
             ( \r ->
                 it (T.unpack (rowId r)) $
-                    ( fmap (const ()) (decodeEstablishmentEvent (rowRaw r))
-                    , maybe Nothing (const (either (const Nothing) (Just . deeSeq) (decodeEstablishmentEvent (rowRaw r)))) (rowSeq r)
+                    ( void (decodeEstablishmentEvent (rowRaw r))
+                    , rowSeq r >> either (const Nothing) (Just . deeSeq) (decodeEstablishmentEvent (rowRaw r))
                     )
                         `shouldBe` (rowExpected r, rowSeq r)
             )
@@ -83,9 +83,9 @@ loadRows fx = arrayField fx "rows" >>= mapM one
             ("accept", _) -> Right (Right ())
             (_, Just (String e)) -> Left <$> errorOf e
             _ -> Left ("row " <> T.unpack rid)
-        let seqRaw = case lookupKey "seq_raw" r of
-                Just (String q) -> Just (TE.encodeUtf8 q)
-                _ -> Nothing
+        seqRaw <- case lookupKey "seq_raw_hex" r of
+            Just (String q) -> Just <$> decodeHex q
+            _ -> Right Nothing
         Right (Row rid raw sha expected seqRaw)
     errorOf = \case
         "ErrFraming" -> Right ErrFraming

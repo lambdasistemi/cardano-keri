@@ -175,17 +175,18 @@ parseMembers raw i acc = do
         0x7d -> Right (acc', i2)
         _ -> Left ErrFraming
 
+{- | One string of the event, member names and top-level values included: the
+same well-formedness as every nested string (escapes, no raw control
+character, well-formed UTF-8). The content is returned in its raw
+spelling, escapes undecoded: a spelling that is not the schema's or the
+field's is refused by the consumer, never decoded here.
+-}
 parseString ::
     ByteString -> Int -> Either EventDecodeError (ByteString, Int)
 parseString raw i = do
     require (at raw i == 0x22) ErrFraming
-    go (i + 1)
-  where
-    go j
-        | j >= BS.length raw = Left ErrFraming
-        | at raw j == 0x5c = Left ErrFraming
-        | at raw j == 0x22 = Right (BS.take (j - i - 1) (BS.drop (i + 1) raw), j + 1)
-        | otherwise = go (j + 1)
+    j <- jsonString raw i
+    Right (BS.take (j - i - 2) (BS.drop (i + 1) raw), j)
 
 parseValue ::
     ByteString ->

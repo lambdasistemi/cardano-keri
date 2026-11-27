@@ -8,7 +8,7 @@ open CardanoKeri.ConsumerIdentity.Bytes.Vectors (aidB aidE)
 
 /- The example bytes and partial decoder stand for a decoded signed event.
 The companion Python check independently constructs, serializes and signs
-the fifteen corresponding keripy events. -/
+the corresponding keripy events. -/
 private def identifier (code : String) : String :=
   if code == "E" then aidE else code ++ (aidB.drop 1).toString
 
@@ -63,6 +63,23 @@ private def prefixCases : List (String × Bool) := [
   ("E zero signing", regular "E" {body "E" with threshold := .count 0}),
   ("D zero next with digest", regular "D" {body "D" [22] with nextThreshold := .count 0})]
 
+private def future (next : List Nat) (clauses : List (List Weight)) :=
+  regular "D" {body "D" next with nextThreshold := .weighted clauses}
+
+private def futureCases : List (String × Bool) :=
+  let half := Weight.key ⟨1, 2⟩
+  let third := Weight.key ⟨1, 3⟩
+  let one := Weight.key ⟨1, 1⟩
+  [("D next below one", future [21,22] [[third, third]]),
+   ("D next unreduced", future [21,22] [[.key ⟨2,4⟩, .key ⟨2,4⟩]]),
+   ("D next partial coverage", future [21,22,23] [[one], [one]]),
+   ("D weighted next without commitments", future [] [[one]]),
+   ("D next exact one", future [21,22] [[half, half]]),
+   ("D next second clause below one", future [21,22] [[one], [third]]),
+   ("D next inner below one", future [21,22,23] [[one, .group ⟨1,2⟩ [⟨1,3⟩, ⟨1,3⟩]]]),
+   ("D next nested exact one", future [21,22,23] [[half, .group ⟨1,2⟩ [⟨1,2⟩, ⟨1,2⟩]]]),
+   ("D next no clauses", future [] [])]
+
 private def refusals : List Bool :=
   let e := evidence (body "D")
   [regular "D" {body "D" with keys := [12]}, regular "D" {body "D" with keys := [12,13]},
@@ -75,4 +92,4 @@ private def refusals : List Bool :=
 
 def main : IO Unit := do
   if refusals.any id then throw (IO.userError "An inconsistent booking was admitted")
-  IO.println (Lean.toJson prefixCases).compress
+  IO.println (Lean.toJson (prefixCases ++ futureCases)).compress

@@ -36,6 +36,9 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
     -- * F18 well-formedness and evaluation
     wellFormed,
     futureWellFormed,
+    fitsNextKeys,
+    normaliseWeights,
+    parseThresholdSpelling,
     evaluate,
 ) where
 
@@ -172,20 +175,105 @@ unBuiltin (BuiltinData d) = d
 -- F18 well-formedness (rules 1-13)
 -- ---------------------------------------------------------
 
-{- | The inception rule for the future (next) pair. The declared width is bounded
-by the signed commitments, every weight is canonical and at most one, and
-numeric zero is a valid future threshold: an inception may declare no future
-at all (no commitments, threshold zero) or commitments with threshold zero.
-The positive current signing quorum is 'wellFormed', which this does not
-replace.
+{- | The inception rule for the future (next) pair, as the model states it (draft #600,
+@fitsNextKeys@): the declared width is bounded by the signed commitments, every weight is at
+most one with a positive denominator, and every clause reaches one by the rational sum of its
+weights. Reduced form, the denominator bound and an exact cover of the commitments belong to
+F18, the rule of the signing threshold, and are not asked of the future. A numeric zero is valid
+with any number of commitments, none included. The commitments are distinct and 32 bytes wide.
+The positive current signing quorum is 'wellFormed', which this does not replace.
 -}
 futureWellFormed :: [ByteString] -> Threshold -> Either ThresholdError ()
-futureWellFormed keys th = case (keys, th) of
-    ([], Unweighted 0) -> Right ()
-    (_ : _, Unweighted 0) -> do
-        unless (all ((== 32) . BS.length) keys) (Left KeyWidth)
-        when (length (nub keys) /= length keys) (Left DuplicateKey)
-    _ -> wellFormed keys th
+futureWellFormed keys th = do
+    unless (all ((== 32) . BS.length) keys) (Left KeyWidth)
+    when (length (nub keys) /= length keys) (Left DuplicateKey)
+    fitsNextKeys (length keys) th
+
+{- | A declaration of the future against the number of signed commitments: the rule of the
+model, on rational values.
+-}
+fitsNextKeys :: Int -> Threshold -> Either ThresholdError ()
+fitsNextKeys count = \case
+    Unweighted m
+        | m < 0 || m > fromIntegral count -> Left UnweightedRange
+        | otherwise -> Right ()
+    Weighted clauses -> do
+        when (null clauses || any null clauses) (Left EmptyClause)
+        mapM_ weightInUnit (concat clauses)
+        unless (sum (map length clauses) <= count) (Left PartitionMismatch)
+        mapM_ clauseTotal clauses
+  where
+    weightInUnit (Weight num den) = do
+        when (den <= 0) (Left NonPositiveDen)
+        when (num < 0) (Left NegativeNum)
+        when (num > den) (Left OverUnityWeight)
+    clauseTotal clause =
+        unless (sum [num % den | Weight num den <- clause] >= 1) (Left UnsatisfiableClause)
+
+-- | Every weight in lowest terms: the same rational values, in the form the datum codec reads.
+normaliseWeights :: Threshold -> Threshold
+normaliseWeights = \case
+    Unweighted m -> Unweighted m
+    Weighted clauses -> Weighted (map (map reduce) clauses)
+  where
+    reduce w@(Weight num den)
+        | den > 0 && num >= 0 = let g = gcd num den in if g > 1 then Weight (num `div` g) (den `div` g) else w
+        | otherwise = w
+
+{- | The threshold a signed spelling declares: bare hexadecimal digits, or a compact JSON array of
+fraction strings (one clause) or of arrays of them (several). The weights keep the spelling they
+were signed with, unreduced if so; nothing is decoded of an escape.
+-}
+parseThresholdSpelling :: ByteString -> Either String Threshold
+parseThresholdSpelling spelling = case BS.uncons spelling of
+    Just (0x5b, _) -> do
+        (items, rest) <- array (BS.drop 1 spelling)
+        unless (BS.null rest) (Left "trailing bytes after the threshold")
+        case items of
+            Left flat -> Weighted . (: []) <$> traverse weight flat
+            Right nested -> Weighted <$> traverse (traverse weight) nested
+    _ ->
+        case BS.unpack spelling of
+            [] -> Left "an empty threshold"
+            digits
+                | all hexDigit digits -> Right (Unweighted (foldl (\acc d -> acc * 16 + toInteger (hexValue d)) 0 digits))
+                | otherwise -> Left "a threshold is hexadecimal digits or an array"
+  where
+    hexDigit d = (d >= 0x30 && d <= 0x39) || (d >= 0x61 && d <= 0x66)
+    hexValue d = if d <= 0x39 then d - 0x30 else d - 0x61 + 10
+    weight text = case BS.split 0x2f text of
+        [n] -> Weight <$> decimal n <*> pure 1
+        [n, d] -> Weight <$> decimal n <*> decimal d
+        _ -> Left "a weight is n or n/d"
+    decimal t
+        | BS.null t || not (BS.all (\c -> c >= 0x30 && c <= 0x39) t) = Left "a weight part is decimal digits"
+        | otherwise = Right (BS.foldl' (\acc c -> acc * 10 + toInteger (c - 0x30)) 0 t)
+    -- one array: of strings, or of arrays of strings; returns the rest after its closing bracket
+    array bytes = case BS.uncons bytes of
+        Just (0x22, _) -> strings bytes [] >>= \(ss, rest) -> Right (Left ss, rest)
+        Just (0x5b, _) -> clauses bytes []
+        _ -> Left "an array of fraction strings or of arrays"
+    strings bytes acc = do
+        (text, afterString) <- quoted bytes
+        case BS.uncons afterString of
+            Just (0x2c, more) -> strings more (text : acc)
+            Just (0x5d, rest) -> Right (reverse (text : acc), rest)
+            _ -> Left "a fraction string is followed by a comma or the end of its array"
+    clauses bytes acc = case BS.uncons bytes of
+        Just (0x5b, inner) -> do
+            (ss, afterClause) <- strings inner []
+            case BS.uncons afterClause of
+                Just (0x2c, more) -> clauses more (ss : acc)
+                Just (0x5d, rest) -> Right (Right (reverse (ss : acc)), rest)
+                _ -> Left "a clause is followed by a comma or the end of the thresholds"
+        _ -> Left "a clause is an array"
+    quoted bytes = case BS.uncons bytes of
+        Just (0x22, afterQuote) ->
+            let (text, afterText) = BS.break (== 0x22) afterQuote
+             in if BS.null afterText || BS.elem 0x5c text
+                    then Left "a fraction string is closed and has no escape"
+                    else Right (text, BS.drop 1 afterText)
+        _ -> Left "a fraction string"
 
 {- | The F18 well-formedness predicate over a positional
 @(cur_keys, threshold)@ pair. Total and deterministic; each rejection maps to

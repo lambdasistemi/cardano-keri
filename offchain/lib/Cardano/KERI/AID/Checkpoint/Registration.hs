@@ -94,6 +94,8 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
     evaluate,
+    normaliseWeights,
+    parseThresholdSpelling,
  )
 import Cardano.KERI.AID.Ed25519 (
     verifyEd25519,
@@ -347,6 +349,17 @@ rawKey text = case parsePrimitive text of
     Right (Ed25519PublicKey raw, rest) | BS.null rest -> Just raw
     _ -> Nothing
 
+{- | The signed future threshold against the datum's. A numeric threshold is compared by its exact
+spelling, as the current threshold is. A weighted one is compared by the rational value of its
+weights: the signed bytes keep the spelling they were signed with (an unreduced @2/4@ stays @2/4@
+in the event, in its identity and its signatures), the datum stores the weights in lowest terms.
+-}
+futureThresholdMatches :: ByteString -> Threshold -> Bool
+futureThresholdMatches signed = \case
+    declared@(Unweighted _) -> signed == respellThreshold declared
+    declared@(Weighted _) ->
+        either (const False) ((== normaliseWeights declared) . normaliseWeights) (parseThresholdSpelling signed)
+
 {- | R6 — the E1-E9 event binding. The event is decoded from its bytes
 alone (E1 refuses what does not decode); every expected value is computed from the datum
 (derivation-code-prefixed qb64 or an exact keripy re-spelling) and compared
@@ -377,7 +390,7 @@ eventBindingOver q d e = do
         (deeN ev == map qb64Aid (cdNextKeys d))
         (Left E6NextKeysMismatch)
     unless
-        (deeNt ev == respellThreshold (cdNextThreshold d))
+        (futureThresholdMatches (deeNt ev) (cdNextThreshold d))
         (Left E7NextThresholdMismatch)
     unless
         (deeB ev == map qb64WitnessVerkey (cdWitnesses d))

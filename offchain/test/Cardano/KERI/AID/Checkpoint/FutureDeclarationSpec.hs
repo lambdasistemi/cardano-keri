@@ -38,16 +38,20 @@ spec = describe "the future declaration of an inception" $ do
         row "three commitments, two of three" 3 (Unweighted 2) (Right ())
         row "three commitments, three of three" 3 (Unweighted 3) (Right ())
         row "width above the commitments" 1 (Unweighted 2) (Left UnweightedRange)
-        row "no commitments, a positive threshold" 0 (Unweighted 1) (Left EmptyKeys)
+        row "no commitments, a positive threshold" 0 (Unweighted 1) (Left UnweightedRange)
         row "a weight above one" 1 (Weighted [[Weight 3 2]]) (Left OverUnityWeight)
         row "a zero denominator" 1 (Weighted [[Weight 1 0]]) (Left NonPositiveDen)
         row "a weighted clause over every commitment" 2 (Weighted [[Weight 1 2, Weight 1 2]]) (Right ())
         row "a weighted threshold of whole weights" 2 (Weighted [[Weight 1 1], [Weight 1 1]]) (Right ())
-    describe "narrower than the stated rule: refused by an F18 rule the rule does not name" $ do
-        row "a clause whose weights do not reach one (narrower)" 2 (Weighted [[Weight 1 3, Weight 1 3]]) (Left UnsatisfiableClause)
-        row "an unreduced fraction (narrower)" 2 (Weighted [[Weight 2 4, Weight 2 4]]) (Left UnreducedWeight)
-        row "clauses that cover fewer commitments than are signed (narrower)" 3 (Weighted [[Weight 1 1], [Weight 1 1]]) (Left PartitionMismatch)
-        row "a weighted threshold with no commitments (narrower)" 0 (Weighted [[Weight 1 1]]) (Left EmptyKeys)
+    describe "the four rows of Q-069 and their neighbours, by rational value" $ do
+        row "a clause of 1/3 + 1/3 does not reach one" 2 (Weighted [[Weight 1 3, Weight 1 3]]) (Left UnsatisfiableClause)
+        row "an unreduced clause of 2/4 + 2/4 reaches one" 2 (Weighted [[Weight 2 4, Weight 2 4]]) (Right ())
+        row "two whole-weight clauses over three commitments" 3 (Weighted [[Weight 1 1], [Weight 1 1]]) (Right ())
+        row "a whole-weight clause over no commitments" 0 (Weighted [[Weight 1 1]]) (Left PartitionMismatch)
+        row "a second clause below one beside a clause that reaches it" 2 (Weighted [[Weight 1 1], [Weight 1 3]]) (Left UnsatisfiableClause)
+        row "no clauses" 0 (Weighted []) (Left EmptyClause)
+        row "an empty clause" 1 (Weighted [[]]) (Left EmptyClause)
+        row "a weight below zero" 1 (Weighted [[Weight (-1) 2]]) (Left NegativeNum)
     describe "commitments" $ do
         it "a duplicated commitment is refused" $
             futureWellFormed (commitments 1 <> commitments 1) (Unweighted 0) `shouldBe` Left DuplicateKey

@@ -254,7 +254,7 @@ spec = describe "#559 the booking transaction of interface v3" $ do
             ( \name -> it name $ do
                 s <- scenarioOf [(name, deposit)]
                 case map requestInitialDatum (scRecords s) of
-                    [PLC.Constr 1 [live]] -> fmap (const ()) (checkpointDatumFromData (PLC.Constr 1 [live])) `shouldBe` Just ()
+                    [PLC.Constr 1 [live]] -> void (checkpointDatumFromData (PLC.Constr 1 [live])) `shouldBe` Just ()
                     other -> fail ("the initial datum is not a version 2 checkpoint: " <> show other)
             )
             ["future:D next unreduced", "future:D next partial coverage"]

@@ -45,6 +45,7 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
     evaluate,
+    normaliseWeights,
  )
 import Cardano.KERI.AID.Ed25519 (verifyEd25519)
 import Control.Monad (unless, when)
@@ -188,7 +189,8 @@ inceptionFromEvent raw controllerSignatures witnessReceipts = do
     unless (blake3Hash (deeSaidPreimage event) == digest) $
         Left "KEL inception SAID does not bind the exact event bytes"
     currentThreshold <- thresholdFromSpelling (deeKt event)
-    nextThreshold <- thresholdFromSpelling (deeNt event)
+    -- the signed spelling stays in the bytes; the datum carries the weights in lowest terms
+    nextThreshold <- normaliseWeights <$> thresholdFromSpelling (deeNt event)
     currentKeys <- traverse (decodePublicKey "k" . text) (deeK event)
     nextKeys <- traverse (decodeSelfAddressing "n" . text) (deeN event)
     witnesses <- traverse (decodePublicKey "b" . text) (deeB event)

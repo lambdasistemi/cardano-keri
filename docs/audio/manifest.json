@@ -411760,6 +411760,361 @@
     }
    ]
   },
+  "docs-design-user-experience/register-08": {
+   "audio_sha256": "2740e7e07bd8a3e7aa651ad5a724e72cf79cbda360ac4a45d17a53541d55d78b",
+   "characters": 414,
+   "cost": 0.00040985999999999996,
+   "duration": 28.35,
+   "index": 8,
+   "key": "88a7c3683a5ad6e5c376afb013c1209f09f0dd6705d1dbe561e5b7e95b4120cd",
+   "page": "docs/design/user-experience.md",
+   "pause_ms": 400,
+   "section": "register",
+   "sent_text": "Before registering a non-transferable identifier, plan for its checkpoint deposit and freeze bond to stay locked indefinitely. The owner has no withdrawal path. A transferable identifier whose last rotation commits to no next keys also loses rotation authority. Ending that authority leaves the checkpoint and its funds in place. A valid conflicting rotation at the same sequence can still convict that checkpoint.",
+   "text": "Before registering a non-transferable identifier, plan for its checkpoint deposit and freeze bond to stay locked indefinitely. The owner has no withdrawal path. A transferable identifier whose last rotation commits to no next keys also loses rotation authority. Ending that authority leaves the checkpoint and its funds in place. A valid conflicting rotation at the same sequence can still convict that checkpoint.",
+   "words": [
+    {
+     "end": 0.55,
+     "start": 0.2,
+     "text": "Before"
+    },
+    {
+     "end": 1.225,
+     "start": 0.55,
+     "text": "registering"
+    },
+    {
+     "end": 1.337,
+     "start": 1.225,
+     "text": "a"
+    },
+    {
+     "end": 2.412,
+     "start": 1.337,
+     "text": "non-transferable"
+    },
+    {
+     "end": 3.35,
+     "start": 2.412,
+     "text": "identifier"
+    },
+    {
+     "end": 3.463,
+     "start": 3.35,
+     "text": ","
+    },
+    {
+     "end": 3.875,
+     "start": 3.463,
+     "text": "plan"
+    },
+    {
+     "end": 4.0,
+     "start": 3.875,
+     "text": "for"
+    },
+    {
+     "end": 4.213,
+     "start": 4.0,
+     "text": "its"
+    },
+    {
+     "end": 4.7,
+     "start": 4.213,
+     "text": "checkpoint"
+    },
+    {
+     "end": 5.3,
+     "start": 4.7,
+     "text": "deposit"
+    },
+    {
+     "end": 5.438,
+     "start": 5.3,
+     "text": "and"
+    },
+    {
+     "end": 5.812,
+     "start": 5.438,
+     "text": "freeze"
+    },
+    {
+     "end": 6.25,
+     "start": 5.812,
+     "text": "bond"
+    },
+    {
+     "end": 6.375,
+     "start": 6.25,
+     "text": "to"
+    },
+    {
+     "end": 6.688,
+     "start": 6.375,
+     "text": "stay"
+    },
+    {
+     "end": 7.113,
+     "start": 6.688,
+     "text": "locked"
+    },
+    {
+     "end": 8.5,
+     "start": 7.113,
+     "text": "indefinitely"
+    },
+    {
+     "end": 8.75,
+     "start": 8.5,
+     "text": "."
+    },
+    {
+     "end": 9.05,
+     "start": 8.925,
+     "text": "The"
+    },
+    {
+     "end": 9.375,
+     "start": 9.05,
+     "text": "owner"
+    },
+    {
+     "end": 9.575,
+     "start": 9.375,
+     "text": "has"
+    },
+    {
+     "end": 9.775,
+     "start": 9.575,
+     "text": "no"
+    },
+    {
+     "end": 10.2,
+     "start": 9.775,
+     "text": "withdrawal"
+    },
+    {
+     "end": 10.975,
+     "start": 10.2,
+     "text": "path"
+    },
+    {
+     "end": 11.175,
+     "start": 10.975,
+     "text": "."
+    },
+    {
+     "end": 11.45,
+     "start": 11.375,
+     "text": "A"
+    },
+    {
+     "end": 12.262,
+     "start": 11.45,
+     "text": "transferable"
+    },
+    {
+     "end": 13.15,
+     "start": 12.262,
+     "text": "identifier"
+    },
+    {
+     "end": 13.387,
+     "start": 13.15,
+     "text": "whose"
+    },
+    {
+     "end": 13.775,
+     "start": 13.387,
+     "text": "last"
+    },
+    {
+     "end": 14.45,
+     "start": 13.775,
+     "text": "rotation"
+    },
+    {
+     "end": 14.85,
+     "start": 14.45,
+     "text": "commits"
+    },
+    {
+     "end": 14.975,
+     "start": 14.85,
+     "text": "to"
+    },
+    {
+     "end": 15.2,
+     "start": 14.975,
+     "text": "no"
+    },
+    {
+     "end": 15.5,
+     "start": 15.2,
+     "text": "next"
+    },
+    {
+     "end": 15.962,
+     "start": 15.5,
+     "text": "keys"
+    },
+    {
+     "end": 16.388,
+     "start": 15.962,
+     "text": "also"
+    },
+    {
+     "end": 16.85,
+     "start": 16.388,
+     "text": "loses"
+    },
+    {
+     "end": 17.425,
+     "start": 16.85,
+     "text": "rotation"
+    },
+    {
+     "end": 18.65,
+     "start": 17.425,
+     "text": "authority"
+    },
+    {
+     "end": 18.875,
+     "start": 18.65,
+     "text": "."
+    },
+    {
+     "end": 19.375,
+     "start": 19.075,
+     "text": "Ending"
+    },
+    {
+     "end": 19.513,
+     "start": 19.375,
+     "text": "that"
+    },
+    {
+     "end": 20.0,
+     "start": 19.513,
+     "text": "authority"
+    },
+    {
+     "end": 20.312,
+     "start": 20.0,
+     "text": "leaves"
+    },
+    {
+     "end": 20.4,
+     "start": 20.312,
+     "text": "the"
+    },
+    {
+     "end": 21.013,
+     "start": 20.4,
+     "text": "checkpoint"
+    },
+    {
+     "end": 21.138,
+     "start": 21.013,
+     "text": "and"
+    },
+    {
+     "end": 21.3,
+     "start": 21.138,
+     "text": "its"
+    },
+    {
+     "end": 21.612,
+     "start": 21.3,
+     "text": "funds"
+    },
+    {
+     "end": 21.75,
+     "start": 21.612,
+     "text": "in"
+    },
+    {
+     "end": 22.65,
+     "start": 21.75,
+     "text": "place"
+    },
+    {
+     "end": 22.85,
+     "start": 22.65,
+     "text": "."
+    },
+    {
+     "end": 23.138,
+     "start": 23.05,
+     "text": "A"
+    },
+    {
+     "end": 23.55,
+     "start": 23.138,
+     "text": "valid"
+    },
+    {
+     "end": 24.1,
+     "start": 23.55,
+     "text": "conflicting"
+    },
+    {
+     "end": 24.75,
+     "start": 24.1,
+     "text": "rotation"
+    },
+    {
+     "end": 24.837,
+     "start": 24.75,
+     "text": "at"
+    },
+    {
+     "end": 24.938,
+     "start": 24.837,
+     "text": "the"
+    },
+    {
+     "end": 25.288,
+     "start": 24.938,
+     "text": "same"
+    },
+    {
+     "end": 25.8,
+     "start": 25.288,
+     "text": "sequence"
+    },
+    {
+     "end": 26.0,
+     "start": 25.8,
+     "text": "can"
+    },
+    {
+     "end": 26.3,
+     "start": 26.0,
+     "text": "still"
+    },
+    {
+     "end": 26.75,
+     "start": 26.3,
+     "text": "convict"
+    },
+    {
+     "end": 27.013,
+     "start": 26.75,
+     "text": "that"
+    },
+    {
+     "end": 28.15,
+     "start": 27.013,
+     "text": "checkpoint"
+    },
+    {
+     "end": 28.35,
+     "start": 28.15,
+     "text": "."
+    }
+   ]
+  },
   "docs-design-user-experience/rotate-00": {
    "audio_sha256": "0291e61f40fcfb042cb99e4ea33a6ae74bd48eaafb4f02e784aa8781a3a506ec",
    "characters": 7,

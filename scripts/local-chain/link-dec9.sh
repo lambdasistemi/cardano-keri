@@ -57,6 +57,10 @@ STAGE=protocol-transition
 for waited in $(seq 1 300); do curl -s "$URL/tip" >/dev/null || true; [[ "$(jq -r .protocolMajor "$TIME_DIR/time-manifest.json" 2>/dev/null)" == 11 ]] && break; sleep 1; done
 [[ "$(jq -r .protocolMajor "$TIME_DIR/time-manifest.json")" == 11 ]] || fail "the facade's network time did not reach protocol 11"
 log "ok: local fixture at protocol version 11"
+EPOCH=$(curl -s "$URL/tip" | jq -r '.[0].epoch_no')
+curl -s "$URL/epoch_params?_epoch_no=$EPOCH" >"$WORK/epoch-params.json"
+log "effective parameters (the facade's epoch_params, epoch $EPOCH, read at $(date -u +%Y-%m-%dT%H:%M:%SZ)): $(jq -c '.[0] | {epoch_no, max_tx_ex_mem, max_tx_ex_steps, max_tx_size, max_block_ex_mem, max_block_ex_steps, protocol_major}' "$WORK/epoch-params.json")"
+log "genesis in effect: E2E_GENESIS_DIR $( ( source "$NODE_ENV" >/dev/null 2>&1; echo "$E2E_GENESIS_DIR" ) ) alonzo $( ( source "$NODE_ENV" >/dev/null 2>&1; jq -c '{maxTxExUnits, maxBlockExUnits}' "$E2E_GENESIS_DIR/alonzo-genesis.json" ) )"
 
 common=(--network-magic $MAGIC --blueprint "$BLUEPRINT" --timeout-seconds 300)
 provider=(--koios-url "$URL" --network-time "$TIME_DIR")

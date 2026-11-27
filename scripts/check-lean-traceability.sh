@@ -11,6 +11,10 @@ base_sha="${2:-9b2e6b88937707cc2c571ae1e9e5f112dc248a30}"
 ruling_url=https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
 lean_root="$repo_root/lean"
 
+# Validate the reviewed validator-source table against this checkout and the
+# published January reference on every pull request and push to main.
+node "$repo_root/scripts/validator-conformance.mjs" --check --published
+
 retired_modules=(Lifecycle Goals Invariants)
 for module in "${retired_modules[@]}"; do
   test ! -e "$lean_root/CardanoKeri/$module.lean" || {

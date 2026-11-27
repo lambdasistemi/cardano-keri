@@ -94,11 +94,29 @@ def Threshold.weightsAtMostOne : Threshold → Bool
     | .group outer members => decide (outer.numerator ≤ outer.denominator) &&
         members.all fun w => decide (w.numerator ≤ w.denominator)
 
+/-- Minimum number of committed keys described by this threshold. -/
+def Threshold.width : Threshold → Nat
+  | .count n => n
+  | .weighted clauses => (clauses.map clauseWidth).sum
+
+private def sumAtLeastOne (weights : List Fraction) : Bool :=
+  (weights.foldl Fraction.add ⟨0, 1⟩).atLeastOne
+
+/-- A declared weighted rule can be constructed only if every clause and
+every nested member list totals at least one. The width counts the members
+of a nested group. Numeric zero remains a valid declaration for the future. -/
+def Threshold.fitsNextKeys (threshold : Threshold) (keyCount : Nat) : Bool :=
+  decide (threshold.width ≤ keyCount) && match threshold with
+    | .count _ => true
+    | .weighted clauses => !clauses.isEmpty && clauses.all fun clause =>
+      sumAtLeastOne (clause.map fun | .key w | .group w _ => w) &&
+      clause.all fun | .key _ => true | .group _ members => sumAtLeastOne members
+
 /-- Each key contributes once, in that list's order; clauses are conjunctive. -/
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
   let signed := keys.map signers.contains
   match threshold with
-  | .count n => n <= keys.length && n <= (signed.filter id).length
+  | .count n => 0 < n && n <= keys.length && n <= (signed.filter id).length
   | .weighted clauses =>
     !clauses.isEmpty && (clauses.map clauseWidth).sum == keys.length &&
     clausesSatisfied clauses signed
@@ -179,12 +197,16 @@ def receiptsValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
   let witnesses := derivedWitnesses prior signed.event
   let receipts := verifiedSigners signed.event signed.receipts
   distinct prior.witnesses && distinct signed.event.cuts && distinct signed.event.adds &&
+  signed.event.cuts.all prior.witnesses.contains &&
+  signed.event.adds.all (fun w => !prior.witnesses.contains w) &&
+  (witnesses.isEmpty || 0 < signed.event.witnessThreshold) &&
   signed.event.witnessThreshold <= witnesses.length &&
   signed.event.witnessThreshold <= (witnesses.filter receipts.contains).length
 
 def rotationValid (prior : Predecessor) (signed : SignedEvent) : Bool :=
   !prior.delegated && decide (signed.event.kind = .rotation) &&
-  (signed.structureVerified && prior.nextThreshold.weightsAtMostOne &&
+  ((signed.structureVerified && signed.event.nextThreshold.fitsNextKeys signed.event.nextKeys.length) &&
+    prior.nextThreshold.weightsAtMostOne &&
     signed.event.weightsAtMostOne && signed.event.nextThreshold.positiveDenominators) &&
   signed.event.aid == prior.aid && prior.sn < signed.event.sn &&
   signingValid prior signed && receiptsValid prior signed

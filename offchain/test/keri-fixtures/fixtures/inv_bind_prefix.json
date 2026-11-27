@@ -1,0 +1,21 @@
+{
+  "note": "Two keripy 1.3.5 inceptions from the #589 comparison corpus (commit d67af49f467e2811818327af27f465411299e8dd, keripy-results.json sha256 3d1e7425ff7567d8e89f2b15b502c016c1d7a1c1a991646692d267be8db244df): I01 a key-derived (basic) prefix, i is the qualified key and differs from the own SAID d; I02 a self-addressing prefix, i equals d. Each carries the exact bytes and keripys own SAID.",
+  "cases": [
+    {
+      "id": "I01",
+      "key": "I01",
+      "outcome": "accepted",
+      "pre": "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ",
+      "said": "EFdfRKDdnvl3KoYGilKKR8p_ukC4sKLuf8YMJDPT9_8c",
+      "raw": "{\"v\":\"KERI10JSON00012b_\",\"t\":\"icp\",\"d\":\"EFdfRKDdnvl3KoYGilKKR8p_ukC4sKLuf8YMJDPT9_8c\",\"i\":\"DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ\",\"s\":\"0\",\"kt\":\"1\",\"k\":[\"DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ\"],\"nt\":\"1\",\"n\":[\"EEALWneUDP2CdXkI7scn8lar0Ug5YRSYvZ_EWjECU_M3\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}"
+    },
+    {
+      "id": "I02",
+      "key": "I02",
+      "outcome": "accepted",
+      "pre": "EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA",
+      "said": "EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA",
+      "raw": "{\"v\":\"KERI10JSON0001e7_\",\"t\":\"icp\",\"d\":\"EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA\",\"i\":\"EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA\",\"s\":\"0\",\"kt\":\"2\",\"k\":[\"DNFWz8AsxHPcZFy7tIswi1cYEG96zmZQVkdz8gQIdzIL\",\"DCtQH-bOQ4L7ywz_P_uuT_pSKAWce7H6PB_sKuy7b3_R\",\"DHsjDyW82DiCth5DZhxzn_zJ7PeOPpTFW3zJ-FLXbD09\"],\"nt\":\"2\",\"n\":[\"EGEQmO2Sf680UtghtAz0N1h2tYnJZNwMjJjvIgFUn9vj\",\"EMgUxVLi0hSkbyljZTz7LWBD7Fa-bTlFQStVCPZpN8L7\",\"EOAp4KUvziyb-FdPAkRaXNZBfSCyCHhEFQuh2Ns0YwZm\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}"
+    }
+  ]
+}

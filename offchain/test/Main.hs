@@ -18,6 +18,8 @@ import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
 import Cardano.KERI.AID.Checkpoint.FreezeSpec qualified as FreezeSpec
+import Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec qualified as InvBindPrefixSpec
+import Cardano.KERI.AID.Checkpoint.InvBindSpec qualified as InvBindSpec
 import Cardano.KERI.AID.Checkpoint.Keri68OracleSpec qualified as Keri68OracleSpec
 import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec qualified as NineFieldDatumSpec
@@ -58,6 +60,8 @@ main = hspec $ do
     MessageSpec.spec
     Keri68OracleSpec.spec
     EnforcementSpec.spec
+    InvBindPrefixSpec.spec
+    InvBindSpec.spec
     FreezeBondSpec.spec
     FreezeSpec.spec
     TopUpSpec.spec

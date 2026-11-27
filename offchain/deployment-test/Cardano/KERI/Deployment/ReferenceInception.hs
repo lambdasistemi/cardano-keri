@@ -14,6 +14,7 @@ module Cardano.KERI.Deployment.ReferenceInception (
     exportOf,
     referenceExport,
     prefixCaseExport,
+    futureCaseExport,
     streamOf,
     respell,
 ) where
@@ -150,8 +151,17 @@ referenceExport name = do
 signed bytes), through the same construction.
 -}
 prefixCaseExport :: Text -> IO InceptionExport
-prefixCaseExport label = do
-    path <- getDataFileName "test/keri-fixtures/fixtures/inception_prefix_cases.json"
+prefixCaseExport = caseExport "inception_prefix_cases.json"
+
+{- | A weighted next declaration of draft #600 by its label: the signed bytes keep the spelling the
+row declares (a literal @2/4@ stays @2/4@), signed by the one current key.
+-}
+futureCaseExport :: Text -> IO InceptionExport
+futureCaseExport = caseExport "inception_future_cases.json"
+
+caseExport :: FilePath -> Text -> IO InceptionExport
+caseExport file label = do
+    path <- getDataFileName ("test/keri-fixtures/fixtures/" <> file)
     top <- eitherDecodeFileStrict path >>= either fail pure
     cases <- either fail pure (field "cases" top >>= array)
     found <-

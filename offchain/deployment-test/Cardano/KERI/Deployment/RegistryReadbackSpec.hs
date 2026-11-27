@@ -35,6 +35,7 @@ import Cardano.KERI.Deployment.RegistryBookingShapeSpec (
     foldAt,
     scenarioOf,
  )
+import Cardano.KERI.Deployment.RegistryChain (exportKey)
 import Cardano.KERI.Deployment.RegistryReadback (
     Link (..),
     LinkFailure (..),
@@ -49,7 +50,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     deploymentScripts,
     statePolicyId,
  )
-import Cardano.KERI.Deployment.RegistryTransactionsSpec (deposit, outputAt, producedBy)
+import Cardano.KERI.Deployment.RegistryTransactionsSpec (deposit, load, outputAt, producedBy)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (Data (..))
 import Cardano.Ledger.Api.Tx (txIdTx, witsTxL)
@@ -225,6 +226,20 @@ spec = describe "the checkpoint of a booked identifier, read through a ledger pr
                     other -> fail ("a checkpoint was expected: " <> show (fmap (fmap readbackIdentifier) other))
             )
             rows
+    describe "a weighted future declaration of draft #600 is booked, folded and read back (Q-069)" $
+        mapM_
+            ( \name -> it name $ do
+                w <- worldOf name
+                export <- load name
+                let aid = exportKey export
+                result <- readOf w (honest w) aid
+                case result of
+                    Right (Just rb) -> do
+                        readbackIdentifier rb `shouldBe` aid
+                        fmap linkedBooking (readbackLinks rb) `shouldBe` Right (historicalId (wBooking w))
+                    other -> fail ("a checkpoint was expected: " <> show (fmap (fmap readbackIdentifier) other))
+            )
+            ["future:D next unreduced", "future:D next partial coverage"]
     describe "a request that is not at the first output of its booking" $ do
         it "is read at its own output index, with its own evidence among the two the booking issues" $ do
             let shapes = [("case:B empty", deposit), ("reference:I01", deposit + 7_000_000)]

@@ -15,6 +15,7 @@ module Cardano.KERI.Deployment.RegistrationEvidenceSpec (spec) where
 import Cardano.KERI.AID.CESR (qb64Aid)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV2 (..),
+    DatumError (..),
     KeyMaterial (..),
     KeyStateView (..),
     QualifiedIdentity (..),
@@ -23,6 +24,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.InceptionPrefix (PrefixKind (..))
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
+    InceptionError (..),
     RegistrationError (..),
     RegistrationEvidence (..),
     proofTokenName,
@@ -38,6 +40,7 @@ import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.ReferenceInception (
     Reference (..),
     exportOf,
+    futureCaseExport,
     loadReferences,
     pick,
     prefixCaseExport,
@@ -103,6 +106,34 @@ spec = describe "offset-free registration evidence" $ do
                 accepted export
             )
             ["B empty", "D empty", "D next", "D seal", "E digest", "D zero next with digest"]
+    describe "the weighted future declarations of draft #600, on keripy's signed inceptions (Q-069)" $ do
+        let signed label = do
+                export <- futureCaseExport label
+                pure (export, reEventBytes (inceptionEvidence export))
+        it "admits a signed literal 2/4 + 2/4 clause over two commitments, keeping the signed bytes and both commitments in order" $ do
+            (export, bytes) <- signed "D next unreduced"
+            accepted export
+            ("\"nt\":[\"2/4\",\"2/4\"]" `BS.isInfixOf` bytes) `shouldBe` True
+            length (cdNextKeys (inceptionDatum export)) `shouldBe` 2
+        it "admits [[1],[1]] over three commitments, keeping all three in order" $ do
+            (export, bytes) <- signed "D next partial coverage"
+            accepted export
+            ("\"nt\":[[\"1\"],[\"1\"]]" `BS.isInfixOf` bytes) `shouldBe` True
+            length (cdNextKeys (inceptionDatum export)) `shouldBe` 3
+        it "keeps admitting the reduced clause and the numeric zero" $ do
+            futureCaseExport "D next exact one" >>= accepted
+            prefixCaseExport "D zero next with digest" >>= accepted
+        let refusedAtR4 label = it ("refuses " <> T.unpack label <> " at the inception rule") $ do
+                export <- futureCaseExport label
+                case registrationPredicateOver
+                    context
+                    (inceptionQualified export)
+                    (inceptionDatum export)
+                    1_007_000_000
+                    (inceptionEvidence export) of
+                    Left (R4InceptionInvalid (InceptionIllFormed (NextIllFormed _))) -> pure ()
+                    result -> fail ("a refusal of the next declaration was expected: " <> show result)
+        mapM_ refusedAtR4 ["D next below one", "D weighted next without commitments", "D next second clause below one"]
     describe "a datum that disagrees with the signed bytes in one field is refused by name" $ do
         let refused name what mutate expected =
                 it (name <> ": " <> what) $ do

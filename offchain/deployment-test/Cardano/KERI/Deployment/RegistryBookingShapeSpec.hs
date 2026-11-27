@@ -43,7 +43,7 @@ import Cardano.KERI.AID.Application (
     actionData,
     activeTokenName,
  )
-import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..), checkpointDatumFromData)
 import Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationBurnData,
     bookingAttestationIssueData,
@@ -249,6 +249,15 @@ spec = describe "#559 the booking transaction of interface v3" $ do
         , ("one request of a key-derived identifier (D code, own SAID apart)", keyDerived)
         ]
 
+    describe "a weighted future declaration is booked with a datum the codec reads back" $
+        mapM_
+            ( \name -> it name $ do
+                s <- scenarioOf [(name, deposit)]
+                case map requestInitialDatum (scRecords s) of
+                    [PLC.Constr 1 [live]] -> fmap (const ()) (checkpointDatumFromData (PLC.Constr 1 [live])) `shouldBe` Just ()
+                    other -> fail ("the initial datum is not a version 2 checkpoint: " <> show other)
+            )
+            ["future:D next unreduced", "future:D next partial coverage"]
     describe "a key-derived inception is booked under its signed qualified identifier" $ do
         it "keys the request, the initial datum and the stored current keys by the exact signed spelling" $ do
             s <- scenarioOf keyDerived

@@ -35,13 +35,13 @@ def replayFold (rp : CardanoKeri.Registry.Params) (re : CardanoKeri.Registry.Env
           reachable := history.reachable reachable, executed := folded }
         history }
 
-structure CertificateResult (current : CertifiedSys) (p : Params) (env : Env) where
+structure CertificateResult (current : CertifiedSys) (p : Params) (env : SystemEnv) where
   next : CertifiedSys
   event : SysStep p env current.state next.state
   checkpointFlow : Option Flow := none
   registryFlow : Option CardanoKeri.Registry.Flow := none
 
-def completeCertificate (current : CertifiedSys) (p : Params) (env : Env)
+def completeCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid : AID) (certificate : FoldCertificate) : Except String (CertificateResult current p env) := do
   match stored : current.state.pending aid with
   | none => throw "checkpoint-association-missing"
@@ -58,9 +58,9 @@ def completeCertificate (current : CertifiedSys) (p : Params) (env : Env)
         registryFlow := some folded.receipt.flow }
     else throw "checkpoint-receipt-mismatch"
 
-def bookCertificate (current : CertifiedSys) (p : Params) (env : Env)
+def bookCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid booker fee : Nat) (history : List CardanoKeri.Registry.Action)
-    (booking : Singular.TerminationBooking) : Except String (CertificateResult current p env) := do
+    (booking : CardanoKeri.Registry.TerminationBooking) : Except String (CertificateResult current p env) := do
   match state : current.state.states aid with
   | .terminationPending key =>
     match stored : current.state.origins aid with
@@ -76,7 +76,9 @@ def bookCertificate (current : CertifiedSys) (p : Params) (env : Env)
             match found : CardanoKeri.Registry.pendingAt booked booking.request.reference with
             | none => throw "checkpoint-booking-entry-missing"
             | some entry =>
-              if fields : entry.booking = booking ∧ entry.payload.aid = aid ∧ entry.payload.token = origin.token then
+              if fields : entry.booking = booking ∧ entry.payload.aid = aid ∧ (entry.payload.token = origin.token ∧
+                  entry.payload.spend = ⟨booking.pendingReference, aid, key⟩ ∧
+                  bookingSharesConviction current.state aid origin booking.pendingReference = true) then
                 let association : PendingAssociation := {
                   origin, keyState := key, reference := booking.request.reference, entry, booked }
                 let event : SysStep p env current.state (current.state.associate aid association) :=
@@ -92,26 +94,29 @@ def isRegistration : Action → Bool
   | .register _ _ => true
   | _ => false
 
-def localCertificate (current : CertifiedSys) (p : Params) (env : Env)
+def localCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid : AID) (now : Slot) (action : Action) : Except String (CertificateResult current p env) := do
   if localAction : isRegistration action = false then
-    match executed : stepFn p env action now (current.state.states aid) with
+    match executed : stepFn p (env aid) action now (current.state.states aid) with
     | none => throw "checkpoint-local-refused"
     | some (flow, state) =>
       have nonregister : ∀ refund pool, action ≠ .register refund pool := by
         intro refund pool equal
         subst action
         contradiction
-      if revealed : current.state.revealOpenB aid action = true then
-        let event : SysStep p env current.state ((current.state.set aid state).retireRevealed action) :=
-          .local ⟨aid, action, now, flow, state, nonregister,
-            (T7_step_iff_stepFn p env).mpr executed, revealed, rfl⟩
-        pure { next := current.advance event, event, checkpointFlow := some flow }
-      else throw "checkpoint-commitment-not-open"
+      let writer := current.state.localWriter (env aid) aid action
+      if authorized : writer.isSome = true then
+        if revealed : current.state.revealOpenB aid action = true then
+          let event : SysStep p env current.state ((current.state.set aid state writer.join (state.producingSpend (env aid))).retireRevealed action) :=
+            .local ⟨aid, action, now, flow, state, nonregister,
+              (T7_step_iff_stepFn p (env aid)).mpr executed, ⟨revealed, authorized⟩, rfl⟩
+          pure { next := current.advance event, event, checkpointFlow := some flow }
+        else throw "checkpoint-commitment-not-open"
+      else throw "checkpoint-rotation-writer-mismatch"
   else throw "checkpoint-registration-receipt-required"
 
 /-- Open a commitment of the release's commitment program. -/
-def openCertificate (current : CertifiedSys) (p : Params) (env : Env) (c : Commitment) :
+def openCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv) (c : Commitment) :
     Except String (CertificateResult current p env) := do
   if free : current.state.commitments c.marker = none then
     if formed : c.wellFormed then
@@ -123,7 +128,7 @@ def openCertificate (current : CertifiedSys) (p : Params) (env : Env) (c : Commi
   else throw "commitment-marker-taken"
 
 /-- Reveal an open commitment without a conviction, inside its window. -/
-def revealCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker : Marker) (now : Slot) :
+def revealCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv) (marker : Marker) (now : Slot) :
     Except String (CertificateResult current p env) := do
   match found : current.state.commitments marker with
   | none => throw "commitment-not-open"
@@ -137,7 +142,7 @@ def revealCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker 
     else throw "commitment-outside-window"
 
 /-- Sweep an open commitment strictly after its window. -/
-def sweepCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker : Marker) (now : Slot) :
+def sweepCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv) (marker : Marker) (now : Slot) :
     Except String (CertificateResult current p env) := do
   match found : current.state.commitments marker with
   | none => throw "commitment-not-open"
@@ -150,14 +155,14 @@ def sweepCertificate (current : CertifiedSys) (p : Params) (env : Env) (marker :
       else throw "commitment-marker-mismatch"
     else throw "commitment-not-expired"
 
-def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)
+def registerCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid : AID) (now : Slot) (refund pool : Nat)
     (rp : CardanoKeri.Registry.Params) (re : CardanoKeri.Registry.Env) (cfg : Singular.Config)
     (certificate : FoldCertificate) (booking : Singular.RegistrationBooking) (index : Nat) :
     Except String (CertificateResult current p env) := do
   if absent : current.state.leaves aid = .absent then
     if unbound : current.state.origins aid = none then
-      match executed : stepFn p env (.register refund pool) now (current.state.states aid) with
+      match executed : stepFn p (env aid) (.register refund pool) now (current.state.states aid) with
       | none => throw "checkpoint-local-refused"
       | some (flow, state) =>
         let folded ← replayFold rp re cfg (CardanoKeri.Registry.Sys.init cfg) .init certificate
@@ -169,27 +174,32 @@ def registerCertificate (current : CertifiedSys) (p : Params) (env : Env)
           | none => throw "checkpoint-registration-output-missing"
             | some output =>
             letI : BEq Singular.FoldMember := instBEqOfDecidableEq
-            if fields : Singular.FoldMember.registration booking ∈
+            if booked : ¬ BookedFacts p rp booking now refund pool then
+              throw "checkpoint-registration-facts-mismatch"
+            else if fields : Singular.FoldMember.registration booking ∈
                 Singular.foldMembers receipt.before.toWorld receipt.transaction ∧
                 booking.request.key = aid ∧
                 output.singularTags = [receipt.before.config.singularTag aid] ∧
                 output.output.address = some booking.request.destination ∧
                 output.output.datumValue = booking.request.datum ∧
                 output.output.lovelace = booking.request.carrierAda then
-              let origin : Origin := {
-                parameters := rp, environment := re, configuration := cfg,
-                registered := receipt.after, token, registrationRef := booking.request.reference,
-                carrierRef := ⟨receipt.transaction.identity, index⟩ }
-              have delivered : DeliveredOrigin receipt booking aid origin := by
-                exact ⟨fields.1, fields.2.1, rfl, rfl, rfl, rfl, rfl, alias,
-                  index, output, outputFound, rfl, fields.2.2.1, fields.2.2.2.1,
-                  fields.2.2.2.2.1, fields.2.2.2.2.2⟩
-              let event : SysStep p env current.state (current.state.installOrigin aid state origin) :=
-                .register ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
-                  absent, unbound, (T7_step_iff_stepFn p env).mpr executed, delivered, rfl⟩
-              pure {
-                next := current.advance event, event, checkpointFlow := some flow,
-                registryFlow := some receipt.flow }
+              match initial : (env aid).initialHistory aid booking.request.datum with
+              | none => throw "checkpoint-inception-writer-mismatch"
+              | some inception => do
+                let origin : Origin := {
+                  parameters := rp, environment := re, configuration := cfg,
+                  registered := receipt.after, token, inception, registrationRef := booking.request.reference,
+                  carrierRef := ⟨receipt.transaction.identity, index⟩ }
+                have delivered : DeliveredOrigin receipt booking aid origin := by
+                  exact ⟨fields.1, fields.2.1, rfl, rfl, rfl, rfl, rfl, alias,
+                    index, output, outputFound, rfl, fields.2.2.1, fields.2.2.2.1,
+                    fields.2.2.2.2.1, fields.2.2.2.2.2⟩
+                let event : SysStep p env current.state (current.state.installOrigin aid state origin) :=
+                  .register ⟨aid, now, refund, pool, flow, state, rp, re, cfg, receipt, booking, origin,
+                    absent, unbound, (T7_step_iff_stepFn p (env aid)).mpr executed, delivered, ⟨Decidable.of_not_not booked, initial⟩, rfl⟩
+                pure {
+                  next := current.advance event, event, checkpointFlow := some flow,
+                  registryFlow := some receipt.flow }
             else throw "checkpoint-registration-delivery-mismatch"
     else throw "checkpoint-origin-already-bound"
   else throw "checkpoint-registration-leaf"

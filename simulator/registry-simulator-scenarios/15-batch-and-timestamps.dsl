@@ -27,17 +27,8 @@ actors:
   7: "termination booker"
   42: "Alice, request refund address"
 env:
-  duplicity:
-    - [11, 0]
-    - [11, 1]
-    - [11, 2]
-    - [12, 0]
-    - [12, 1]
-    - [12, 2]
-    - [13, 0]
-    - [13, 1]
-    - [13, 2]
   inception: [11, 12, 13, 14, 15]
+  convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
 step:
   now: 0
   actor: "anyone presenting the required evidence"
@@ -150,7 +141,7 @@ step:
         state:
           bindings:
             - [11, 0]
-          carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"live","token":0}]
+          carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
           config:
             activePolicy: 8
             applicationPolicy: 7
@@ -296,23 +287,14 @@ fork:
   at: 0
   title: "Process one identity while another remains pending"
   env:
-    duplicity:
-      - [11, 0]
-      - [11, 1]
-      - [11, 2]
-      - [12, 0]
-      - [12, 1]
-      - [12, 2]
-      - [13, 0]
-      - [13, 1]
-      - [13, 2]
     inception: [11, 12, 13, 14, 15]
+    convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
   expectFinal:
     bindings:
       - [13, 2]
       - [12, 1]
       - [11, 0]
-    carriers: [{"aid":13,"k":0,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"st":"live","token":2}]
+    carriers: [{"aid":13,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"pendingSpend":null,"token":2}]
     config:
       activePolicy: 8
       applicationPolicy: 7
@@ -334,17 +316,8 @@ fork:
       - [13,{"known":{"s":"active"}}]
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Alice
@@ -408,17 +381,8 @@ fork:
     note: "Alice books her registration."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Alice
@@ -482,17 +446,8 @@ fork:
     note: "Bob books his registration beside Alice’s."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Hal
@@ -548,7 +503,7 @@ fork:
             bindings:
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":12,"k":0,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"st":"live","token":1},{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"live","token":0}]
+            carriers: [{"aid":12,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"pendingSpend":null,"token":1},{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -570,17 +525,8 @@ fork:
     note: "Hal processes the selected requests."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Cora
@@ -603,7 +549,7 @@ fork:
             bindings:
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":12,"k":0,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"st":"live","token":1},{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"terminationPending","token":0}]
+            carriers: [{"aid":12,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"pendingSpend":null,"token":1},{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -622,20 +568,11 @@ fork:
             trie:
               - [12,{"known":{"s":"active"}}]
               - [11,{"known":{"s":"active"}}]
-    note: "Cora proves duplicity at Alice’s current key."
+    note: "Cora presents one conflicting rival. Alice’s checkpoint spend accepts the comparison with its spent tip and creates her pending termination output."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Cora
@@ -658,7 +595,7 @@ fork:
             bindings:
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":12,"k":0,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"st":"terminationPending","token":1},{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"terminationPending","token":0}]
+            carriers: [{"aid":12,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"pendingSpend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1},{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -677,20 +614,11 @@ fork:
             trie:
               - [12,{"known":{"s":"active"}}]
               - [11,{"known":{"s":"active"}}]
-    note: "Cora proves duplicity at Bob’s current key."
+    note: "Cora presents one conflicting rival. Bob’s checkpoint spend accepts the comparison with its spent tip and creates his pending termination output."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Sam
@@ -718,6 +646,12 @@ fork:
             singularTags: [{"registryId":9,"token":{"name":11,"policy":8}}]
             submittedAt: null
           trieReadyTagsMinted: [{"name":"5600603241348410377","policy":9}]
+          pendingReference:
+            index: 0
+            tx: 105
+          position:
+            epoch: 1
+            sn: 1
         fee: 1
     expect:
       ok: true
@@ -735,7 +669,7 @@ fork:
             bindings:
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":12,"k":0,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"st":"terminationPending","token":1}]
+            carriers: [{"aid":12,"minAda":4,"original":{"datum":712,"key":12,"kind":"active","output":112},"pendingSpend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -749,7 +683,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -757,17 +691,8 @@ fork:
     note: "Sam books Alice’s pending termination."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Sam
@@ -795,6 +720,12 @@ fork:
             singularTags: [{"registryId":9,"token":{"name":12,"policy":8}}]
             submittedAt: null
           trieReadyTagsMinted: [{"name":"2457363527023764289","policy":9}]
+          pendingReference:
+            index: 0
+            tx: 106
+          position:
+            epoch: 1
+            sn: 1
         fee: 1
     expect:
       ok: true
@@ -826,7 +757,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -834,17 +765,8 @@ fork:
     note: "Sam books Bob’s pending termination without changing Alice’s."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Alice
@@ -904,7 +826,7 @@ fork:
             gen: 1
             nextToken: 2
             registrations: [{"applicationTagsMinted":[{"assetName":"3378713363565182131","destination":113,"edge":"insertActive","key":13,"owner":42,"policy":7,"signatures":[]}],"interval":{"lower":0,"upper":1},"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"3378713363565182131","destination":113,"edge":"insertActive","key":13,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"15697965816598438058","policy":9}]},"datum":713,"declaredTip":1,"destination":113,"key":13,"reference":{"index":0,"tx":102},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1},"trieReadyTagsMinted":[{"name":"15697965816598438058","policy":9}]}]
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}},{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
             treasury: 4
             trie:
               - [12,{"known":{"s":"active"}}]
@@ -912,17 +834,8 @@ fork:
     note: "Another identity books a registration beside both terminations."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Hal
@@ -978,7 +891,7 @@ fork:
               - [13, 2]
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":13,"k":0,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"st":"live","token":2}]
+            carriers: [{"aid":13,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"pendingSpend":null,"token":2}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -992,7 +905,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]
@@ -1001,17 +914,8 @@ fork:
     note: "Hal registers the new identity and completes Alice’s termination; Bob’s entire pending entry remains."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Alice
@@ -1058,7 +962,7 @@ fork:
               - [13, 2]
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":13,"k":0,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"st":"live","token":2}]
+            carriers: [{"aid":13,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"pendingSpend":null,"token":2}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -1072,7 +976,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: [{"applicationTagsMinted":[{"assetName":"16463530648679258229","destination":114,"edge":"insertActive","key":14,"owner":42,"policy":7,"signatures":[]}],"interval":{"lower":0,"upper":1},"request":{"carrierAda":14,"contents":{"applicationTags":[{"assetName":"16463530648679258229","destination":114,"edge":"insertActive","key":14,"owner":42,"policy":7,"signatures":[]}],"lovelace":17,"otherAssets":[],"trieReadyTags":[{"name":"13729662992350352876","policy":9}]},"datum":714,"declaredTip":1,"destination":114,"key":14,"reference":{"index":0,"tx":103},"refundAddress":42,"registrationCost":2,"registryId":9,"submittedAt":1},"trieReadyTagsMinted":[{"name":"13729662992350352876","policy":9}]}]
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]
@@ -1081,17 +985,8 @@ fork:
     note: "A further registration is booked while Bob’s pending entry remains."
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 6
     actor: anyone
     as: Alice
@@ -1146,7 +1041,7 @@ fork:
               - [13, 2]
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":13,"k":0,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"st":"live","token":2}]
+            carriers: [{"aid":13,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"pendingSpend":null,"token":2}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -1160,7 +1055,7 @@ fork:
             gen: 2
             nextToken: 3
             registrations: []
-            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":712,"key":12,"kind":"active","output":112},"token":1}}]
+            terminations: [{"booking":{"custodyInputs":[{"datum":712,"key":12,"kind":"active","output":112}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"2457363527023764289","policy":9}]},"declaredTip":1,"destination":112,"key":12,"reference":{"index":0,"tx":201},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":12,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"2457363527023764289","policy":9}]},"payload":{"aid":12,"booker":7,"bookingFee":1,"original":{"datum":712,"key":12,"kind":"active","output":112},"spend":{"aid":12,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":106}},"token":1}}]
             treasury: 8
             trie:
               - [11,{"known":{"s":"terminal"}}]
@@ -1169,17 +1064,8 @@ fork:
     note: "Return the registration after its deadline"
   step:
     env:
-      duplicity:
-        - [11, 0]
-        - [11, 1]
-        - [11, 2]
-        - [12, 0]
-        - [12, 1]
-        - [12, 2]
-        - [13, 0]
-        - [13, 1]
-        - [13, 2]
       inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
     now: 0
     actor: anyone
     as: Hal
@@ -1229,7 +1115,7 @@ fork:
               - [13, 2]
               - [12, 1]
               - [11, 0]
-            carriers: [{"aid":13,"k":0,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"st":"live","token":2}]
+            carriers: [{"aid":13,"minAda":4,"original":{"datum":713,"key":13,"kind":"active","output":113},"pendingSpend":null,"token":2}]
             config:
               activePolicy: 8
               applicationPolicy: 7
@@ -1253,7 +1139,7 @@ fork:
 expectFinal:
   bindings:
     - [11, 0]
-  carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"live","token":0}]
+  carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
   config:
     activePolicy: 8
     applicationPolicy: 7

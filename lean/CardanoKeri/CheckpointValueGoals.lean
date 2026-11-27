@@ -106,7 +106,7 @@ theorem registerJoint_value (i : Interpretation) (c : Context)
   rcases agreement with ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, relation, carrier, _, holding, _⟩
   have step := registration_holds_carrier q.checkpointParams q.registryParams q.checkpointEnv
     ((T7_step_iff_stepFn _ _).mpr registration)
-  refine ⟨by simpa using relation, ?_, by simpa using holding⟩
+  refine ⟨(of_decide_eq_true relation).2.2.1, ?_, by simpa using holding⟩
   rw [beq_iff_eq.mp carrier, step.1]
 
 end CardanoKeri.ConsumerIdentity

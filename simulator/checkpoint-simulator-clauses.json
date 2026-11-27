@@ -417,74 +417,69 @@
       "note": "the address is the registration’s along the whole trace (T6_conviction_refunds_registration_address)."
     },
     {
-      "id": "9.the-second-rotation-is-at",
+      "id": "9.same-sequence",
       "story": 9,
-      "clause": "the second rotation is at the tip's sequence",
+      "clause": "the rival rotation names the spent sequence",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
+      "text": "env.acceptsRival l.epoch l.sn = true",
       "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.satisfies-the-common-prior-next",
+      "id": "9.same-identifier",
       "story": 9,
-      "clause": "satisfies the common prior-next threshold",
+      "clause": "names the spent identifier",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof",
-      "note": "Duplicity.signingValid checks actual verified signers against the authenticated prior commitment; partial_augmented_siblings_accepted admits different key lists."
+      "text": "env.acceptsRival l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.satisfies-its-own-current",
+      "id": "9.prior-next-keys",
       "story": 9,
-      "clause": "satisfies its own current threshold",
+      "clause": "satisfies the previous next-key commitment and threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof",
-      "note": "Duplicity.signingValid grades the rival threshold; exact_key_mutant_refused and weighted_threshold_mutant_refused reject stale or unsatisfiable grading."
+      "text": "env.acceptsRival l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.carries-own-derived-receipts",
+      "id": "9.rival-signing-threshold",
       "story": 9,
-      "clause": "carries receipts from its own derived witness threshold",
+      "clause": "meets its own signing threshold",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof",
-      "note": "Duplicity.receiptsValid applies cuts then adds; tip_witness_mutant_refused and missing_receipts_mutant_refused bind the refusal controls."
+      "text": "env.acceptsRival l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.and-differs-in-complete-content",
+      "id": "9.rival-receipt-threshold",
       "story": 9,
-      "clause": "and differs in complete content from the accepted rotation",
+      "clause": "meets its own receipt threshold using its derived witnesses",
       "class": "guard",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
-      "reason": "no-duplicity-proof",
-      "note": "Duplicity.duplicity_iff and identical_content_mutant_refused require full Content inequality."
+      "text": "env.acceptsRival l.epoch l.sn = true",
+      "reason": "no-duplicity-proof"
     },
     {
-      "id": "9.both-validate-authenticated-context",
+      "id": "9.complete-content-conflict",
       "story": 9,
-      "clause": "Both ordinary rotations validate against authenticated predecessor context",
+      "clause": "and differs from the complete writer event",
       "class": "guard",
-      "note": "Duplicity.duplicity_iff requires both rotationValid premises. Context authentication, digest opening and cryptographic verification remain declared technical boundaries.",
       "kind": "guard",
       "decl": "Step.convict",
       "hyp": "hdup",
-      "text": "env.duplicityAt l.epoch l.sn = true",
+      "text": "env.acceptsRival l.epoch l.sn = true",
       "reason": "no-duplicity-proof"
     },
     {

@@ -45,7 +45,7 @@ def main (args : List String) : IO Unit := do
   let full ← IO.ofExcept (completionIdentity j)
   let association ← IO.ofExcept (associationEvents j)
   IO.println (CardanoKeri.Registry.TraceWire.exactJson (Json.mkObj [
-    ("schema", toJson "cardano-keri.consumer.identity"), ("version", toJson (1 : Nat)),
+    ("schema", toJson "cardano-keri.consumer.identity"), ("version", toJson (2 : Nat)),
     ("limits", toJson ["finite model interpretation, not Cardano bytes", "current observation/refinement remains required",
       "money relation does not identify Checkpoint bonds with physical lovelace", "no production conformance"]),
     ("genesis", toJson j.input.genesisTx), ("genesisOutputs", toJson j.input.genesisOutputs),

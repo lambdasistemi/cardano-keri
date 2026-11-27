@@ -8,7 +8,7 @@ namespace CardanoKeri.Checkpoint.InterfaceChecks
 open CardanoKeri.Registry
 
 def foreignParams : Registry.Params := { Registry.Examples.p with D := 11, hD := by decide }
-def foreignEnv : Registry.Env := { Registry.Examples.env with duplicity := fun _ _ => false }
+def foreignEnv : Registry.Env := { Registry.Examples.env with presentedConviction := fun _ => none }
 def foreignConfig : Singular.Config := { Registry.Examples.cfg with registryId := 10 }
 
 example : True := by

@@ -20,11 +20,12 @@ def evidence : TraceWire.EnvTable := {
   rotationTo := (List.range 12).map fun n => (n, n, n + 1)
   depositAuthorized := List.range 13
   quorum := List.range 13
-  duplicityAt := (List.range 13).map fun n => (n, n) }
-def ce : Env := evidence.toEnv
+  duplicityAt := (List.range 13).map fun n => (n, n)
+  writers := TraceWire.WriterTable.fixture 11 711 ((List.range 12).map fun n => (n, n, n + 1)) }
+def ce : Env := evidence.toEnv 11
 def registryEnvironment : CardanoKeri.Registry.TraceWire.EnvTable := {
-  inception := [11, 12, 13],
-  duplicity := [11, 12, 13].flatMap fun aid => (List.range 13).map fun n => (aid, n) }
+  inception := [11, 12, 13]
+  convictions := [CardanoKeri.Registry.Scenarios.convictionFixture 11 8 8, CardanoKeri.Registry.Scenarios.convictionFixture 12 1 1, CardanoKeri.Registry.Scenarios.convictionFixture 13 1 1] }
 def context : Context := {
   network := 0
   release := { applicationPolicy := 7, applicationCredential := 110, stateProgram := 88, statePolicy := 8 },
@@ -41,7 +42,7 @@ def interpretation : Interpretation := {
   code := fixtureCodec
   keyOf := id
   decode := fun release raw => if release == context.release && raw == 711 then
-    some ⟨11, .present ⟨0, 0, false, false, 2, 42, 3, false⟩⟩ else none }
+    some ⟨11, .present ⟨0, 0, false, false, 1, 42, 3, false⟩⟩ else none }
 def abstractRegistry (r : Singular.TokenId) : Nat :=
   if r == registryAsset interpretation context then 9 else r.name + 100
 -- Finite witness interpretation only, not a cryptographic root implementation.
@@ -90,7 +91,7 @@ def inputFor (context : Context) : Except String RegistrationInput := do
     signers := [], interval := ⟨2, 3⟩, fee := tx.transaction.fee, donation := tx.transaction.donation }
   pure {
     registryParams := S.p, registryEnv := registryEnvironment.toEnv, configuration := S.cfg,
-    checkpointParams := cp, checkpointEnv := ce, now := 2, refund := 42, pool := 3,
+    checkpointParams := cp, checkpointEnv := ce, now := 1, refund := 42, pool := 3,
     genesisTx := genesisTx, genesisOutputs := [genesisOutput], booking := booking,
     unspent := u, economicTx := tx, fullFold := fullFold, holdingIndex := 1 }
 

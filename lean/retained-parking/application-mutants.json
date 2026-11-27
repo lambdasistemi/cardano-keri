@@ -305,32 +305,32 @@
   },
   {
     "id": "termination-booking-pending-state",
-    "before": "    | some d => i.keyOf d.aid == key && pendingState d.state",
-    "after": "    | some d => i.keyOf d.aid == key && true",
+    "before": "  | some ⟨aid, .terminationPending position⟩ =>",
+    "after": "  | some ⟨aid, state⟩ =>\n    let position := match state with\n      | .terminationPending keyState => keyState\n      | .present live => live.hash\n      | _ => ⟨0, 0⟩",
     "failure": "verdict-changed termination-booking-live-checkpoint",
     "owner": "CardanoKeri.Application.termination_approval_requires_conviction",
     "test": "ApplicationChecks"
   },
   {
     "id": "termination-booking-key",
-    "before": "    | some d => i.keyOf d.aid == key && pendingState d.state",
-    "after": "    | some d => true && pendingState d.state",
+    "before": "&& i.keyOf aid == key then",
+    "after": "&& true then",
     "failure": "verdict-changed termination-booking-other-aid",
     "owner": "CardanoKeri.Application.termination_approval_requires_pending",
     "test": "ApplicationChecks"
   },
   {
     "id": "termination-booking-pending-address",
-    "before": "  input.credential == c.checkpointCredential &&\n  (match checkpointDatum",
-    "after": "  true &&\n  (match checkpointDatum",
+    "before": "if input.credential == c.checkpointCredential && input.lovelace",
+    "after": "if true && input.lovelace",
     "failure": "verdict-changed termination-booking-at-other-address",
     "owner": "CardanoKeri.Application.termination_approval_requires_pending",
     "test": "ApplicationChecks"
   },
   {
     "id": "termination-booking-pending-minimum",
-    "before": "  input.lovelace == rp.Mc &&",
-    "after": "  true &&",
+    "before": "&& input.lovelace == rp.Mc &&",
+    "after": "&& true &&",
     "failure": "verdict-changed termination-booking-pending-one-more",
     "owner": "CardanoKeri.Application.termination_approval_requires_pending",
     "test": "ApplicationChecks"
@@ -438,5 +438,29 @@
     "failure": "verdict-changed fold-without-inception-evidence",
     "owner": "CardanoKeri.Application.only_booking_reads_inception",
     "test": "ApplicationChecks"
+  },
+  {
+    "id": "termination-receipt-spent-reference",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨⟨input.reference.tx, 0⟩, aid, position⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
+  },
+  {
+    "id": "termination-receipt-spent-identifier",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨input.reference, aid + 1, position⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
+  },
+  {
+    "id": "termination-receipt-native-position",
+    "before": "some ⟨input.reference, aid, position⟩",
+    "after": "some ⟨input.reference, aid, ⟨position.sn, position.epoch⟩⟩",
+    "failure": "pending-receipt-changed",
+    "owner": "CardanoKeri.Application.Custody.booking_receipt_provenance",
+    "test": "ApplicationPendingReadChecks"
   }
 ]

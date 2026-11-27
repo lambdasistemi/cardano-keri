@@ -9,16 +9,16 @@
   },
   {
     "id": "convict-wrong-key",
-    "before": "if old.aid == aid then { old with st := .terminationPending } else old",
-    "after": "if old.aid == aid then { old with st := .terminationPending, k := old.k + 1 } else old",
+    "before": "if old.aid == aid then (old.convicted env aid) else old",
+    "after": "if old.aid == aid then { old with pendingSpend := (env.pendingSpend aid).map (fun spend => { spend with position.sn := spend.position.sn + 1 }) } else old",
     "failure": "conviction-still-active",
     "owner": "CardanoKeri.Registry.local_conviction_retains",
     "test": "RegistryRetentionChecks"
   },
   {
     "id": "convict-no-evidence",
-    "before": "c.st == .terminationPending || env.duplicity aid c.k != true",
-    "after": "c.st == .terminationPending || (env.duplicity aid c.k && false)",
+    "before": "c.st == .terminationPending || !(env.pendingSpend aid).isSome",
+    "after": "c.st == .terminationPending",
     "failure": "missing-duplicity",
     "owner": "CardanoKeri.Registry.pending_has_keri_authorization",
     "test": "RegistryRetentionChecks"
@@ -99,7 +99,7 @@
   },
   {
     "id": "live-booking-allowed",
-    "before": "if c.st != .terminationPending then throw \"keri-conviction-required\"",
+    "before": "if ¬(c.st = .terminationPending ∧ c.pendingSpend = some b.spend) then throw \"keri-conviction-required\"",
     "after": "if false then throw \"keri-conviction-required\"",
     "owner": "CardanoKeri.Registry.live_cannot_book, CardanoKeri.Registry.bookTermination_iff",
     "failure": "live-booking-refused",

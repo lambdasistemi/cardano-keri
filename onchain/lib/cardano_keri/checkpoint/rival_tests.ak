@@ -316,3 +316,36 @@ test an_addition_already_in_the_set_is_not_repeated() {
     !rotation_valid(base_previous(), two_witnesses),
   }
 }
+
+// T15 of the keripy comparison (#589): keripy refuses to construct the
+// threshold [3/2, 1/2]. The model's admission guard refuses it in each of the
+// three places it is read (the rival's signing rule, its declared next rule
+// and the predecessor's next rule); without the ceiling the two keys signing
+// would satisfy it. The control is the admissible [1/2, 1/2] under the same
+// keys, signers and receipts.
+test the_589_t15_threshold_is_refused_wherever_the_rival_reads_it() {
+  let t15 = Weighted([[Weight { num: 3, den: 2 }, Weight { num: 1, den: 2 }]])
+  let halves = Weighted(
+    [[Weight { num: 1, den: 2 }, Weight { num: 1, den: 2 }]],
+  )
+  let two_keys = Rotation {
+    ..base_rival(),
+    keys: [key_of(1), key_of(2)],
+    signers: [key_of(1), key_of(2)],
+  }
+  let previous = Previous {
+    ..base_previous(),
+    next_threshold: Weighted(
+      [[Weight { num: 3, den: 2 }, Weight { num: 1, den: 2 }]],
+    ),
+  }
+  and {
+    rotation_valid(base_previous(), Rotation { ..two_keys, threshold: halves }),
+    !rotation_valid(base_previous(), Rotation { ..two_keys, threshold: t15 }),
+    !rotation_valid(
+      base_previous(),
+      Rotation { ..two_keys, threshold: halves, next_threshold: t15 },
+    ),
+    !rotation_valid(previous, Rotation { ..two_keys, threshold: halves }),
+  }
+}

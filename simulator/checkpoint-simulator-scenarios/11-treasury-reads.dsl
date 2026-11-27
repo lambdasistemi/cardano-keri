@@ -373,7 +373,27 @@ step:
         keyState:
           epoch: 2
           sn: 2
-        evidence: [{"epoch":2,"prior":{"aid":1,"sn":1,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":2,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+        evidence:
+          event:
+            aid: 0
+            sn: 2
+            kind: rotation
+            priorDigest: 0
+            keys: [0]
+            threshold:
+              count:
+                required: 1
+            nextKeys: [1]
+            nextThreshold:
+              count:
+                required: 1
+            cuts: []
+            adds: []
+            witnessThreshold: 0
+            extension: []
+          structureVerified: true
+          signatures: [{"signer":0,"event":{"aid":0,"sn":2,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+          receipts: []
         payee: 3
         openedAt: 49
         eligibleAfter: 50

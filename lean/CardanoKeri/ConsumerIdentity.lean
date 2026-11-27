@@ -21,6 +21,11 @@ structure DecodedDatum where
 /-- A decoded datum with only its datum facts. -/
 def DecodedDatum.facts (d : DecodedDatum) : DecodedDatum := { d with state := d.state.datumFacts }
 
+/-- In a consuming transaction the relying party selects the intended release,
+registry and identifier. Its validator derives the asset using the release's
+codec, hash and key encoding and decodes the referenced holding. The genesis
+transaction of the deployer fixes the registry identity. For a public read the
+same observations are checked by the reader. -/
 structure Interpretation where
   hash : AH.Hash
   code : AH.Codec
@@ -218,7 +223,7 @@ def registrationAgreementB (i : Interpretation) (c : Context) (q : RegistrationI
   eo.output.address == some q.booking.request.destination &&
   eo.output.datumValue == q.booking.request.datum &&
   eo.output.lovelace == q.booking.request.carrierAda &&
-  q.registryParams.D == q.checkpointParams.D + q.checkpointParams.B &&
+  decide (BookedFacts q.checkpointParams q.registryParams q.booking q.now q.refund q.pool) &&
   q.booking.request.carrierAda == st.heldValue q.checkpointParams q.registryParams &&
   eo.singularTags == [booked.config.singularTag c.aid] &&
   o.lovelace == q.booking.request.carrierAda &&
@@ -260,10 +265,12 @@ def registerJoint (i : Interpretation) (c : Context)
   if !registrationAgreementB i c q created booked after st o eo then
     throw "registration-correspondence-mismatch"
   let some token := CardanoKeri.Registry.bindingAt after c.aid | throw "origin-binding-missing"
+  let some inception := q.checkpointEnv.initialHistory c.aid q.booking.request.datum
+    | throw "checkpoint-inception-writer-mismatch"
   let origin : Origin := {
     parameters := q.registryParams, environment := q.registryEnv,
     configuration := q.configuration, registered := after,
-    token := token, registrationRef := q.booking.request.reference,
+    token := token, inception, registrationRef := q.booking.request.reference,
     carrierRef := ⟨q.economicTx.identity, q.holdingIndex⟩ }
   pure {
     created := created, booked := booked, after := after,

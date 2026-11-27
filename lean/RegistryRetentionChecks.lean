@@ -34,11 +34,11 @@ def retention : Except String Unit := do
   let (convictFlow, pending) ← execute live (.convictCkpt 11)
   check "conviction-still-active" (decide
     (pending.state.toWorld = live.state.toWorld ∧ convictFlow = {} ∧
-      carrierAt pending.state 11 = some { original with st := .terminationPending } ∧
+      carrierAt pending.state 11 = some (original.convicted env 11) ∧
       Singular.worldSingularSupply pending.state.toWorld 11 = 1))
   check "pending-cannot-reconvict" (refused (convictCkpt env pending.state 11))
   check "missing-duplicity" (refused
-    (convictCkpt { env with duplicity := fun _ _ => false } live.state 11))
+    (convictCkpt { env with presentedConviction := fun _ => none } live.state 11))
 
 def main : IO Unit := do
   match retention with

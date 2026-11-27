@@ -74,7 +74,7 @@ that key state. -/
 theorem pending_only_by_conviction (p : Params) (env : Env) {a : Action} {t : Slot}
     {s : State} {f : Flow} {h : Hash} (hs : Step p env a t s f (.terminationPending h)) :
     ∃ (l : Live) (payee : Addr) (c : Commitment), s = .present l ∧ a = .convict payee c ∧
-      env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t ∧ l.hash = h := by
+      env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t ∧ l.hash = h := by
   cases hs with
   | convict now payee c hdup hent => exact ⟨_, payee, c, rfl, rfl, hdup, hent, rfl⟩
 
@@ -88,12 +88,12 @@ theorem trace_pending_convicted (p : Params) (env : Env) {t : Slot} {s : State}
     {es : List (Slot × Action)} {h : Hash} (tr : Trace p env t s es (.terminationPending h)) :
     s = .terminationPending h ∨
       ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
-        env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h := by
+        env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h := by
   suffices general : ∀ {t : Slot} {s final : State} {es : List (Slot × Action)},
       Trace p env t s es final → final = .terminationPending h →
       s = .terminationPending h ∨
         ∃ (t' : Slot) (payee : Addr) (c : Commitment) (l : Live), (t', Action.convict payee c) ∈ es ∧
-          env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h from general tr rfl
+          env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t' ∧ l.hash = h from general tr rfl
   intro t s final es tr target
   induction tr with
   | nil => exact Or.inl target
@@ -113,7 +113,7 @@ theorem reachable_pending_convicted (p : Params) (env : Env) {h : Hash}
     (reach : Reachable p env (.terminationPending h)) :
     ∃ (t : Slot) (es : List (Slot × Action)) (t' : Slot) (payee : Addr) (c : Commitment) (l : Live),
       Trace p env t .absent es (.terminationPending h) ∧
-      (t', Action.convict payee c) ∈ es ∧ env.duplicityAt l.epoch l.sn = true ∧
+      (t', Action.convict payee c) ∈ es ∧ env.acceptsRival l.epoch l.sn = true ∧
       c.entitles env l payee t' ∧ l.hash = h := by
   obtain ⟨t, es, tr⟩ := reach
   rcases trace_pending_convicted p env tr with absurd | ⟨t', payee, c, l, mem, dup, ent, hash⟩
@@ -424,7 +424,7 @@ theorem T5_freeze_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : 
 When Execute the local conviction transition, or compare it to its complete guard in the iff statements.
 Then The exact existing component flow and concrete duplicity guard remain; the target is pending at the source hash. Both iff directions remain obligations. Enabled clauses are local applicability only, not a claim that an arbitrary economic request can be booked. -/
 theorem T5_convict_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (payee : Addr)
-    (c : Commitment) (hdup : env.duplicityAt l.epoch l.sn = true)
+    (c : Commitment) (hdup : env.acceptsRival l.epoch l.sn = true)
     (hent : c.entitles env l payee t) :
     ∃ f, Step p env (.convict payee c) t (.present l) f (.terminationPending l.hash) := by
   exact ⟨_, Step.convict t payee c hdup hent⟩
@@ -734,14 +734,14 @@ theorem T7_trace_iff_replay (p : Params) (env : Env) {t : Slot} {s s' : State} {
 
 /-- **T8a.** In every reachable system every leaf agrees with its state:
 the leaf is exactly the identity-level projection of the UTxO's state. -/
-theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :
+theorem T8_leaf_agrees_with_state (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) (aid : AID) :
     s.leaves aid = (s.states aid).leaf := by
   induction h with
   | init => rfl
   | step _ hs ih =>
     cases hs with
     | register event =>
-      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       simp only [Sys.installOrigin, Sys.set]
       split <;> simp_all
     | «local» event =>
@@ -769,8 +769,8 @@ theorem T8_leaf_agrees_with_state (p : Params) (env : Env) {s : Sys} (h : SysRea
 /-- Given Arbitrary reachable Checkpoint Sys and a successful local Step on the chosen AID with every typed parameter.
 When Apply Sys.set to that local result.
 Then The entire leaf function is unchanged iff Action.touchesLeaf is false. Only local registration has touchesLeaf=true; conviction-to-pending is false. Completed retirement is a separate associated system event, not a local Action. -/
-theorem T8_edges_leave_the_leaf (p : Params) (env : Env) {s : Sys} {aid : AID} {a : Action} {now : Slot}
-    {f : Flow} {st' : State} (hs : SysReach p env s) (hstep : Step p env a now (s.states aid) f st') :
+theorem T8_edges_leave_the_leaf (p : Params) (env : SystemEnv) {s : Sys} {aid : AID} {a : Action} {now : Slot}
+    {f : Flow} {st' : State} (hs : SysReach p env s) (hstep : Step p (env aid) a now (s.states aid) f st') :
     (s.set aid st').leaves = s.leaves ↔ a.touchesLeaf = false := by
   have hag := T8_leaf_agrees_with_state p env hs aid
   generalize hst : s.states aid = st at hstep hag
@@ -791,7 +791,7 @@ theorem T8_edges_leave_the_leaf (p : Params) (env : Env) {s : Sys} {aid : AID} {
 `absent` has a leaf: active or retired — the token was minted once
 by a registration under an absence proof and the leaf never returns to
 absent. -/
-theorem T8_present_implies_registered (p : Params) (env : Env) {s : Sys} (h : SysReach p env s)
+theorem T8_present_implies_registered (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s)
     (aid : AID) (hne : s.states aid ≠ .absent) : s.leaves aid ≠ .absent := by
   have hag := T8_leaf_agrees_with_state p env h aid
   rw [hag]
@@ -801,7 +801,7 @@ theorem T8_present_implies_registered (p : Params) (env : Env) {s : Sys} (h : Sy
 /-- Given All p/env/reachable system s and AID; no assumption of live eligibility.
 When Observe the key and application state.
 Then Active iff present or terminationPending, in both directions; retired implies completed conviction. The pending payload retains the recorded key state; its system association retains the whole booked request. -/
-theorem T8_leaf_states (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :
+theorem T8_leaf_states (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) (aid : AID) :
     (s.leaves aid = .active ↔
       (∃ l, s.states aid = .present l) ∨
       (∃ pending, s.states aid = .terminationPending pending)) ∧
@@ -813,7 +813,7 @@ theorem T8_leaf_states (p : Params) (env : Env) {s : Sys} (h : SysReach p env s)
 /-- Given All p/env/s/aid with SysReach p env s.
 When Observe State.hasOutput and the leaf.
 Then Output existence iff active key, including present and terminationPending. The pending output retains the representative; completed conviction has neither output nor active key. -/
-theorem T8_utxo_iff_active (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :
+theorem T8_utxo_iff_active (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) (aid : AID) :
     (s.states aid).hasOutput = true ↔ s.leaves aid = .active := by
   have hag := T8_leaf_agrees_with_state p env h aid
   rw [hag]
@@ -822,13 +822,13 @@ theorem T8_utxo_iff_active (p : Params) (env : Env) {s : Sys} (h : SysReach p en
 /-- Given Arbitrary reachable Checkpoint Sys, actual system step and AID.
 When Observe that AID after the step.
 Then A nonabsent leaf never becomes absent, and a retired leaf remains retired. Registration-origin and booking-association events preserve the same lifecycle clauses. -/
-theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : SysReach p env s)
+theorem T8_leaf_never_absent_again (p : Params) (env : SystemEnv) {s s' : Sys} (hs : SysReach p env s)
     (h : SysStep p env s s') (aid : AID) :
     (s.leaves aid ≠ .absent → s'.leaves aid ≠ .absent) ∧
     (s.leaves aid = .retired → s'.leaves aid = .retired) := by
   have hag := T8_leaf_agrees_with_state p env hs aid
   have key : ∀ (aid₀ : AID) (a : Action) (now : Slot) (f : Flow) (st' : State),
-      Step p env a now (s.states aid₀) f st' →
+      Step p (env aid₀) a now (s.states aid₀) f st' →
       (s.leaves aid ≠ .absent → (s.set aid₀ st').leaves aid ≠ .absent) ∧
       (s.leaves aid = .retired → (s.set aid₀ st').leaves aid = .retired) := by
     intro aid₀ a now f st' hstep
@@ -839,7 +839,7 @@ theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : S
     · simp [Sys.set, heq]
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, _, rfl⟩ := event
     exact key _ _ _ _ _ step
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, step, _, rfl⟩ := event
@@ -866,8 +866,8 @@ theorem T8_leaf_never_absent_again (p : Params) (env : Env) {s s' : Sys} (hs : S
 /-- Given All p/env/reachable s/aid, and all action data, times, flows and successors in each quantified clause.
 When A registration succeeds.
 Then Registration requires the previously absent key. There is no other minting step. Same-token identity is separately checked in Registry. -/
-theorem T8_mint_once (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) (aid : AID) :
-    (∀ refund pool0 now f st', Step p env (.register refund pool0) now (s.states aid) f st' →
+theorem T8_mint_once (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) (aid : AID) :
+    (∀ refund pool0 now f st', Step p (env aid) (.register refund pool0) now (s.states aid) f st' →
       s.leaves aid = .absent) := by
   have hag := T8_leaf_agrees_with_state p env h aid
   intro refund pool0 now f st' hstep
@@ -884,7 +884,7 @@ theorem T8_freeze_and_convict_actors_are_proof (sn' : Seq) (payee : Addr) (c : C
 /-- Given Arbitrary Checkpoint parameters and environment, before/after abstract Sys and actual SysStep.
 When Classify the system transition.
 Then Exactly the fully defined RegistrationEvent, LocalEvent, BookingEvent, CompletionEvent, OpenEvent, RevealEvent or SweepEvent holds. Local lifecycle clauses remain complete; registration binds the actual origin, booking fixes its pending association, completion checks the stored context, history, hash, full entry, reference and alias, and the three commitment events open, reveal or sweep one commitment. Full mixed Registry effects are separate from this focused Checkpoint observation. -/
-theorem T8_sysstep_partition (p : Params) (env : Env) {s s' : Sys}
+theorem T8_sysstep_partition (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : SysStep p env s s') :
     RegistrationEvent p env s s' ∨ LocalEvent p env s s' ∨
       BookingEvent s s' ∨ CompletionEvent s s' ∨
@@ -986,7 +986,7 @@ theorem T12_convict_exact (p : Params) (env : Env) {a : Action} {t : Slot} {l : 
       f = { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
             convictor := some { addr := payee, dreg := p.D } } ∧
       c.entitles env l payee t) ∧
-    env.duplicityAt l.epoch l.sn = true := by
+    env.acceptsRival l.epoch l.sn = true := by
   cases h with
   | convict _ _ _ hdup hent => exact ⟨rfl, ⟨_, _, rfl, rfl, hent⟩, hdup⟩
 
@@ -1267,7 +1267,7 @@ theorem Step.convict_iff {p : Params} {env : Env} (l : Live) (now : Slot) (payee
     Step p env (.convict payee c) now (.present l)
       { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
         convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-    env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now := by
+    env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now := by
   constructor
   · intro h
     cases h with
@@ -1363,6 +1363,6 @@ variable (p : Params) (env : Env)
   Step p env (.convict payee c) now (.present l)
     { refund := some { addr := l.refundTo, b := l.bHeld p, pool := l.pool },
       convictor := some { addr := payee, dreg := p.D } } (.terminationPending l.hash) ↔
-  env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee now)
+  env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee now)
 
 end CheckpointInversionExactTypes

@@ -1,6 +1,6 @@
 const INTEREST = Object.fromEntries(Object.entries(CAST).map(([id, c]) => [id, c.blurb]));
 const addNat = (a, b) => E.toWire(E.toInternal(a) + E.toInternal(b));
-const evHas = (env, kind, args) => env[kind].some(x => equal(x, kind === 'inception' ? args[0] : args));
+const evHas = (env, kind, args) => env[kind].some(x => equal(x, args[0]));
 const canonicalJson = canonical;
 const treeAddEvidence = (tree, row) => ({ tree: editEvidence(tree, row, true) });
 const treeRemoveEvidence = (tree, row) => ({ tree: editEvidence(tree, row, false) });
@@ -128,7 +128,7 @@ function describeFlow(f) {
   return bits.length ? bits.join('; ') : 'no application flow recorded';
 }
 const REASON_WORDS = {
-  "keri-conviction-refused": "Conviction needs duplicity at the retained key and a carrier not already pending.",
+  "keri-conviction-refused": "Conviction requires a live carrier and an accepted comparison of the spent tip with one rival.",
   "keri-conviction-required": "Only a convicted carrier can be booked for termination; a live carrier stays in custody until it is convicted.",
   "keri-carrier-missing": "This identity has no retained carrier at this point.",
   "keri-generation-mismatch": "This proposal names a registry generation that has already moved.",
@@ -149,7 +149,7 @@ const REASON_WORDS = {
 const reasonText = reason => (REASON_WORDS[reason] || reason.replaceAll('-', ' ')) + ' [' + reason + ']';
 function needsOf(action) {
   const t = actionTag(action);
-  if (t === 'convictCkpt') return { cls: 'public', text: 'duplicity evidence at this key' };
+  if (t === 'convictCkpt') return { cls: 'public', text: 'one rival against the spent checkpoint' };
   if (t === 'returnRequests') return { cls: 'public', text: 'the deadline passed; refund to the declared address, no signature' };
   return { cls: 'public', text: t === 'fold' ? 'complete batch, value, token and authorization checks' : 'complete request or transaction observations' };
 }
@@ -189,14 +189,14 @@ function drawScene() {
   for (const [id,c] of Object.entries(CAST)) {
     const q=layout['actor:'+id], current=c.aid ? ckptOf(sess,c.aid) : null;
     parts.push(s('g',{class:'actor'+(app.actor===id?' on':''),dataset:{obj:'actor',key:'actor:'+id},transform:'translate('+q.x+','+q.y+')',role:'button',tabindex:0,onclick:()=>{app.actor=id;render();}},
-      s('circle',{class:'avatar',r:28}),s('text',{class:'nm',y:4},c.name),s('text',{class:'role',y:42},c.role),s('text',{class:'badge',y:57},current ? current.st+' · key '+current.k : '')));
+      s('circle',{class:'avatar',r:28}),s('text',{class:'nm',y:4},c.name),s('text',{class:'role',y:42},c.role),s('text',{class:'badge',y:57},current ? (current.pendingSpend ? 'pending' : 'live') : '')));
   }
   const box=(key,x,y,w,title,lines,klass='utxo')=>s('g',{dataset:{obj:key,key}},s('rect',{class:klass,x,y,width:w,height:Math.max(75,37+lines.length*23),rx:10}),s('text',{class:'state-word',x:x+10,y:y+20},title),...lines.map((line,i)=>s('text',{class:'datum-v',x:x+10,y:y+44+i*23},line)));
   parts.push(box('registry',290,65,208,'generation '+st.gen,st.trie.length ? st.trie.slice(0,5).map(([aid,l])=>'AID '+aid+' · '+leafWord(l)) : ['no registered keys']));
   const requests=pendingOf(sess);
   parts.push(box('inbox',510,65,203,'requests · '+requests.length,requests.slice(0,5).map(m=>m.kind+' · '+m.booking.request.key),'tray'));
-  const holders=[...st.carriers.map(c=>({aid:c.aid,token:c.token,k:c.k,state:c.st,min:c.minAda})),...st.terminations.map(e=>({aid:e.payload.aid,token:e.payload.token,k:e.payload.keyState,state:'booked termination',min:e.booking.request.contents.lovelace}))];
-  holders.slice(0,3).forEach((c,i)=>{const x=288+i*143;layout['ckpt:'+c.aid]={x:x+65,y:330};parts.push(box('ckpt:'+c.aid,x,280,138,'AID '+c.aid,[c.state,'token '+c.token+' · key '+c.k,'retained '+c.min],'ck'));});
+  const holders=[...st.carriers.map(c=>({aid:c.aid,token:c.token,k:c.pendingSpend?.position,state:c.pendingSpend?'pending':'live',min:c.minAda})),...st.terminations.map(e=>({aid:e.payload.aid,token:e.payload.token,k:e.payload.spend.position,state:'booked termination',min:e.booking.request.contents.lovelace}))];
+  holders.slice(0,3).forEach((c,i)=>{const x=288+i*143;layout['ckpt:'+c.aid]={x:x+65,y:330};parts.push(box('ckpt:'+c.aid,x,280,138,'AID '+c.aid,[c.state,'token '+c.token+(c.k?' · '+c.k.epoch+'/'+c.k.sn:''),'retained '+c.min],'ck'));});
   if(!holders.length)parts.push(s('text',{class:'hint',x:305,y:330},'No retained carrier or booked termination'));
   parts.push(box('validator',300,423,400,'Transaction judgment',['admit or refuse these complete observations'],'tray'));
   const rows=Object.entries(sess.env).flatMap(([key,xs])=>xs.map(x=>key+' '+(Array.isArray(x)?x.join('/') : x)));
@@ -392,7 +392,7 @@ function renderPots() {
     ['Pending termination','Conviction retains the token and key. Booking moves whole custody to a request; another request cannot complete it.'],
     ['Retired registry key','Permanent. Its representative token was burned by the consuming fold.'],
     ['Time windows','Registration processing: '+c.processTime+' slots after the booking. Until then only a fold spends the request; from then anyone returns it, less its tip, to its refund address. Complete transaction bounds are checked.'],
-    ['Evidence table','Finite model predicates, not generated signatures or a concrete KERI proof. The local checkpoint simulator separately checks concrete duplicity.']])dl.append(h('dt',{},term),h('dd',{},body));
+    ['Evidence table','The conviction observation names an indexed output and supplies the writer, its predecessor and the signed rival. The simulator checks event-bound signature and receipt reads. The fixture table supplies the abstract mint attestation.']])dl.append(h('dt',{},term),h('dd',{},body));
 }
 
 function renderNarration() {
@@ -487,10 +487,14 @@ const backendMoveSlot=moveSlot;
 moveSlot=function(target){try{adoptTree(backendMoveSlot(currentTree(),target),true);$('slot-msg').textContent='';render();}catch(error){$('slot-msg').textContent=error.message;}};
 function renderEvidence() {
   const sess=cur(),env=sess.env;
-  const aids=[...new Set([11,12,13,...env.inception,...env.duplicity.map(r=>r[0]),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
-  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','inception','duplicity at key'].map(t=>h('th',{},t))))),tb=h('tbody',{});
-  const cb=(kind,args,label)=>h('label',{},h('input',{type:'checkbox',dataset:{ev:kind,aid:args[0],k:args[1]??''},checked:evHas(env,kind,args),onchange:e=>{adoptTree(editEvidence(currentTree(),{[kind]:args},e.target.checked),true);render();}}),label);
-  for(const aid of aids){const key=ckptOf(sess,aid)?.k??0;const ks=[...new Set([0,1,2,3,key])];tb.append(h('tr',{},h('td',{},aid),h('td',{},cb('inception',[aid],'verifies')),h('td',{},ks.map(k=>cb('duplicity',[aid,k],String(k))))));}
+  const aids=[...new Set([11,12,13,...env.inception,...env.convictions.map(r=>r.comparison.tip.aid),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
+  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','inception','conviction observation'].map(t=>h('th',{},t))))),tb=h('tbody',{});
+  const cb=(kind,args,label)=>h('label',{},h('input',{type:'checkbox',dataset:{ev:kind,aid:kind==='inception'?args[0]:args[0].comparison.tip.aid},checked:evHas(env,kind,args),onchange:e=>{adoptTree(editEvidence(currentTree(),{[kind]:args},e.target.checked),true);render();}}),label);
+  for(const aid of aids){
+    const read=env.convictions.find(r=>equal(r.comparison.tip.aid,aid))??Judgment.convictionFixture(aid,1,1);
+    tb.append(h('tr',{},h('td',{},aid),h('td',{},cb('inception',[aid],'verifies')),
+      h('td',{},cb('convictions',[read],read.output.tx+'#'+read.output.index))));
+  }
   tbl.append(tb);clear($('evbody')).append(tbl);
 }
 
@@ -507,7 +511,7 @@ function renderNumbers() {
 /* ---- the chart: three lanes over the current branch --------------------------- */
 function heldBy(sess) {
   const st=E.toInternal(sess.state),p=E.toInternal(sess.params);
-  return {dreg:BigInt(st.carriers.filter(c=>c.st==='live').length)*p.D,b:st.carriers.reduce((n,c)=>n+c.minAda,0n)+[...st.registrations,...st.terminations.map(e=>e.booking)].reduce((n,b)=>n+b.request.contents.lovelace,0n)};
+  return {dreg:BigInt(st.carriers.filter(c=>c.pendingSpend===null).length)*p.D,b:st.carriers.reduce((n,c)=>n+c.minAda,0n)+[...st.registrations,...st.terminations.map(e=>e.booking)].reduce((n,b)=>n+b.request.contents.lovelace,0n)};
 }
 function paidOut(f){return E.toInternal(f.bondReturn?.[1]??0)+E.toInternal(f.premium?.[1]??0);}
 
@@ -577,10 +581,10 @@ function renderMoney() {
 }
 /* ---- the story player: a scenario becomes a tree ------------------------------ */
 function startFresh() {
-  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{inception:[],duplicity:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
+  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{inception:[],convictions:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
   app.story=null;app.punch=null;app.challenge=null;app.pastPunch=false;
 }
-const CHALLENGES={sweep:{title:'Sweep a live carrier',actor:'sam',goal:'Alice has a live carrier and nobody holds duplicity against her key. Try to book its termination and collect the booking premium.',won:()=>pathTo(app.cursor).map(node).some(n=>n.record?.action?.bookTermination&&n.record.result.ok),why:'A termination booking requires a convicted carrier: a live carrier cannot be booked (Registry.live_cannot_book). There is no owner exit to collect. Conviction needs duplicity at the carrier’s key; if you add that premise to the model evidence table, the premise has changed.'}};
+const CHALLENGES={sweep:{title:'Sweep a live carrier',actor:'sam',goal:'Alice has a live carrier and the evidence table contains no accepted conviction for it. Try to book its termination and collect the booking premium.',won:()=>pathTo(app.cursor).map(node).some(n=>n.record?.action?.bookTermination&&n.record.result.ok),why:'A termination booking requires a convicted carrier: a live carrier cannot be booked (Registry.live_cannot_book). There is no owner exit to collect. Conviction needs duplicity at the carrier’s key; if you add that premise to the model evidence table, the premise has changed.'}};
 function playChallenge(id){if(id!=='sweep'){startFresh();render();return;}const tree=Backend.playStory(10);tree.cursor=2;adoptTree(tree);app.story=null;app.challenge=CHALLENGES[id];app.actor='sam';render();}
 
 function renderChallenge() {
@@ -589,7 +593,7 @@ function renderChallenge() {
   clear(box);
   const won = c.won();
   box.append(h('div', {}, h('b', {}, '★ ' + c.title + ' — '), c.goal, ' ', h('span', { class: 'tiny' }, 'moves so far: ' + pathTo(app.cursor).filter(id => node(id).record).length)));
-  box.append(won ? h('div', { class: 'won' }, 'The model was supplied duplicity evidence and the carrier was convicted first.') : h('div', { class: 'tiny' }, 'not yet'));
+  box.append(won ? h('div', { class: 'won' }, 'The checkpoint spend accepted its rival and created the pending carrier.') : h('div', { class: 'tiny' }, 'not yet'));
   box.append(h('details', { open: won || undefined }, h('summary', {}, won ? 'what it bought you' : 'give up: why conviction comes first'), h('div', {}, c.why)));
   if (won && !app.wonShown) { app.wonShown = true; toast('Only a convicted carrier was booked.', 5000); }
 }
@@ -630,7 +634,7 @@ function runSelftest() {
   const rows=[],row=(what,ok,detail='')=>rows.push({what,ok,detail});
   for(const sc of SCENARIOS){const r=checkScenario(sc);row('story '+sc.id,r.ok,r.problems.join('; '));}
   const c=checkCorpus(REGISTRY_LEAN_TRACES_V3);row('complete Lean corpus',c.ok,c.cells+' cells '+c.reasons.join('; '));
-  try{playStory(12);$('hist-next').click();$('hist-next').click();$('hist-next').click();row('conviction control',ckptOf(cur(),11)?.st==='terminationPending');$('hist-prev').click();row('tree rewind',ckptOf(cur(),11)?.st==='live');const fork=app.nodes.find(n=>n.branch);goTo(fork.id);row('fork selection',app.cursor===fork.id);row('drawn tree',document.querySelectorAll('#tree .node').length===app.nodes.length);row('theorem observations',!document.querySelector('#ledger .broken'));row('scene',$('scene').querySelectorAll('[data-obj]').length>=10);toggleTheme();toggleTheme();}catch(error){row('controls',false,error.message);}
+  try{playStory(12);$('hist-next').click();$('hist-next').click();$('hist-next').click();row('conviction control',!!ckptOf(cur(),11)?.pendingSpend);$('hist-prev').click();row('tree rewind',ckptOf(cur(),11)?.pendingSpend===null);const fork=app.nodes.find(n=>n.branch);goTo(fork.id);row('fork selection',app.cursor===fork.id);row('drawn tree',document.querySelectorAll('#tree .node').length===app.nodes.length);row('theorem observations',!document.querySelector('#ledger .broken'));row('scene',$('scene').querySelectorAll('[data-obj]').length>=10);toggleTheme();toggleTheme();}catch(error){row('controls',false,error.message);}
   const ok=rows.every(r=>r.ok);document.title=(ok?'PASS':'FAIL')+' — registry simulator selftest';$('selftest-out').hidden=false;$('selftest-out').textContent=rows.map(r=>(r.ok?'PASS ':'FAIL ')+r.what+' '+r.detail).join('\n');window.__selftest={ok,rows};return ok;
 }
 

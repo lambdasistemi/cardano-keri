@@ -3,13 +3,13 @@ family: checkpoint
 
 story: 9
 title: "Cora convicts"
-goal: "As Cora, I want concrete duplicity to place the checkpoint into pending termination custody, receive the conviction bond, and enable a later consuming fold to retire the registry key."
+goal: "As Cora, I want an accepted rival comparison to place the checkpoint into pending termination custody, receive the conviction bond, and enable a later consuming fold to retire the registry key."
 params:
   D: 1000
   B: 5
   P: 2
   W: 10
-atoms: ["9.the-second-rotation-is-at", "9.satisfies-the-common-prior-next", "9.satisfies-its-own-current", "9.carries-own-derived-receipts", "9.and-differs-in-complete-content", "9.both-validate-authenticated-context"]
+atoms: ["9.same-sequence", "9.same-identifier", "9.prior-next-keys", "9.rival-signing-threshold", "9.rival-receipt-threshold", "9.complete-content-conflict"]
 step:
   slot: 0
   who: alice
@@ -62,7 +62,7 @@ step:
 step:
   slot: 1
   who: alice
-  say: "Alice lands her first rotation. Its prior-next commitment anchors both branches of the later duplicity proof."
+  say: "Alice lands her first rotation. The checkpoint now carries the previous commitments for validating a sibling rotation."
   evidence:
     add: [{"rotationTo":[0,0,1]}]
   action:
@@ -176,7 +176,7 @@ step:
 step:
   slot: 12
   who: cora
-  say: "Cora supplies a conflicting rotation at sequence 1. Both branches satisfy the common prior-next commitment and their signing and derived-witness thresholds. Cora holds a commitment naming this key state, this evidence and herself, opened by a transaction whose validity range ended in the slot before; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
+  say: "Cora supplies a conflicting rotation at sequence 1. The rival satisfies the previous commitments and its own signing and receipt rules. Its next keys differ from the writer’s. Cora holds a commitment naming this key state, this evidence and herself, opened by a transaction whose validity range ended in the slot before; the poison that landed since leaves it as it was, and the conviction reveals it. The checkpoint enters termination-pending custody, keeping its token and key state. D goes to Cora; B and the pool return to the refund address. The registry key remains active until the later consuming fold."
   evidence:
     add: [{"duplicityAt":[1,1]}]
   action:
@@ -188,7 +188,27 @@ step:
         keyState:
           epoch: 1
           sn: 1
-        evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+        evidence:
+          event:
+            aid: 0
+            sn: 1
+            kind: rotation
+            priorDigest: 0
+            keys: [0]
+            threshold:
+              count:
+                required: 1
+            nextKeys: [1]
+            nextThreshold:
+              count:
+                required: 1
+            cuts: []
+            adds: []
+            witnessThreshold: 0
+            extension: []
+          structureVerified: true
+          signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+          receipts: []
         payee: 3
         openedAt: 11
         eligibleAfter: 12
@@ -238,7 +258,7 @@ step:
           h:
             epoch: 1
             sn: 1
-    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, convict_requires_entitlement, pending_consumer_refused, pending_custody_observations, step_from_present_keeps_refund, trace_sn_monotone_all]
+    exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, convict_requires_entitlement, pending_consumer_refused, pending_custody_observations, pending_only_by_conviction, reachable_pending_convicted, step_from_present_keeps_refund, trace_pending_convicted, trace_sn_monotone_all]
 fork:
   id: noproof
   at: 2
@@ -256,7 +276,27 @@ fork:
           keyState:
             epoch: 1
             sn: 1
-          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 11
           eligibleAfter: 12
@@ -288,7 +328,7 @@ fork:
       reason: termination-pending
       verdict: not-present
       modelResult: null
-      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
+      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, reachable_pending_convicted, trace_from_pending, trace_pending_convicted]
   step:
     slot: 12
     who: friend
@@ -301,7 +341,7 @@ fork:
       reason: termination-pending
       verdict: not-present
       modelResult: null
-      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, trace_from_pending]
+      exhibits: [T7_step_iff_stepFn, T9_juvenility_is_consumer_only, consumableStateB_iff, pending_consumer_refused, pending_custody_observations, pending_has_no_local_exit, pending_step_impossible, reachable_pending_convicted, trace_from_pending, trace_pending_convicted]
 fork:
   id: sequence-zero
   at: 0
@@ -309,7 +349,7 @@ fork:
   step:
     slot: 0
     who: cora
-    say: "A sequence-zero sibling cannot be later than its prior establishment. The concrete rotation predicate refuses this evidence."
+    say: "Lean refuses conviction at a never-rotated checkpoint because it has no preceding commitments. Evidence that the on-chain validator refuses this spend is still outstanding."
     evidence:
       add: [{"duplicityAt":[0,0]}]
     action:
@@ -321,7 +361,27 @@ fork:
           keyState:
             epoch: 0
             sn: 0
-          evidence: [{"epoch":0,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":0,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 0
+              kind: inception
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":0,"kind":"inception","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 0
           eligibleAfter: 1
@@ -352,7 +412,27 @@ fork:
           keyState:
             epoch: 1
             sn: 1
-          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 11
           eligibleAfter: 12
@@ -383,7 +463,27 @@ fork:
           keyState:
             epoch: 1
             sn: 1
-          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 12
           eligibleAfter: 13
@@ -425,7 +525,27 @@ fork:
           keyState:
             epoch: 1
             sn: 1
-          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 11
           eligibleAfter: 12
@@ -475,7 +595,7 @@ fork:
             h:
               epoch: 1
               sn: 1
-      exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, convict_requires_entitlement, pending_consumer_refused, pending_custody_observations, step_from_present_keeps_refund, topped_up_moves_only_on_evidence, trace_sn_monotone_all]
+      exhibits: [T10_bonds_are_observable, T12_convict_exact, T16_payments_are_named, T1_sn_monotone_all, T4_current_key_thief_cannot_rotate_or_freeze, T4_poisoned_blocks_quorum_and_freeze, T4_poisoned_nonrotation_inert, T5_convict_enabled, T6_component_conservation, T6_conviction_refunds_registration_address, T6_dreg_never_a_fee, T7_step_iff_stepFn, T7_trace_iff_replay, T8_freeze_and_convict_actors_are_proof, T9_juvenility_is_consumer_only, at_most_one_topUp_between_rotations, consumableStateB_iff, convict_requires_entitlement, pending_consumer_refused, pending_custody_observations, pending_only_by_conviction, reachable_pending_convicted, step_from_present_keeps_refund, topped_up_moves_only_on_evidence, trace_pending_convicted, trace_sn_monotone_all]
 fork:
   id: rotated
   at: 2
@@ -555,7 +675,27 @@ fork:
           keyState:
             epoch: 1
             sn: 1
-          evidence: [{"epoch":1,"prior":{"aid":1,"sn":0,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"witnesses":[10]},"accepted":{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"structureVerified":true,"signatures":[{"signer":1,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}],"receipts":[{"signer":10,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[1],"threshold":{"count":{"required":1}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":1,"extension":[]},"verified":true}]}},{"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"structureVerified":true,"signatures":[{"signer":2,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true},{"signer":3,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}],"receipts":[{"signer":11,"event":{"aid":1,"sn":1,"kind":"rotation","priorDigest":50,"keys":[2,3],"threshold":{"count":{"required":2}},"nextKeys":[4],"nextThreshold":{"count":{"required":1}},"cuts":[10],"adds":[11],"witnessThreshold":1,"extension":[99]},"verified":true}]}]
+          evidence:
+            event:
+              aid: 0
+              sn: 1
+              kind: rotation
+              priorDigest: 0
+              keys: [0]
+              threshold:
+                count:
+                  required: 1
+              nextKeys: [1]
+              nextThreshold:
+                count:
+                  required: 1
+              cuts: []
+              adds: []
+              witnessThreshold: 0
+              extension: []
+            structureVerified: true
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            receipts: []
           payee: 3
           openedAt: 11
           eligibleAfter: 12

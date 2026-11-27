@@ -87,7 +87,9 @@ def intentFor (p : Params) (o : Observed) (l : Live) (sn' : Seq) : DepositIntent
     deposit := p.B - l.bHeld p }
 
 /-- Ed25519 verification of a signature by a public key over a message, all
-byte strings. A declared gap: the model does not enter the primitive. -/
+byte strings. A declared gap: the checkpoint spend verifies the controller's signatures over the intent
+observed in that transaction. The signature-binding law below is a cryptographic
+assumption used in the proof of non-transferability. -/
 abbrev Verify := List Nat → List Nat → List Nat → Bool
 
 /-- One signature cannot verify, under one key, over two different messages.

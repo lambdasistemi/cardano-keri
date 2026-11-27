@@ -17,8 +17,8 @@ for (const id of played) for (const node of playStory(id).nodes) if (node.record
   assert.deepEqual(oracleResult(index, node.record), { found: true, agrees: true }); cells++;
 }
 const violations = {
-  'pending-conviction': r => { r.result.ok.state.carriers.find(c => c.aid === r.action.convictCkpt.aid).k++; },
-  'booking-custody': r => { r.result.ok.state.terminations.find(e => equal(e.booking.request.reference, r.action.bookTermination.booking.request.reference)).payload.keyState++; },
+  'pending-conviction': r => { r.result.ok.state.carriers.find(c => c.aid === r.action.convictCkpt.aid).pendingSpend.position.sn++; },
+  'booking-custody': r => { r.result.ok.state.terminations.find(e => equal(e.booking.request.reference, r.action.bookTermination.booking.request.reference)).payload.spend.position.sn++; },
   'pending-frame': r => {
     const consumed = r.action.fold?.transaction.transaction.inputs.map(i => i.ref) ?? [];
     const kept = r.input.terminations.find(e => !consumed.some(ref => equal(ref, e.booking.request.reference)));

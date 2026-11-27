@@ -12,7 +12,6 @@ open CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint.TraceWire
 
 deriving instance Lean.ToJson for BondOp
-deriving instance Lean.ToJson for KeyState
 deriving instance Lean.ToJson for Live
 deriving instance Lean.ToJson for Commitment
 deriving instance Lean.ToJson for Action
@@ -20,7 +19,6 @@ deriving instance Lean.ToJson for State
 deriving instance Lean.ToJson for Payment
 deriving instance Lean.ToJson for Flow
 deriving instance Lean.FromJson for BondOp
-deriving instance Lean.FromJson for KeyState
 deriving instance Lean.FromJson for Live
 deriving instance Lean.FromJson for Commitment
 deriving instance Lean.FromJson for Action
@@ -42,6 +40,32 @@ def paramsOfJson (j : Json) : Except String Params := do
     else throw "B must be positive"
   else throw "D must be positive"
 
+structure InceptionRow where
+  aid : Nat
+  datum : Nat
+  signed : CardanoKeri.Duplicity.SignedEvent
+  witnesses : List Nat
+  deriving Lean.ToJson, Lean.FromJson
+
+structure RotationRow where
+  aid : Nat
+  epoch : Nat
+  sn : Nat
+  signed : CardanoKeri.Duplicity.SignedEvent
+  deriving Lean.ToJson, Lean.FromJson
+
+structure WriterTable where
+  inceptions : List InceptionRow := []
+  rotations : List RotationRow := []
+  deriving Lean.ToJson, Lean.FromJson
+
+/-- A synthetic event table for connected lifecycle fixtures. Every encoded
+row contains the signed event checked by the interpreter. -/
+def WriterTable.fixture (aid datum : Nat) (positions : List (Nat × Nat × Nat)) : WriterTable :=
+  { inceptions := [⟨aid, datum, CardanoKeri.Duplicity.writerFixture aid 0 .inception, []⟩]
+    rotations := positions.map fun (epoch, sn, target) =>
+      ⟨aid, epoch, sn, CardanoKeri.Duplicity.writerFixture aid target .rotation⟩ }
+
 /-- Three primitive decision tables and selectors for concrete duplicity
 fixtures. A selector is a model scenario, not proof of real cryptography. -/
 structure EnvTable where
@@ -50,11 +74,26 @@ structure EnvTable where
   depositAuthorized : List Nat
   quorum : List Nat
   duplicityAt : List (Nat × Nat)
+  writers : WriterTable := {}
 
-def EnvTable.toEnv (t : EnvTable) : Env where
+def EnvTable.toEnv (t : EnvTable) (aid : Nat := 0) : Env where
+  keyReads := ⟨(fun | [key] => some key | _ => none), (fun | [key] => some key | _ => none)⟩
+  attestationMinted := fun observed =>
+    t.duplicityAt.any fun (epoch, sn) =>
+      decide (observed = ⟨⟨105 + (aid - 11), 0⟩,
+        CardanoKeri.CheckpointConviction.Fixtures.comparison aid epoch sn⟩)
+  presentedSpend := fun e sn => if t.duplicityAt.contains (e, sn) then
+    some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩ else none
   rotationTo := fun e sn sn' => t.rotationTo.contains (e, sn, sn')
   depositAuthorized := fun e => t.depositAuthorized.contains e
   quorum := fun e => t.quorum.contains e
+  inceptionWriter := fun aid datum => do
+    let row ← t.writers.inceptions.find? fun row => row.aid == aid && row.datum == datum
+    return (row.signed, row.witnesses)
+  rotationWriter := fun aid epoch sn target => do
+    let row ← t.writers.rotations.find? fun row =>
+      row.aid == aid && row.epoch == epoch && row.sn == sn && row.signed.event.sn == target
+    return row.signed
   convictionContext := fun e sn =>
     if t.duplicityAt.contains (e, sn) then some (CardanoKeri.Duplicity.fixture e sn).1 else none
   convictionRival := fun e sn =>

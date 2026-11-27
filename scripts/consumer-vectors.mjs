@@ -182,7 +182,7 @@ const render = (n, indent, col, tail) => {
 
 // --- module ------------------------------------------------------------
 const corpus = JSON.parse(readFileSync(corpusPath, 'utf8'));
-if (corpus.schema !== 'cardano-keri.consumer.identity' || corpus.version !== 1) throw new Error('corpus schema');
+if (corpus.schema !== 'cardano-keri.consumer.identity' || corpus.version !== 2) throw new Error('corpus schema');
 if (corpus.fields.length !== 35) throw new Error(`expected 35 fields queries, found ${corpus.fields.length}`);
 
 const ident = (rowName) => {

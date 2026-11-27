@@ -20,7 +20,7 @@
  * second transcription.
  */
 
-import { systemBundle } from './checkpoint-system-bundle.mjs';
+import { systemBundle, evidenceBundle } from './checkpoint-system-bundle.mjs';
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
@@ -100,11 +100,16 @@ if (problems.length) {
   process.exit(1);
 }
 
+const evidenceBlock=evidenceBundle();
+const evidenceMatch=html.match(blockRe('EVIDENCE'));
+if(!evidenceMatch)throw Error('missing checkpoint evidence modules');
+const evidenceStale=evidenceMatch[1]!==evidenceBlock;
 const systemBlock=systemBundle();
 const systemMatch=html.match(blockRe('SYSTEM'));
 if(!systemMatch)throw Error('missing system page block');
 const systemStale=systemMatch[1]!==systemBlock;
 let out = html.replace(blockRe('SYSTEM'),()=>`/* @@SYSTEM@@ */\n${systemBlock}/* @@SYSTEM:END@@ */`);
+if(evidenceStale) out=out.replace(blockRe('EVIDENCE'),()=>`/* @@EVIDENCE@@ */\n${evidenceBlock}/* @@EVIDENCE:END@@ */`);
 for (const id of stale)
   out = out.replace(sliceRe(id), () => `/* @@CORE:${id}@@ */\n${coreSlices[id]}/* @@CORE:${id}:END@@ */`);
 if (scenariosStale) out = out.replace(blockRe('SCENARIOS'), () => `/* @@SCENARIOS@@ */\n${scenarioBlock}/* @@SCENARIOS:END@@ */`);
@@ -115,6 +120,7 @@ if (backendStale) out = out.replace(blockRe('BACKEND'), () => `/* @@BACKEND@@ */
 const docsCurrent = existsSync(DOCS) ? readFileSync(DOCS, 'utf8') : null;
 const docsStale = docsCurrent !== out;
 const changes = [
+  ...(evidenceStale ? ['checkpoint evidence modules'] : []),
   ...(systemStale ? ['associated system modules/corpus/page'] : []),
   ...stale.map(id => `slice ${id}`),
   ...(scenariosStale ? ['scenarios'] : []),

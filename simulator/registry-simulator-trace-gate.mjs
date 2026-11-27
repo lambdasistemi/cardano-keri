@@ -3,6 +3,7 @@
  * replay. --selftest also checks corrupt corpora, a live guard mutation and a
  * cold source copy. Compile/setup failures never count as semantic controls. */
 import assert from 'node:assert/strict';
+import './checkpoint-rival-validity-checks.mjs';
 import {readFileSync,writeFileSync,mkdtempSync,cpSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -45,7 +46,7 @@ async function selftest(fresh,page) {
   writeFileSync(join(temp,'coherent-forged-page.html'),forgedPage);console.log('REJECTED coherent false result by replay');
   assert.throws(()=>embedded(page.replace(/REGISTRY_LEAN_TRACES_SHA256 = '[a-f0-9]{64}'/,"REGISTRY_LEAN_TRACES_SHA256 = '"+'0'.repeat(64)+"'")),/embedded digest/);
   const mutant=join(temp,'mutant');mkdirSync(mutant);
-  for(const file of ['registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs'])cpSync(join(HERE,file),join(mutant,file));
+  for(const file of ['registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-conviction.mjs'])cpSync(join(HERE,file),join(mutant,file));
   const path=join(mutant,'registry-simulator-core.mjs'),source=readFileSync(path,'utf8'),needle="require(a.expectedGen === s.gen, 'keri-generation-mismatch');";
   assert(source.includes(needle),'guard mutation target');writeFileSync(path,source.replace(needle,''));
   const core=await import(pathToFileURL(path)); // Failure here is setup, not a kill.

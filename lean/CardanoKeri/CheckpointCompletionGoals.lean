@@ -10,7 +10,7 @@ fixed initial-config field, stored-key equality and clearing holds. A valid
 same-context receipt whose before state lacks this stored request cannot
 complete it. Foreign-context receipts cannot instantiate the indexed type;
 that is a proof-interface exclusion, not a semantic refusal or mutation kill. -/
-theorem local_event_preserves_associations (p : Params) (env : Env) {s s' : Sys}
+theorem local_event_preserves_associations (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : LocalEvent p env s s') :
     s'.origins = s.origins ∧ s'.pending = s.pending := by
   obtain ⟨aid, action, now, flow, state, _, _, _, rfl⟩ := h
@@ -83,13 +83,13 @@ Registration can install an origin only into an absent/unbound AID. Local,
 booking and completion events preserve existing origins; completion clears
 only the pending association. This binds all later history extensions to the
 origin context rather than reselecting one at each event. -/
-theorem sysstep_preserves_existing_origin (p : Params) (env : Env)
+theorem sysstep_preserves_existing_origin (p : Params) (env : SystemEnv)
     {s s' : Sys} (hs : SysStep p env s s') (aid : AID) (origin : Origin)
     (ho : s.origins aid = some origin) : s'.origins aid = some origin := by
   cases hs with
   | register event =>
     obtain ⟨other, now, refund, pool, flow, state, rp, re, cfg, receipt, booking,
-      origin', _, empty, _, _, rfl⟩ := event
+      origin', _, empty, _, _, _, rfl⟩ := event
     have different : aid ≠ other := by
       intro same
       subst other

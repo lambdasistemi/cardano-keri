@@ -171,12 +171,12 @@ When the step is taken under each environment.
 Then the two results are the same: a fold of a booked request, and a return,
 succeed or are refused whatever inception evidence exists. -/
 theorem only_booking_reads_inception (p : Params) (env env' : Env)
-    (sameDuplicity : env.duplicity = env'.duplicity) (action : Action) (s : Sys)
+    (sameDuplicity : env.pendingSpend = env'.pendingSpend) (action : Action) (s : Sys)
     (notBooking : ∀ b, action ≠ .bookRegistration b) :
     stepFn p env action s = stepFn p env' action s := by
   cases action with
   | bookRegistration b => exact absurd rfl (notBooking b)
-  | convictCkpt aid => simp [stepFn, convictCkpt, sameDuplicity]
+  | convictCkpt aid => simp [stepFn, convictCkpt, Carrier.convicted, sameDuplicity]
   | bookTermination aid booker fee booking => rfl
   | fold gen plugin u tx => rfl
   | returnRequests u tx => rfl

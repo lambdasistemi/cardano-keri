@@ -8,7 +8,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 export function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {

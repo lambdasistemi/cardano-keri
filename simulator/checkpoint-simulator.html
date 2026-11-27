@@ -507,7 +507,7 @@
 
 <script>
 /* @@EVIDENCE@@ */
-/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"57e3102232ef8b35b066d55f460b16422506b66844da09fb17f530ab9c55bd90","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
+/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"9e258edf0412cefd1f28ffbc98ce7d3eda4cf259c8b7ef227801290b4b78383f","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
 const [checkpointEconomics, checkpointAttestation, checkpointEvidence, checkpointWire] = (() => {
 const E=(()=>{
 /* Executable transcription of the pinned Singular economic judgments used by
@@ -810,7 +810,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {

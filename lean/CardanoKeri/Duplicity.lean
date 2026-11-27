@@ -116,7 +116,7 @@ def Threshold.fitsNextKeys (threshold : Threshold) (keyCount : Nat) : Bool :=
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
   let signed := keys.map signers.contains
   match threshold with
-  | .count n => n <= keys.length && n <= (signed.filter id).length
+  | .count n => 0 < n && n <= keys.length && n <= (signed.filter id).length
   | .weighted clauses =>
     !clauses.isEmpty && (clauses.map clauseWidth).sum == keys.length &&
     clausesSatisfied clauses signed

@@ -113,6 +113,17 @@ theorem rotation_witness_changes_valid {prior : Predecessor} {signed : SignedEve
   simp [rotationValid, receiptsValid] at accepted
   grind
 
+/-- Given any keys and signer subset, checking numeric signing threshold zero
+returns false, including when every key signed. -/
+theorem zero_signing_threshold_unsatisfied (keys signers : List Nat) :
+    (Threshold.count 0).satisfied keys signers = false := by rfl
+
+/-- Given a decoded rotation with numeric signing threshold zero, neither
+the signatures it carries nor the predecessor can make it a valid rotation. -/
+theorem rotation_zero_signing_threshold_refused (prior : Predecessor) (signed : SignedEvent)
+    (zero : signed.event.threshold = .count 0) : rotationValid prior signed = false := by
+  simp [rotationValid, signingValid, zero, zero_signing_threshold_unsatisfied]
+
 /-- Given authenticated openings for the installed writer and the presented
 rival, when the KERI digest has no collision on these two signed byte bodies,
 digest inequality holds exactly when their bytes differ. -/

@@ -25,6 +25,7 @@ private def overweight := Threshold.weighted [[.key ⟨3,2⟩, .key ⟨1,2⟩]]
 private def ordinary := rotation "R01" 3 4 [1,2] [5,6] two two true
 private def r09a := rotation "R09a" 63 64 [61,62] [65,66] two overweight false
 private def r09b := rotation "R09b" 69 70 [67,68] [71,72] two (.count 3) false
+private def r10e := rotation "R10e" 266 267 [264,265] [268,269] (.count 0) two false
 private def first := rotation "D08 accepted" 258 259 [256,257] [260,261] two two true
 private def rival := rotation "D08 rival" 258 259 [256,257] [262,263] two overweight false
 
@@ -33,6 +34,7 @@ private def agrees (c : Case) := rotationValid c.prior c.rotation == c.expected
 #guard agrees ordinary
 #guard agrees r09a
 #guard agrees r09b
+#guard agrees r10e
 #guard agrees first && agrees rival
 #guard !duplicityAt 1 1 ⟨1, first.prior, first.rotation⟩ rival.rotation
 
@@ -55,7 +57,7 @@ private def w11 := witnesses "W11" 278 279 [276,277] [280,281] [282,283] [] [] 0
 #guard agrees w06
 #guard agrees w11
 
-def cases : List Case := [ordinary, r09a, r09b, first, rival, w04, w05, w06, w11,
+def cases : List Case := [ordinary, r09a, r09b, r10e, first, rival, w04, w05, w06, w11,
   witnesses "genuine removal" 151 152 [147,148] [153,154] [149,150] [149] [] 1 [150] true,
   witnesses "genuine addition" 160 161 [156,157] [162,163] [158,159] [] [125] 2 [159,125] true,
   witnesses "W01 distinct replacement" 126 127 [122,123] [128,129] [130,124] [130] [125] 2 [124,125] true,
@@ -84,6 +86,26 @@ private def contextFor (c : Case) : Context :=
 
 def exportCases := cases.map fun c => (Lean.toJson c).setObjVal! "context" (Lean.toJson (contextFor c))
 
+structure SigningCase where
+  name : String
+  keyCount : Nat
+  threshold : Nat
+  expectedMasks : List Nat
+  deriving Lean.ToJson
+
+def signingCases : List SigningCase :=
+  [⟨"T01", 1, 1, [1]⟩, ⟨"T02", 3, 2, [3,5,6,7]⟩,
+   ⟨"T03", 3, 3, [7]⟩, ⟨"T04", 2, 0, []⟩]
+
+private def satisfyingMasks (c : SigningCase) : List Nat :=
+  let keys := List.range c.keyCount
+  (List.range (2 ^ c.keyCount)).filter fun mask =>
+    (Threshold.count c.threshold).satisfied keys (keys.filter fun k => mask.testBit k)
+
+#guard signingCases.all fun c => satisfyingMasks c == c.expectedMasks
+
 end RotationAdmissionChecks
 
-def main : IO Unit := IO.println (Lean.toJson RotationAdmissionChecks.exportCases).compress
+def main : IO Unit := IO.println (Lean.Json.mkObj [
+  ("rotations", Lean.toJson RotationAdmissionChecks.exportCases),
+  ("thresholds", Lean.toJson RotationAdmissionChecks.signingCases)]).compress

@@ -14,7 +14,7 @@ use cardano_keri/checkpoint/rival_bytes_vectors.{
   fork_witnessed_recorded, fork_witnessed_rival, honest_2key_rotation,
 }
 use cardano_keri/checkpoint/rival_evidence.{
-  RivalClaim, open_rival, signed_event_digest,
+  RivalClaim, event_said, open_rival, signed_event_digest,
 }
 
 fn opened(c: Case) -> Option<Rotation> {
@@ -309,10 +309,45 @@ test bytes_over_the_hash_limit_are_refused_without_a_hash() {
 
 test a_span_outside_the_bytes_is_refused() {
   and {
+    event_said(fork_rival.evidence.event_bytes, -1) == None,
+    event_said(
+      fork_rival.evidence.event_bytes,
+      bytearray.length(fork_rival.evidence.event_bytes) - 10,
+    ) == None,
     signed_event_digest(fork_rival.evidence.event_bytes, -1) == None,
     signed_event_digest(
       fork_rival.evidence.event_bytes,
       bytearray.length(fork_rival.evidence.event_bytes) - 10,
     ) == None,
   }
+}
+
+test a_claim_that_hides_a_next_key_is_refused() {
+  let claim = RivalClaim {
+    ..advance_witnessed_2key.claim,
+    next_keys: when advance_witnessed_2key.claim.next_keys is {
+      [first, ..] -> [first]
+      [] -> []
+    },
+  }
+  let evidence = AdvanceEvidence {
+    ..advance_witnessed_2key.evidence,
+    off_n: when advance_witnessed_2key.evidence.off_n is {
+      [first, ..] -> [first]
+      [] -> []
+    },
+  }
+  and {
+    valid(advance_witnessed_2key),
+    opened(Case { ..advance_witnessed_2key, claim, evidence }) == None,
+  }
+}
+
+test a_claim_that_hides_a_witness_addition_is_refused() {
+  let hidden = AdvanceEvidence {
+    ..advance_witnessed_2key.evidence,
+    off_ba: [],
+    wit_add: [],
+  }
+  opened(with_evidence(advance_witnessed_2key, hidden)) == None
 }

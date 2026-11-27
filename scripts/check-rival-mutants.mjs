@@ -5,7 +5,11 @@
 // decomposition of the predicate: a clause with no entry is not claimed.
 //
 //   nix shell github:NixOS/nixpkgs/<pin>#aiken github:NixOS/nixpkgs/<pin>#nodejs \
-//     github:NixOS/nixpkgs/<pin>#util-linux --command node scripts/check-rival-mutants.mjs
+//     github:NixOS/nixpkgs/<pin>#util-linux --command node scripts/check-rival-mutants.mjs [predicate|evidence]
+//
+// `predicate` (the default) edits checkpoint/rival.ak, the flat decoded
+// predicate; `evidence` edits checkpoint/rival_evidence.ak, the signed-byte
+// opening over real keripy events. Both run every rival test.
 //
 // Each mutant is a copy of `onchain/` with exactly one listed edit applied to
 // `checkpoint/rival.ak` (a clause removed or weakened), and the rival tests are
@@ -23,7 +27,7 @@
 // The compiler prints no diagnostics without a terminal, so the harness needs
 // `script` (util-linux) to name the failed tests, and stops without it rather
 // than degrade. Every run must also select exactly the tests written in
-// rival_tests.ak and rival_vectors.ak; a different count is an error.
+// rival_tests.ak, rival_vectors.ak and rival_evidence_tests.ak; a different count is an error.
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -32,10 +36,12 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const onchain = join(root, 'onchain');
-const RIVAL = 'lib/cardano_keri/checkpoint/rival.ak';
+const SET = process.argv[2] ?? 'predicate';
+if (!['predicate', 'evidence'].includes(SET)) { console.error('set is predicate or evidence'); process.exit(2); }
+const RIVAL = SET === 'evidence' ? 'lib/cardano_keri/checkpoint/rival_evidence.ak' : 'lib/cardano_keri/checkpoint/rival.ak';
 
 const drop = (line) => ({ from: `${line}\n`, to: '' });
-const mutants = [
+const predicateMutants = [
   { name: 'rotation-kind', clause: 'kind = rotation', ...drop('    rival.is_rotation,') },
   { name: 'structure-verified', clause: 'structureVerified', ...drop('    rival.structure_ok,') },
   { name: 'previous-weights-at-most-one', clause: 'prior.nextThreshold.weightsAtMostOne', ...drop('    weights_at_most_one(previous.next_threshold),') },
@@ -75,7 +81,27 @@ const mutants = [
   { name: 'rival-valid-against-previous', clause: 'rotationValid previous rival', from: '        rotation_valid(previous, rival),\n      }', to: '        True,\n      }' },
 ];
 
-const survivorControl = { name: 'comment-only-edit', from: 'pub fn derived_witnesses(', to: '// an edit that changes no behaviour\npub fn derived_witnesses(' };
+const evidenceMutants = [
+  { name: 'hash-limit', clause: 'bytes over 1024 are not hashed', from: 'length > hash_limit || ', to: '' },
+  { name: 'span-start', clause: 'd span inside the bytes (start)', from: 'off_d < 0 || ', to: '' },
+  { name: 'span-end', clause: 'd span inside the bytes (end)', from: 'off_d + 44 > length', to: 'False' },
+  { name: 'said-dressing', clause: 'the d value is dressed before hashing', from: '|> bytearray.concat(dummy_span)', to: '|> bytearray.concat("")' },
+  { name: 'declared-digest-refused', clause: 'the carried d is the recomputed digest', from: 'if slice_matches(event_bytes, off_d, qb64_aid(digest)) {', to: 'if True {' },
+  { name: 'keys-list-bound', clause: 'k list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_k_list,\n      list_text(list.map(claim.cur_keys, qb64_verkey)),\n    ),', to: '    True,' },
+  { name: 'next-list-bound', clause: 'n list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_n_list,\n      list_text(list.map(claim.next_keys, qb64_aid)),\n    ),', to: '    True,' },
+  { name: 'cut-list-bound', clause: 'br list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_br_list,\n      list_text(list.map(e.wit_cut, qb64_witness_verkey)),\n    ),', to: '    True,' },
+  { name: 'add-list-bound', clause: 'ba list bound whole', from: '    slice_matches(\n      e.event_bytes,\n      claim.off_ba_list,\n      list_text(list.map(e.wit_add, qb64_witness_verkey)),\n    ),', to: '    True' },
+  { name: 'sequence-bound', clause: 'the claimed sequence is the bytes', from: 'native_sn: claim.sn,', to: 'native_sn: 1,' },
+  { name: 'signatures-verified', clause: 'controller signatures verified over the bytes', from: 'verified_indices(claim.cur_keys, e.event_bytes, e.ctrl_sigs)', to: 'list.range(0, list.length(claim.cur_keys) - 1)' },
+  { name: 'receipts-verified', clause: 'witness receipts verified over the bytes', from: 'verified_indices(witnesses, e.event_bytes, e.wit_receipts)', to: 'list.range(0, list.length(witnesses) - 1)' },
+  { name: 'receipts-against-derived-witnesses', clause: 'receipts index the derived witness set', from: 'let witnesses = derived_witnesses(previous, skeleton)', to: 'let witnesses = previous.witnesses' },
+  { name: 'own-digest-carried', clause: 'the rival carries its own digest', from: 'event_digest: digest,', to: 'event_digest: claim.aid,' },
+];
+const mutants = SET === 'evidence' ? evidenceMutants : predicateMutants;
+
+const survivorControl = SET === 'evidence'
+  ? { name: 'comment-only-edit', from: 'pub fn event_said(', to: '// an edit that changes no behaviour\npub fn event_said(' }
+  : { name: 'comment-only-edit', from: 'pub fn derived_witnesses(', to: '// an edit that changes no behaviour\npub fn derived_witnesses(' };
 
 const WORKERS = Math.max(1, Number(process.env.RIVAL_MUTANT_WORKERS ?? Math.min(4, availableParallelism())));
 if (spawnSync('script', ['--version'], { encoding: 'utf8' }).status !== 0) {
@@ -83,7 +109,7 @@ if (spawnSync('script', ['--version'], { encoding: 'utf8' }).status !== 0) {
   process.exit(2);
 }
 const countTests = (file) => (readFileSync(join(onchain, file), 'utf8').match(/^test /gm) ?? []).length;
-const expectedChecks = countTests('lib/cardano_keri/checkpoint/rival_tests.ak') + countTests('lib/cardano_keri/checkpoint/rival_vectors.ak');
+const expectedChecks = ['rival_tests', 'rival_vectors', 'rival_evidence_tests'].map((m) => countTests(`lib/cardano_keri/checkpoint/${m}.ak`)).reduce((a, b) => a + b, 0);
 
 const aiken = (cwd, filter) => new Promise((done) => {
   const child = spawn('script', ['-qec', `aiken check -m '${filter}'`, '/dev/null'], { cwd });

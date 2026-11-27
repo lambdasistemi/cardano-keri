@@ -425,7 +425,7 @@ check-freeze-mutants: stage-onchain
 # --- the conviction predicate (#573) ---
 
 # Regenerate the Aiken tests of the conviction predicate from the vendored rows of
-# the draft model (specs/573-conviction/draft-582); `aiken fmt` canonicalizes them.
+# the draft model (specs/573-conviction/model); `aiken fmt` canonicalizes them.
 gen-rival-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/rival-vectors.mjs
     cd onchain && nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken --command aiken fmt lib/cardano_keri/checkpoint/rival_vectors.ak

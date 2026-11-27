@@ -248,6 +248,7 @@ pub fn open_rival(
         is_rotation: True,
         structure_ok: True,
         keys: claim.cur_keys,
+        next_key_count: list.length(claim.next_keys),
         threshold: claim.cur_threshold,
         next_threshold: claim.next_threshold,
         cuts: claim.cuts,

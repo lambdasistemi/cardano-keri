@@ -28,6 +28,8 @@ pub type Rotation {
   is_rotation: Bool,
   structure_ok: Bool,
   keys: List<ByteArray>,
+  /// How many next-key commitments the rotation declares (its `n`).
+  next_key_count: Int,
   threshold: Threshold,
   next_threshold: Threshold,
   cuts: List<ByteArray>,

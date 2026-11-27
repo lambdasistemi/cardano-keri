@@ -12,7 +12,7 @@ use cardano_keri/checkpoint/rival_vectors.{
   aid_of, commitment_of, key_of, previous_of, rotation_of,
   row_partial_other_committed_key, row_rival_witness_change, tip_of,
 }
-use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
+use cardano_keri/checkpoint/threshold.{Threshold, Unweighted, Weight, Weighted}
 
 // The base case is the model's row `partial-other-committed-key`: the rival
 // reveals the other committed key, is receipted by the previous witness, and
@@ -268,14 +268,23 @@ test rotation_at_the_previous_sequence_is_refused() {
   }
 }
 
-// Derived from the model's `receiptsValid` (not a signed keripy case): at a
-// receipt threshold of zero a redundant receipt does not refuse, and a
-// positive threshold with no eligible receipt does.
-test zero_receipt_threshold_counts_eligible_receipts_without_an_empty_list_rule() {
-  let redundant = Rotation { ..base_rival(), toad: 0 }
+// W11 (#598, keripy refused): a nonempty resulting witness set with a receipt
+// threshold of zero is not admitted, receipts or not. The control is the empty
+// resulting set with threshold zero (#591: every witness cut), which stays
+// admitted; a positive threshold with no eligible receipt is refused as before.
+test a_nonempty_witness_set_needs_a_positive_receipt_threshold() {
+  let zero_with_receipt = Rotation { ..base_rival(), toad: 0 }
+  let empty_set = Rotation {
+    ..base_rival(),
+    cuts: [key_of(10)],
+    toad: 0,
+    receipts: [],
+  }
   let short = Rotation { ..base_rival(), toad: 1, receipts: [] }
   and {
-    rotation_valid(base_previous(), redundant),
+    rotation_valid(base_previous(), base_rival()),
+    !rotation_valid(base_previous(), zero_with_receipt),
+    rotation_valid(base_previous(), empty_set),
     !rotation_valid(base_previous(), short),
   }
 }
@@ -302,18 +311,104 @@ test previous_quorum_follows_the_signer_not_the_revealed_key() {
   }
 }
 
-// Witness derivation (Lean `derivedWitnesses`, Duplicity.lean:161-166: an
-// addition already in the resulting list is not repeated). The previous
-// witness set is [10] and the rival adds 10 again: the set stays one witness,
-// so a receipt threshold of one is met and a threshold of two is not. Whether
-// keripy itself admits re-adding a present witness is outside this decoded
-// check; the model's rule is what is bound here.
-test an_addition_already_in_the_set_is_not_repeated() {
-  let one_witness = Rotation { ..base_rival(), adds: [key_of(10)], toad: 1 }
-  let two_witnesses = Rotation { ..one_witness, toad: 2 }
+// W05 (#598, keripy refused): adding a witness the previous set already has is
+// not admitted, at whatever receipt threshold; the genuine addition of an absent
+// witness (with its receipt) is the control. The model's derivation still does
+// not repeat a present witness, but admission refuses the addition first.
+test an_addition_of_a_present_witness_is_refused() {
+  let present_one = Rotation { ..base_rival(), adds: [key_of(10)], toad: 1 }
+  let present_two = Rotation { ..present_one, toad: 2 }
+  let genuine = Rotation {
+    ..base_rival(),
+    adds: [key_of(11)],
+    toad: 2,
+    receipts: [key_of(10), key_of(11)],
+  }
   and {
-    rotation_valid(base_previous(), one_witness),
-    !rotation_valid(base_previous(), two_witnesses),
+    !rotation_valid(base_previous(), present_one),
+    !rotation_valid(base_previous(), present_two),
+    rotation_valid(base_previous(), genuine),
+  }
+}
+
+// W04 (#598, keripy refused): cutting a witness that is not in the previous set.
+// The control is cutting a member.
+test a_cut_of_a_nonmember_is_refused() {
+  let cut_member = Rotation {
+    ..base_rival(),
+    cuts: [key_of(10)],
+    adds: [key_of(11)],
+    toad: 1,
+    receipts: [key_of(11)],
+  }
+  let cut_nonmember = Rotation { ..cut_member, cuts: [key_of(12)] }
+  and {
+    rotation_valid(base_previous(), cut_member),
+    !rotation_valid(base_previous(), cut_nonmember),
+  }
+}
+
+// W06 (#598, keripy refused): cutting and adding the same witness. The control
+// is a replacement by two distinct witnesses.
+test a_cut_and_an_addition_of_the_same_witness_is_refused() {
+  let same = Rotation {
+    ..base_rival(),
+    cuts: [key_of(10)],
+    adds: [key_of(10)],
+    toad: 1,
+  }
+  let distinct_replacement = Rotation {
+    ..base_rival(),
+    cuts: [key_of(10)],
+    adds: [key_of(11)],
+    toad: 1,
+    receipts: [key_of(11)],
+  }
+  and {
+    !rotation_valid(base_previous(), same),
+    rotation_valid(base_previous(), distinct_replacement),
+  }
+}
+
+// #596: a numeric signing threshold of zero is never satisfied, whoever signs,
+// in the rival's rule and in the predecessor's next rule (Lean
+// `zero_signing_threshold_unsatisfied`, `rotation_zero_signing_threshold_refused`).
+test a_zero_signing_threshold_is_never_satisfied() {
+  let rival = Rotation { ..base_rival(), threshold: Unweighted(0) }
+  let previous = Previous { ..base_previous(), next_threshold: Unweighted(0) }
+  let none_signed = Rotation { ..base_rival(), signers: [] }
+  and {
+    !rotation_valid(base_previous(), rival),
+    !rotation_valid(previous, base_rival()),
+    !rotation_valid(previous, none_signed),
+  }
+}
+
+// #595: the rival's own declared next rule must fit the next keys it declares
+// (Lean `Threshold.fitsNextKeys`): a count wider than the keys, a weighted rule
+// wider than the keys, an empty weighted declaration, a clause that cannot reach
+// one. A count of zero over no keys (abandonment) and a weighted rule narrower
+// than the keys are admitted.
+test the_declared_next_rule_must_fit_the_declared_next_keys() {
+  let with_next = fn(count: Int, next: Threshold) {
+    Rotation { ..base_rival(), next_key_count: count, next_threshold: next }
+  }
+  let half = Weight { num: 1, den: 2 }
+  and {
+    rotation_valid(base_previous(), with_next(2, Unweighted(2))),
+    !rotation_valid(base_previous(), with_next(1, Unweighted(2))),
+    rotation_valid(base_previous(), with_next(0, Unweighted(0))),
+    !rotation_valid(base_previous(), with_next(1, Weighted([[half, half]]))),
+    rotation_valid(base_previous(), with_next(2, Weighted([[half, half]]))),
+    rotation_valid(
+      base_previous(),
+      with_next(2, Weighted([[Weight { num: 1, den: 1 }]])),
+    ),
+    !rotation_valid(base_previous(), with_next(2, Weighted([]))),
+    !rotation_valid(
+      base_previous(),
+      with_next(2, Weighted([[Weight { num: 1, den: 4 }, half]])),
+    ),
   }
 }
 

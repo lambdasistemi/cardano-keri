@@ -123,6 +123,7 @@ done
 lake_run env lean --run InceptionPrefixReference.lean >"$tmp_root/inception-prefix.json"
 nix develop --quiet --no-write-lock-file "$repo_root/offchain/test/keri-fixtures" --command \
   python "$lean_root/check-inception-prefix.py" "$tmp_root/inception-prefix.json"
+lake_run env lean CheckpointRivalValidityControls.lean
 lake_run env lean RotationAdmissionChecks.lean
 
 git -C "$repo_root" diff HEAD --check

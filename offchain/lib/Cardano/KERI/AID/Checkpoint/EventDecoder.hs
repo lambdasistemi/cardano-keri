@@ -8,6 +8,8 @@ from complete event bytes. No caller offset is accepted.
 module Cardano.KERI.AID.Checkpoint.EventDecoder (
     EventVariant (..),
     EventDecodeError (..),
+    AnchorKind (..),
+    AnchorItem (..),
     DecodedEstablishmentEvent (..),
     decodeEstablishmentEvent,
     decodeSaidPreimage,
@@ -49,6 +51,22 @@ data EventDecodeError
       ErrTrailing
     deriving stock (Show, Eq)
 
+-- | The JSON kind of one anchor element.
+data AnchorKind
+    = AnchorObject
+    | AnchorArray
+    | AnchorString
+    | AnchorNumber
+    | AnchorLiteral
+    deriving stock (Show, Eq)
+
+-- | One anchor element: its kind and its exact signed bytes.
+data AnchorItem = AnchorItem
+    { aiKind :: !AnchorKind
+    , aiRaw :: !ByteString
+    }
+    deriving stock (Show, Eq)
+
 -- | Protected raw spellings from a successful total parse.
 data DecodedEstablishmentEvent = DecodedEstablishmentEvent
     { deeVariant :: !EventVariant
@@ -72,6 +90,8 @@ data DecodedEstablishmentEvent = DecodedEstablishmentEvent
     , deeDi :: !(Maybe ByteString)
     , deeAnchors :: !ByteString
     -- ^ @a@: the anchors, as the full JSON array text
+    , deeAnchorItems :: ![AnchorItem]
+    -- ^ @a@: each element, typed, with its exact bytes
     , deeSaidPreimage :: !ByteString
     }
     deriving stock (Show, Eq)
@@ -247,6 +267,7 @@ assemble rest raw = do
             , deeBa = ba
             , deeDi = di
             , deeAnchors = anchors
+            , deeAnchorItems = []
             , deeSaidPreimage = preimage
             }
 

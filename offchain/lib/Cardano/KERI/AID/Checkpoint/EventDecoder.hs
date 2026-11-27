@@ -17,6 +17,8 @@ module Cardano.KERI.AID.Checkpoint.EventDecoder (
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.Maybe (isJust)
+import Data.Text.Encoding qualified as TE
 import Data.Word (Word8)
 
 -- | Structural establishment-event variant.
@@ -155,25 +157,23 @@ parseObject ::
 parseObject raw = do
     let n = BS.length raw
     require (n >= 2 && at raw 0 == 0x7b && at raw (n - 1) == 0x7d) ErrFraming
-    (fs, i) <- parseFields raw 1 []
+    (fs, i) <- parseMembers raw 1 []
     if i == n - 1 then Right (reverse fs) else Left ErrTrailing
 
-parseFields ::
+parseMembers ::
     ByteString ->
     Int ->
     [(ByteString, ByteString, Int)] ->
     Either EventDecodeError ([(ByteString, ByteString, Int)], Int)
-parseFields raw i acc
-    | at raw i == 0x7d = Right (acc, i)
-    | otherwise = do
-        (name, i1) <- parseString raw i
-        require (at raw i1 == 0x3a) ErrFraming
-        (val, start, i2) <- parseValue raw (i1 + 1)
-        let acc' = (name, val, start) : acc
-        case at raw i2 of
-            0x2c -> parseFields raw (i2 + 1) acc'
-            0x7d -> Right (acc', i2)
-            _ -> Left ErrFraming
+parseMembers raw i acc = do
+    (name, i1) <- parseString raw i
+    require (at raw i1 == 0x3a) ErrFraming
+    (val, start, i2) <- parseValue raw (i1 + 1)
+    let acc' = (name, val, start) : acc
+    case at raw i2 of
+        0x2c -> parseMembers raw (i2 + 1) acc'
+        0x7d -> Right (acc', i2)
+        _ -> Left ErrFraming
 
 parseString ::
     ByteString -> Int -> Either EventDecodeError (ByteString, Int)
@@ -196,28 +196,122 @@ parseValue raw i
         (content, j) <- parseString raw i
         Right (content, i + 1, j)
     | at raw i == 0x5b = do
-        j <- skipArray raw i
+        j <- jsonValue raw i
         Right (BS.take (j - i) (BS.drop i raw), i, j)
     | otherwise = Left ErrValueShape
 
-skipArray :: ByteString -> Int -> Either EventDecodeError Int
-skipArray raw i = do
-    require (at raw i == 0x5b) ErrFraming
-    go (i + 1) 1 False
+{- | The end of one complete JSON value starting at @i@ (compact profile: no
+whitespace; strings, escapes, numbers, literals and UTF-8 well formed).
+-}
+jsonValue :: ByteString -> Int -> Either EventDecodeError Int
+jsonValue raw i = case at raw i of
+    0x22 -> jsonString raw i
+    0x7b -> jsonObject raw i
+    0x5b -> jsonArray raw i
+    0x74 -> jsonLiteral raw i "true"
+    0x66 -> jsonLiteral raw i "false"
+    0x6e -> jsonLiteral raw i "null"
+    c
+        | c == 0x2d || isDigit c -> jsonNumber raw i
+        | otherwise -> Left ErrFraming
+
+jsonLiteral :: ByteString -> Int -> ByteString -> Either EventDecodeError Int
+jsonLiteral raw i word
+    | BS.take (BS.length word) (BS.drop i raw) == word = Right (i + BS.length word)
+    | otherwise = Left ErrFraming
+
+isDigit :: Word8 -> Bool
+isDigit c = c >= 0x30 && c <= 0x39
+
+jsonString :: ByteString -> Int -> Either EventDecodeError Int
+jsonString raw i = go (i + 1)
   where
-    go :: Int -> Int -> Bool -> Either EventDecodeError Int
-    go j depth inStr
-        | j >= BS.length raw = Left ErrFraming
-        | inStr && at raw j == 0x5c = Left ErrFraming
-        | inStr && at raw j == 0x22 = go (j + 1) depth False
-        | inStr = go (j + 1) depth True
-        | at raw j == 0x22 = go (j + 1) depth True
-        | at raw j == 0x5b = go (j + 1) (depth + 1) False
-        | at raw j == 0x5d =
-            if depth == 1
-                then Right (j + 1)
-                else go (j + 1) (depth - 1) False
-        | otherwise = go (j + 1) depth False
+    n = BS.length raw
+    go j
+        | j >= n = Left ErrFraming
+        | c < 0x20 = Left ErrFraming
+        | c == 0x22 = do
+            case TE.decodeUtf8' (BS.take (j - i - 1) (BS.drop (i + 1) raw)) of
+                Right _ -> Right (j + 1)
+                Left _ -> Left ErrFraming
+        | c == 0x5c = case at raw (j + 1) of
+            e
+                | e `BS.elem` "\"\\/bfnrt" -> go (j + 2)
+                | e == 0x75 && all isHex [at raw (j + 2 + k) | k <- [0 .. 3]] && j + 6 < n -> go (j + 6)
+                | otherwise -> Left ErrFraming
+        | otherwise = go (j + 1)
+      where
+        c = at raw j
+    isHex h = isJust (hexDigit h) || (h >= 0x41 && h <= 0x46)
+
+jsonNumber :: ByteString -> Int -> Either EventDecodeError Int
+jsonNumber raw i0 = do
+    let i1 = if at raw i0 == 0x2d then i0 + 1 else i0
+    i2 <- case at raw i1 of
+        0x30 -> Right (i1 + 1)
+        c | isDigit c -> Right (digitsFrom (i1 + 1))
+        _ -> Left ErrFraming
+    i3 <-
+        if at raw i2 == 0x2e
+            then if isDigit (at raw (i2 + 1)) then Right (digitsFrom (i2 + 2)) else Left ErrFraming
+            else Right i2
+    if at raw i3 == 0x65 || at raw i3 == 0x45
+        then
+            let i4 = if at raw (i3 + 1) == 0x2b || at raw (i3 + 1) == 0x2d then i3 + 2 else i3 + 1
+             in if isDigit (at raw i4) then Right (digitsFrom (i4 + 1)) else Left ErrFraming
+        else Right i3
+  where
+    digitsFrom j
+        | isDigit (at raw j) = digitsFrom (j + 1)
+        | otherwise = j
+
+jsonObject :: ByteString -> Int -> Either EventDecodeError Int
+jsonObject raw i
+    | at raw (i + 1) == 0x7d = Right (i + 2)
+    | otherwise = members (i + 1)
+  where
+    members j = do
+        require (at raw j == 0x22) ErrFraming
+        j1 <- jsonString raw j
+        require (at raw j1 == 0x3a) ErrFraming
+        j2 <- jsonValue raw (j1 + 1)
+        case at raw j2 of
+            0x2c -> members (j2 + 1)
+            0x7d -> Right (j2 + 1)
+            _ -> Left ErrFraming
+
+jsonArray :: ByteString -> Int -> Either EventDecodeError Int
+jsonArray raw i
+    | at raw (i + 1) == 0x5d = Right (i + 2)
+    | otherwise = elements (i + 1)
+  where
+    elements j = do
+        j1 <- jsonValue raw j
+        case at raw j1 of
+            0x2c -> elements (j1 + 1)
+            0x5d -> Right (j1 + 1)
+            _ -> Left ErrFraming
+
+-- | The elements of a validated anchor array, typed, with their exact bytes.
+anchorItems :: ByteString -> Either EventDecodeError [AnchorItem]
+anchorItems arr
+    | BS.length arr == 2 = Right []
+    | otherwise = go 1 []
+  where
+    go j acc = do
+        k <- jsonValue arr j
+        let item = AnchorItem (kindOf (at arr j)) (BS.take (k - j) (BS.drop j arr))
+        case at arr k of
+            0x2c -> go (k + 1) (item : acc)
+            _ -> Right (reverse (item : acc))
+    kindOf = \case
+        0x7b -> AnchorObject
+        0x5b -> AnchorArray
+        0x22 -> AnchorString
+        0x74 -> AnchorLiteral
+        0x66 -> AnchorLiteral
+        0x6e -> AnchorLiteral
+        _ -> AnchorNumber
 
 assemble ::
     [(ByteString, ByteString, Int)] ->
@@ -246,6 +340,9 @@ assemble rest raw = do
         VariantDip -> Just <$> req "di" rest
         _ -> Right Nothing
     anchors <- req "a" rest
+    aStart <- startOf "a" rest
+    require (at raw aStart == 0x5b && at raw (aStart - 1) == 0x3a) ErrValueShape
+    items <- anchorItems anchors
     dStart <- startOf "d" rest
     iStart <- startOf "i" rest
     require (BS.length said == 44 && BS.length aid == 44) ErrValueShape
@@ -267,7 +364,7 @@ assemble rest raw = do
             , deeBa = ba
             , deeDi = di
             , deeAnchors = anchors
-            , deeAnchorItems = []
+            , deeAnchorItems = items
             , deeSaidPreimage = preimage
             }
 
@@ -348,7 +445,9 @@ parseStringArray raw
             (s, j) <- parseString raw i
             let acc' = s : acc
             case at raw j of
-                0x2c -> go (j + 1) acc'
+                0x2c -> do
+                    require (j + 1 < end) ErrValueShape
+                    go (j + 1) acc'
                 0x5d -> Right (reverse acc')
                 _ -> Left ErrValueShape
 

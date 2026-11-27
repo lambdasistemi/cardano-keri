@@ -26,6 +26,7 @@ import Cardano.KERI.AID.Checkpoint.FixtureLoader (
 import Data.Aeson (Value (..))
 import Data.ByteString (ByteString)
 import Data.Foldable (toList)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -72,7 +73,7 @@ spec = describe "#291 event object and anchor grammar" $ do
             ( \r ->
                 it (T.unpack (rowId r)) $
                     fmap deeAnchorItems (decodeEstablishmentEvent (rowRaw r))
-                        `shouldBe` Right (maybe [] id (rowItems r))
+                        `shouldBe` Right (fromMaybe [] (rowItems r))
             )
             [r | r <- rows, rowAccept r]
 

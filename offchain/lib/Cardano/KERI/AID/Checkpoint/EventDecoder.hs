@@ -70,6 +70,8 @@ data DecodedEstablishmentEvent = DecodedEstablishmentEvent
     , deeBr :: ![ByteString]
     , deeBa :: ![ByteString]
     , deeDi :: !(Maybe ByteString)
+    , deeAnchors :: !ByteString
+    -- ^ @a@: the anchors, as the full JSON array text
     , deeSaidPreimage :: !ByteString
     }
     deriving stock (Show, Eq)
@@ -243,6 +245,7 @@ assemble rest raw = do
             , deeBr = br
             , deeBa = ba
             , deeDi = di
+            , deeAnchors = mempty
             , deeSaidPreimage = preimage
             }
 

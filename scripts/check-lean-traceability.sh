@@ -120,6 +120,7 @@ for pair in ReviewedContracts:151 PreservedContracts:49; do
   cat "$tmp_root/$source_name.log"
 done
 
+lake_run env lean CheckpointRivalValidityControls.lean
 lake_run env lean RotationAdmissionChecks.lean
 
 git -C "$repo_root" diff HEAD --check

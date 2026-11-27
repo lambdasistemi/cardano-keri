@@ -141,7 +141,20 @@ function validateWriterTable(table) {
     list(s.signatures, signature);
     list(s.receipts, signature);
   }
-  fields(table, ['inceptions','rotations'], 'writers');
+  const hasPrefixes = own(table, 'prefixes');
+  fields(table, hasPrefixes ? ['inceptions', 'rotations', 'prefixes'] : ['inceptions', 'rotations'], 'writers');
+  if (hasPrefixes) {
+    const {codes, digests} = table.prefixes;
+    fields(table.prefixes, ['codes', 'digests'], 'prefixes');
+    for (const [entries, key, value] of [
+      [codes, integer, code => { if (typeof code !== 'string') invalid(); }],
+      [digests, content, integer],
+    ]) list(entries, pair => {
+      if (!Array.isArray(pair) || pair.length !== 2) invalid();
+      key(pair[0]);
+      value(pair[1]);
+    });
+  }
   list(table.inceptions, row => {
     fields(row, ['aid','datum','signed','witnesses'], 'inception-row');
     integer(row.aid);
@@ -164,7 +177,21 @@ function inceptionWriter(writers, aid, datum) {
   const {signed, witnesses} = row;
   const e = signed.event;
   const receipts = C.verifiedSigners(e, signed.receipts);
-  require(E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
+  // Existing traces without a decoder table use transferable basic identifiers.
+  const code = writers.prefixes ? writers.prefixes.codes.find(([id]) => E.equal(id, aid))?.[1] : 'D';
+  const basic = E.equal(e.keys, [aid]) && e.threshold.count?.required === 1;
+  let bound = false;
+  if (['D', '1AAB', '1AAD', '1AAJ'].includes(code)) bound = basic;
+  if (['B', '1AAA', '1AAC', '1AAI'].includes(code))
+    bound = basic && !e.nextKeys.length && !witnesses.length && !e.extension.length;
+  if (['E', 'F', 'G', 'H', 'I', '0D', '0E', '0F', '0G'].includes(code)) {
+    const digest = writers.prefixes.digests.find(([body]) => body.eventDigest === e.eventDigest && E.equal(body, e));
+    bound = digest !== undefined && E.equal(digest[1], aid);
+  }
+  const nextWidth = e.nextThreshold.count?.required ?? e.nextThreshold.weighted.clauses
+    .flat().reduce((width, term) => width + (term.key ? 1 : term.group.members.length), 0);
+  require(bound && nextWidth <= e.nextKeys.length &&
+    E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
     e.priorDigest === 0 && e.cuts.length === 0 && e.adds.length === 0 &&
     C.admittedWeights(e.threshold) && C.admittedWeights(e.nextThreshold) &&
     e.keys.length > 0 && new Set(e.keys).size === e.keys.length &&

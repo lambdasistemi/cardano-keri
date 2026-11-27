@@ -507,7 +507,7 @@
 
 <script>
 /* @@EVIDENCE@@ */
-/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"52c4a5fbe5b784612b915b17179dc9a7c7169dc626cd9f09d166f27d1d38c4d0","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
+/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"c1108fb813eb4803ffbefb4ddede998057a9ef75ce933dd572cc4536b8eec9c6","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
 const [checkpointEconomics, checkpointAttestation, checkpointEvidence, checkpointWire] = (() => {
 const E=(()=>{
 /* Executable transcription of the pinned Singular economic judgments used by
@@ -810,7 +810,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {
@@ -4235,7 +4235,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"7d5e03a45b19f83aeb5d714636fa799ddc5f2b16f0d4ca58f8798aecad715725","checkpoint-system-properties.mjs":"bc438e3e5cd26b948e2640c25ee900420fd4ecf93b0d86623a43763f8ccaf2fd","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"5e22be5ce31ec3fb34cc4344e27aa61f7dc67650ecc4084ed41db4d599f4b7ca","checkpoint-system-properties.mjs":"bc438e3e5cd26b948e2640c25ee900420fd4ecf93b0d86623a43763f8ccaf2fd","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,
@@ -4620,7 +4620,20 @@ function validateWriterTable(table) {
     list(s.signatures, signature);
     list(s.receipts, signature);
   }
-  fields(table, ['inceptions','rotations'], 'writers');
+  const hasPrefixes = own(table, 'prefixes');
+  fields(table, hasPrefixes ? ['inceptions', 'rotations', 'prefixes'] : ['inceptions', 'rotations'], 'writers');
+  if (hasPrefixes) {
+    const {codes, digests} = table.prefixes;
+    fields(table.prefixes, ['codes', 'digests'], 'prefixes');
+    for (const [entries, key, value] of [
+      [codes, integer, code => { if (typeof code !== 'string') invalid(); }],
+      [digests, content, integer],
+    ]) list(entries, pair => {
+      if (!Array.isArray(pair) || pair.length !== 2) invalid();
+      key(pair[0]);
+      value(pair[1]);
+    });
+  }
   list(table.inceptions, row => {
     fields(row, ['aid','datum','signed','witnesses'], 'inception-row');
     integer(row.aid);
@@ -4643,7 +4656,21 @@ function inceptionWriter(writers, aid, datum) {
   const {signed, witnesses} = row;
   const e = signed.event;
   const receipts = C.verifiedSigners(e, signed.receipts);
-  require(E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
+  // Existing traces without a decoder table use transferable basic identifiers.
+  const code = writers.prefixes ? writers.prefixes.codes.find(([id]) => E.equal(id, aid))?.[1] : 'D';
+  const basic = E.equal(e.keys, [aid]) && e.threshold.count?.required === 1;
+  let bound = false;
+  if (['D', '1AAB', '1AAD', '1AAJ'].includes(code)) bound = basic;
+  if (['B', '1AAA', '1AAC', '1AAI'].includes(code))
+    bound = basic && !e.nextKeys.length && !witnesses.length && !e.extension.length;
+  if (['E', 'F', 'G', 'H', 'I', '0D', '0E', '0F', '0G'].includes(code)) {
+    const digest = writers.prefixes.digests.find(([body]) => body.eventDigest === e.eventDigest && E.equal(body, e));
+    bound = digest !== undefined && E.equal(digest[1], aid);
+  }
+  const nextWidth = e.nextThreshold.count?.required ?? e.nextThreshold.weighted.clauses
+    .flat().reduce((width, term) => width + (term.key ? 1 : term.group.members.length), 0);
+  require(bound && nextWidth <= e.nextKeys.length &&
+    E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
     e.priorDigest === 0 && e.cuts.length === 0 && e.adds.length === 0 &&
     C.admittedWeights(e.threshold) && C.admittedWeights(e.nextThreshold) &&
     e.keys.length > 0 && new Set(e.keys).size === e.keys.length &&

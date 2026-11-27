@@ -115,8 +115,14 @@ private def readsFor (code : String) (e : InceptionPrefix.Evidence)
 private def prefixBooking (reads : InceptionPrefix.Reads) (tx := regObs) : Bool :=
   admitted i aenv rp p release reads 0 tx
 
-private def evidence (e : Content) (witnesses seals : List Nat := []) : InceptionPrefix.Evidence :=
-  ⟨signedByKeys e, witnesses, seals⟩
+private def evidence (e : Content) (witnesses : List Nat := []) : InceptionPrefix.Evidence :=
+  ⟨signedByKeys e, witnesses⟩
+
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with nextThreshold := .count 1}))
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [22] with nextThreshold := .count 2}))
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with nextThreshold := .count 1}))
+#guard !prefixBooking (readsFor "E" (evidence {prefixEvent [] with threshold := .count 0}) (some 11))
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with extension := [7]}))
 
 private def basic := evidence (prefixEvent [])
 #guard prefixBooking (readsFor "B" basic)
@@ -125,12 +131,12 @@ private def basic := evidence (prefixEvent [])
 #guard !prefixBooking (readsFor "B" (evidence (prefixEvent [22])))
 private def witnessed : InceptionPrefix.Evidence :=
   let e := { prefixEvent [] with witnessThreshold := 1 }
-  ⟨{ signedByKeys e with receipts := [⟨17, e, true⟩] }, [17], []⟩
+  ⟨{ signedByKeys e with receipts := [⟨17, e, true⟩] }, [17]⟩
 #guard prefixBooking (readsFor "D" witnessed)
 #guard !prefixBooking (readsFor "B" witnessed)
 #guard !prefixBooking (readsFor "D" {witnessed with signed.receipts := []})
-#guard !prefixBooking (readsFor "B" (evidence (prefixEvent []) [] [7]))
-#guard prefixBooking (readsFor "D" (evidence (prefixEvent []) [] [7]))
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with extension := [7]}))
+#guard prefixBooking (readsFor "D" (evidence {prefixEvent [] with extension := [7]}))
 #guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with keys := [12]}))
 #guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with keys := [11, 12]}))
 #guard !prefixBooking (readsFor "D"
@@ -138,6 +144,37 @@ private def witnessed : InceptionPrefix.Evidence :=
 #guard prefixBooking (readsFor "E" (evidence {prefixEvent [] with keys := [12]}) (some 11))
 #guard !prefixBooking (readsFor "E" basic (some 12))
 #guard !prefixBooking (readsFor "E" basic none)
+/-- The same indexed booking verdicts checked by the pinned keripy reference. -/
+def inceptionReferenceCases : List (String × Bool) :=
+  let booking := fun code body => prefixBooking (readsFor code (evidence body))
+  [("B empty", booking "B" (prefixEvent [])),
+   ("D empty", booking "D" (prefixEvent [])),
+   ("B next", booking "B" (prefixEvent [22])),
+   ("D next", booking "D" (prefixEvent [22])),
+   ("B witness", prefixBooking (readsFor "B" witnessed)),
+   ("D witness", prefixBooking (readsFor "D" witnessed)),
+   ("B seal", booking "B" {prefixEvent [] with extension := [7]}),
+   ("D seal", booking "D" {prefixEvent [] with extension := [7]}),
+   ("D weighted one", booking "D" {prefixEvent [] with threshold := .weighted [[.key ⟨1,1⟩]]}),
+   ("E digest", prefixBooking (readsFor "E" basic (some 11))),
+   ("D missing next", booking "D" {prefixEvent [] with nextThreshold := .count 1}),
+   ("D oversized next", booking "D" {prefixEvent [22] with nextThreshold := .count 2}),
+   ("B missing next", booking "B" {prefixEvent [] with nextThreshold := .count 1}),
+   ("E zero signing", prefixBooking (readsFor "E" (evidence {prefixEvent [] with threshold := .count 0}) (some 11))),
+   ("D zero next with digest", booking "D" {prefixEvent [22] with nextThreshold := .count 0})]
+
+-- Reopen the indexed evidence using the actual registration history reader.
+private def installed (reads : InceptionPrefix.Reads) :=
+  let system : Checkpoint.Env := {env 11 with
+    inceptionOpening := reads.toOpeningReads
+    inceptionBytes := fun aid raw => if aid == 11 && raw == data.initialDatum then reads.bytesAt regObs 0 else none}
+  system.initialHistory 11 (some data.initialDatum)
+
+#guard (installed (readsFor "B" basic)).isSome
+#guard (installed (readsFor "D" (evidence {prefixEvent [] with keys := [12]}))).isNone
+#guard (installed (readsFor "E" basic (some 11))).isSome
+#guard (installed (readsFor "E" basic (some 12))).isNone
+
 #guard !prefixBooking (readsFor "B" {basic with signed.signatures := []})
 #guard !prefixBooking (readsFor "A" basic)
 #guard !prefixBooking {readsFor "B" basic with prefixCode := fun _ => none}

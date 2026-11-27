@@ -94,11 +94,16 @@ def Threshold.weightsAtMostOne : Threshold → Bool
     | .group outer members => decide (outer.numerator ≤ outer.denominator) &&
         members.all fun w => decide (w.numerator ≤ w.denominator)
 
+/-- Minimum number of committed keys described by this threshold. -/
+def Threshold.width : Threshold → Nat
+  | .count n => n
+  | .weighted clauses => (clauses.map clauseWidth).sum
+
 /-- Each key contributes once, in that list's order; clauses are conjunctive. -/
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
   let signed := keys.map signers.contains
   match threshold with
-  | .count n => n <= keys.length && n <= (signed.filter id).length
+  | .count n => 0 < n && n <= keys.length && n <= (signed.filter id).length
   | .weighted clauses =>
     !clauses.isEmpty && (clauses.map clauseWidth).sum == keys.length &&
     clausesSatisfied clauses signed

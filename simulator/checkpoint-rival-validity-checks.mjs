@@ -33,15 +33,17 @@ function changeBody(signed, changes) {
     signature.event = structuredClone(signed.event);
   }
 }
-function register(changes, structureVerified = true) {
+function register(changes, structureVerified = true, code = "D") {
   const env = structuredClone(first.env);
   const signed = env[0][1].writers.inceptions[0].signed;
   changeBody(signed, changes);
   signed.structureVerified = structureVerified;
+  const aid = signed.event.aid;
+  env[0][1].writers.prefixes = {codes: [[aid, code]], digests: [[structuredClone(signed.event), aid]]};
   return attemptSystem(newSystem(first.params, env, trace.deployment), first.command).record.result;
 }
-function checkRegistration(changes, allowed, label, verified = true) {
-  const result = register(changes, verified);
+function checkRegistration(changes, allowed, label, verified = true, code = "D") {
+  const result = register(changes, verified, code);
   if (allowed) assert.ok(result.ok, label);
   else assert.equal(result.error, 'checkpoint-inception-writer-mismatch', label);
 }
@@ -49,6 +51,10 @@ for (const changes of [{priorDigest: 7}, {cuts: [20]}, {adds: [21]}]) {
   checkRegistration(changes, false, JSON.stringify(changes));
 }
 checkRegistration({}, false, 'decoded invalid structure', false);
+checkRegistration({nextKeys: [], nextThreshold: {count: {required: 1}}}, false, 'missing next digest');
+checkRegistration({nextThreshold: {count: {required: 2}}}, false, 'next threshold exceeds commitments');
+checkRegistration({threshold: {count: {required: 0}}}, false, 'zero signing threshold', true, "E");
+checkRegistration({nextKeys: [], nextThreshold: {count: {required: 0}}, extension: [7]}, false, 'signed anchors', true, "B");
 const ratio = (numerator, denominator) => ({numerator, denominator});
 const one = ratio(1, 1);
 const positions = {
@@ -64,7 +70,8 @@ for (const [position, term] of Object.entries(positions)) {
     const rule = {weighted: {clauses: [[term(fraction)]]}};
     for (const field of ['threshold', 'nextThreshold']) {
       const changes = {[field]: rule}, label = [position, name, field].join('/');
-      checkRegistration(changes, allowed, label);
+      checkRegistration(changes, allowed, label, true, "E");
+      checkRegistration(changes, field === "nextThreshold" && allowed, "basic " + label);
       const {comparison} = convictionFixture(11, 1, 1);
       changeBody(comparison.rival, changes);
       assert.equal(rotationValid(comparison.tip.previous, comparison.rival), allowed, 'advance ' + label);

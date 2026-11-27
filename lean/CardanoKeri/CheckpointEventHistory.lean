@@ -44,7 +44,8 @@ The wire reader must check field absence in the signed body. -/
 def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : Bool :=
   let e := event.event
   let receipts := verifiedSigners e event.receipts
-  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty
+  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty &&
+    decide (e.nextThreshold.width ≤ e.nextKeys.length)
   e.aid == aid && e.sn == 0 && e.kind == .inception &&
     (event.structureVerified && inceptionFields && e.weightsAtMostOne && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&

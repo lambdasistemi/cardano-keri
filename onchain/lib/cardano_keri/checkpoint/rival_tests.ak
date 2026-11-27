@@ -223,9 +223,22 @@ test no_rival_key_refuses_even_for_a_zero_count() {
   !rotation_valid(previous, rival)
 }
 
+// A receipt threshold is a natural number: refused over a nonempty set (where
+// the positive-threshold rule also refuses it) and over the empty set after
+// every witness is cut (where only the natural-number rule does).
 test negative_receipt_threshold_refuses() {
   let rival = Rotation { ..base_rival(), toad: -1 }
-  !rotation_valid(base_previous(), rival)
+  let empty_set = Rotation {
+    ..base_rival(),
+    cuts: [key_of(10)],
+    toad: -1,
+    receipts: [],
+  }
+  and {
+    !rotation_valid(base_previous(), rival),
+    !rotation_valid(base_previous(), empty_set),
+    rotation_valid(base_previous(), Rotation { ..empty_set, toad: 0 }),
+  }
 }
 
 // The witness change of the model row `rival-witness-change`, with a repeated

@@ -28,6 +28,9 @@
 // zero is never satisfied and a weighted rule must partition the keys), and the
 // repeated-addition guard of the witness derivation (an addition of a present
 // witness is refused before the derivation).
+// Also equivalent since #595: the positive-denominator check of the declared next
+// rule (a zero denominator makes the clause total's denominator zero, so the rule
+// does not fit its next keys; the model keeps both checks, the flat domain needs one).
 //
 // The compiler prints no diagnostics without a terminal, so the harness needs
 // `script` (util-linux) to name the failed tests, and stops without it rather
@@ -52,7 +55,6 @@ const predicateMutants = [
   { name: 'previous-weights-at-most-one', clause: 'prior.nextThreshold.weightsAtMostOne', ...drop('    weights_at_most_one(previous.next_threshold),') },
   { name: 'rival-weights-at-most-one', clause: 'event.threshold.weightsAtMostOne', ...drop('    weights_at_most_one(rival.threshold),') },
   { name: 'rival-next-weights-at-most-one', clause: 'event.nextThreshold.weightsAtMostOne', ...drop('    weights_at_most_one(rival.next_threshold),') },
-  { name: 'rival-next-denominators', clause: 'nextThreshold.positiveDenominators', ...drop('    positive_denominators(rival.next_threshold),') },
   { name: 'same-identifier', clause: 'event.aid = prior.aid', ...drop('    rival.aid == previous.aid,') },
   { name: 'later-sequence', clause: 'prior.sn < event.sn', from: 'previous.sn < rival.sn', to: 'previous.sn <= rival.sn' },
   { name: 'receipts-checked', clause: 'receiptsValid', ...drop('    receipts_valid(previous, rival),') },
@@ -82,7 +84,6 @@ const predicateMutants = [
   { name: 'weighted-clauses-partition-keys', clause: 'clauseWidth sum == keys.length', from: ') == key_count && evaluate(threshold, key_count, signed)', to: ') >= 0 && evaluate(threshold, key_count, signed)' },
   { name: 'weighted-denominators-positive', clause: 'Weight.wellFormed', from: '!list.is_empty(clause) && list.all(clause, fn(w) { w.den > 0 })', to: '!list.is_empty(clause)' },
   { name: 'weight-ceiling', clause: 'weightsAtMostOne', from: 'list.all(clause, fn(w) { w.num <= w.den })', to: 'list.all(clause, fn(_) { True })' },
-  { name: 'declared-denominators', clause: 'positiveDenominators', from: 'list.all(clauses, fn(clause) { list.all(clause, fn(w) { w.den > 0 }) })', to: 'True' },
   { name: 'never-rotated-refused', clause: 'previous = none', from: '    None -> False', to: '    None -> True' },
   { name: 'rotated-epoch', clause: 'epoch != 0', ...drop('        tip.epoch != 0,') },
   { name: 'tip-identifier', clause: 'tip.aid = rival.aid', ...drop('        tip.aid == rival.aid,') },

@@ -25,6 +25,8 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationName,
     registerObserverRedeemerData,
     registrationEvidenceData,
+    hashProofMintData,
+    hashProofBurnData,
     asPlcData,
 ) where
 
@@ -274,6 +276,22 @@ registrationEvidenceData RegistrationEvidence{..} =
         , signatureListData reCtrlSigs
         , signatureListData reWitReceipts
         ]
+
+{- | The hash-proof mint redeemer of an inception: @Constr 0 [event bytes, raw
+@i@]@. The raw identifier is the 32 bytes decoded from the signed @i@ (the
+digest of a self-addressing prefix, the key of a basic one); the proof token is
+named over exactly these two values and recomputed by the booking.
+-}
+hashProofMintData :: ByteString -> ByteString -> Data
+hashProofMintData eventBytes rawIdentifier =
+    Constr 0 [B eventBytes, B rawIdentifier]
+
+{- | The hash-proof burn redeemer: the two-field shape with empty fields. The burn
+branch reads nothing after the constructor boundary; the booking recomputes
+the name from its own evidence.
+-}
+hashProofBurnData :: Data
+hashProofBurnData = Constr 0 [B "", B ""]
 
 intListData :: (Integral a) => [a] -> Data
 intListData = List . map (I . fromIntegral)

@@ -67,6 +67,8 @@ module Cardano.KERI.AID.Checkpoint.Registration (
 ) where
 
 import Cardano.KERI.AID.CESR (
+    Primitive (..),
+    parsePrimitive,
     qb64Aid,
     qb64Verkey,
  )
@@ -83,6 +85,7 @@ import Cardano.KERI.AID.Checkpoint.EventDecoder (
     EventVariant (..),
     decodeEstablishmentEvent,
  )
+import Cardano.KERI.AID.Checkpoint.InceptionPrefix (verifyPrefixBinding)
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
@@ -280,7 +283,10 @@ data RegistrationError
       @rot@ all reject here; the decoded type feeds R4's event type).
       -}
       E1EventTypeMismatch
-    | -- | E2: the @i@ slice is not the datum AID's E-code qb64.
+    | {- | E2: the signed @i@ is not bound to its prefix kind (a basic prefix is
+      the sole signing key; a self-addressing prefix is the digest of the signed
+      body), or its raw 32 bytes are not the datum's identifier.
+      -}
       E2AidMismatch
     | -- | E3: the @s@ slice is not @\"0\"@ (an @icp@ has @s = 0@).
       E3SequenceMismatch
@@ -318,6 +324,18 @@ data RegistrationError
       R8DepositBelowMinimum
     deriving stock (Show, Eq)
 
+{- | The signed @i@ is bound to its prefix kind and carries exactly the datum's
+32 identifier bytes: the key of a basic prefix (codes B and D), the digest of a
+self-addressing one (code E).
+-}
+identifierBound :: DecodedEstablishmentEvent -> CesrAid -> Bool
+identifierBound ev aid =
+    either (const False) (const True) (verifyPrefixBinding ev)
+        && case parsePrimitive (deeAid ev) of
+            Right (Ed25519PublicKey raw, rest) -> BS.null rest && raw == aid
+            Right (SelfAddressing raw, rest) -> BS.null rest && raw == aid
+            _ -> False
+
 {- | R6 — the E1-E9 event binding. The event is decoded from its bytes
 alone (E1 refuses what does not decode); every expected value is computed from the datum
 (derivation-code-prefixed qb64 or an exact keripy re-spelling) and compared
@@ -335,7 +353,7 @@ eventBinding d e = do
             Right
             (decodeEstablishmentEvent (reEventBytes e))
     unless (deeVariant ev == VariantIcp) (Left E1EventTypeMismatch)
-    unless (deeAid ev == qb64Aid (cdCesrAid d)) (Left E2AidMismatch)
+    unless (identifierBound ev (cdCesrAid d)) (Left E2AidMismatch)
     unless (deeSeq ev == "0") (Left E3SequenceMismatch)
     unless
         (deeK ev == map qb64Verkey (cdCurKeys d))

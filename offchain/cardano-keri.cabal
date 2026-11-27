@@ -550,6 +550,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RecordedHistory
+    Cardano.KERI.Deployment.RegistrationEvidenceSpec
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryApplicationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
@@ -1216,11 +1217,13 @@ executable gen-registration-vectors
   default-language: GHC2021
   hs-source-dirs:   app
   main-is:          GenRegistrationVectors.hs
+  other-modules:    LegacyRegistration
   build-depends:
     , aeson
     , base
     , bytestring
     , cardano-keri
+    , containers
     , memory        >=0.18 && <0.19
     , text
 

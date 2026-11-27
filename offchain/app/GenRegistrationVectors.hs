@@ -40,11 +40,9 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
     InceptionError (..),
     RegistrationError (..),
-    RegistrationEvidence (..),
     proofTokenName,
     qb64WitnessVerkey,
     registrationDepositFloor,
-    registrationPredicate,
     respellHex,
     respellThreshold,
  )
@@ -69,10 +67,11 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BC
 import Data.Foldable (toList)
-import Data.List (find, intercalate)
+import Data.List (intercalate)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
+import LegacyRegistration (RegistrationEvidence (..), registrationPredicate)
 import Numeric (readHex)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
@@ -117,9 +116,7 @@ main = do
         r7k = orDie (regCase fx "reg_7key")
         scenarios = buildScenarios wit wgt dip drt r2k r7k
     mapM_ assertVerdict scenarios
-    let cases = [wit, wgt, dip, drt, r2k, r7k]
-        honest = [s' | s' <- scenarios, reEventBytes (scEvidence s') `elem` map rcRaw cases]
-        rendered = render cases wit wgt honest
+    let rendered = render wit wgt scenarios
     case out of
         Just path -> writeFile path rendered
         Nothing -> putStr rendered
@@ -163,27 +160,8 @@ assertVerdict s =
 -- ---------------------------------------------------------
 
 -- | One registration sub-fixture, lifted into predicate inputs.
-
-{- | The positions the validators on main still read (their evidence type carries
-nine offsets until the offset-free validators merge). They are read from the
-keripy fixture and used only to render the Aiken vectors; the Haskell
-builders and the predicate no longer take a position.
--}
-data LegacyOffsets = LegacyOffsets
-    { loT :: !Int
-    , loI :: !Int
-    , loS :: !Int
-    , loK :: ![Int]
-    , loKt :: !Int
-    , loN :: ![Int]
-    , loNt :: !Int
-    , loB :: ![Int]
-    , loBt :: !Int
-    }
-
 data RegCase = RegCase
     { rcRaw :: ByteString
-    , rcOffsets :: LegacyOffsets
     , rcDatum :: KeyStateView
     , rcEvidence :: RegistrationEvidence
     , rcOldMessageSigs :: [(Int, ByteString)]
@@ -204,17 +182,15 @@ regCase fx key = do
     nt <- thresholdField ked "nt"
     bt <- hexIntField ked "bt"
     offs <- note (key <> ".offsets missing") (lookupKey "offsets" sub)
-    offsets <-
-        LegacyOffsets
-            <$> off offs "t"
-            <*> off offs "i"
-            <*> off offs "s"
-            <*> offList offs "k"
-            <*> off offs "kt"
-            <*> offList offs "n"
-            <*> off offs "nt"
-            <*> offList offs "b"
-            <*> off offs "bt"
+    offT <- off offs "t"
+    offI <- off offs "i"
+    offS <- off offs "s"
+    offKt <- off offs "kt"
+    offNt <- off offs "nt"
+    offBt <- off offs "bt"
+    offK <- offList offs "k"
+    offN <- offList offs "n"
+    offB <- offList offs "b"
     eventSigs <- sigList sub "event_sigs"
     receipts <- optionalSigList sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
@@ -233,11 +209,19 @@ regCase fx key = do
     pure
         RegCase
             { rcRaw = raw
-            , rcOffsets = offsets
             , rcDatum = datum
             , rcEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
+                    , reOffT = offT
+                    , reOffI = offI
+                    , reOffS = offS
+                    , reOffK = offK
+                    , reOffKt = offKt
+                    , reOffN = offN
+                    , reOffNt = offNt
+                    , reOffB = offB
+                    , reOffBt = offBt
                     , reCtrlSigs = eventSigs
                     , reWitReceipts = receipts
                     }
@@ -370,16 +354,13 @@ buildScenarios wit wgt dip drt r2k r7k =
             (rcEvidence wit)
             (Left E2AidMismatch)
     , sc
-        "e3_trailing"
-        "trailing byte -> E1"
+        "e3_off_s_at_t"
+        "off_s pointed at t -> E3"
         ctx0
         (rcDatum wit)
         funded
-        (rcEvidence wit)
-            { reEventBytes =
-                reEventBytes (rcEvidence wit) <> "!"
-            }
-        (Left E1EventTypeMismatch)
+        (rcEvidence wit){reOffS = reOffT (rcEvidence wit)}
+        (Left E3SequenceMismatch)
     , let d =
             (rcDatum wit)
                 { cdCurKeys = take 2 (cdCurKeys (rcDatum wgt))
@@ -537,12 +518,12 @@ buildScenarios wit wgt dip drt r2k r7k =
         (Left R7QuorumUnsatisfied)
     , sc
         "r7_crossed_event_bytes"
-        "controller signatures crossed onto different event bytes -> E1EventTypeMismatch"
+        "controller signatures crossed onto different event bytes -> R7"
         ctx0
         (rcDatum wit)
         funded
         (rcEvidence wit){reEventBytes = flipLast (rcRaw wit)}
-        (Left E1EventTypeMismatch)
+        (Left R7QuorumUnsatisfied)
     , sc
         "r7_receipts_empty"
         "witnessed inception without receipts -> witness R7"
@@ -637,16 +618,105 @@ buildScenarios wit wgt dip drt r2k r7k =
         (boundary - 1)
         (rcEvidence wit)
         (Left R8DepositBelowMinimum)
+    , sc
+        "mis_off_i_shift"
+        "misdirection: off_i shifted by one -> E2"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffI = reOffI (rcEvidence wit) + 1}
+        (Left E2AidMismatch)
+    , let k0 = first1 (reOffK (rcEvidence wit))
+       in sc
+            "mis_overlap_k"
+            "misdirection: overlapping spans off_k[1]=off_k[0]+1 -> E4"
+            ctx0
+            (rcDatum wit)
+            funded
+            (rcEvidence wit){reOffK = [k0, k0 + 1]}
+            (Left E4CurKeysMismatch)
+    , sc
+        "mis_k_into_n"
+        "misdirection: off_k pointed into n (D vs E code) -> E4"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffK = reOffN (rcEvidence wit)}
+        (Left E4CurKeysMismatch)
+    , sc
+        "mis_k_into_b"
+        "misdirection: off_k pointed into b (D vs B code) -> E4"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffK = take 2 (reOffB (rcEvidence wit))}
+        (Left E4CurKeysMismatch)
+    , sc
+        "mis_i_at_k"
+        "misdirection: off_i pointed at a k entry (E vs D code) -> E2"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffI = first1 (reOffK (rcEvidence wit))}
+        (Left E2AidMismatch)
+    , sc
+        "mis_b_at_k"
+        "misdirection: off_b pointed at k entries (B vs D code) -> E8"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit)
+            { reOffB =
+                reOffK (rcEvidence wit)
+                    <> drop 2 (reOffB (rcEvidence wit))
+            }
+        (Left E8WitnessesMismatch)
+    , sc
+        "mis_trunc_i"
+        "misdirection: off_i at the byte tail (truncated) -> E2"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffI = BS.length (rcRaw wit) - 10}
+        (Left E2AidMismatch)
+    , let k0 = first1 (reOffK (rcEvidence wit))
+       in sc
+            "mis_trunc_k"
+            "misdirection: last off_k at the tail (truncated) -> E4"
+            ctx0
+            (rcDatum wit)
+            funded
+            (rcEvidence wit)
+                { reOffK = [k0, BS.length (rcRaw wit) - 20]
+                }
+            (Left E4CurKeysMismatch)
+    , sc
+        "mis_neg_i"
+        "misdirection: negative off_i -> E2"
+        ctx0
+        (rcDatum wit)
+        funded
+        (rcEvidence wit){reOffI = -1}
+        (Left E2AidMismatch)
     , let k0raw = first1 (cdCurKeys (rcDatum wit))
+          k0off = first1 (reOffK (rcEvidence wit))
           d = (rcDatum wit){cdCurKeys = [k0raw, k0raw]}
        in sc
             "mis_dup_k"
-            "duplicated current keys -> E4CurKeysMismatch"
+            "misdirection: duplicated offsets duplicate the key -> R4 F18"
             ctx0
             d
             funded
             (rcEvidence wit)
-            (Left E4CurKeysMismatch)
+                { reOffK = [k0off, k0off]
+                }
+            ( Left
+                ( R4InceptionInvalid
+                    ( InceptionIllFormed
+                        (ThresholdIllFormed DuplicateKey)
+                    )
+                )
+            )
     ]
   where
     sc = Scenario
@@ -821,11 +891,10 @@ textArrayField value k = do
 -- Aiken rendering
 -- ---------------------------------------------------------
 
-render :: [RegCase] -> RegCase -> RegCase -> [Scenario] -> String
-render cases wit wgt scenarios =
-    header <> "\n" <> goldens <> "\n" <> concatMap (renderScenario offsetsOf) scenarios
+render :: RegCase -> RegCase -> [Scenario] -> String
+render wit wgt scenarios =
+    header <> "\n" <> goldens <> "\n" <> concatMap renderScenario scenarios
   where
-    offsetsOf raw = maybe (error "no legacy offsets for these bytes") rcOffsets (find ((== raw) . rcRaw) cases)
     header =
         unlines
             [ "//// Auto-generated Aiken registration vectors for #114 — DO NOT EDIT."
@@ -897,8 +966,8 @@ render cases wit wgt scenarios =
                 ]
             <> "]"
 
-renderScenario :: (ByteString -> LegacyOffsets) -> Scenario -> String
-renderScenario offsetsOf s =
+renderScenario :: Scenario -> String
+renderScenario s =
     unlines
         [ "/// " <> scDoc s
         , "pub const " <> n <> "_ctx: DeploymentContext = " <> renderCtx (scCtx s)
@@ -913,7 +982,7 @@ renderScenario offsetsOf s =
         , "pub const "
             <> n
             <> "_evidence: RegistrationEvidence = "
-            <> renderEvidence (offsetsOf (reEventBytes (scEvidence s))) (scEvidence s)
+            <> renderEvidence (scEvidence s)
         , ""
         , "pub const "
             <> n
@@ -951,21 +1020,21 @@ renderDatum d =
             ]
         <> " }"
 
-renderEvidence :: LegacyOffsets -> RegistrationEvidence -> String
-renderEvidence o e =
+renderEvidence :: RegistrationEvidence -> String
+renderEvidence e =
     "RegistrationEvidence { "
         <> intercalate
             ", "
             [ "event_bytes: " <> hexLit (reEventBytes e)
-            , "off_t: " <> show (loT o)
-            , "off_i: " <> show (loI o)
-            , "off_s: " <> show (loS o)
-            , "off_k: " <> intList (loK o)
-            , "off_kt: " <> show (loKt o)
-            , "off_n: " <> intList (loN o)
-            , "off_nt: " <> show (loNt o)
-            , "off_b: " <> intList (loB o)
-            , "off_bt: " <> show (loBt o)
+            , "off_t: " <> show (reOffT e)
+            , "off_i: " <> show (reOffI e)
+            , "off_s: " <> show (reOffS e)
+            , "off_k: " <> intList (reOffK e)
+            , "off_kt: " <> show (reOffKt e)
+            , "off_n: " <> intList (reOffN e)
+            , "off_nt: " <> show (reOffNt e)
+            , "off_b: " <> intList (reOffB e)
+            , "off_bt: " <> show (reOffBt e)
             , "ctrl_sigs: " <> sigLits (reCtrlSigs e)
             , "wit_receipts: " <> sigLits (reWitReceipts e)
             ]

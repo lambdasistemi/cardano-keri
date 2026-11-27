@@ -50,6 +50,8 @@ import Cardano.KERI.AID.Checkpoint.TopUp (
 import Cardano.KERI.AID.Checkpoint.Value (checkpointMinAda)
 import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
+    hashProofBurnData,
+    hashProofMintData,
     registerObserverRedeemerData,
  )
 import Cardano.KERI.ChainQuery (
@@ -300,14 +302,10 @@ mkRegistrationPlan manifest escrow inception = do
             , planEscrowLovelace = escrow
             , planPremintRedeemer =
                 plutusDataJson $
-                    Constr
-                        0
-                        [ B (reEventBytes evidence)
-                        , B (cdCesrAid datum)
-                        ]
+                    hashProofMintData (reEventBytes evidence) (cdCesrAid datum)
             , planCheckpointRedeemer = plutusDataJson (Constr 0 [])
             , planProofBurnRedeemer =
-                plutusDataJson (Constr 0 [B "", B ""])
+                plutusDataJson hashProofBurnData
             , planObserverRedeemer =
                 plutusDataJson $
                     registerObserverRedeemerData

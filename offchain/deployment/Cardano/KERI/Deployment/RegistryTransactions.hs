@@ -130,6 +130,8 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationBurnData,
     bookingAttestationIssueData,
     bookingAttestationName,
+    hashProofBurnData,
+    hashProofMintData,
  )
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
@@ -845,8 +847,7 @@ mintHashProof parameters deployment payer export validity = do
     raw = reEventBytes evidence
     aid = cdCesrAid (inceptionDatum export)
     proofName = AssetName (SBS.toShort (inceptionProofName export))
-    hashProofRedeemer =
-        Constr 0 [B raw, B aid]
+    hashProofRedeemer = hashProofMintData raw aid
     attempt funding =
         balancedTx
             <$> first
@@ -1157,7 +1158,7 @@ hashProofBurnExUnits :: ExUnits
 hashProofBurnExUnits = ExUnits 500_000 500_000_000
 
 hashProofBurnRedeemer :: PLC.Data
-hashProofBurnRedeemer = Constr 0 [B "", B ""]
+hashProofBurnRedeemer = hashProofBurnData
 
 -- | The redeemers of a set of purposes, each with its budget or the fallback.
 redeemerMap ::

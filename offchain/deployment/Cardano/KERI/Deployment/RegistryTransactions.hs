@@ -198,6 +198,7 @@ import Cardano.Ledger.Mary.Value (
     MultiAsset (..),
     PolicyID (..),
     filterMultiAsset,
+    mapMaybeMultiAsset,
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
@@ -1372,8 +1373,25 @@ balanced parameters resolved spent fixed changeAddress funding template = do
     -- of the collateral input to the payer
     withOutputs =
         template
-            & bodyTxL . outputsTxBodyL .~ StrictSeq.fromList fixed
+            & bodyTxL . outputsTxBodyL .~ StrictSeq.fromList (fixed <> tokenOutputs)
             & bodyTxL . collateralInputsTxBodyL .~ Set.singleton (fst (fundingCollateral funding))
+    -- what the transaction leaves of the tokens its inputs hold and it mints: an output of its own, so that the change holds
+    -- lovelace alone, as the change of public Singular's builders does and the payer's next transaction needs
+    leftover =
+        filterMultiAsset
+            (\_ _ quantity -> quantity > 0)
+            ( foldMap (assetsOf . snd) spent
+                <> (template ^. bodyTxL . mintTxBodyL)
+                <> mapMaybeMultiAsset (\_ _ quantity -> Just (negate quantity)) (foldMap assetsOf fixed)
+            )
+    tokenOutputs
+        | leftover == mempty = []
+        | otherwise = [carrying]
+    carrying =
+        let probe = mkBasicTxOut changeAddress (MaryValue (Coin 0) leftover)
+            atFirst = getMinCoinTxOut parameters probe
+            atSecond = getMinCoinTxOut parameters (probe & coinTxOutL .~ atFirst)
+         in probe & coinTxOutL .~ max atFirst atSecond
     insufficient = "the outputs that fund the transaction do not hold its payments, its fee and a change output"
     balanceRefused = \case
         InsufficientFee{} -> FeeRefused insufficient

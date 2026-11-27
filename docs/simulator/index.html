@@ -767,7 +767,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {
@@ -3735,7 +3735,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"4100deb9cf3f788dd767582e9833115de33a1c56a0f81d06a0e1c825363ce2b8","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","registry-wire.mjs":"6b7542417d9b1a122f544bda108dc69988cec47ccfeb341ce0ebc5ca46cf30ef","registry-simulator-core.mjs":"2dabe47d319e1f21ff8a7f590279a836c8bd5f0d12cf6f13b191878bd02be7d2","checkpoint-system-core.mjs":"164a261d7317e569cebebe4c410e0394aa45408baad06218c0c7f7944e0fe58a","checkpoint-system-properties.mjs":"d3dab9e637e8db2c2d8d556a38f7f506b1ac88c578d8ba9eee545ead186b2d91","consumer-core.mjs":"2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"61510ffa227d16c3ce728efef6b804ae98658e014558e2c9987f25444707bd1b","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"801060f01debd1027deb329875bbe5a9b796117573cb86f54cad1904e8848ad5","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"0bfa15a04d65e66ae6e1e1681b1d58519df15dbc739a9605576338baa3e292fe","registry-economic-core.mjs":"2ec8e4cafd4ee445cd6e0a2388223e72d5d6c8449e3492fd31a8e7637dc07dde","registry-wire.mjs":"6b7542417d9b1a122f544bda108dc69988cec47ccfeb341ce0ebc5ca46cf30ef","registry-simulator-core.mjs":"2dabe47d319e1f21ff8a7f590279a836c8bd5f0d12cf6f13b191878bd02be7d2","checkpoint-system-core.mjs":"164a261d7317e569cebebe4c410e0394aa45408baad06218c0c7f7944e0fe58a","checkpoint-system-properties.mjs":"d3dab9e637e8db2c2d8d556a38f7f506b1ac88c578d8ba9eee545ead186b2d91","consumer-core.mjs":"2df661f27ff4b149e3c0d118ceb2ebbcde2c62fec2f7644542ffd7618f40397a","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"61510ffa227d16c3ce728efef6b804ae98658e014558e2c9987f25444707bd1b","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"801060f01debd1027deb329875bbe5a9b796117573cb86f54cad1904e8848ad5","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,

@@ -1,4 +1,5 @@
 import SingularApplicationHeld.Client
+import CardanoKeri.ApplicationInceptionPrefix
 import CardanoKeri.Registry
 import CardanoKeri.ConsumerIdentity
 
@@ -105,6 +106,7 @@ inception evidence. A booking mints an approval only for such a key; no other
 action reads it. -/
 structure Env where
   inception : Key → Bool
+  opening : InceptionPrefix.Reads := {}
 
 /-- One KERI registry deployment: the published release of `A_keri` and the
 seed its registry state was created from. -/
@@ -153,6 +155,8 @@ structure Observation where
   interval : Interval
   donation : Nat
   actions : List Action
+  /-- Signed inception bytes at each booking output index in this transaction. -/
+  signedInceptions : List (Option (List UInt8)) := []
 
 /-! ## The configuration record -/
 
@@ -425,6 +429,16 @@ def namedInput (o : Observation) (ref : OutRef) : Option ObservedOutput :=
   if o.assets.spent.count ref == 1 && (o.inputs.filter fun x => decide (x.reference = ref)).length == 1
   then o.inputs.find? (fun x => decide (x.reference = ref)) else none
 
+/-- Check the signed evidence indexed by this booking, against the AID and
+key material in the initial datum committed by its actual request output. -/
+def bookingOpening (i : Interpretation) (env : Env) (o : Observation)
+    (index : Nat) (output : ObservedOutput) : Bool :=
+  (do
+    let .registration data ← decoded i.decode output | none
+    let datum ← i.decodeCheckpoint data.initialDatum
+    let bytes ← o.signedInceptions[index]?.join
+    return InceptionPrefix.verify env.opening data.initialDatum datum.aid bytes).getD false
+
 /-- One action. -/
 def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     (cp : CardanoKeri.Checkpoint.Params) (release : PublishedRelease) (o : Observation) : Action → Bool
@@ -432,7 +446,7 @@ def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     | some output => createConfiguration i release registry seed output o
     | none => false
   | .bookRegistration index => match o.outputs[index]? with
-    | some output => bookRegistration i env rp cp release o output
+    | some output => bookRegistration i env rp cp release o output && bookingOpening i env o index output
     | none => false
   | .foldTermination ref registry key => match namedInput o ref with
     | some input => spendTermination i release o input registry key

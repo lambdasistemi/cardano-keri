@@ -1908,9 +1908,9 @@ theorem accepted_booking_has_inception (i : Interpretation) (env : Env)
     env.inception data.key = true := by
   simp only [accepted, Bool.and_eq_true] at ok
   have aok := List.all_eq_true.mp ok.1.1.1.2 _ booked
-  simp only [action, ho] at aok
+  simp only [action, ho, Bool.and_eq_true] at aok
   obtain ⟨d, _, hd', _, _, _, _, _, _, _, _, _, evidence, _⟩ :=
-    booking_inversion i env rp cp release o aok
+    booking_inversion i env rp cp release o aok.1
   rw [hd] at hd'
   cases hd'
   exact evidence

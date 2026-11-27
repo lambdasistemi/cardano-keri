@@ -76,7 +76,7 @@ def parameters : ApplicationParameters :=
   { registrationCost := 2, minimumTip := 1, processTime := 5, retractTime := 0, bookingWidth := 1 }
 
 def rp : CardanoKeri.Registry.Params := CardanoKeri.Registry.Scenarios.p
-def env : Env := ⟨fun _ => true⟩
+
 
 /-- The checkpoint parameters: the registry's deposit 10 is the checkpoint
 deposit 6 plus the freeze bond 4; one premium is 1. -/
@@ -202,6 +202,22 @@ def interpretation : Interpretation :=
 
 def i : Interpretation := interpretation
 
+/-- The existing economic vectors use a self-addressing inception. The
+fixture supplies a successful signed and datum opening for its ordinary row. -/
+def fixtureEvent : Duplicity.Content :=
+  ⟨aidOfCesr aidE, 0, .inception, 0, [1], .count 1, [2], .count 1, [], [], 0, []⟩
+
+def fixtureEvidence : InceptionPrefix.Evidence :=
+  ⟨⟨fixtureEvent, true, [⟨1, fixtureEvent, true⟩], []⟩, []⟩
+
+def env : Env := {
+  inception := fun _ => true
+  opening := {
+    prefixCode := fun aid => if aid == aidOfCesr aidE then some "E" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some fixtureEvidence else none
+    deriveIdentifier := fun bytes => if bytes == [1] then some (aidOfCesr aidE) else none
+    datumKeys := fun raw => if raw == initialRaw aidE then some ⟨[1], .count 1, [2], .count 1, [], 0⟩ else none } }
+
 def dataOf (raw : Nat) : RegistrationData := ((requests.find? (·.1 == raw)).map (·.2)).getD (requestData 0)
 
 def approvalOf (raw : Nat) : TokenId := registrationAsset i.hash i.code release (dataOf raw)
@@ -256,7 +272,7 @@ def booking (raw lovelace : Nat) (mint : Int := 1) (references : Bool := true)
     inputs := [], outputs := [request raw lovelace],
     referenceInputs := if references then [⟨50, 0⟩] else [],
     referenceOutputs := [configuration registry record, configuration foreignRegistry],
-    interval, donation := 0, actions := [.bookRegistration 0] }
+    interval, donation := 0, actions := [.bookRegistration 0], signedInceptions := [some [1]] }
 
 def fold (holdingLovelace : Nat) (interval : Interval := ⟨12, 15⟩) (donation : Nat := 2)
     (datum : Nat := initialRaw aidE) (burn : Int := -1) (raw : Nat := 9001)
@@ -594,7 +610,7 @@ def cases : List Case := [
 def hexOf (n : Nat) : String := toHex (unpack n)
 
 def verdict (c : Case) : String :=
-  if accepted i ⟨fun _ => c.evidence⟩ rp c.checkpoint release c.observation then "accepted" else "refused"
+  if accepted i {env with inception := fun _ => c.evidence} rp c.checkpoint release c.observation then "accepted" else "refused"
 
 def intervalJson (x : Interval) : Json :=
   Json.mkObj [("lower", toJson x.lower), ("upper", toJson x.upper)]

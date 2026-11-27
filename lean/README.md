@@ -174,3 +174,30 @@ and proves its own correspondence contracts. Neither class of evidence proves
 production Aiken/Haskell correspondence or discharges consumer authentication
 (#439) and the production request lifecycle, whose model is
 `RegistryRequestLifecycle.lean` (#468).
+
+
+### Inception evidence at booking
+
+The controller supplies signed inception bytes at the index of the request
+being booked. The application mint checks the public identifier in the
+committed initial datum and compares its six decoded key-material fields
+with the signed opening. A basic prefix names the sole current key with
+numeric signing threshold one. A non-transferable basic inception has no
+next keys, witnesses or signed seals. A self-addressing prefix requires
+derivation of the same qualified identifier from those signed bytes.
+The current signing quorum must be positive. Zero is permitted for the
+future next threshold. An identifier that can no longer rotate has no
+owner exit for its deposit or bond. The folder copies the committed datum.
+
+The decoder, signature checks, qualified-key and digest reads, and opening
+of the datum's key material are partial primitives. The controller's booking
+transaction supplies their evidence. The economic key-evidence premise also
+remains required. The system's receipt-based registration on main records
+delivery; the signed-field checks run in the application's indexed booking
+action. The standalone model carries the registration width and weight
+conditions shared with #595 and the positive signing condition from #596.
+The January rotation and conviction rules are separate.
+
+The reference check runs fifteen indexed bookings against keripy 1.3.5.
+The derivation-code families and restrictions follow its
+[prefix validation](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L1564-L1610).

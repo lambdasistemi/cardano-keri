@@ -3,9 +3,11 @@
   "scope": "Current lifecycle and transport theorem source stories with complete formal binders and conclusions; no production correspondence claim",
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Application.lean": "ce2f95dc02f875d411715b0e331740adabf252d98117a861e5ab1783d1fd97f6",
-    "lean/CardanoKeri/ApplicationGoals.lean": "5367c8d28e828dfc480dcd1898e112c081440d84fbe859a7450df4bb5a11766a",
-    "lean/CardanoKeri/ApplicationVectors.lean": "073d713d9c86e6bee45751c38c031456ff0e363e0f16acf6cb5c6894479f98f6",
+    "lean/CardanoKeri/Application.lean": "1341ca9a0c7b4b1a5b7f2a9267b474c39946a0f65798e6685f017856935756d6",
+    "lean/CardanoKeri/ApplicationGoals.lean": "67086526577f81aaeddcc354132b6d33bc43e443464daf7abfcb7371ebc1138b",
+    "lean/CardanoKeri/ApplicationInceptionPrefix.lean": "40d706d1335e480f08334885cfdfd58009880d27bda3ef5fc67c302e83bed353",
+    "lean/CardanoKeri/ApplicationPrefixGoals.lean": "24f9f6de52b52e714306158b14efc8618e3df99d152273b81c6fd3d142a1d9c7",
+    "lean/CardanoKeri/ApplicationVectors.lean": "5c3557ab1d23d18355ba28893d651940b63d8d85688d1e7e7f2571c362cd0f3e",
     "lean/CardanoKeri/Checkpoint.lean": "3cc6fbd7d9de62c5d42a96721442f34b2ce55216dfa9245cd008675a358607f5",
     "lean/CardanoKeri/CheckpointCertificate.lean": "1123cdfd9ccf249c41bcc44833ddee5433eb83f6d3c23bfea2eb471a11ecf5f2",
     "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "0e2b4cc6f65e11741a596fb3b9cba580feb8e2ea18affecbd61ae1005bcd1e0b",
@@ -1321,6 +1323,90 @@
         "then": "accepted i env rp cp release (adapted\n      (buildFold i.hash i.code commit release registry [.registration request data] funding)\n      record donation) = true ∧\n    ∃ holding, (adapted\n        (buildFold i.hash i.code commit release registry [.registration request data] funding)\n        record donation).outputs[1]? = some holding ∧\n      holding.credential = data.holdingAddress ∧\n      holding.datum = .application data.initialDatum ∧\n      holding.lovelace = data.deposit ∧\n      quantity holding (activeAsset i.hash i.code data.registry data.key) = 1 ∧\n      writesInitialState i rp cp data holding = true"
       },
       "storySha256": "cca33808d6e19c3ad75956cd28189fd0e970e1eb6d77d66cc7aff7fa965f2f8a"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.inception_has_no_rotation_fields",
+      "path": "lean/CardanoKeri/ApplicationInceptionPrefix.lean",
+      "line": 58,
+      "statement": "theorem inception_has_no_rotation_fields {aid : Nat} {event : SignedEvent} {witnesses : List Nat}\n    (accepted : inceptionWrites aid event witnesses = true) :\n    event.event.priorDigest = 0 ∧ event.event.cuts = [] ∧ event.event.adds = []",
+      "statementSha256": "295f3a0f48af340620d5d1ef4a6afe7051d7453f2252b3a57b2335c9dda35421",
+      "sourceStory": "Given a signed event and initial witnesses, when registration accepts its\ninception opening, the decoded writer has no prior digest or witness deltas.",
+      "story": {
+        "given": "{aid : Nat} {event : SignedEvent} {witnesses : List Nat}\n    (accepted : inceptionWrites aid event witnesses = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "event.event.priorDigest = 0 ∧ event.event.cuts = [] ∧ event.event.adds = []"
+      },
+      "storySha256": "9239d37bbb1cb50170111969f38b5860e1fcf6de7ab9535009dd5024063a2aa7"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.accepted_opening",
+      "path": "lean/CardanoKeri/ApplicationPrefixGoals.lean",
+      "line": 9,
+      "statement": "theorem accepted_opening {i env rp cp release o index output data datum}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum) :\n    ∃ bytes kind e, o.signedInceptions[index]?.join = some bytes ∧\n      kindOf env.opening.prefixCode datum.aid = some kind ∧ env.opening.decodeEvidence bytes = some e ∧\n      env.opening.datumKeys data.initialDatum = some e.keyState ∧\n      inceptionWrites datum.aid e.signed e.witnesses = true ∧\n      env.opening.toOpeningReads.binding bytes datum.aid e kind = true",
+      "statementSha256": "de55961f7624cf77932c954cdba05b93602139c71a939d5b1c9468d93b6762a8",
+      "sourceStory": "Given an accepted booking action, its indexed output and its committed\ninitial datum, the transaction supplies bytes whose signed event and key\nmaterial pass the inception opening for that datum's identifier.",
+      "story": {
+        "given": "{i env rp cp release o index output data datum}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ bytes kind e, o.signedInceptions[index]?.join = some bytes ∧\n      kindOf env.opening.prefixCode datum.aid = some kind ∧ env.opening.decodeEvidence bytes = some e ∧\n      env.opening.datumKeys data.initialDatum = some e.keyState ∧\n      inceptionWrites datum.aid e.signed e.witnesses = true ∧\n      env.opening.toOpeningReads.binding bytes datum.aid e kind = true"
+      },
+      "storySha256": "2c337010d99f112dc3500121c1c766a8e0024f02806de42da01faf4152aa8373"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.accepted_basic",
+      "path": "lean/CardanoKeri/ApplicationPrefixGoals.lean",
+      "line": 34,
+      "statement": "theorem accepted_basic {i env rp cp release o index output data datum transferable}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (basic : kindOf env.opening.prefixCode datum.aid = some (.basic transferable)) :\n    ∃ bytes e, o.signedInceptions[index]?.join = some bytes ∧ env.opening.decodeEvidence bytes = some e ∧\n      e.signed.event.keys = [datum.aid] ∧ e.signed.event.threshold = .count 1 ∧\n      (transferable = false → e.signed.event.nextKeys = [] ∧ e.witnesses = [] ∧ e.seals = [])",
+      "statementSha256": "e94f66b79c3c364a934ef5b9c5471354b8870ef015283755208d269ba3d19cd4",
+      "sourceStory": "Given a booking accepted for a key-derived identifier, its sole current\nkey is that identifier and its signing threshold is the numeric value one.\nA non-transferable identifier has no next keys, witnesses or signed seals.",
+      "story": {
+        "given": "{i env rp cp release o index output data datum transferable}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (basic : kindOf env.opening.prefixCode datum.aid = some (.basic transferable))",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ bytes e, o.signedInceptions[index]?.join = some bytes ∧ env.opening.decodeEvidence bytes = some e ∧\n      e.signed.event.keys = [datum.aid] ∧ e.signed.event.threshold = .count 1 ∧\n      (transferable = false → e.signed.event.nextKeys = [] ∧ e.witnesses = [] ∧ e.seals = [])"
+      },
+      "storySha256": "4fcf19160b9aed9921c9f1758fabd8d172d16e1f4ef666e8f7783c7430999388"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.accepted_self_addressing",
+      "path": "lean/CardanoKeri/ApplicationPrefixGoals.lean",
+      "line": 50,
+      "statement": "theorem accepted_self_addressing {i env rp cp release o index output data datum}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (digest : kindOf env.opening.prefixCode datum.aid = some .selfAddressing) :\n    ∃ bytes, o.signedInceptions[index]?.join = some bytes ∧ env.opening.deriveIdentifier bytes = some datum.aid",
+      "statementSha256": "6b1580a4a73cca286e04a4b98a84acfb2b084c4f73cc07eb1d322ea7ae6ba16d",
+      "sourceStory": "Given an accepted booking for a self-addressing identifier, deriving the\nidentifier from the signed bytes supplied at that very output returns the AID.",
+      "story": {
+        "given": "{i env rp cp release o index output data datum}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (digest : kindOf env.opening.prefixCode datum.aid = some .selfAddressing)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ bytes, o.signedInceptions[index]?.join = some bytes ∧ env.opening.deriveIdentifier bytes = some datum.aid"
+      },
+      "storySha256": "50445405750e0bbcdf86907516bd01719289314aa87d943e81b539db9b14cfd9"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.inconsistent_booking_refused",
+      "path": "lean/CardanoKeri/ApplicationPrefixGoals.lean",
+      "line": 63,
+      "statement": "theorem inconsistent_booking_refused {i env rp cp release o index output data datum bytes k e}\n    (booked : Action.bookRegistration index ∈ o.actions) (found : o.outputs[index]? = some output)\n    (request : decoded i.decode output = some (.registration data)) (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (source : o.signedInceptions[index]?.join = some bytes) (kind : kindOf env.opening.prefixCode datum.aid = some k)\n    (body : env.opening.decodeEvidence bytes = some e)\n    (invalid : e.signed.event.nextKeys.length < e.signed.event.nextThreshold.width ∨\n      e.signed.event.threshold = .count 0 ∨ env.opening.toOpeningReads.binding bytes datum.aid e k = false) :\n    accepted i env rp cp release o = false",
+      "statementSha256": "6d8790edb90a6e83e73ec7a6d793c58a37853563a9b5abc6b532eae52bec7aed",
+      "sourceStory": "If an indexed signed opening has an oversized next rule, a zero numeric\nsigning threshold, or fails the identifier binding, its booking is refused.",
+      "story": {
+        "given": "{i env rp cp release o index output data datum bytes k e}\n    (booked : Action.bookRegistration index ∈ o.actions) (found : o.outputs[index]? = some output)\n    (request : decoded i.decode output = some (.registration data)) (opened : i.decodeCheckpoint data.initialDatum = some datum)\n    (source : o.signedInceptions[index]?.join = some bytes) (kind : kindOf env.opening.prefixCode datum.aid = some k)\n    (body : env.opening.decodeEvidence bytes = some e)\n    (invalid : e.signed.event.nextKeys.length < e.signed.event.nextThreshold.width ∨\n      e.signed.event.threshold = .count 0 ∨ env.opening.toOpeningReads.binding bytes datum.aid e k = false)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "accepted i env rp cp release o = false"
+      },
+      "storySha256": "15dd4ff4c06652d60664a3dffa8350b8bf9441a1d78d9ae5558aab8f46f053ac"
+    },
+    {
+      "declaration": "CardanoKeri.Application.InceptionPrefix.delivered_kind",
+      "path": "lean/CardanoKeri/ApplicationPrefixGoals.lean",
+      "line": 90,
+      "statement": "theorem delivered_kind {i env rp cp release o index output data datum holding fold}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum) (delivery : delivered i data holding fold = true) :\n    ∃ k, kindOf env.opening.prefixCode datum.aid = some k ∧\n      (match holding.datum with\n       | .application raw => (i.decodeCheckpoint raw).bind fun d => kindOf env.opening.prefixCode d.aid\n       | _ => none) = some k",
+      "statementSha256": "68a75ce1caa8b5056e94209776e861efa0125dc571169ec7cbd24d5e7eaef30c",
+      "sourceStory": "When the folder delivers an accepted request, its holding carries the\nsame initial datum. A reader applying the booking's public decoders to that\ndatum obtains the same identifier kind without the controller's signatures.",
+      "story": {
+        "given": "{i env rp cp release o index output data datum holding fold}\n    (ok : accepted i env rp cp release o = true) (booked : Action.bookRegistration index ∈ o.actions)\n    (found : o.outputs[index]? = some output) (request : decoded i.decode output = some (.registration data))\n    (opened : i.decodeCheckpoint data.initialDatum = some datum) (delivery : delivered i data holding fold = true)",
+        "when": "Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.",
+        "then": "∃ k, kindOf env.opening.prefixCode datum.aid = some k ∧\n      (match holding.datum with\n       | .application raw => (i.decodeCheckpoint raw).bind fun d => kindOf env.opening.prefixCode d.aid\n       | _ => none) = some k"
+      },
+      "storySha256": "7f03e4ba5d458874fd100bc6181ba78ec6bab2f6b0f9abe482df37cded3b5796"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.Sys.retireRevealed_frame",

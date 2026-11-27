@@ -550,6 +550,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RecordedHistory
+    Cardano.KERI.Deployment.ReferenceInception
     Cardano.KERI.Deployment.RegistrationEvidenceSpec
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryApplicationSpec

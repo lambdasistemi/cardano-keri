@@ -4,22 +4,29 @@ Description : The offset-free registration evidence, built from signed bytes alo
 
 Three inceptions of an independent structural reference (a key-derived prefix
 whose digest differs from its identifier, a self-addressing prefix with a
-three-signature quorum, and the two-key positive) go through the production
-builder, the hash-proof redeemers and the registration predicate. The controls
-change one datum field, or the spelling of the sequence number, and require the
-named refusal.
+three-signature quorum, and the two-key positive) and the keripy prefix cases
+the model admits go through the production builder, the hash-proof redeemers,
+the qualified live datum and the registration predicate. The controls change
+one datum field, the spelling of the sequence number or the signed bytes, and
+require the named refusal.
 -}
 module Cardano.KERI.Deployment.RegistrationEvidenceSpec (spec) where
 
 import Cardano.KERI.AID.CESR (qb64Aid)
-import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..))
+import Cardano.KERI.AID.Checkpoint.Datum (
+    CheckpointDatumV2 (..),
+    KeyMaterial (..),
+    KeyStateView (..),
+    QualifiedIdentity (..),
+    liveOfInception,
+ )
 import Cardano.KERI.AID.Checkpoint.InceptionPrefix (PrefixKind (..))
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
     RegistrationError (..),
     RegistrationEvidence (..),
     proofTokenName,
-    registrationPredicate,
+    registrationPredicateOver,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
@@ -27,36 +34,22 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     hashProofMintData,
     registrationEvidenceData,
  )
-import Cardano.KERI.Deployment.KEL (
-    InceptionExport (..),
-    parseInceptionExport,
+import Cardano.KERI.Deployment.KEL (InceptionExport (..))
+import Cardano.KERI.Deployment.ReferenceInception (
+    Reference (..),
+    exportOf,
+    loadReferences,
+    pick,
+    prefixCaseExport,
+    respell,
  )
-import Data.Aeson (Value (..), eitherDecodeFileStrict)
-import Data.Aeson.Key qualified as K
-import Data.Aeson.KeyMap qualified as KM
-import Data.Bits (shiftR, (.&.))
-import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
-import Data.ByteString (ByteString)
+import Cardano.KERI.Deployment.RegistryChain (exportKey)
+import Control.Monad ((>=>))
 import Data.ByteString qualified as BS
-import Data.ByteString.Char8 qualified as B8
-import Data.Foldable (toList)
-import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
-import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
-
--- | One reference inception: signed bytes, signatures and the values the reference states.
-data Reference = Reference
-    { refId :: !Text
-    , refEvent :: !ByteString
-    , refCtrlSigs :: ![(Int, ByteString)]
-    , refIdentifier :: !Text
-    , refSaid :: !Text
-    , refProofName :: !ByteString
-    , refMint :: !(ByteString, ByteString)
-    }
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 spec :: Spec
 spec = describe "offset-free registration evidence" $ do
@@ -77,24 +70,47 @@ spec = describe "offset-free registration evidence" $ do
             cdCesrAid (inceptionDatum export) `shouldBe` inceptionDigest export
         it "accepts each reference inception under the registration predicate" $ do
             refs <- loadReferences
-            mapM_
-                ( \r -> do
-                    export <- exportOf r
-                    registrationPredicate
-                        context
-                        (inceptionDatum export)
-                        1_007_000_000
-                        (inceptionEvidence export)
-                        `shouldBe` Right ()
-                )
-                refs
+            mapM_ (exportOf >=> accepted) refs
+    describe "the request key, the datum identity and the stored keys are the signed qualified spelling" $ do
+        let spelled name expectedAid expectedKeys = it name $ do
+                refs <- loadReferences
+                export <- exportOf (pick (T.pack name) refs)
+                exportKey export `shouldBe` TE.encodeUtf8 expectedAid
+                case liveOfInception "refund" 7 (inceptionDatum export) (inceptionQualified export) of
+                    Live{lvAid, lvKeys} -> do
+                        lvAid `shouldBe` TE.encodeUtf8 expectedAid
+                        kmCurKeys lvKeys `shouldBe` map TE.encodeUtf8 expectedKeys
+                    _ -> fail "a live datum was expected"
+        spelled "I01" "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ" ["DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"]
+        spelled
+            "I02"
+            "EEnwnQUz696trMrSNOKKH9b2CKz5xTF-fgCquWHuiLgA"
+            [ "DNFWz8AsxHPcZFy7tIswi1cYEG96zmZQVkdz8gQIdzIL"
+            , "DCtQH-bOQ4L7ywz_P_uuT_pSKAWce7H6PB_sKuy7b3_R"
+            , "DHsjDyW82DiCth5DZhxzn_zJ7PeOPpTFW3zJ-FLXbD09"
+            ]
+        it "B empty keeps the B code of its key and its identifier, apart from its own SAID" $ do
+            export <- prefixCaseExport "B empty"
+            let aid = "BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw"
+            exportKey export `shouldBe` aid
+            qiCurKeys (inceptionQualified export) `shouldBe` [aid]
+            qb64Aid (inceptionDigest export) `shouldBe` "EIgvoqHwq-DpO8FStujY-u5MDe1JjChiQssTtgBG208B"
+            inceptionKind export `shouldBe` BasicPrefix False
+    describe "the model admits the empty and zero future declarations of the keripy cases" $
+        mapM_
+            ( \label -> it (T.unpack label <> " is accepted by the predicate") $ do
+                export <- prefixCaseExport label
+                accepted export
+            )
+            ["B empty", "D empty", "D next", "D seal", "E digest", "D zero next with digest"]
     describe "a datum that disagrees with the signed bytes in one field is refused by name" $ do
         let refused name what mutate expected =
                 it (name <> ": " <> what) $ do
                     refs <- loadReferences
                     export <- exportOf (pick (T.pack name) refs)
-                    registrationPredicate
+                    registrationPredicateOver
                         context
+                        (inceptionQualified export)
                         (mutate (inceptionDatum export))
                         1_007_000_000
                         (inceptionEvidence export)
@@ -106,9 +122,21 @@ spec = describe "offset-free registration evidence" $ do
         refused "pos_2key" "next threshold" (\d -> d{cdNextThreshold = other (cdNextThreshold d)}) E7NextThresholdMismatch
         refused "pos_2key" "witnesses" (\d -> d{cdWitnesses = [BS.replicate 32 7]}) E8WitnessesMismatch
         refused "pos_2key" "witness threshold" (\d -> d{cdToad = 1}) E9ToadMismatch
+        it "I01: a key spelled with another code than the signed one is refused as the current keys" $ do
+            refs <- loadReferences
+            export <- exportOf (pick "I01" refs)
+            let q = inceptionQualified export
+                bCoded = q{qiCurKeys = map (\k -> "B" <> BS.drop 1 k) (qiCurKeys q)}
+            registrationPredicateOver
+                context
+                bCoded
+                (inceptionDatum export)
+                1_007_000_000
+                (inceptionEvidence export)
+                `shouldBe` Left E4CurKeysMismatch
     describe "the sequence number is the canonical spelling" $ do
         -- a key-derived prefix is not a digest of the body, so the spelling is the only difference
-        let spelled replacement =
+        let spelledAs replacement =
                 it ("s = " <> show replacement <> " is refused as a sequence mismatch") $ do
                     refs <- loadReferences
                     let r = pick "I01" refs
@@ -117,27 +145,57 @@ spec = describe "offset-free registration evidence" $ do
                             (inceptionEvidence export)
                                 { reEventBytes = respell (refEvent r) "\"s\":\"0\"" ("\"s\":\"" <> replacement <> "\"")
                                 }
-                    registrationPredicate
+                    registrationPredicateOver
                         context
+                        (inceptionQualified export)
                         (inceptionDatum export)
                         1_007_000_000
                         evidence
                         `shouldBe` Left E3SequenceMismatch
-        mapM_ spelled ["00", "0x0", "", "1", "A"]
+        mapM_ spelledAs ["00", "0x0", "", "1", "A", "\\u0030", "\\u0030\\u0030"]
         it "a respelled body of a self-addressing prefix is refused earlier, as not derived" $ do
             refs <- loadReferences
             let r = pick "pos_2key" refs
             export <- exportOf r
-            registrationPredicate
+            registrationPredicateOver
                 context
+                (inceptionQualified export)
                 (inceptionDatum export)
                 1_007_000_000
                 (inceptionEvidence export){reEventBytes = respell (refEvent r) "\"s\":\"0\"" "\"s\":\"00\""}
                 `shouldBe` Left E2AidMismatch
+    describe "the controller signatures bind the exact signed bytes" $
+        it "a grammar-valid body with another own SAID is refused at the quorum, after every binding check" $ do
+            refs <- loadReferences
+            let r = pick "I01" refs
+            export <- exportOf r
+            let evidence =
+                    (inceptionEvidence export)
+                        { reEventBytes = respell (refEvent r) (TE.encodeUtf8 (refSaid r)) (swapSecond (TE.encodeUtf8 (refSaid r)))
+                        }
+            registrationPredicateOver
+                context
+                (inceptionQualified export)
+                (inceptionDatum export)
+                1_007_000_000
+                evidence
+                `shouldBe` Left R7QuorumUnsatisfied
   where
     context = DeploymentContext{dcMinAda = 2_000_000, dcDReg = 1_000_000_000}
     other (Unweighted n) = Unweighted (n + 1)
     other t = t
+    -- another valid E-code digest: the second character of the payload changed
+    swapSecond t = BS.take 2 t <> (if BS.index t 2 == 0x41 then "B" else "A") <> BS.drop 3 t
+
+accepted :: InceptionExport -> IO ()
+accepted export =
+    registrationPredicateOver
+        DeploymentContext{dcMinAda = 2_000_000, dcDReg = 1_000_000_000}
+        (inceptionQualified export)
+        (inceptionDatum export)
+        1_007_000_000
+        (inceptionEvidence export)
+        `shouldBe` Right ()
 
 checkReference :: Reference -> IO ()
 checkReference r = do
@@ -160,94 +218,3 @@ checkReference r = do
             , List [List [I (fromIntegral i), B s] | (i, s) <- refCtrlSigs r]
             , List []
             ]
-
-exportOf :: Reference -> IO InceptionExport
-exportOf r =
-    either (\e -> expectationFailure e >> fail e) pure $
-        parseInceptionExport (streamOf (refEvent r) (refCtrlSigs r))
-
-pick :: Text -> [Reference] -> Reference
-pick name refs = case filter ((== name) . refId) refs of
-    [r] -> r
-    _ -> error ("reference " <> T.unpack name <> " is not in the fixture exactly once")
-
-loadReferences :: IO [Reference]
-loadReferences = do
-    path <- getDataFileName "test/keri-fixtures/fixtures/registration_reference.json"
-    top <- eitherDecodeFileStrict path >>= either fail pure
-    either fail pure $ do
-        cases <- field "cases" top >>= array
-        traverse one cases
-  where
-    one c = do
-        i <- field "id" c >>= text
-        event <- field "event_hex" c >>= text >>= hex
-        sigs <- field "ctrl_sigs" c >>= array >>= traverse sigOf
-        ident <- field "identifier" c >>= text
-        said <- field "said" c >>= text
-        name <- field "proof_name" c >>= text >>= hex
-        mint <- field "mint_fields" c >>= array >>= traverse (text >=> hex)
-        case mint of
-            [e, raw] -> Right (Reference i event sigs ident said name (e, raw))
-            _ -> Left "mint redeemer is not two fields"
-    sigOf p = do
-        pair <- array p
-        case pair of
-            [Number n, String s] -> (,) (truncate n) <$> hex s
-            _ -> Left "not an indexed signature"
-    (>=>) f g x = f x >>= g
-
-field :: Text -> Value -> Either String Value
-field k v = case v of
-    Object o | Just x <- KM.lookup (K.fromText k) o -> Right x
-    _ -> Left (show k <> " missing")
-
-array :: Value -> Either String [Value]
-array (Array xs) = Right (toList xs)
-array _ = Left "not an array"
-
-text :: Value -> Either String Text
-text (String t) = Right t
-text _ = Left "not a string"
-
-hex :: Text -> Either String ByteString
-hex = convertFromBase Base16 . TE.encodeUtf8
-
-{- | A kli-export message: the event, its attachment group counter, and the
-indexed controller signatures as 88-character CESR tokens.
--}
-streamOf :: ByteString -> [(Int, ByteString)] -> ByteString
-streamOf event sigs =
-    event
-        <> "-V"
-        <> counter (1 + 22 * length sigs)
-        <> "-A"
-        <> counter (length sigs)
-        <> BS.concat (map token sigs)
-  where
-    counter n = B8.pack [digit (n `shiftR` 6), digit (n .&. 63)]
-    token (index, signature) =
-        B8.pack ('A' : digit index : [digit (bits `shiftR` (6 * k) .&. 63) | k <- [85, 84 .. 0]])
-      where
-        bits = foldl (\acc b -> acc * 256 + fromIntegral b) (0 :: Integer) (BS.unpack signature)
-    digit :: (Integral a) => a -> Char
-    digit v =
-        let n = fromIntegral v :: Int
-         in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" !! n
-
-{- | Replace one spelling in the signed bytes and keep the version string's size
-field equal to the new length, so that only the spelling differs.
--}
-respell :: ByteString -> ByteString -> ByteString -> ByteString
-respell raw old new =
-    let (before, rest) = BS.breakSubstring old raw
-        edited = before <> new <> BS.drop (BS.length old) rest
-        size = B8.pack (pad (showHex6 (BS.length edited)))
-     in BS.take 16 edited <> size <> BS.drop 22 edited
-  where
-    pad s = replicate (6 - length s) '0' <> s
-    showHex6 n = case n of
-        0 -> "0"
-        _ -> go n ""
-    go 0 acc = acc
-    go n acc = go (n `div` 16) ("0123456789abcdef" !! (n `mod` 16) : acc)

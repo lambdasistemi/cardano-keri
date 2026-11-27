@@ -35,7 +35,8 @@ import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     KeyStateView (..),
-    liveOfKeyState,
+    QualifiedIdentity (..),
+    liveOfInception,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
 import Cardano.KERI.AID.Checkpoint.Registration (
@@ -179,6 +180,8 @@ data RegistrationPlan = RegistrationPlan
     , planCheckpointDatum :: !Value
     , planKeyState :: !KeyStateView
     -- ^ the inception key state the datum is written from
+    , planQualified :: !QualifiedIdentity
+    -- ^ the signed qualified identifier and current keys the datum stores
     , planUpperSlot :: !Integer
     -- ^ the slot the registration is valid until; its start is the datum's @born_at@
     }
@@ -312,8 +315,9 @@ mkRegistrationPlan manifest escrow inception = do
                         (decodeHexUnsafe checkpointPolicy)
                         evidence
             , planLifecycleCertificateRedeemer = plutusDataJson (I 0)
-            , planCheckpointDatum = checkpointDatumJson noBirth datum
+            , planCheckpointDatum = checkpointDatumJson noBirth datum (inceptionQualified inception)
             , planKeyState = datum
+            , planQualified = inceptionQualified inception
             , planUpperSlot = birthUpperSlot noBirth
             }
   where
@@ -353,11 +357,11 @@ registrationBirth provider refund now = do
             if found < slot then bisect slotAt slot mid hi else bisect slotAt slot lo mid
 
 -- | The inline datum a registration writes, as plan JSON.
-checkpointDatumJson :: RegistrationBirth -> KeyStateView -> Value
-checkpointDatumJson birth datum =
+checkpointDatumJson :: RegistrationBirth -> KeyStateView -> QualifiedIdentity -> Value
+checkpointDatumJson birth datum qualified =
     plutusDataJson
         ( asPlcData $
-            V2 (liveOfKeyState (birthRefundTo birth) (birthBornAt birth) datum)
+            V2 (liveOfInception (birthRefundTo birth) (birthBornAt birth) datum qualified)
         )
 
 {- | Fix when and for whom the registration is made: the datum's @born_at@ and
@@ -367,7 +371,7 @@ without it cannot be registered (the upper slot is zero).
 withBirth :: RegistrationBirth -> RegistrationPlan -> RegistrationPlan
 withBirth birth plan =
     plan
-        { planCheckpointDatum = checkpointDatumJson birth (planKeyState plan)
+        { planCheckpointDatum = checkpointDatumJson birth (planKeyState plan) (planQualified plan)
         , planUpperSlot = birthUpperSlot birth
         }
 

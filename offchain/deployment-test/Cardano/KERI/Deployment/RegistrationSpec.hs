@@ -39,8 +39,9 @@ import Cardano.Crypto.Hash (hashFromStringAsHex, hashToBytes)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (V2),
     KeyStateView (..),
-    liveOfKeyState,
+    liveOfInception,
  )
+import Cardano.KERI.AID.Checkpoint.Registration (qualifiedOfView)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.ChainQuery (
@@ -603,6 +604,7 @@ syntheticPlan =
             plutusDataJson syntheticLifecycleRedeemer
         , planCheckpointDatum = plutusDataJson syntheticCheckpointDatum
         , planKeyState = syntheticKeyState
+        , planQualified = qualifiedOfView syntheticKeyState
         , planUpperSlot = 123
         }
 
@@ -1278,7 +1280,7 @@ registrationBirthSpec = describe "registration birth (version 2 datum)" $ do
         planCheckpointDatum born
             `shouldBe` plutusDataJson
                 ( asPlcData $
-                    V2 (liveOfKeyState refundBytes (birthBornAt birth) syntheticKeyState)
+                    V2 (liveOfInception refundBytes (birthBornAt birth) syntheticKeyState (qualifiedOfView syntheticKeyState))
                 )
   where
     refundBytes = BS.cons 0x00 (BS.replicate 56 0x42)

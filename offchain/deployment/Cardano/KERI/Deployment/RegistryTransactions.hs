@@ -118,7 +118,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV2 (..),
     KeyStateView (..),
-    liveOfKeyState,
+    liveOfInception,
  )
 import Cardano.KERI.AID.Checkpoint.EventDecoder (decodeSaidPreimage)
 import Cardano.KERI.AID.Checkpoint.Registration (
@@ -446,7 +446,11 @@ of the validity interval, refunding the given address.
 -}
 registeredFacts :: Addr -> InceptionExport -> ValidityPlan -> CheckpointDatumV2
 registeredFacts refund export validity =
-    liveOfKeyState (serialiseAddr refund) (upperPosixMs validity) (inceptionDatum export)
+    liveOfInception
+        (serialiseAddr refund)
+        (upperPosixMs validity)
+        (inceptionDatum export)
+        (inceptionQualified export)
 
 -- | The approval token name of a request.
 approval :: RegistrationData -> ByteString

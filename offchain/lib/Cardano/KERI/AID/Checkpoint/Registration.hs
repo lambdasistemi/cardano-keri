@@ -63,7 +63,10 @@ module Cardano.KERI.AID.Checkpoint.Registration (
     -- * The registration predicate
     RegistrationError (..),
     eventBinding,
+    eventBindingOver,
     registrationPredicate,
+    registrationPredicateOver,
+    qualifiedOfView,
 ) where
 
 import Cardano.KERI.AID.CESR (
@@ -76,9 +79,10 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     DatumError,
     KeyStateView (..),
+    QualifiedIdentity (..),
     Verkey,
     blake2b_256,
-    keyStateWellFormed,
+    inceptionKeyStateWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.EventDecoder (
     DecodedEstablishmentEvent (..),
@@ -260,7 +264,7 @@ validateInceptionDatum et d = do
     unless (et == Icp) (Left DelegatedInceptionRejected)
     unless (BS.length (cdCesrAid d) == 32) (Left InceptionAidWidth)
     unless (cdNativeSn d == 0) (Left InceptionNativeSnNonZero)
-    first InceptionIllFormed (keyStateWellFormed d)
+    first InceptionIllFormed (inceptionKeyStateWellFormed d)
 
 -- ---------------------------------------------------------
 -- The registration predicate
@@ -328,13 +332,20 @@ data RegistrationError
 32 identifier bytes: the key of a basic prefix (codes B and D), the digest of a
 self-addressing one (code E).
 -}
-identifierBound :: DecodedEstablishmentEvent -> CesrAid -> Bool
-identifierBound ev aid =
+identifierBound :: DecodedEstablishmentEvent -> QualifiedIdentity -> CesrAid -> Bool
+identifierBound ev q aid =
     either (const False) (const True) (verifyPrefixBinding ev)
-        && case parsePrimitive (deeAid ev) of
+        && deeAid ev == qiAid q
+        && case parsePrimitive (qiAid q) of
             Right (Ed25519PublicKey raw, rest) -> BS.null rest && raw == aid
             Right (SelfAddressing raw, rest) -> BS.null rest && raw == aid
             _ -> False
+
+-- | The 32 raw bytes of one complete qualified Ed25519 public key (code B or D).
+rawKey :: ByteString -> Maybe ByteString
+rawKey text = case parsePrimitive text of
+    Right (Ed25519PublicKey raw, rest) | BS.null rest -> Just raw
+    _ -> Nothing
 
 {- | R6 — the E1-E9 event binding. The event is decoded from its bytes
 alone (E1 refuses what does not decode); every expected value is computed from the datum
@@ -342,21 +353,22 @@ alone (E1 refuses what does not decode); every expected value is computed from t
 with the decoder's projection of the same field. There is no position to
 point at another field: field identity comes from the parse.
 -}
-eventBinding ::
+eventBindingOver ::
+    QualifiedIdentity ->
     KeyStateView ->
     RegistrationEvidence ->
     Either RegistrationError ()
-eventBinding d e = do
+eventBindingOver q d e = do
     ev <-
         either
             (const (Left E1EventTypeMismatch))
             Right
             (decodeEstablishmentEvent (reEventBytes e))
     unless (deeVariant ev == VariantIcp) (Left E1EventTypeMismatch)
-    unless (identifierBound ev (cdCesrAid d)) (Left E2AidMismatch)
+    unless (identifierBound ev q (cdCesrAid d)) (Left E2AidMismatch)
     unless (deeSeq ev == "0") (Left E3SequenceMismatch)
     unless
-        (deeK ev == map qb64Verkey (cdCurKeys d))
+        (deeK ev == qiCurKeys q && map rawKey (qiCurKeys q) == map Just (cdCurKeys d))
         (Left E4CurKeysMismatch)
     unless
         (deeKt ev == respellThreshold (cdCurThreshold d))
@@ -374,6 +386,31 @@ eventBinding d e = do
         (deeBt ev == respellHex (cdToad d))
         (Left E9ToadMismatch)
 
+{- | The qualified spelling of a datum whose identifier carries the E code and
+whose current keys carry the D code: the datum of a self-addressing, transferable
+inception. A basic prefix whose signing key has the B code is read with
+'registrationPredicateOver' and its own qualified identity.
+-}
+qualifiedOfView :: KeyStateView -> QualifiedIdentity
+qualifiedOfView d =
+    QualifiedIdentity
+        { qiAid = qb64Aid (cdCesrAid d)
+        , qiCurKeys = map qb64Verkey (cdCurKeys d)
+        }
+
+-- | R6 over the E and D spelling of the datum ('qualifiedOfView').
+eventBinding :: KeyStateView -> RegistrationEvidence -> Either RegistrationError ()
+eventBinding d = eventBindingOver (qualifiedOfView d) d
+
+-- | The registration predicate over the E and D spelling of the datum.
+registrationPredicate ::
+    DeploymentContext ->
+    KeyStateView ->
+    Integer ->
+    RegistrationEvidence ->
+    Either RegistrationError ()
+registrationPredicate ctx d = registrationPredicateOver ctx (qualifiedOfView d) d
+
 {- | The pure registration predicate: R3, R6 (E1-E9), R4, R7, R8,
 in order. R6 precedes R4 because E1's verified @t@ slice is what
 derives R4's 'EventType' (after E1 only 'Icp' can reach it);
@@ -382,20 +419,22 @@ only to fail R4's F18 (rule 2). The @lovelace@ argument is the
 state output's value the R8 arithmetic runs over; transaction
 shape itself (R1\/R2\/R5) is the S5 validator layer.
 -}
-registrationPredicate ::
+registrationPredicateOver ::
     DeploymentContext ->
+    -- | The qualified identifier and current keys the committed datum carries.
+    QualifiedIdentity ->
     -- | The inline datum @D@ of the genesis state output.
     KeyStateView ->
     -- | The state output's lovelace (R8).
     Integer ->
     RegistrationEvidence ->
     Either RegistrationError ()
-registrationPredicate ctx d lovelace e = do
+registrationPredicateOver ctx q d lovelace e = do
     unless (validRegistrationDeposit (dcDReg ctx)) (Left DRegBelowMinimum)
     -- R3: genesis projection.
     unless (cdSeq d == 0) (Left R3GenesisDatumMismatch)
     -- R6: the event-binding slice set (E1 derives R4's type).
-    eventBinding d e
+    eventBindingOver q d e
     -- R4: the frozen #68 schema predicate, reused.
     first R4InceptionInvalid (validateInceptionDatum Icp d)
     -- R7: distinct controller positions over exact event bytes.

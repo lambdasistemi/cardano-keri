@@ -151,9 +151,6 @@ import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
     deriveAidAssetName,
  )
-import Cardano.KERI.AID.Checkpoint.Registration (
-    RegistrationEvidence (..),
- )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.TopUp (
     TopUpParams (..),
@@ -208,7 +205,7 @@ import Cardano.KERI.AID.E2E.Script (
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Cardano.KERI.AID.Release qualified as Rel
-import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
+import Cardano.KERI.Deployment.KEL (InceptionExport (..), inceptionFromEvent, parseInceptionExport)
 import Cardano.KERI.Deployment.RefusalAt (Verdict (..), evaluationRefusedAt, purposeName, requireRefusedAt, verdictAt)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
@@ -1996,61 +1993,8 @@ signedRotateEvidence _env _input fixture signers receipts =
 registrationFixtureFrom ::
     Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String InceptionExport
 registrationFixtureFrom event signatures receipts = do
-    ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
-    pre <- textAt "pre" event
-    aid <- digestRaw pre
-    currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
-    nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
-    witnesses <- textArrayAt "b" ked >>= traverse verkeyRaw
-    currentThreshold <- thresholdAt "kt" ked
-    nextThreshold <- thresholdAt "nt" ked
-    toad <- hexIntegerAt "bt" ked
-    offT <- integerAt "t" offsets
-    offI <- integerAt "i" offsets
-    offS <- integerAt "s" offsets
-    offK <- integerArrayAt "k" offsets
-    offKt <- integerAt "kt" offsets
-    offN <- integerArrayAt "n" offsets
-    offNt <- integerAt "nt" offsets
-    offB <- integerArrayAt "b" offsets
-    offBt <- integerAt "bt" offsets
-    offD <- eventSaidOffset event
-    let datum =
-            KeyStateView
-                { cdCesrAid = aid
-                , cdCurKeys = currentKeys
-                , cdCurThreshold = currentThreshold
-                , cdNextKeys = nextKeys
-                , cdNextThreshold = nextThreshold
-                , cdWitnesses = witnesses
-                , cdToad = toad
-                , cdSeq = 0
-                , cdNativeSn = 0
-                }
-        evidence =
-            RegistrationEvidence
-                { reEventBytes = raw
-                , reOffT = fromInteger offT
-                , reOffI = fromInteger offI
-                , reOffS = fromInteger offS
-                , reOffK = map fromInteger offK
-                , reOffKt = fromInteger offKt
-                , reOffN = map fromInteger offN
-                , reOffNt = fromInteger offNt
-                , reOffB = map fromInteger offB
-                , reOffBt = fromInteger offBt
-                , reCtrlSigs = signatures
-                , reWitReceipts = receipts
-                }
-    pure
-        InceptionExport
-            { inceptionAid = pre
-            , inceptionDatum = datum
-            , inceptionEvidence = evidence
-            , inceptionDigestOffset = fromInteger offD
-            }
+    inceptionFromEvent raw signatures receipts
 
 enforcementEvidenceFrom :: Value -> [(Int, ByteString)] -> Either String EnforcementEvidence
 enforcementEvidenceFrom event signatures = do
@@ -2082,16 +2026,6 @@ enforcementEvidenceFrom event signatures = do
         <*> pure toad
         <*> pure signatures
         <*> pure []
-
-eventSaidOffset :: Value -> Either String Integer
-eventSaidOffset event = do
-    raw <- textAt "raw_hex" event >>= decodeHex
-    said <- textAt "said" event
-    let needle = Text.encodeUtf8 said
-    maybe
-        (Left "event SAID not found in raw serialization")
-        (Right . fromIntegral)
-        (findSubsequence needle raw)
 
 {- | The long-lived #116 enforcement fixtures intentionally preserve their
 original raw KERI events without an offsets envelope.  Re-derive the exact

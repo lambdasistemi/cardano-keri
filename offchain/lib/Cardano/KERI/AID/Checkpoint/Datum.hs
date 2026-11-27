@@ -62,6 +62,7 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     -- * Datum-level well-formedness (rule 14)
     DatumError (..),
     keyStateWellFormed,
+    inceptionKeyStateWellFormed,
     datumV2WellFormed,
 
     -- * The key-state view of a version 2 checkpoint
@@ -73,6 +74,8 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     rotatedLive,
     convictedOf,
     liveOfKeyState,
+    QualifiedIdentity (..),
+    liveOfInception,
 ) where
 
 import Cardano.Crypto.Hash.Blake2b (
@@ -88,6 +91,7 @@ import Cardano.KERI.AID.CESR (
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     ThresholdError,
+    futureWellFormed,
     wellFormed,
  )
 import Control.Monad (
@@ -394,12 +398,18 @@ domains (@cesr_aid@, witness verkeys all exactly 32 bytes) and the rule-14
 witness\/@toad@ constraints. Nothing malformed can serialize past it.
 -}
 keyStateWellFormed :: KeyStateView -> Either DatumError ()
-keyStateWellFormed KeyStateView{..} = do
+keyStateWellFormed = keyStateWith wellFormed
+
+keyStateWith ::
+    ([Verkey] -> Threshold -> Either ThresholdError ()) ->
+    KeyStateView ->
+    Either DatumError ()
+keyStateWith nextRule KeyStateView{..} = do
     unless (BS.length cdCesrAid == 32) (Left CesrAidWidth)
     -- Delegate cur_keys + cur_threshold to the reused Slice-2 F18 predicate.
     first ThresholdIllFormed (wellFormed cdCurKeys cdCurThreshold)
-    -- The committed next pair obeys the same F18 predicate (KERI n + nt).
-    first NextIllFormed (wellFormed cdNextKeys cdNextThreshold)
+    -- The committed next pair obeys the rule given (KERI n + nt).
+    first NextIllFormed (nextRule cdNextKeys cdNextThreshold)
     unless (all ((== 32) . BS.length) cdWitnesses) (Left WitnessWidth)
     when (length (nub cdWitnesses) /= length cdWitnesses) (Left DuplicateWitness)
     unless toadOk (Left ToadRange)
@@ -408,6 +418,13 @@ keyStateWellFormed KeyStateView{..} = do
     toadOk
         | null cdWitnesses = cdToad == 0
         | otherwise = 1 <= cdToad && cdToad <= fromIntegral (length cdWitnesses)
+
+{- | The key-state rules of an inception: the current pair obeys F18 (a positive
+signing quorum); the future pair obeys the inception rule, under which a
+numeric zero threshold with no commitments, or with commitments, is valid.
+-}
+inceptionKeyStateWellFormed :: KeyStateView -> Either DatumError ()
+inceptionKeyStateWellFormed = keyStateWith futureWellFormed
 
 {- | Write-time validity of a version 2 datum: the numbers it carries are
 non-negative and its key material obeys the key-state rules. No rule on
@@ -557,3 +574,26 @@ liveOfKeyState refund bornAt view@KeyStateView{..} =
         , lvToppedUp = False
         , lvKeys = keyMaterialOf view
         }
+
+{- | The exact qualified spelling of an inception's identifier and current keys, as
+signed (@i@ and @k@): the request key, the checkpoint's identity and its stored
+current keys, with their derivation codes. The raw bytes stay in the
+'KeyStateView' for signatures and the proof name.
+-}
+data QualifiedIdentity = QualifiedIdentity
+    { qiAid :: !ByteString
+    , qiCurKeys :: ![ByteString]
+    }
+    deriving stock (Show, Eq)
+
+{- | The live datum of a registration: the key state of 'liveOfKeyState' with the
+signed qualified identifier as its identity and the signed qualified keys, in
+signed order, as its current keys.
+-}
+liveOfInception ::
+    ByteString -> Integer -> KeyStateView -> QualifiedIdentity -> CheckpointDatumV2
+liveOfInception refund bornAt view QualifiedIdentity{..} =
+    case liveOfKeyState refund bornAt view of
+        live@Live{lvKeys} ->
+            live{lvAid = qiAid, lvKeys = lvKeys{kmCurKeys = qiCurKeys}}
+        pending -> pending

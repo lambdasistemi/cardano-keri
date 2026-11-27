@@ -9,6 +9,7 @@ material required by the frozen checkpoint validators.
 module Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     RotationExport (..),
+    inceptionFromEvent,
     parseInceptionExport,
     parseIndexedSignatureLines,
     parseRotationExport,
@@ -25,6 +26,7 @@ import Cardano.KERI.AID.Checkpoint.Advance (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     KeyStateView (..),
+    QualifiedIdentity (..),
     keyStateWellFormed,
  )
 import Cardano.KERI.AID.Checkpoint.EventDecoder (
@@ -87,6 +89,8 @@ data InceptionExport = InceptionExport
     , inceptionDigest :: !ByteString
     -- ^ the event's own SAID, 32 raw bytes
     , inceptionDatum :: !KeyStateView
+    , inceptionQualified :: !QualifiedIdentity
+    -- ^ the signed @i@ and @k@ exactly as spelled, with their derivation codes
     , inceptionEvidence :: !RegistrationEvidence
     }
     deriving stock (Show, Eq)
@@ -150,6 +154,24 @@ material, and an own SAID that does not bind the exact event bytes.
 parseInceptionExport :: ByteString -> Either String InceptionExport
 parseInceptionExport stream = do
     (raw, attachments, _) <- splitMessage stream
+    (controllerSignatures, witnessReceipts) <-
+        parseAttachments attachments
+    when (null controllerSignatures) $
+        Left "KEL inception has no controller indexed signatures"
+    inceptionFromEvent raw controllerSignatures witnessReceipts
+
+{- | The registration material of one inception from its exact signed bytes and its
+indexed attachments. This is the one construction of an 'InceptionExport': the
+stream reader above and every fixture or test that already holds the attachments
+come through it, so the decoder, the prefix binding and the own-SAID check apply
+to each. The attachments are not judged here; the registration predicate does.
+-}
+inceptionFromEvent ::
+    ByteString ->
+    [(Int, ByteString)] ->
+    [(Int, ByteString)] ->
+    Either String InceptionExport
+inceptionFromEvent raw controllerSignatures witnessReceipts = do
     event <-
         first (("KEL inception failed total parse: " <>) . show) $
             decodeEstablishmentEvent raw
@@ -170,10 +192,6 @@ parseInceptionExport stream = do
     currentKeys <- traverse (decodePublicKey "k" . text) (deeK event)
     nextKeys <- traverse (decodeSelfAddressing "n" . text) (deeN event)
     witnesses <- traverse (decodePublicKey "b" . text) (deeB event)
-    (controllerSignatures, witnessReceipts) <-
-        parseAttachments attachments
-    when (null controllerSignatures) $
-        Left "KEL inception has no controller indexed signatures"
     let evidence =
             RegistrationEvidence
                 { reEventBytes = raw
@@ -198,6 +216,11 @@ parseInceptionExport stream = do
             , inceptionKind = kind
             , inceptionDigest = digest
             , inceptionDatum = datum
+            , inceptionQualified =
+                QualifiedIdentity
+                    { qiAid = deeAid event
+                    , qiCurKeys = deeK event
+                    }
             , inceptionEvidence = evidence
             }
 

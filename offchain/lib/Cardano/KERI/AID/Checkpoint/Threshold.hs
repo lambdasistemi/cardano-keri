@@ -35,6 +35,7 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
 
     -- * F18 well-formedness and evaluation
     wellFormed,
+    futureWellFormed,
     evaluate,
 ) where
 
@@ -170,6 +171,21 @@ unBuiltin (BuiltinData d) = d
 -- ---------------------------------------------------------
 -- F18 well-formedness (rules 1-13)
 -- ---------------------------------------------------------
+
+{- | The inception rule for the future (next) pair. The declared width is bounded
+by the signed commitments, every weight is canonical and at most one, and
+numeric zero is a valid future threshold: an inception may declare no future
+at all (no commitments, threshold zero) or commitments with threshold zero.
+The positive current signing quorum is 'wellFormed', which this does not
+replace.
+-}
+futureWellFormed :: [ByteString] -> Threshold -> Either ThresholdError ()
+futureWellFormed keys th = case (keys, th) of
+    ([], Unweighted 0) -> Right ()
+    (_ : _, Unweighted 0) -> do
+        unless (all ((== 32) . BS.length) keys) (Left KeyWidth)
+        when (length (nub keys) /= length keys) (Left DuplicateKey)
+    _ -> wellFormed keys th
 
 {- | The F18 well-formedness predicate over a positional
 @(cur_keys, threshold)@ pair. Total and deterministic; each rejection maps to

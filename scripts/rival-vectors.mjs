@@ -53,7 +53,10 @@ if (!Array.isArray(rows) || rows.length !== 17) throw new Error(`expected 17 row
 
 const admissionRaw = readFileSync(admissionInput);
 if (createHash('sha256').update(admissionRaw).digest('hex') !== admissionSha256) throw new Error('vendored admission cases differ from the pinned model');
-const admission = JSON.parse(admissionRaw.toString('utf8')).rotations;
+const admissionDoc = JSON.parse(admissionRaw.toString('utf8'));
+const admission = admissionDoc.rotations;
+const signingCases = admissionDoc.thresholds;
+if (!Array.isArray(signingCases) || signingCases.length !== 4) throw new Error('expected 4 signing cases');
 if (!Array.isArray(admission) || admission.length !== 21) throw new Error(`expected 21 admission cases, found ${admission.length}`);
 
 const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x)
@@ -126,7 +129,7 @@ use aiken/builtin
 use aiken/collection/list
 use cardano_keri/checkpoint/message.{next_key_digest}
 use cardano_keri/checkpoint/rival.{
-  Previous, Rotation, Tip, conviction_accepts, rotation_valid,
+  Previous, Rotation, Tip, conviction_accepts, rotation_valid, satisfied,
 }
 use cardano_keri/checkpoint/threshold.{
   Threshold, Unweighted, Weight, Weighted,
@@ -262,7 +265,23 @@ test ${name}_rotation_verdict() {
 ${accepted}`;
 };
 
+// The signing masks of the model's thresholds export: for each case and each of the
+// 2^keyCount subsets of signing keys, the actual signing rule must agree with the
+// model on whether the subset satisfies the count (mask bit i set = key i signed).
+const maskTests = signingCases.flatMap((c) => {
+  if (!(c.keyCount >= 1) || !c.expectedMasks.every((m) => Number.isInteger(m) && m >= 0 && m < 2 ** c.keyCount)) throw new Error(`signing case ${c.name}`);
+  return Array.from({ length: 2 ** c.keyCount }, (_, mask) => {
+    const positions = Array.from({ length: c.keyCount }, (_, i) => i).filter((i) => (mask >> i) & 1);
+    return `
+test signing_${c.name.toLowerCase()}_mask_${mask}() {
+  satisfied(Unweighted(${c.threshold}), ${c.keyCount}, [${positions.join(', ')}]) == ${c.expectedMasks.includes(mask) ? 'True' : 'False'}
+}
+`;
+  });
+});
+if (maskTests.length !== 22) throw new Error(`expected 22 masks, generated ${maskTests.length}`);
+
 const all = [...rows, ...admissionRows];
-const body = header + all.map(rowConst).join('') + all.map(rowTests).join('');
+const body = header + all.map(rowConst).join('') + all.map(rowTests).join('') + maskTests.join('');
 
 writeFileSync(out, body);

@@ -81,7 +81,11 @@ fn positive_denominators(threshold: Threshold) -> Bool {
 /// signers (a count of zero is never satisfied, #596); a weighted
 /// rule needs a nonempty list of nonempty clauses with positive denominators
 /// that partition the keys, each clause summing to at least one.
-fn satisfied(threshold: Threshold, key_count: Int, signed: List<Int>) -> Bool {
+pub fn satisfied(
+  threshold: Threshold,
+  key_count: Int,
+  signed: List<Int>,
+) -> Bool {
   when threshold is {
     Unweighted(m) ->
       m >= 1 && m <= key_count && evaluate(threshold, key_count, signed)

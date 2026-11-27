@@ -17,7 +17,7 @@ use aiken/builtin
 use aiken/collection/list
 use cardano_keri/checkpoint/message.{next_key_digest}
 use cardano_keri/checkpoint/rival.{
-  Previous, Rotation, Tip, conviction_accepts, rotation_valid,
+  Previous, Rotation, Tip, conviction_accepts, rotation_valid, satisfied,
 }
 use cardano_keri/checkpoint/threshold.{Threshold, Unweighted, Weight, Weighted}
 
@@ -1916,4 +1916,92 @@ test adm_underweight_next_clause_rotation_verdict() {
 test adm_underweight_next_clause_conviction_verdict() {
   let row = row_adm_underweight_next_clause
   conviction_accepts(tip_of(row.tip), rotation_of(row.rival)) == row.expected_accepted
+}
+
+test signing_t01_mask_0() {
+  satisfied(Unweighted(1), 1, []) == False
+}
+
+test signing_t01_mask_1() {
+  satisfied(Unweighted(1), 1, [0]) == True
+}
+
+test signing_t02_mask_0() {
+  satisfied(Unweighted(2), 3, []) == False
+}
+
+test signing_t02_mask_1() {
+  satisfied(Unweighted(2), 3, [0]) == False
+}
+
+test signing_t02_mask_2() {
+  satisfied(Unweighted(2), 3, [1]) == False
+}
+
+test signing_t02_mask_3() {
+  satisfied(Unweighted(2), 3, [0, 1]) == True
+}
+
+test signing_t02_mask_4() {
+  satisfied(Unweighted(2), 3, [2]) == False
+}
+
+test signing_t02_mask_5() {
+  satisfied(Unweighted(2), 3, [0, 2]) == True
+}
+
+test signing_t02_mask_6() {
+  satisfied(Unweighted(2), 3, [1, 2]) == True
+}
+
+test signing_t02_mask_7() {
+  satisfied(Unweighted(2), 3, [0, 1, 2]) == True
+}
+
+test signing_t03_mask_0() {
+  satisfied(Unweighted(3), 3, []) == False
+}
+
+test signing_t03_mask_1() {
+  satisfied(Unweighted(3), 3, [0]) == False
+}
+
+test signing_t03_mask_2() {
+  satisfied(Unweighted(3), 3, [1]) == False
+}
+
+test signing_t03_mask_3() {
+  satisfied(Unweighted(3), 3, [0, 1]) == False
+}
+
+test signing_t03_mask_4() {
+  satisfied(Unweighted(3), 3, [2]) == False
+}
+
+test signing_t03_mask_5() {
+  satisfied(Unweighted(3), 3, [0, 2]) == False
+}
+
+test signing_t03_mask_6() {
+  satisfied(Unweighted(3), 3, [1, 2]) == False
+}
+
+test signing_t03_mask_7() {
+  satisfied(Unweighted(3), 3, [0, 1, 2]) == True
+}
+
+test signing_t04_mask_0() {
+  satisfied(Unweighted(0), 2, []) == False
+}
+
+test signing_t04_mask_1() {
+  satisfied(Unweighted(0), 2, [0]) == False
+}
+
+test signing_t04_mask_2() {
+  satisfied(Unweighted(0), 2, [1]) == False
+}
+
+test signing_t04_mask_3() {
+  satisfied(Unweighted(0), 2, [0, 1]) == False
 }

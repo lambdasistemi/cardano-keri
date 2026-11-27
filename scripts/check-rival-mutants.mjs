@@ -73,6 +73,7 @@ const predicateMutants = [
   { name: 'previous-threshold-met', clause: 'prior.nextThreshold.satisfied', from: '      satisfied(\n        previous.next_threshold,', to: '      satisfied(\n        Unweighted(0),' },
   { name: 'own-threshold-met', clause: 'event.threshold.satisfied', from: '    satisfied(\n      rival.threshold,', to: '    satisfied(\n      Unweighted(0),' },
   { name: 'count-is-natural-and-bounded', clause: 'count n: n <= keys.length', from: 'm >= 1 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'evaluate(threshold, key_count, signed)' },
+  { name: 'count-evaluates-signers', clause: 'a count is met by that many distinct signing positions', from: 'm >= 1 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'm >= 1 && m <= key_count' },
   { name: 'zero-count-never-satisfied', clause: 'count 0 is never satisfied (#596)', from: 'm >= 1 && m <= key_count && evaluate(threshold, key_count, signed)', to: 'm >= 0 && m <= key_count && evaluate(threshold, key_count, signed)' },
   { name: 'next-rule-fits-checked', clause: 'fitsNextKeys (#595)', ...drop('    fits_next_keys(rival.next_threshold, rival.next_key_count),') },
   { name: 'next-count-fits-keys', clause: 'fitsNextKeys count width (#595)', from: 'Unweighted(m) -> m >= 0 && m <= key_count', to: 'Unweighted(m) -> m >= 0' },

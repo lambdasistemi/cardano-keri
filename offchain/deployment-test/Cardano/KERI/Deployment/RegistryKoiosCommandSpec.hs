@@ -186,7 +186,7 @@ wireWith hooks bound base payer = do
             use (base, payer)
     pure
         Wired
-            { wiredOpeners = Openers{openersNode = nodeOpener, openersKoios = koiosOpener}
+            { wiredOpeners = Openers{openersNode = nodeOpener, openersKoios = koiosOpener, openersKoiosFold = \_ _ -> fail "the fold opener was reached"}
             , wiredNode = reverse <$> readIORef nodeReached
             , wiredKoios = reverse <$> readIORef koiosReached
             , wiredEvents = readIORef events
@@ -546,15 +546,29 @@ refusalSpec = describe "a provider choice that is not exactly one" $ do
                 wired <- wire 3 settles (caseRuntime c) (casePayer c)
                 outcome <- try @IOException (caseRunUnreadable c (wiredOpeners wired) nodeChoice)
                 either show (const "the command went on") outcome `shouldSatisfy` ("nonexistent" `isInfixOf`)
-    forM_ [("a Koios URL", koiosAt "http://koios.invalid/api/v1"), ("a Koios URL and a token file", (koiosAt "http://koios.invalid/api/v1"){chosenKoiosTokenFile = Just "t"})] $ \(label, choice) ->
-        it ("fold given " <> label <> " is refused as fold-runs-on-the-node-only, before it reads a file or opens a provider") $ do
+    forM_ [("a Koios URL", koiosAt "http://koios.invalid/api/v1"), ("a Koios URL and a token file", (koiosAt "http://koios.invalid/api/v1"){chosenKoiosTokenFile = Just "t"})] $ \(label, choice) -> do
+        it ("fold given " <> label <> " and a supplied registry state is refused as supplied-state-not-used, before it reads a file or opens a provider") $ do
             wired <- wire 3 settles (error "no runtime is wanted") walletAddress
-            (code, _, err) <- runCaptured (runRegistryFoldOver (hPutStrLn stderr) (wiredOpeners wired) (foldSettings choice))
+            (code, _, err) <- runCaptured (runRegistryFoldOver (hPutStrLn stderr) (wiredOpeners wired) (foldSettings choice){rfPending = ["aa#0"]})
             code `shouldBe` ExitFailure 1
-            err `shouldSatisfy` ("ckeri: fold-runs-on-the-node-only:" `isInfixOf`)
+            err `shouldSatisfy` ("ckeri: supplied-state-not-used:" `isInfixOf`)
             err `shouldSatisfy` (not . ("invalid" `isInfixOf`))
             wiredNode wired >>= (`shouldBe` [])
             wiredKoios wired >>= (`shouldBe` [])
+        it ("fold given " <> label <> " and no request named is refused as pending-missing, before it reads a file or opens a provider") $ do
+            wired <- wire 3 settles (error "no runtime is wanted") walletAddress
+            (code, _, err) <- runCaptured (runRegistryFoldOver (hPutStrLn stderr) (wiredOpeners wired) (foldSettings choice){rfSnapshot = ""})
+            code `shouldBe` ExitFailure 1
+            err `shouldSatisfy` ("ckeri: pending-missing:" `isInfixOf`)
+            wiredNode wired >>= (`shouldBe` [])
+            wiredKoios wired >>= (`shouldBe` [])
+    it "fold given a node socket and a named request is refused as pending-needs-a-provider, before it reads a file or opens a provider" $ do
+        wired <- wire 3 settles (error "no runtime is wanted") walletAddress
+        (code, _, err) <- runCaptured (runRegistryFoldOver (hPutStrLn stderr) (wiredOpeners wired) (foldSettings nodeChoice){rfPending = ["aa#0"]})
+        code `shouldBe` ExitFailure 1
+        err `shouldSatisfy` ("ckeri: pending-needs-a-provider:" `isInfixOf`)
+        wiredNode wired >>= (`shouldBe` [])
+        wiredKoios wired >>= (`shouldBe` [])
     it "fold given neither is refused as provider-none-given" $ do
         wired <- wire 3 settles (error "no runtime is wanted") walletAddress
         (code, _, err) <- runCaptured (runRegistryFoldOver (hPutStrLn stderr) (wiredOpeners wired) (foldSettings (ProviderChoice Nothing Nothing Nothing Nothing)))
@@ -577,6 +591,7 @@ refusalSpec = describe "a provider choice that is not exactly one" $ do
             , rfRequest = ""
             , rfSnapshot = "/nonexistent/snapshot.json"
             , rfSnapshotOut = Nothing
+            , rfPending = []
             }
 
 -- ---------------------------------------------------------------------

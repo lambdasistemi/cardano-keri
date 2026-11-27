@@ -29,7 +29,6 @@ import Test.Hspec
 spec :: Spec
 spec = describe "#546 the provider a registry command runs on" $ do
     resolveSpec
-    nodeOnlySpec
     namesSpec
     wordingSpec
     handoffReportSpec
@@ -56,18 +55,6 @@ resolveSpec = describe "the choice of a command that can run on either" $ do
     it "is refused when a token file goes with a node socket and no Koios URL" $
         resolveProvider socket{chosenKoiosTokenFile = Just "token"} `shouldBe` Left TokenFileWithoutKoios
 
-nodeOnlySpec :: Spec
-nodeOnlySpec = describe "the choice of a command that runs on the node only" $ do
-    it "is the node socket" $
-        resolveNodeProvider socket `shouldBe` Right "node.socket"
-    it "refuses anything that names Koios, whether or not a node socket is also given" $ do
-        resolveNodeProvider koios `shouldBe` Left FoldRunsOnTheNodeOnly
-        resolveNodeProvider koios{chosenKoiosTokenFile = Just "token"} `shouldBe` Left FoldRunsOnTheNodeOnly
-        resolveNodeProvider socket{chosenKoiosUrl = Just "u"} `shouldBe` Left FoldRunsOnTheNodeOnly
-        resolveNodeProvider socket{chosenKoiosTokenFile = Just "t"} `shouldBe` Left FoldRunsOnTheNodeOnly
-    it "is refused when nothing is given" $
-        resolveNodeProvider (ProviderChoice Nothing Nothing Nothing Nothing) `shouldBe` Left NoProvider
-
 namesSpec :: Spec
 namesSpec = describe "each refusal" $
     it "begins with its name, then says what to give" $ do
@@ -75,7 +62,6 @@ namesSpec = describe "each refusal" $
                 [ (BothProviders, "provider-both-given: ")
                 , (NoProvider, "provider-none-given: ")
                 , (TokenFileWithoutKoios, "koios-token-file-without-koios-url: ")
-                , (FoldRunsOnTheNodeOnly, "fold-runs-on-the-node-only: ")
                 ]
         mapM_ (\(refusal, prefix) -> renderProviderRefusal refusal `shouldSatisfy` (prefix `isPrefixOf`)) named
         renderProviderRefusal NoProvider `shouldSatisfy` ("--koios-url" `isInfixOf`)

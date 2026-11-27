@@ -213,8 +213,8 @@ library deployment
     Cardano.KERI.Deployment.WalletHolding
 
 -- The Koios instance of the registry runtime: its reads and its settlement.
--- It alone holds the dependency on Singular's main library, which carries
--- the Koios client, so "deployment" and everything that reaches only
+-- It alone holds the dependency on Singular's Koios client and local-services
+-- libraries, so "deployment" and everything that reaches only
 -- "deployment" stays free of a provider. "write-composition" does not depend
 -- on this component and the boundary check refuses the edge.
 library deployment-koios
@@ -225,15 +225,21 @@ library deployment-koios
   build-depends:
     , aeson
     , base                              >=4.18 && <5
+    , bytestring
+    , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-allegra
     , cardano-ledger-api
     , cardano-ledger-conway
     , cardano-ledger-core
+    , cardano-ledger-mary
     , cardano-node-clients
+    , cardano-tx-tools:tx-build
     , containers
     , contra-tracer
     , microlens
+    , plutus-core
+    , plutus-tx
     , singular-registry
     , singular-registry:koios-http
     , singular-registry:local-services
@@ -245,7 +251,11 @@ library deployment-koios
     Cardano.KERI.Deployment.KoiosRuntime
     Cardano.KERI.Deployment.KoiosSettlement
     Cardano.KERI.Deployment.KoiosSubmission
+    Cardano.KERI.Deployment.RegistryApplication
+    Cardano.KERI.Deployment.RegistryFoldNamed
+    Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
+    Cardano.KERI.Deployment.SingularFunding
 
 library indexer
   import:           warnings
@@ -537,12 +547,16 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KoiosSubmissionSpec
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
+    Cardano.KERI.Deployment.RecordedHistory
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.RegistryApplicationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain
     Cardano.KERI.Deployment.RegistryBookingCommandSpec
     Cardano.KERI.Deployment.RegistryBookingEvaluationSpec
     Cardano.KERI.Deployment.RegistryBookingShapeSpec
+    Cardano.KERI.Deployment.RegistryCollateralSpec
+    Cardano.KERI.Deployment.RegistryCommandDumpSpec
     Cardano.KERI.Deployment.RegistryCommandSpec
     Cardano.KERI.Deployment.RegistryDeploySpec
     Cardano.KERI.Deployment.RegistryFilesSpec
@@ -554,15 +568,18 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
     Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
+    Cardano.KERI.Deployment.RegistryOneOutputSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec
+    Cardano.KERI.Deployment.RegistryReplaySpec
     Cardano.KERI.Deployment.RegistryRequestSpec
     Cardano.KERI.Deployment.RegistryReturnCommandSpec
     Cardano.KERI.Deployment.RegistryReturnSpec
     Cardano.KERI.Deployment.RegistryScriptsSpec
     Cardano.KERI.Deployment.RegistryShortDepositSpec
     Cardano.KERI.Deployment.RegistrySnapshotSpec
+    Cardano.KERI.Deployment.RegistryTransactionDumpSpec
     Cardano.KERI.Deployment.RegistryTransactionsSpec
     Cardano.KERI.Deployment.RegistryVaultSpec
     Cardano.KERI.Deployment.ScriptAritySpec
@@ -601,6 +618,7 @@ test-suite deployment-tests
     , cardano-tx-tools:tx-build
     , case-insensitive
     , containers
+    , contra-tracer
     , crypton
     , directory
     , filepath

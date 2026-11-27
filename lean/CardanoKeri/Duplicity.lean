@@ -98,6 +98,19 @@ def Threshold.width : Threshold → Nat
   | .count n => n
   | .weighted clauses => (clauses.map clauseWidth).sum
 
+private def sumAtLeastOne (weights : List Fraction) : Bool :=
+  (weights.foldl Fraction.add ⟨0, 1⟩).atLeastOne
+
+/-- A declared weighted rule can be constructed only if every clause and
+every nested member list totals at least one. The width counts the members
+of a nested group. Numeric zero remains a valid declaration for the future. -/
+def Threshold.fitsNextKeys (threshold : Threshold) (keyCount : Nat) : Bool :=
+  decide (threshold.width ≤ keyCount) && match threshold with
+    | .count _ => true
+    | .weighted clauses => !clauses.isEmpty && clauses.all fun clause =>
+      sumAtLeastOne (clause.map fun | .key w | .group w _ => w) &&
+      clause.all fun | .key _ => true | .group _ members => sumAtLeastOne members
+
 /-- Each key contributes once, in that list's order; clauses are conjunctive. -/
 def Threshold.satisfied (threshold : Threshold) (keys signers : List Nat) : Bool :=
   let signed := keys.map signers.contains

@@ -102,7 +102,7 @@ const registrationOnMain = read('main','lean/CardanoKeri/ApplicationInceptionPre
 const differences = [];
 const mainRotation = read('main','lean/CardanoKeri/Duplicity.lean');
 if (!mainRotation.includes('0 < n && n <=')) differences.push('zero signing threshold (#596)');
-if (!mainRotation.includes('def Threshold.fitsNextKeys')) differences.push('declared next rule (#595)');
+if (!mainRotation.includes('signed.event.nextThreshold.fitsNextKeys signed.event.nextKeys.length')) differences.push('declared next rule (#595)');
 if (!mainRotation.includes('signed.event.cuts.all prior.witnesses.contains')) differences.push('witness changes (#598)');
 if (!mainRotation.includes('context.accepted.event.eventDigest ≠ rival.event.eventDigest')) differences.push('signed digest identity (#573)');
 const entries = entryPoints.map(s => resolve('main', s)).join(', ');

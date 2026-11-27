@@ -79,7 +79,7 @@ theorem inconsistent_booking_refused {i env rp cp release o index output data da
     rw [body] at he
     cases he
     rcases invalid with wide | zero | wrong
-    · simp [inceptionWrites] at writes
+    · simp [inceptionWrites, Threshold.fitsNextKeys] at writes
       omega
     · simp [inceptionWrites, zero, Threshold.satisfied] at writes
     · simp [wrong] at binding

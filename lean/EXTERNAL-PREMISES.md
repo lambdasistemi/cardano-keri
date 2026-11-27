@@ -52,6 +52,15 @@ opening distinguishes the two byte strings. Verified signatures and receipts
 must refer to the actual signed body of the event being graded. Lean checks decoded transitions under these premises. Production authentication
 of the complete writer opening at registration and advance remains open.
 
+For an ordinary rotation the relayer or convictor presents the signed next
+threshold. Its width must fit the number of next digests, every weighted clause
+must total at least one, and each nested member list must independently total
+at least one. A numeric next threshold of zero permits abandonment. Cuts must
+belong to the previous witness list and additions must be new to it. The
+result requires a positive receipt threshold exactly when witnesses remain.
+Both the writer and the rival use this rotation judgment. [keripy rotation construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L857-L907)
+and [weighted threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L4026-L4062).
+
 Ordinary inception has no signed prior link, cuts or adds. The controller's
 booking decoder must detect even an empty forbidden field before projecting it
 to the empty decoded value. For registration, advance and rival grading,

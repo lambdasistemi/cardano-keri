@@ -94,6 +94,25 @@ theorem rotation_weights_at_most_one {prior : Predecessor} {signed : SignedEvent
   simp only [rotationValid, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
   exact ⟨accepted.1.1.1.1.2.1.1.2, accepted.1.1.1.1.2.1.2⟩
 
+/-- Given an admitted rotation, when the next rule is read from its signed
+body, its width fits its declared digests and its weighted clauses and groups
+meet the minimum for a declaration. -/
+theorem rotation_next_rule_fits {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    signed.event.nextThreshold.fitsNextKeys signed.event.nextKeys.length = true := by
+  simp only [rotationValid, Bool.and_eq_true] at accepted
+  grind
+
+/-- Given an admitted rotation, its cuts are prior witnesses, its additions
+are new, and any nonempty resulting set has a positive receipt threshold. -/
+theorem rotation_witness_changes_valid {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    (∀ w ∈ signed.event.cuts, w ∈ prior.witnesses) ∧
+    (∀ w ∈ signed.event.adds, w ∉ prior.witnesses) ∧
+    (derivedWitnesses prior signed.event ≠ [] → 0 < signed.event.witnessThreshold) := by
+  simp [rotationValid, receiptsValid] at accepted
+  grind
+
 /-- Given authenticated openings for the installed writer and the presented
 rival, when the KERI digest has no collision on these two signed byte bodies,
 digest inequality holds exactly when their bytes differ. -/

@@ -51,7 +51,11 @@ export function signingValid(prior, signed) {
 }
 export function receiptsValid(prior, signed) {
   const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
-  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
+  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) &&
+    event.cuts.every(w => prior.witnesses.includes(w)) &&
+    event.adds.every(w => !prior.witnesses.includes(w)) &&
+    (witnesses.length === 0 || event.witnessThreshold > 0) &&
+    event.witnessThreshold <= witnesses.length &&
     event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
 }
 // The keripy event profile applies to both declared rules. A next rule is
@@ -62,9 +66,28 @@ export function admittedWeights(threshold) {
   return threshold.weighted.clauses.every(clause => clause.every(term =>
     term.key ? admitted(term.key.weight) : admitted(term.group.weight) && term.group.members.every(admitted)));
 }
+function nextRuleFits(threshold, keyCount) {
+  if (threshold.count) return threshold.count.required <= keyCount;
+  const clauses = threshold.weighted.clauses;
+  const reachesOne = weights => atLeastOne(weights.map(fraction).reduce(fractionAdd, [0n, 1n]));
+  let width = 0;
+  return clauses.length > 0 && clauses.every(clause => {
+    const top = [];
+    for (const term of clause) {
+      top.push((term.key ?? term.group).weight);
+      if (term.key) width++;
+      else {
+        width += term.group.members.length;
+        if (!reachesOne(term.group.members)) return false;
+      }
+    }
+    return reachesOne(top);
+  }) && width <= keyCount;
+}
 export function rotationValid(prior, signed) {
   return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
     admittedWeights(prior.nextThreshold) && admittedWeights(signed.event.threshold) && admittedWeights(signed.event.nextThreshold) &&
+    nextRuleFits(signed.event.nextThreshold, signed.event.nextKeys.length) &&
     signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
 }
 

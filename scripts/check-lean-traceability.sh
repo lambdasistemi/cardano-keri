@@ -120,6 +120,8 @@ for pair in ReviewedContracts:151 PreservedContracts:49; do
   cat "$tmp_root/$source_name.log"
 done
 
+lake_run env lean RotationAdmissionChecks.lean
+
 git -C "$repo_root" diff HEAD --check
 node "$lean_root/retained-parking/story-bindings.mjs"
 echo "retirement: retired=${#retired_modules[@]} ledger=$historical_count compiled-declarations=$declaration_count reviewed-types=151 preserved-types=49 build=pass axioms=pass"

@@ -193,7 +193,7 @@ def scenarios : List Scenario :=
    ⟨"prior-weighted-insufficient", 1, 1,
      { baseContext with prior.nextThreshold := .weighted [[.key ⟨1,2⟩, .key ⟨1,2⟩]] }, baseRival⟩,
    row "different-prior-digest" (signed { baseRival.event with eventDigest := "different-prior", priorDigest := 51 } [2,3] [11]),
-   row "existing-witness-add-is-not-duplicated" (signed { baseContext.accepted.event with adds := [10], eventDigest := "existing-witness-add" } [1] [10]),
+   row "existing-witness-add-refused" (signed { baseContext.accepted.event with adds := [10], eventDigest := "existing-witness-add" } [1] [10]),
    row "duplicate-cuts" (signed { baseRival.event with eventDigest := "duplicate-cuts", cuts := [10,10] } [2,3] [11])]
 
 def scenarioJson (scenario : Scenario) : Lean.Json :=

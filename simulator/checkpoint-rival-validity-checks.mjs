@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { attemptSystem, newSystem } from './checkpoint-system-core.mjs';
 import { acceptsComparison, convictionFixture } from './checkpoint-conviction.mjs';
-import { rotationValid } from './checkpoint-simulator-core.mjs';
+import { concreteDuplicityAt, rotationValid } from './checkpoint-simulator-core.mjs';
 import { validateEnv } from './registry-wire.mjs';
 
 const rows = JSON.parse(readFileSync(new URL('../lean/checkpoint-rival-validity-vectors.json', import.meta.url)));
@@ -16,6 +16,14 @@ for (const {name, input, rotationValid: valid, convictionAccepted} of rows) {
   assert.equal(input.tip.previous && rotationValid(input.tip.previous, input.rival), valid, name);
   assert.equal(acceptsComparison(input), convictionAccepted, name);
 }
+const admissionCases = JSON.parse(execFileSync(process.env.LAKE_BIN || 'lake',
+  ['env', 'lean', '--run', 'RotationAdmissionChecks.lean'],
+  {cwd: new URL('../lean/', import.meta.url), encoding: 'utf8'}));
+for (const {name, prior, rotation, context, expected} of admissionCases) {
+  assert.equal(rotationValid(prior, rotation), expected, name);
+  assert.equal(concreteDuplicityAt(1, 1, context, rotation), expected, 'rival: ' + name);
+}
+console.log(`All ${admissionCases.length} rotation admission examples agree with Lean.`);
 const spelling = rows.find(row => row.name === 'signed-weight-1-versus-1/1').input;
 const inconsistent = structuredClone(spelling);
 inconsistent.tip.writer.eventDigest = inconsistent.rival.event.eventDigest;

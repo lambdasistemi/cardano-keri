@@ -91,7 +91,7 @@ pub fn row_positive_anchor() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -137,7 +137,7 @@ pub fn row_positive_anchor() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -216,7 +216,7 @@ pub fn row_maturity_minus_one() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -262,7 +262,7 @@ pub fn row_maturity_minus_one() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 6,
+    now: 5,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -341,7 +341,7 @@ pub fn row_maturity_plus_one() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -387,7 +387,7 @@ pub fn row_maturity_plus_one() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 8,
+    now: 7,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -466,7 +466,7 @@ pub fn row_zero_w_birth() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -512,7 +512,7 @@ pub fn row_zero_w_birth() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 0 },
-    now: 2,
+    now: 1,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -591,7 +591,7 @@ pub fn row_wrong_policy() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -637,7 +637,7 @@ pub fn row_wrong_policy() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -716,7 +716,7 @@ pub fn row_wrong_name() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -762,7 +762,7 @@ pub fn row_wrong_name() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -841,7 +841,7 @@ pub fn row_missing_token() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -887,7 +887,7 @@ pub fn row_missing_token() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -961,7 +961,7 @@ pub fn row_quantity_zero() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1007,7 +1007,7 @@ pub fn row_quantity_zero() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1086,7 +1086,7 @@ pub fn row_quantity_two() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1132,7 +1132,7 @@ pub fn row_quantity_two() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1211,7 +1211,7 @@ pub fn row_duplicate_entries() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1257,7 +1257,7 @@ pub fn row_duplicate_entries() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1341,7 +1341,7 @@ pub fn row_other_aid_token() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1387,7 +1387,7 @@ pub fn row_other_aid_token() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1466,7 +1466,7 @@ pub fn row_rival_seed_transaction() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1512,7 +1512,7 @@ pub fn row_rival_seed_transaction() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1591,7 +1591,7 @@ pub fn row_rival_seed_index() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1637,7 +1637,7 @@ pub fn row_rival_seed_index() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1716,7 +1716,7 @@ pub fn row_rival_registry_policy() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1762,7 +1762,7 @@ pub fn row_rival_registry_policy() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1841,7 +1841,7 @@ pub fn row_wrong_network() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -1887,7 +1887,7 @@ pub fn row_wrong_network() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -1966,7 +1966,7 @@ pub fn row_unknown_release() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2003,7 +2003,7 @@ pub fn row_unknown_release() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2082,7 +2082,7 @@ pub fn row_release_application_policy() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2128,7 +2128,7 @@ pub fn row_release_application_policy() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2207,7 +2207,7 @@ pub fn row_release_credential() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2253,7 +2253,7 @@ pub fn row_release_credential() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2332,7 +2332,7 @@ pub fn row_release_state_program() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2378,7 +2378,7 @@ pub fn row_release_state_program() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2457,7 +2457,7 @@ pub fn row_release_state_policy() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2503,7 +2503,7 @@ pub fn row_release_state_policy() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2582,7 +2582,7 @@ pub fn row_holding_credential() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2628,7 +2628,7 @@ pub fn row_holding_credential() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2707,7 +2707,7 @@ pub fn row_holding_at_application_credential() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2753,7 +2753,7 @@ pub fn row_holding_at_application_credential() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2832,7 +2832,7 @@ pub fn row_unknown_checkpoint_credential() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -2876,7 +2876,7 @@ pub fn row_unknown_checkpoint_credential() -> Query {
       checkpoint_credential: None,
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -2955,7 +2955,7 @@ pub fn row_wrong_checkpoint_credential() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3001,7 +3001,7 @@ pub fn row_wrong_checkpoint_credential() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3080,7 +3080,7 @@ pub fn row_datum_empty() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3126,7 +3126,7 @@ pub fn row_datum_empty() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3205,7 +3205,7 @@ pub fn row_datum_root() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3251,7 +3251,7 @@ pub fn row_datum_root() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3330,7 +3330,7 @@ pub fn row_datum_malformed() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3376,7 +3376,7 @@ pub fn row_datum_malformed() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3455,7 +3455,7 @@ pub fn row_datum_other_aid() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3501,7 +3501,7 @@ pub fn row_datum_other_aid() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3580,7 +3580,7 @@ pub fn row_table_missing_key() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3626,7 +3626,7 @@ pub fn row_table_missing_key() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3686,7 +3686,7 @@ pub fn row_table_missing_code() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3732,7 +3732,7 @@ pub fn row_table_missing_code() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3803,7 +3803,7 @@ pub fn row_table_missing_hash() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3849,7 +3849,7 @@ pub fn row_table_missing_hash() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -3929,7 +3929,7 @@ pub fn row_table_ambiguous_key() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -3975,7 +3975,7 @@ pub fn row_table_ambiguous_key() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -4087,7 +4087,7 @@ pub fn row_absent_datum() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -4198,7 +4198,7 @@ pub fn row_terminal_datum() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(
@@ -4277,7 +4277,7 @@ pub fn row_genuine_rival_registry() -> Query {
                 epoch: 0,
                 poisoned: False,
                 frozen: False,
-                born_at: 2,
+                born_at: 1,
                 refund_to: 42,
                 pool: 3,
                 topped_up: False,
@@ -4323,7 +4323,7 @@ pub fn row_genuine_rival_registry() -> Query {
       ),
     },
     params: Params { d: 8, b: 2, p: 1, w: 5 },
-    now: 7,
+    now: 6,
     output: Output {
       address: Address {
         payment_credential: Script(

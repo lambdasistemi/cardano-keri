@@ -1,3 +1,4 @@
+import CardanoKeri.CheckpointCommitmentGoals
 import CardanoKeri.AttestationFixtures
 import CardanoKeri.CheckpointSystemHistory
 import CardanoKeri.RegistryLifecycleExamples
@@ -128,6 +129,61 @@ theorem committed_step : SysStep p env rotated committed := by
   apply SysStep.openCommitment
   exact ⟨commitment, rfl, by decide, rfl⟩
 
+/-- Given the registered and rotated checkpoint, when its payee convicts at
+slot five, the checked transition consumes the open marker and produces pending. -/
+private theorem conviction_at_five : (ClosingEvent.convict 11 7 5).Occurs p env committed pending commitment := by
+  refine ⟨
+    { refund := some { addr := 42, b := 2, pool := 4 },
+      convictor := some { addr := 7, dreg := 3 } },
+    .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
+  · intro refund pool equal; cases equal
+  · exact Step.convict 5 7 commitment (by decide) (by decide)
+  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
+
+-- The former time-only conclusion holds for every commitment, without a step.
+example (c : Commitment) : ∃ now : Slot,
+    (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now :=
+  ⟨c.expiresAt + 1, Or.inr (Nat.lt_succ_self _)⟩
+
+-- With no opening in the initial system, none of the three closing events occurs.
+example (c : Commitment) (event : ClosingEvent) :
+    ¬ event.Occurs p env (Sys.init deployment) (Sys.init deployment) c := by
+  intro actual
+  have held : (Sys.init deployment).commitments c.marker = some c := by
+    cases event with
+    | convict aid payee now =>
+      obtain ⟨_, _, _, _, checks, _⟩ := actual
+      exact ((Sys.revealOpen_iff _ _ _).mp checks.1 c rfl).1
+    | reveal => exact actual.1
+    | sweep => exact actual.1
+  cases held
+
+-- Slot 21 satisfies the old conclusion for this exact commitment. The actual
+-- conviction at slot five cannot instead be certified with the expired slot.
+example : commitment.expiresAt < 21 ∧
+    ¬ (ClosingEvent.convict 11 7 21).Occurs p env committed pending commitment := by
+  refine ⟨by decide, fun actual => ?_⟩
+  exact (by decide : ¬ 21 ≤ commitment.expiresAt) (ClosingEvent.timing actual).2
+
+-- The old after-opening conclusion also holds with no closing transaction:
+-- slot six entitles the payee, while keeping the marker open precludes a conviction.
+example : committed.commitments commitment.marker = some commitment ∧
+    commitment.entitles (env 11) rotatedLive 7 6 ∧ commitment.openedAt < 6 ∧
+    ¬ (ClosingEvent.convict 11 7 6).Occurs p env committed committed commitment := by
+  refine ⟨rfl, by decide, by decide, ?_⟩
+  intro actual
+  obtain ⟨_, _, _, _, _, target⟩ := actual
+  have marker := congrArg (fun s : Sys => s.commitments commitment.marker) target
+  have held : committed.commitments commitment.marker = some commitment := rfl
+  simp [Sys.retireRevealed, Action.revealed, Sys.retire, held] at marker
+
+example : (ClosingEvent.reveal 20).Occurs p env committed (committed.retire 1) commitment :=
+  ⟨rfl, by decide, by decide, rfl⟩
+example : (ClosingEvent.sweep 21).Occurs p env committed (committed.retire 1) commitment :=
+  ⟨rfl, by decide, rfl⟩
+example : ¬ (ClosingEvent.sweep 20).Occurs p env committed (committed.retire 1) commitment :=
+  fun actual => (by decide : ¬ commitment.expiresAt < 20) (ClosingEvent.timing actual)
+
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -137,15 +193,8 @@ Then the complete conclusion is:
 
 SysStep p env committed pending
 -/
-theorem pending_step : SysStep p env committed pending := by
-  apply SysStep.local
-  refine ⟨11, .convict 7 commitment, 5,
-    { refund := some { addr := 42, b := 2, pool := 4 },
-      convictor := some { addr := 7, dreg := 3 } },
-    .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
-  · intro refund pool equal; cases equal
-  · exact Step.convict 5 7 commitment (by decide) (by decide)
-  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
+theorem pending_step : SysStep p env committed pending :=
+  ClosingEvent.system_step (event := .convict 11 7 5) conviction_at_five
 
 
 /-- Given the complete parameters and hypotheses:

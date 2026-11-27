@@ -4235,7 +4235,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"7d5e03a45b19f83aeb5d714636fa799ddc5f2b16f0d4ca58f8798aecad715725","checkpoint-system-properties.mjs":"bc438e3e5cd26b948e2640c25ee900420fd4ecf93b0d86623a43763f8ccaf2fd","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"7d5e03a45b19f83aeb5d714636fa799ddc5f2b16f0d4ca58f8798aecad715725","checkpoint-system-properties.mjs":"cc9ac05bcdd9677a4f3a6782a20add18af49fae3697f9eeaf1030d6889c7b131","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,
@@ -4812,7 +4812,7 @@ const P=(()=>{
 const {evidenceFor}=S;
 const {equal}=E;
 const {stateKind,leafOf,hasOutput,actionKind,entitles}=C;
-const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','commitment_closes_in_or_after_window',
+const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','sys_conviction_after_opening_slot','commitment_closes_in_or_after_window',
   'registration_installs_booked_facts','local_event_uses_own_authorization','sys_step_keeps_deployment','sys_commitment_survives_key_state_step','sys_conviction_refused_for_other_deployment'];
 const rowAt=(state,aid)=>state.aids.find(r=>equal(r.aid,aid))??{aid,state:'absent',leaf:'absent',status:'never-registered',origin:null,pending:null};
 function systemProperties(cell,result=cell.result) {
@@ -4859,10 +4859,19 @@ function systemProperties(cell,result=cell.result) {
       !after.commitments.some(o=>o.marker===c.marker)&&
       entitles(evidenceFor(cell.env,command.aid),c,old.state.present.l,payee,command.now,command.aid);
   });
-  // A commitment that closes closes inside its window (a reveal or the conviction
-  // that revealed it) or strictly after it (a sweep), never before it is eligible.
-  const closed=accepted?before.commitments.filter(o=>!after.commitments.some(n=>n.marker===o.marker)):[];
-  row('commitment_closes_in_or_after_window',closed.length>0,()=>closed.every(o=>o.eligibleAfter<=command.now));
+  row('sys_conviction_after_opening_slot', convicted, () => {
+    const action = command.action?.convict;
+    return !!action && rows.sys_conviction_consumes_commitment.holds &&
+      action.commitment.openedAt < command.now;
+  });
+  const closed = accepted ? before.commitments.filter(c => !after.commitments.some(n => n.marker === c.marker)) : [];
+  row('commitment_closes_in_or_after_window', closed.length > 0, () => closed.every(c => {
+    const inWindow = c.eligibleAfter <= command.now && command.now <= c.expiresAt;
+    if (kind === 'reveal') return command.marker === c.marker && inWindow;
+    if (kind === 'sweep') return command.marker === c.marker && c.expiresAt < command.now;
+    return convicted && equal(command.action?.convict?.commitment, c) &&
+      rows.sys_conviction_consumes_commitment.holds && inWindow;
+  }));
   // Every step keeps the system's deployment.
   row('sys_step_keeps_deployment',accepted,()=>after.deployment===before.deployment);
   // A step that replaces a live output by a different one with the same key state (a

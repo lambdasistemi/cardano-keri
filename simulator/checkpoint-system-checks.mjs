@@ -46,6 +46,20 @@ assert.equal(systemProperties(convict,kept)['sys_conviction_consumes_commitment'
 const reveal=corpus.traces.find(t=>t.name==='system-premises').cells.find(c=>c.name==='open-commitment');
 const early=structuredClone(reveal);early.command={reveal:{marker:1,now:4}};early.input=reveal.result.ok.state;early.result={ok:{...reveal.result.ok,state:{...reveal.result.ok.state,commitments:[]}}};
 assert.equal(systemProperties(early,early.result)['commitment_closes_in_or_after_window'].holds,false,'fabricated commitment window check');
+// The same retired marker can result from a reveal at expiry or a later sweep.
+const checkClosing = (command, expected, label) => {
+  const cell = {...early, command};
+  assert.equal(systemProperties(cell).commitment_closes_in_or_after_window.holds, expected, label);
+};
+checkClosing({reveal: {marker: 1, now: 20}}, true, 'reveal at expiry');
+checkClosing({sweep: {marker: 1, now: 21}}, true, 'sweep after expiry');
+checkClosing({reveal: {marker: 1, now: 21}}, false, 'expired reveal');
+checkClosing({sweep: {marker: 1, now: 20}}, false, 'sweep at expiry');
+checkClosing({reveal: {marker: 2, now: 20}}, false, 'different marker');
+const wrongSlot = structuredClone(convict);
+wrongSlot.command.local.now = 21;
+assert.equal(systemProperties(wrongSlot).commitment_closes_in_or_after_window.holds, false, 'expired conviction');
+assert.equal(systemProperties(wrongSlot).sys_conviction_after_opening_slot.holds, false, 'entitlement at actual slot');
 // A step that changes the deployment, a top-up that burns an open commitment, a
 // conviction accepted on a commitment of another deployment, and a conviction
 // consuming a commitment in a system of another deployment.
@@ -116,4 +130,4 @@ for (const [field, change] of Object.entries(writerChanges)) {
   assert(replay.records.slice(0, -1).every(record => record.result.ok), field + ': changed writer must be reachable');
   assert.equal(replay.records.at(-1).result.error, 'checkpoint-rotation-writer-mismatch', field);
 }
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:21}));
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:26}));

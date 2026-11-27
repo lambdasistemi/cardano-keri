@@ -714,12 +714,15 @@ def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Optio
 
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.
-def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
-  ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
+def LocalEventAt (p : Params) (env : SystemEnv) (s s' : Sys) (aid : AID) (a : Action) (now : Slot) : Prop :=
+  ∃ (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p (env aid) a now (s.states aid) f st ∧
     (s.revealOpen aid a ∧ (s.localWriter (env aid) aid a).isSome = true) ∧
     s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a
+
+def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
+  ∃ aid a now, LocalEventAt p env s s' aid a now
 
 /-- The identity and key-state evidence required by a local action. A deposit
 uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
@@ -760,15 +763,21 @@ def OpenEvent (s s' : Sys) : Prop :=
 
 /-- Revealing a commitment without a conviction, inside its window: the payee
 signs and takes the deposit back. -/
-def RevealEvent (s s' : Sys) : Prop :=
-  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+def RevealEventAt (s s' : Sys) (c : Commitment) (now : Slot) : Prop :=
+  s.commitments c.marker = some c ∧
     c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt ∧ s' = s.retire c.marker
+
+def RevealEvent (s s' : Sys) : Prop :=
+  ∃ c now, RevealEventAt s s' c now
 
 /-- Sweeping an expired commitment: strictly after its window, whoever signs takes
 the deposit, and no checkpoint is touched. -/
-def SweepEvent (s s' : Sys) : Prop :=
-  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+def SweepEventAt (s s' : Sys) (c : Commitment) (now : Slot) : Prop :=
+  s.commitments c.marker = some c ∧
     c.expiresAt < now ∧ s' = s.retire c.marker
+
+def SweepEvent (s s' : Sys) : Prop :=
+  ∃ c now, SweepEventAt s s' c now
 
 /-- A certificate presents two projections of the earlier spend. Compare their
 ledger outpoint and full conviction evidence before associating the histories.

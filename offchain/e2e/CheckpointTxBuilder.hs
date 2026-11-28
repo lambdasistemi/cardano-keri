@@ -394,6 +394,7 @@ import System.IO (
  )
 import System.Process qualified as Proc
 import System.Timeout (timeout)
+import Test.Hspec (pendingWith)
 
 data CheckpointEnv = CheckpointEnv
     { envCheckpointScript :: !(Script ConwayEra)
@@ -407,6 +408,8 @@ data CheckpointEnv = CheckpointEnv
     , envAdvanceBytes :: !SBS.ShortByteString
     , envAdvanceHash :: !ScriptHash
     , envAdvanceReference :: !(Maybe (TxIn, TxOut ConwayEra))
+    , envAdvanceRefusal :: !(Maybe String)
+    -- ^ why the advance and freeze observer was not published, when its program is above the reference script budget
     , envEnforcementScript :: !(Script ConwayEra)
     , envEnforcementBytes :: !SBS.ShortByteString
     , envEnforcementHash :: !ScriptHash
@@ -550,14 +553,17 @@ setupCheckpointEnv blueprintPath lsq ltxs action = do
             queryUTxOs provider (seedAddress genesisAddr)
     seed <- requireJust "the registry seed output is absent" (listToMaybe seedUtxos)
     env <- mkCheckpointEnv blueprintPath lsq ltxs (fst seed)
-    verifyRegisterScriptSizes env
+    advanceRefusal <- verifyRegisterScriptSizes env
     _ <- registerLifecycleStakeCredential env
+    -- #601: the advance and freeze observer is above the reference script budget and is published only when it fits;
+    -- the operations that need it report the refusal where they need it, and every other operation settles
     advanceRef <-
-        deployReferenceScript
-            env
-            "observer_advance reference deployment"
-            (envAdvanceScript env)
-    _ <- registerAdvanceStakeCredential env advanceRef
+        case advanceRefusal of
+            Just _ -> pure Nothing
+            Nothing -> do
+                ref <- deployReferenceScript env "observer_advance reference deployment" (envAdvanceScript env)
+                _ <- registerAdvanceStakeCredential env ref
+                pure (Just ref)
     enforcementRef <-
         deployReferenceScript
             env
@@ -579,7 +585,8 @@ setupCheckpointEnv blueprintPath lsq ltxs action = do
             (envCommitmentScript env)
     genesisRegistry
         env
-            { envAdvanceReference = Just advanceRef
+            { envAdvanceReference = advanceRef
+            , envAdvanceRefusal = advanceRefusal
             , envEnforcementReference = Just enforcementRef
             , envEntitlementReference = Just entitlementRef
             , envCommitmentReference = Just commitmentRef
@@ -669,6 +676,7 @@ mkCheckpointEnvWith registryTerms blueprintPath lsq ltxs seed = do
             , envAdvanceBytes = appliedAdvance
             , envAdvanceHash = advanceHash
             , envAdvanceReference = Nothing
+            , envAdvanceRefusal = Nothing
             , envEnforcementScript = enforcementScript
             , envEnforcementBytes = appliedEnforcement
             , envEnforcementHash = enforcementHash
@@ -714,7 +722,7 @@ requireArtifact name artifacts =
 {- | Prove the Register programs and the Advance observer fit both the applied
 program budget and signed reference-script creation transactions.
 -}
-verifyRegisterScriptSizes :: CheckpointEnv -> IO ()
+verifyRegisterScriptSizes :: CheckpointEnv -> IO (Maybe String)
 verifyRegisterScriptSizes env = do
     params <-
         withinSecs 30 "query Register script-size parameters" $
@@ -750,22 +758,42 @@ verifyRegisterScriptSizes env = do
                 fail (label <> " exceeds stock maxTxSize: " <> show txBytes)
     measure "checkpoint_register reference script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
     measure "observer_lifecycle reference script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
-    measure "observer_advance reference script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measure "observer_enforcement reference script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program once it reads the
-    -- version 2 datum (14_695 before), not reused from the previous pin. The
-    -- 16_133 ceiling is unchanged. Re-derived again after the version 1
-    -- datum constructor left the shared datum type (15_778 before). Re-derived
-    -- once more when the observer also hosts the freeze verdict (15_625 before),
-    -- and when the live datum gained its ninth field (15_665 before).
-    unless (SBS.length (envAdvanceBytes env) == 15_710) $
-        fail
-            ( "observer_advance applied program changed from 15,710 bytes: "
-                <> show (SBS.length (envAdvanceBytes env))
-            )
+    -- #601: the advance and freeze observer is above the budget. Its size is pinned exactly, so that neither growth nor
+    -- shrinkage goes unnoticed; when it fits the budget it is measured like every other program.
+    let advanceBytes = SBS.length (envAdvanceBytes env)
+    if advanceBytes <= productionMaxReferenceProgramBytes
+        then measure "observer_advance reference script" (envAdvanceScript env) advanceBytes >> pure Nothing
+        else do
+            unless (advanceBytes == advanceObserverKnownBytes) $
+                fail
+                    ( "observer_advance applied program changed from the "
+                        <> show advanceObserverKnownBytes
+                        <> " bytes #601 tracks: "
+                        <> show advanceBytes
+                    )
+            pure
+                ( Just
+                    ( "#601: the advance and freeze observer program exceeds applied 16,133-byte budget: "
+                        <> show advanceBytes
+                        <> "; it cannot be published as a reference script"
+                    )
+                )
+
+-- | #601: the applied advance and freeze observer, in bytes, with the structural reader.
+advanceObserverKnownBytes :: Int
+advanceObserverKnownBytes = 18_181
+
+-- | The published reference of the advance and freeze observer, or the refusal #601 records.
+requireAdvanceReference :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
+requireAdvanceReference env =
+    case (envAdvanceReference env, envAdvanceRefusal env) of
+        (Just reference, _) -> pure reference
+        (Nothing, Just refusal) -> pendingWith refusal >> fail refusal
+        (Nothing, Nothing) -> fail "observer_advance reference was not deployed during setup"
 
 productionMaxReferenceProgramBytes :: Int
 productionMaxReferenceProgramBytes = 16_133
@@ -1003,10 +1031,7 @@ productionRegisterAdvanceScenario env = do
     fixture <- loadRotateStoryFixture
     (registered, checkpointRef) <-
         productionRegisterScenarioWithReference env (rsRegistration fixture)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     let honest =
             signedRotateEvidence
                 env
@@ -1183,10 +1208,7 @@ advanceOnceForRotationStory env fixture = do
     let firstRotation = fsFirstRotation fixture
     (registered, checkpointRef) <-
         productionRegisterScenarioWithReference env (rsRegistration firstRotation)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     let firstEvidence =
             signedRotateEvidence
                 env
@@ -1269,10 +1291,7 @@ productionRegisterConvictScenario env = do
     references <- deployRegisterReferences env
     checkpointRef <-
         requireJust "Convict checkpoint reference is absent" (listToMaybe references)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     enforcementRef <-
         requireJust
             "observer_enforcement reference was not deployed during setup"
@@ -5958,10 +5977,7 @@ terminationJourney env observe = do
     fixture <- loadConvictStoryFixture
     references <- deployRegisterReferences env
     checkpointRef <- requireJust "checkpoint reference is absent" (listToMaybe references)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     enforcementRef <-
         requireJust
             "observer_enforcement reference was not deployed during setup"

@@ -1,3 +1,4 @@
+import CardanoKeri.CheckpointCommitmentGoals
 import CardanoKeri.CheckpointSystemEvidence
 
 /-! A finite certificate interpreter for the existing Checkpoint system events.
@@ -154,6 +155,54 @@ def sweepCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv) (ma
         pure { next := current.advance event, event }
       else throw "commitment-marker-mismatch"
     else throw "commitment-not-expired"
+
+/-- Given a successful local conviction certificate, reading the submitted
+checkpoint, payee, commitment and slot reconstructs the closing transition
+to the returned state at that exact slot. -/
+theorem local_certificate_conviction_occurs {current p env aid now payee c result}
+    (ok : localCertificate current p env aid now (.convict payee c) = .ok result) :
+    (ClosingEvent.convict aid payee now).Occurs p env current.state result.next.state c := by
+  unfold localCertificate at ok
+  split at ok <;> try contradiction
+  split at ok <;> try contradiction
+  next executed =>
+    dsimp only at ok
+    split at ok <;> try contradiction
+    split at ok <;> try contradiction
+    cases ok
+    refine ⟨_, _, ?_, (T7_step_iff_stepFn p _).mpr executed, ⟨by assumption, by assumption⟩, rfl⟩
+    intro refund pool same
+    cases same
+
+/-- Given a successful reveal certificate, the supplied marker identifies
+the consumed commitment and the submitted reveal slot witnesses its transition. -/
+theorem reveal_certificate_occurs {current p env marker now result}
+    (ok : revealCertificate current p env marker now = .ok result) :
+    ∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.reveal now).Occurs p env current.state result.next.state c := by
+  unfold revealCertificate at ok
+  split at ok <;> try contradiction
+  next c found =>
+    split at ok <;> try contradiction
+    next window =>
+      split at ok <;> try contradiction
+      next named =>
+        cases ok
+        exact ⟨c, named, named ▸ found, window.1, window.2, rfl⟩
+
+/-- Given a successful sweep certificate, the supplied marker identifies
+the consumed commitment and the submitted sweep slot witnesses its transition. -/
+theorem sweep_certificate_occurs {current p env marker now result}
+    (ok : sweepCertificate current p env marker now = .ok result) :
+    ∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.sweep now).Occurs p env current.state result.next.state c := by
+  unfold sweepCertificate at ok
+  split at ok <;> try contradiction
+  next c found =>
+    split at ok <;> try contradiction
+    next expired =>
+      split at ok <;> try contradiction
+      next named =>
+        cases ok
+        exact ⟨c, named, named ▸ found, expired, rfl⟩
 
 def registerCertificate (current : CertifiedSys) (p : Params) (env : SystemEnv)
     (aid : AID) (now : Slot) (refund pool : Nat)

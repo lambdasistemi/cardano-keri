@@ -144,7 +144,7 @@ spec = describe "the registry of the attested generation" $ do
         (size (attestationFact policies), size (attestationChange policies), size (scriptsCheckpoint scripts))
             `shouldBe` (10_661, 12_903, 8_911)
         size (scriptsCheckpoint old) `shouldBe` 8_957
-        hashOf (scriptsCheckpoint scripts) `shouldBe` "b4d42977c768e4c1678c6bbce128a956e19c63eb376bf8def3e64bec"
+        hashOf (scriptsCheckpoint scripts) `shouldBe` "57e04ac646586416b467cd2b72e3a099313000b47393de00a3f0f62a"
         hashOf (scriptsApplication scripts) `shouldBe` "ef613f113b7d89aaa0fc62b172f1c5569d7bd3d38bf735a36403a941"
         -- the deployed generation's checkpoint over the same terms and seed, for the record: it is not the attested one
         hashOf (scriptsCheckpoint old) `shouldBe` "738dc75d29890a795d427e08bbedd1e166bd98b5f39e5d01c5fc70fe"

@@ -1,0 +1,29 @@
+   Collecting all tests scenarios within module(s): *admission_advance_tests*
+      Testing ...
+
+    ┍━ cardano_keri/checkpoint/admission_advance_tests
+    │ FAIL [mem:   3.02 M, cpu:   1.48 B] adv_R01
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   1.95 M, cpu: 909.33 M] adv_R07
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   3.19 M, cpu:   1.53 B] adv_R08a
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   3.19 M, cpu:   1.53 B] adv_R10c
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   2.01 M, cpu:   1.08 B] adv_R17
+    │ · with traces
+    │ | Eq8CreatedIllFormed
+    │ FAIL [mem:   3.01 M, cpu:   1.48 B] adv_R18
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   3.51 M, cpu:   1.77 B] adv_W01
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   3.14 M, cpu:   1.62 B] adv_W09
+    │ · with traces
+    │ | Valid
+    ┕━━━━━━━━━━━━━━━━━━━ 8 tests | 0 passed | 8 failed

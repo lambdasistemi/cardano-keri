@@ -12,9 +12,9 @@
     "lean/CardanoKeri/Attestation.lean": "1433e93bd2f2cdf7517b2fb72379bc4d30004e5a5173da34384642ceb46485db",
     "lean/CardanoKeri/AttestationFixtures.lean": "e0b60e59b19892ea2dff87d8f8f502e9b203ae217db197f980d6fe89db07f3fc",
     "lean/CardanoKeri/AttestationGoals.lean": "e3fb6f8dcf1655ac431a6e70b04203205c4439defe2b768e7fda0e29232a986e",
-    "lean/CardanoKeri/Checkpoint.lean": "b7470d8f353032df9f516e0a148b167fd4a7b7b60b3ee7be27bab55685a02df9",
-    "lean/CardanoKeri/CheckpointCertificate.lean": "53a621dcd5fba06eb35b9d134127d90091defc8bfbea522081fc14e3cfcafbca",
-    "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "0da669a0a3a72f10d56c3ffb0b31f4ef015d0c3c66cb25f3c7edd265c9fe9da0",
+    "lean/CardanoKeri/Checkpoint.lean": "1d951ed3908771e52c65758f254e1a8edd74d1e103cdb64aa8a4b33f5ddf53a1",
+    "lean/CardanoKeri/CheckpointCertificate.lean": "8e20735a4cab077f555d9156787ea57a05424ad78bc99c4541944807a4f425a2",
+    "lean/CardanoKeri/CheckpointCommitmentGoals.lean": "d943692849181ef74dd1cc9f9407e034f84442700e52e64032d5164ffa8c8b92",
     "lean/CardanoKeri/CheckpointCommitmentVectors.lean": "bd204dd7ea77217f844bff1edee399bb4a9d80cbc24af7bf1c40ce26737becc2",
     "lean/CardanoKeri/CheckpointCompletionGoals.lean": "8d2ba4195fc0ce06d9f646717ad426b4b7d088bf180d3966707900ad5437c4d4",
     "lean/CardanoKeri/CheckpointConviction.lean": "964b3d7b4fbfea96ce6db73e9355eb4c234cf6f8a8c9e5ab3b3c3966bec3ff7a",
@@ -26,7 +26,7 @@
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "f6c96b69a42efd73a3365715213fb0a13a0138bce7c39dba4cd67a5713ba5140",
     "lean/CardanoKeri/CheckpointEventHistory.lean": "4edcbd860839f57f21371ed117724391c50340b6a064e2cc6f58c00c46263898",
     "lean/CardanoKeri/CheckpointGoals.lean": "9465d7e242adfa5f59e75e9602fb995ac739e2c023be69c5b8c3c0d538282b5b",
-    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "37474bd76b814540e755c3558e301642bc49d4a5038c2cf75eac51fca85be6bb",
+    "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "011abafab3f4b507f4926f118f8673c1273475f71d63a7604bb0cca6ce74620c",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "6b9e704f3b7f972c3e8276a1565e38b2e0408e550215d503c9d5f3d02e17cafe",
@@ -2162,7 +2162,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.local_event_uses_own_authorization",
       "path": "lean/CardanoKeri/Checkpoint.lean",
-      "line": 782,
+      "line": 785,
       "statement": "theorem local_event_uses_own_authorization {p : Params} {env : SystemEnv} {s s' : Sys}\n    (event : LocalEvent p env s s') :\n    ∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧\n      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧\n      s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a",
       "statementSha256": "e5e55694f5f9076d266c5e26ee774971dd4c58e478cc7f467400929f0db8defe",
       "sourceStory": "Given a local system event, when it updates a checkpoint, then the very\naction and identifier producing the successor have that identifier's required\nrotation, deposit or poison authorization for its prior live state.",
@@ -2172,6 +2172,48 @@
         "then": "∃ aid a now flow st, Step p (env aid) a now (s.states aid) flow st ∧\n      a.authorizedFor env aid (s.states aid) ∧ s.revealOpen aid a ∧\n      s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a"
       },
       "storySha256": "eb244ea2786c50cb45980caf532df35ae55b890633bc580cc02b7d8dc8741fe5"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.local_certificate_conviction_occurs",
+      "path": "lean/CardanoKeri/CheckpointCertificate.lean",
+      "line": 162,
+      "statement": "theorem local_certificate_conviction_occurs {current p env aid now payee c result}\n    (ok : localCertificate current p env aid now (.convict payee c) = .ok result) :\n    (ClosingEvent.convict aid payee now).Occurs p env current.state result.next.state c",
+      "statementSha256": "482c79cad9b581a78c4d916a4696b9fa3a8725cc01b48d63951b87fca693c94d",
+      "sourceStory": "Given a successful local conviction certificate, reading the submitted\ncheckpoint, payee, commitment and slot reconstructs the closing transition\nto the returned state at that exact slot.",
+      "story": {
+        "given": "{current p env aid now payee c result}\n    (ok : localCertificate current p env aid now (.convict payee c) = .ok result)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(ClosingEvent.convict aid payee now).Occurs p env current.state result.next.state c"
+      },
+      "storySha256": "2c4af97cba595e0774466d81de4a322e7bb40ce456abbf03c7cf541ee24e0853"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.reveal_certificate_occurs",
+      "path": "lean/CardanoKeri/CheckpointCertificate.lean",
+      "line": 179,
+      "statement": "theorem reveal_certificate_occurs {current p env marker now result}\n    (ok : revealCertificate current p env marker now = .ok result) :\n    ∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.reveal now).Occurs p env current.state result.next.state c",
+      "statementSha256": "4d7f69f93601600acb08176aaa84411f518dd504ce929e38321f6b3d3943eb2c",
+      "sourceStory": "Given a successful reveal certificate, the supplied marker identifies\nthe consumed commitment and the submitted reveal slot witnesses its transition.",
+      "story": {
+        "given": "{current p env marker now result}\n    (ok : revealCertificate current p env marker now = .ok result)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.reveal now).Occurs p env current.state result.next.state c"
+      },
+      "storySha256": "419a2d5203f1aa5bce1ab8585a6ff5e6374d2af605b85821f83937f985bf9d43"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.sweep_certificate_occurs",
+      "path": "lean/CardanoKeri/CheckpointCertificate.lean",
+      "line": 194,
+      "statement": "theorem sweep_certificate_occurs {current p env marker now result}\n    (ok : sweepCertificate current p env marker now = .ok result) :\n    ∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.sweep now).Occurs p env current.state result.next.state c",
+      "statementSha256": "9d8245275a0e23dc503252e1795f69f749859f27614b8ddc4aa84850e779ed5b",
+      "sourceStory": "Given a successful sweep certificate, the supplied marker identifies\nthe consumed commitment and the submitted sweep slot witnesses its transition.",
+      "story": {
+        "given": "{current p env marker now result}\n    (ok : sweepCertificate current p env marker now = .ok result)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ c : Commitment, c.marker = marker ∧ (ClosingEvent.sweep now).Occurs p env current.state result.next.state c"
+      },
+      "storySha256": "cd39921aa08e6980c3a530722b5d5b49016a522553f8df28bc70246c73980981"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.convict_requires_entitlement",
@@ -2482,9 +2524,65 @@
       "storySha256": "66531c939cc2782012cf93a8f535eaecff84425343def91108221ea9e38ecf4c"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.ClosingEvent.system_step",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 432,
+      "statement": "theorem ClosingEvent.system_step {p env s s' c event} (actual : ClosingEvent.Occurs event p env s s' c) :\n    SysStep p env s s'",
+      "statementSha256": "b41af9d33af8f3cc214a734f5d335f6c06e793cb9b4f730f6e704e46d36ebaa0",
+      "sourceStory": "Given a closing command and its checked transition, the corresponding\nsystem step starts at its source and installs its target.",
+      "story": {
+        "given": "{p env s s' c event} (actual : ClosingEvent.Occurs event p env s s' c)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "SysStep p env s s'"
+      },
+      "storySha256": "ab7a18aa4b95c563ac752eb0d09242e7d50cd597f938ff2c8750c9390b9226ad"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.ClosingEvent.timing",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 442,
+      "statement": "theorem ClosingEvent.timing {p env s s' c event} (actual : ClosingEvent.Occurs event p env s s' c) :\n    match event with\n    | .convict _ _ now | .reveal now => c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt\n    | .sweep now => c.expiresAt < now",
+      "statementSha256": "a5275b07abbf7e6bd53882efc1d7d53213e5a10544cc06700d0e5da27d96dc37",
+      "sourceStory": "Given a closing transaction with a known command and slot, when it occurs,\na conviction or reveal uses a slot inside the window, and a sweep uses a slot\nstrictly after expiry. The result applies to the supplied command's own slot.",
+      "story": {
+        "given": "{p env s s' c event} (actual : ClosingEvent.Occurs event p env s s' c)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "match event with\n    | .convict _ _ now | .reveal now => c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt\n    | .sweep now => c.expiresAt < now"
+      },
+      "storySha256": "31e166a5569f8ce2f20b8bd3cdc7da328c51597b5b4c507ada4643dd8e84391c"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.conviction_event_after_opening",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 457,
+      "statement": "theorem conviction_event_after_opening {p env s s' aid payee c now l}\n    (reach : SysReach p env s) (live : s.states aid = .present l)\n    (actual : (ClosingEvent.convict aid payee now).Occurs p env s s' c) :\n    s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now",
+      "statementSha256": "a595e5a719c4a55a231b87020a2d17b53cec2154ae29785859f9c5e6ad8cfe48",
+      "sourceStory": "Given a reachable live checkpoint and a particular conviction transaction,\nwhen that transaction spends the commitment, its own slot entitles its payee\nand lies strictly after that commitment's opening.",
+      "story": {
+        "given": "{p env s s' aid payee c now l}\n    (reach : SysReach p env s) (live : s.states aid = .present l)\n    (actual : (ClosingEvent.convict aid payee now).Occurs p env s s' c)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now"
+      },
+      "storySha256": "b7f8707abe74d4be0557a706ddbc6129d945cbd70678ac3edf7b06aca0faf42a"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.conviction_closing_event",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 472,
+      "statement": "private theorem conviction_closing_event (p : Params) (env : SystemEnv) {s s' : Sys}\n    (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :\n    ∃ (payee : Addr) (c : Commitment) (now : Slot),\n      s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment ∧\n      c.entitles (env aid) l payee now ∧ s'.commitments c.marker = none ∧ (ClosingEvent.convict aid payee now).Occurs p env s s' c",
+      "statementSha256": "082115421813a716dcf903745508d598e36e4dacdd532e4ea393aec803020778",
+      "sourceStory": "Given a transition from live to pending, when its system rule is inverted,\nthe conviction command, spent marker, entitlement and successor belong to the\nsame local transaction.",
+      "story": {
+        "given": "(p : Params) (env : SystemEnv) {s s' : Sys}\n    (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "∃ (payee : Addr) (c : Commitment) (now : Slot),\n      s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment ∧\n      c.entitles (env aid) l payee now ∧ s'.commitments c.marker = none ∧ (ClosingEvent.convict aid payee now).Occurs p env s s' c"
+      },
+      "storySha256": "82ed082115933e0f38235b48fb99c5cff0bac017b695e47eb0b3bfa41e852b76"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.sys_conviction_consumes_commitment",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 419,
+      "line": 529,
       "statement": "theorem sys_conviction_consumes_commitment (p : Params) (env : SystemEnv) {s s' : Sys}\n    (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :\n    ∃ (payee : Addr) (c : Commitment) (now : Slot),\n      s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment ∧\n      c.entitles (env aid) l payee now ∧ s'.commitments c.marker = none",
       "statementSha256": "d174ff2334848311e8d5b4d096ba87a129ce555a6cb54f9c9f2390fe2b4a8c60",
       "sourceStory": "**A system conviction consumes an open, entitling commitment.**\nGiven any system step after which an AID's live output `l` is a pending\ntermination.\nWhen the step is read.\nThen it is a conviction paying some `payee` at some slot that revealed a\ncommitment `c`: before the step `c` was open under its marker and named that AID\nand the system's deployment,\n`c` entitles `payee` to convict `l` at that slot, and after the step `c` is no\nlonger open (its marker is burnt, so it entitles no second conviction).",
@@ -2498,35 +2596,63 @@
     {
       "declaration": "CardanoKeri.Checkpoint.sys_conviction_after_opening_slot",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 473,
-      "statement": "theorem sys_conviction_after_opening_slot (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :\n    ∃ (payee : Addr) (c : Commitment) (now : Slot),\n      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now",
-      "statementSha256": "3bc544d4d9d58fe00ce606127323095c918fdcb26c6f040a6b615ce1e4b63d64",
-      "sourceStory": "**A reachable system never convicts in a commitment's opening slot.**\nGiven a reachable system and a step after which an AID's live output `l` is a\npending termination.\nWhen the commitment that step reveals is read.\nThen the conviction's slot is strictly after the upper end of the commitment's\nopening transaction's validity range, so the opening transaction cannot share the\nconviction's slot.",
+      "line": 542,
+      "statement": "theorem sys_conviction_after_opening_slot (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) {aid : AID} {l : Live} {payee : Addr} {c : Commitment} {now : Slot}\n    (live : s.states aid = .present l) (actual : (ClosingEvent.convict aid payee now).Occurs p env s s' c) :\n    s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now",
+      "statementSha256": "bfd27e1acbe8ccf110699951b84d91cca32ebaaf06f9dd8d1b12908505294d6f",
+      "sourceStory": "Given a reachable system with a live checkpoint, when the supplied conviction\noccurs, its commitment was open under its marker. That commitment entitles the\nsupplied payee at the supplied slot, which is strictly after the opening.",
+      "story": {
+        "given": "(p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) {aid : AID} {l : Live} {payee : Addr} {c : Commitment} {now : Slot}\n    (live : s.states aid = .present l) (actual : (ClosingEvent.convict aid payee now).Occurs p env s s' c)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now"
+      },
+      "storySha256": "440f995d406a0bad3e653226dbb5c5db9f0343bf7387e41e0a762e0c885c8439"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.exists_conviction_after_opening_of_pending",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 551,
+      "statement": "theorem exists_conviction_after_opening_of_pending (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :\n    ∃ (payee : Addr) (c : Commitment) (now : Slot),\n      (ClosingEvent.convict aid payee now).Occurs p env s s' c ∧\n      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now",
+      "statementSha256": "342b49f548a45097fc3e572628c8dfd81c7fac1c87fcf1b56c6bd3175a40800a",
+      "sourceStory": "Given a reachable live checkpoint and a system step leaving it pending, there\nexists a conviction between those states, with an open commitment entitling its\npayee at a slot strictly after opening. The step leaves that slot existential.",
       "story": {
         "given": "(p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}\n    (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ (payee : Addr) (c : Commitment) (now : Slot),\n      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now"
+        "then": "∃ (payee : Addr) (c : Commitment) (now : Slot),\n      (ClosingEvent.convict aid payee now).Occurs p env s s' c ∧\n      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now"
       },
-      "storySha256": "5621470798700e0ee54e84f56aa6436d66a227873fcf80edff5eba4308c97b19"
+      "storySha256": "3cd96f51cbfc9ad319093b8573fda041f870f619b1a3089b0d8006402066ce26"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.commitment_closes_in_or_after_window",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 489,
-      "statement": "theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}\n    (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none) :\n    ∃ now : Slot, (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now",
-      "statementSha256": "127ea19e61d8aad8d9d026368dba648d7af4bd5cebafdd6e6708cbb142a8d314",
-      "sourceStory": "**A commitment closes only inside or after its window.**\nGiven a reachable system with a commitment `c` open under marker `m`, and a step\nafter which nothing is open under `m`.\nWhen the step is read.\nThen it happened at a slot inside `c`'s window (a reveal, or the conviction that\nrevealed `c`) or strictly after it (a sweep); never before `c` was eligible.",
+      "line": 564,
+      "statement": "theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) {m : Marker} {c : Commitment} {event : ClosingEvent}\n    (hopen : s.commitments m = some c) (actual : event.Occurs p env s s' c) :\n    c.marker = m ∧ s'.commitments m = none ∧\n      match event with\n      | .convict _ _ now | .reveal now => c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt\n      | .sweep now => c.expiresAt < now",
+      "statementSha256": "d6c3edb01d76a5f0312f7de297bbf291706a8c67a3064038ce3afab7cec44d74",
+      "sourceStory": "Given a reachable system holding commitment `c` under marker `m`, when the\nsupplied closing event occurs, `m` is the commitment's marker and is absent\nafterwards. A supplied conviction or reveal occurs between eligibility and\nexpiry, inclusively. A supplied sweep occurs strictly after expiry.",
+      "story": {
+        "given": "(p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) {m : Marker} {c : Commitment} {event : ClosingEvent}\n    (hopen : s.commitments m = some c) (actual : event.Occurs p env s s' c)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "c.marker = m ∧ s'.commitments m = none ∧\n      match event with\n      | .convict _ _ now | .reveal now => c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt\n      | .sweep now => c.expiresAt < now"
+      },
+      "storySha256": "0662ce2d2407a715c88b8ed13cb701965764588fdb5546b8f871248e967d61b1"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.exists_closing_event_of_marker_spent",
+      "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
+      "line": 587,
+      "statement": "theorem exists_closing_event_of_marker_spent (p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}\n    (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none) :\n    c.marker = m ∧ ∃ event : ClosingEvent, event.Occurs p env s s' c ∧\n      ((c.eligibleAfter ≤ event.slot ∧ event.slot ≤ c.expiresAt) ∨ c.expiresAt < event.slot)",
+      "statementSha256": "88794a14d8fe1e171245c00b283d894c607187e204ee86ffd44d080d9d7ea44b",
+      "sourceStory": "Given a reachable system with a commitment open under a marker, when a\nsystem step leaves that marker empty, the marker belongs to the commitment and\nsome closing event realizes the transition at a slot inside or after its window.",
       "story": {
         "given": "(p : Params) (env : SystemEnv) {s s' : Sys}\n    (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}\n    (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none)",
         "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
-        "then": "∃ now : Slot, (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now"
+        "then": "c.marker = m ∧ ∃ event : ClosingEvent, event.Occurs p env s s' c ∧\n      ((c.eligibleAfter ≤ event.slot ∧ event.slot ≤ c.expiresAt) ∨ c.expiresAt < event.slot)"
       },
-      "storySha256": "b04783ce4428a6836b0f8c0047fbc6f72a619508f47627e47b24a549fe400400"
+      "storySha256": "62fcbde90bddb9c06b4b0ad5b4b9d40fbf8abe03fbed8dd8b270ef1aafd81f0c"
     },
     {
       "declaration": "CardanoKeri.Checkpoint.sys_step_keeps_deployment",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 552,
+      "line": 657,
       "statement": "theorem sys_step_keeps_deployment (p : Params) (env : SystemEnv) {s s' : Sys} (h : SysStep p env s s') :\n    s'.deployment = s.deployment",
       "statementSha256": "276011a793c8f410d3f3136d68549181e1ff53ba176659c2848d72a250637581",
       "sourceStory": "**A system keeps its deployment.**\nGiven any system step.\nWhen the deployment is read before and after it.\nThen it is the same.",
@@ -2540,7 +2666,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.sys_commitment_survives_key_state_step",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 588,
+      "line": 693,
       "statement": "theorem sys_commitment_survives_key_state_step (p : Params) (env : SystemEnv) {s s' : Sys}\n    (h : SysStep p env s s') {aid : AID} {l l' : Live}\n    (hlive : s.states aid = .present l) (hlive' : s'.states aid = .present l')\n    (hspent : l' ≠ l) (hkey : l'.hash = l.hash) (c : Commitment) (payee : Addr) (now : Slot) :\n    s'.commitments = s.commitments ∧\n      (s'.revealOpen aid (.convict payee c) ↔ s.revealOpen aid (.convict payee c)) ∧\n      (c.entitles (env aid) l' payee now ↔ c.entitles (env aid) l payee now)",
       "statementSha256": "54d0cdf36b46f8f2da95aa1ee4c03b94033fd8beb7d40b3dd93ab87c57a604b8",
       "sourceStory": "**A top-up, a freeze or a poison leaves every commitment open and entitling.**\nGiven a system whose AID holds the live output `l`, and a system step after which\nthat AID holds a different live output `l'` with the same key state (a top-up by\nanyone, a freeze or a poison of that checkpoint).\nWhen the commitments are read after the step and a conviction of the AID revealing\na commitment `c` is considered.\nThen the step opened and burnt no commitment, the system's premise on `c` holds\nafter the step exactly when it held before, and `c` entitles a payee at `l'`\nexactly when it did at `l`.",
@@ -2554,7 +2680,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.sys_conviction_refused_for_other_deployment",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 640,
+      "line": 745,
       "statement": "theorem sys_conviction_refused_for_other_deployment (s : Sys) (aid : AID) (payee : Addr)\n    {c : Commitment} (hother : c.deployment ≠ s.deployment) :\n    ¬ s.revealOpen aid (.convict payee c)",
       "statementSha256": "f121636411edf1be6cc2e5a1aadda71cc59d796d9a178184498d9532a0d713bc",
       "sourceStory": "**A commitment naming another deployment is refused.**\nGiven a system and a commitment naming a deployment other than the system's.\nWhen a conviction of any AID naming any payee reveals that commitment.\nThen the system's premise on the commitment fails: the conviction is refused,\nwhether or not the commitment is open and whatever else it names.",
@@ -2568,7 +2694,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.sys_conviction_only_at_commitment_deployment",
       "path": "lean/CardanoKeri/CheckpointCommitmentGoals.lean",
-      "line": 654,
+      "line": 759,
       "statement": "theorem sys_conviction_only_at_commitment_deployment (p : Params) (env : Env) {s₁ s₂ : Sys}\n    {aid : AID} {payee : Addr} {c : Commitment} {now : Slot} {f : Flow} {st : State} {l₂ : Live}\n    (hstep : Step p env (.convict payee c) now (s₁.states aid) f st)\n    (hopen₁ : s₁.revealOpen aid (.convict payee c))\n    (hlive₂ : s₂.states aid = .present l₂) (hkey : c.keyState = l₂.hash)\n    (hopen₂ : s₂.commitments c.marker = some c) :\n    (∃ f' st', Step p env (.convict payee c) now (s₂.states aid) f' st') ∧\n      (s₂.revealOpen aid (.convict payee c) ↔ s₂.deployment = s₁.deployment)",
       "statementSha256": "2f3b65af47c924c26573ec08ab3aa4c1d54fdf6784c3c87014ab96e28a87e5f2",
       "sourceStory": "**A commitment convicts at its own deployment and at no other.**\nGiven a conviction that one system accepts for an AID (its checkpoint step convicts\nand the revealed commitment is open there, naming that AID and that system's\ndeployment), and a second system in which the same commitment is open and the same\nAID holds a live output carrying the key state the commitment names.\nWhen the same conviction is attempted in the second system.\nThen its checkpoint step convicts there too, and the second system accepts the\nconviction exactly when it is the same deployment as the first: at a checkpoint of\nanother deployment with the same identifier and key state it is refused.",
@@ -5564,7 +5690,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.delivered_origin",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 81,
+      "line": 82,
       "statement": "theorem delivered_origin : DeliveredOrigin registrationReceipt CardanoKeri.Registry.Examples.registration 11 origin",
       "statementSha256": "f5d9f6c12d9996388aad08ed1c10ebd20d68e222a8dd95438b36ba5f1b3872cc",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nDeliveredOrigin registrationReceipt CardanoKeri.Registry.Examples.registration 11 origin",
@@ -5578,7 +5704,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registered_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 97,
+      "line": 98,
       "statement": "theorem registered_step : SysStep p env (Sys.init deployment) registered",
       "statementSha256": "b4aca9af07a24498638b662635cb211dbc80e1fc7587ccc46c97eb79690cf812",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env (Sys.init deployment) registered",
@@ -5592,7 +5718,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.rotated_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 112,
+      "line": 113,
       "statement": "theorem rotated_step : SysStep p env registered rotated",
       "statementSha256": "f04d3a7301674ffab9c0f1c9e093c8b71c935d940d1a406340c2ffc7a4631d12",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env registered rotated",
@@ -5606,7 +5732,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.committed_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 129,
+      "line": 130,
       "statement": "theorem committed_step : SysStep p env rotated committed",
       "statementSha256": "654a06c2c0ae56db83b6f2c10c6b232f9379ac57ff1cc539fbd3ec3b40bbd974",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env rotated committed",
@@ -5618,9 +5744,23 @@
       "storySha256": "4931df10d541c985d3767a69f3a493710f60a32c29a6720949bbeda228a99e40"
     },
     {
+      "declaration": "CardanoKeri.Checkpoint.Examples.conviction_at_five",
+      "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
+      "line": 136,
+      "statement": "private theorem conviction_at_five : (ClosingEvent.convict 11 7 5).Occurs p env committed pending commitment",
+      "statementSha256": "e9a6b92f55475af03b95453333ff8b89f0e678d204f17136ee0ae361d850fd54",
+      "sourceStory": "Given the registered and rotated checkpoint, when its payee convicts at\nslot five, the checked transition consumes the open marker and produces pending.",
+      "story": {
+        "given": "No additional local parameters; use the definitions in this module.",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "(ClosingEvent.convict 11 7 5).Occurs p env committed pending commitment"
+      },
+      "storySha256": "4dc8191e2b16d9bc095ebca145285e36b2c115acaeea1489c85a978822a12850"
+    },
+    {
       "declaration": "CardanoKeri.Checkpoint.Examples.pending_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 142,
+      "line": 233,
       "statement": "theorem pending_step : SysStep p env committed pending",
       "statementSha256": "436020a5461a02a84e71e3efb409ab819434667f17bae6af8c40e3b2f3c17a30",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env committed pending",
@@ -5634,7 +5774,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registry_convicted",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 162,
+      "line": 246,
       "statement": "theorem registry_convicted :\n    CardanoKeri.Registry.convictCkpt CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.registered 11 = .ok ({}, registryPending)",
       "statementSha256": "0bf3d23390a51d04a508447d37462d67a60c966e9e73374f640cb3cbba0c162f",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.convictCkpt CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.registered 11 = .ok ({}, registryPending)",
@@ -5648,7 +5788,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registry_booked",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 175,
+      "line": 259,
       "statement": "theorem registry_booked :\n    CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 CardanoKeri.Registry.Examples.termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked)",
       "statementSha256": "904add040bae9cf97b04526563e0588db4e05f80f140245303df98de4cd9efd1",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 CardanoKeri.Registry.Examples.termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked)",
@@ -5662,7 +5802,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registry_folded",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 190,
+      "line": 274,
       "statement": "theorem registry_folded :\n    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy\n      CardanoKeri.Registry.Examples.terminationUnspent CardanoKeri.Registry.Examples.terminationTransaction = .ok ({}, CardanoKeri.Registry.Examples.retired)",
       "statementSha256": "3772d5fcc6c2154c8d85516124e2919f5eb4264dfc73e7329f8234e4c947ea46",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p registryBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy\n      CardanoKeri.Registry.Examples.terminationUnspent CardanoKeri.Registry.Examples.terminationTransaction = .ok ({}, CardanoKeri.Registry.Examples.retired)",
@@ -5676,7 +5816,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.origin_history",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 204,
+      "line": 288,
       "statement": "theorem origin_history : CardanoKeri.Registry.History CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.registered registryPending",
       "statementSha256": "cf55106506cfb4c6ec9e7dccd14e24b08b5407321ff20f750529c8f89f3cf782",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.History CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.registered registryPending",
@@ -5690,7 +5830,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registry_pending_reachable",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 217,
+      "line": 301,
       "statement": "theorem registry_pending_reachable : CardanoKeri.Registry.Reach CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.cfg registryPending",
       "statementSha256": "2ce4f4db3ee6544773ff0bbf367333c34f89b1ad45954d641dadf3d0f8ec4d29",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.Reach CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.cfg registryPending",
@@ -5704,7 +5844,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.registry_booked_reachable",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 230,
+      "line": 314,
       "statement": "theorem registry_booked_reachable : CardanoKeri.Registry.Reach CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.cfg registryBooked",
       "statementSha256": "8c768dfb9086468a6114a7ff6c43fe8a168f95fc0afd54dde9000697f7f55a57",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.Reach CardanoKeri.Registry.Examples.p CardanoKeri.Registry.Examples.env CardanoKeri.Registry.Examples.cfg registryBooked",
@@ -5718,7 +5858,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.booked_event",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 240,
+      "line": 324,
       "statement": "theorem booked_event : BookingEvent pending booked",
       "statementSha256": "e3b8a13ae86ee757feac8fa96e178d27ae77fb7e42d826f9086b6bc7e43bd8d9",
       "sourceStory": "The observed booking associates the request with the prior checkpoint spend.",
@@ -5732,7 +5872,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.booked_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 254,
+      "line": 338,
       "statement": "theorem booked_step : SysStep p env pending booked",
       "statementSha256": "27f7d6c4b2953f45c36803983984dc5f270a0900e0bfb49316ddefa0ab8bd7b1",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env pending booked",
@@ -5746,7 +5886,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.receipt_matches",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 265,
+      "line": 349,
       "statement": "theorem receipt_matches : ReceiptMatches booked 11 association completionReceipt",
       "statementSha256": "5ded725db09efb5eb5c274eaa1533e37d1e98f381948908e9af8142e502ad555",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nReceiptMatches booked 11 association completionReceipt",
@@ -5760,7 +5900,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.completed_step",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 278,
+      "line": 362,
       "statement": "theorem completed_step : SysStep p env booked completed",
       "statementSha256": "4e196bb7d6b49634497cccb756aa73afa2e5f4ecd33d4c8aae787893f0f66710",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysStep p env booked completed",
@@ -5774,7 +5914,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.connected_completion",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 292,
+      "line": 376,
       "statement": "theorem connected_completion :\n    SysReach p env completed ∧ completed.states 11 = .convicted ∧\n      completed.leaves 11 = .retired ∧ completed.pending 11 = none ∧\n      completed.origins 11 = some origin",
       "statementSha256": "f7be9b578dc6dce047df5c3267360de85e908194173872685fa8225c3bc7cc49",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nSysReach p env completed ∧ completed.states 11 = .convicted ∧\n      completed.leaves 11 = .retired ∧ completed.pending 11 = none ∧\n      completed.origins 11 = some origin",
@@ -5788,7 +5928,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.other_booked",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 325,
+      "line": 409,
       "statement": "theorem other_booked :\n    CardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 otherTermination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, otherBooked)",
       "statementSha256": "68f635b825f602dd165ff5428441f6e9cc5b798d067beac088eee0dbeab8595f",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.bookTermination CardanoKeri.Registry.Examples.p registryPending 11 7 1 otherTermination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, otherBooked)",
@@ -5802,7 +5942,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.other_folded",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 348,
+      "line": 432,
       "statement": "theorem other_folded :\n    CardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =\n      .ok ({}, CardanoKeri.Registry.Examples.retired)",
       "statementSha256": "74970299694a35c0cff9bc95a986097cf116f7dbf0d3bb5bdc3d85aa6d28f708",
       "sourceStory": "Given the complete parameters and hypotheses:\n\nNo additional local parameters; use the definitions in this module.\n\nWhen observe the local Checkpoint or associated system relation named by this theorem.\nThen the complete conclusion is:\n\nCardanoKeri.Registry.fold CardanoKeri.Registry.Examples.p otherBooked 1 CardanoKeri.Registry.Examples.cfg.applicationPolicy otherUnspent otherTransaction =\n      .ok ({}, CardanoKeri.Registry.Examples.retired)",
@@ -5816,7 +5956,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.other_request_receipt_refused",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 434,
+      "line": 518,
       "statement": "theorem other_request_receipt_refused : ¬ ReceiptMatches booked 11 association otherReceipt",
       "statementSha256": "8aca6542c0e868e5546359131fb4cb7362dfb590bad480af48a4bc471b6ec439",
       "sourceStory": "Given an actual successful termination receipt at the same context, AID and\nalias but reference201, when offered to the stored reference200 association,\nthen the association refuses; the correct receipt has receipt_matches.",
@@ -5830,7 +5970,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.changed_pending_key_refused",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 442,
+      "line": 526,
       "statement": "theorem changed_pending_key_refused :\n    ¬ ReceiptMatches booked 11 { association with keyState := ⟨2, 3⟩ } completionReceipt",
       "statementSha256": "5276ef97a515473a9b3e89f99599243bd93724568b0058fafec3f265ef712aff",
       "sourceStory": "Given the genuine receipt and pending checkpoint, changing the recorded\npending key cannot satisfy the stored association check.",
@@ -5844,7 +5984,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.stored_context_conviction_refused",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 452,
+      "line": 536,
       "statement": "theorem stored_context_conviction_refused :\n    CardanoKeri.Registry.convictCkpt { CardanoKeri.Registry.Examples.env with presentedConviction := fun _ => none } CardanoKeri.Registry.Examples.registered 11 =\n      .error \"keri-conviction-refused\"",
       "statementSha256": "e5ee3b9ba8ab35768c1fa453a2461ecb2a14b8c4fa71db3141b236b302f4efb1",
       "sourceStory": "Given the same successful conviction source, replay under an environment with\nno conviction authorization actually refuses at the canonical function.",
@@ -5858,7 +5998,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.rotated_spend_uses_one_rival",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 460,
+      "line": 544,
       "statement": "theorem rotated_spend_uses_one_rival :\n    let localEnv := { env 11 with convictionContext := fun _ _ => none, convictionRival := fun _ _ => none }\n    stepFn p localEnv (.convict 7 commitment) 5 (.present rotatedLive) =\n      some ({ refund := some { addr := 42, b := 2, pool := 4 }, convictor := some { addr := 7, dreg := 3 } },\n        .terminationPending rotatedLive.hash)",
       "statementSha256": "6f571a006c3f90ef592e390f8eedbf4cc6783a26fa56760f5744f34f01e650c1",
       "sourceStory": "Given the reachable rotated checkpoint and its open commitment, when the\nconvictor supplies the same observed rival with no separate two-event history\nlookup, then the local spend enters pending at the rotated position.",
@@ -5872,7 +6012,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.conviction_mint_bound_to_output",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 470,
+      "line": 554,
       "statement": "theorem conviction_mint_bound_to_output :\n    let exactClaim : Registry.Conviction :=\n      ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩\n    let other := {exactClaim with output.index := 1}\n    let atUse := fun (claim : Registry.Conviction) =>\n      ({env 11 with convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads claim.output} : Env)\n    (atUse exactClaim).acceptsRival 1 1 = true ∧\n      (atUse other).acceptsRival 1 1 = false",
       "statementSha256": "6d9e1ade87d681bbec97bf315670b60fee4be9fe71a6f26637e7174da60cdbb5",
       "sourceStory": "The pending output selects its producing spend. A production recorded only\nat 105#1 fails the read for 105#0 with the same spent-tip comparison.",
@@ -5886,7 +6026,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.NestedWriter.reachable",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 503,
+      "line": 587,
       "statement": "private theorem reachable : SysReach p environment state",
       "statementSha256": "dfa10c9ecbc6b9f7af97981b1e6ef7ed51cf8d0a33c2caffdcea34fd907e4250",
       "sourceStory": "",
@@ -5900,7 +6040,7 @@
     {
       "declaration": "CardanoKeri.Checkpoint.Examples.NestedWriter.reachable_nested_writer_accepts_sibling",
       "path": "lean/CardanoKeri/CheckpointLifecycleExamples.lean",
-      "line": 521,
+      "line": 605,
       "statement": "theorem reachable_nested_writer_accepts_sibling :\n    SysReach p environment state ∧ state.writers 11 = some history ∧\n    comparison.tip.keys.curThreshold = threshold ∧ comparison.tip.keys.nextThreshold = threshold ∧\n    Duplicity.duplicityAt 1 1 ⟨1, origin.inception.predecessor, writer 11 1⟩ sibling = true ∧\n    state.comparisonMatchesWriter (environment 11) 11 = true ∧\n    (environment 11).acceptsRival 1 1 = true",
       "statementSha256": "0ffff73c39352be71858c1ce0c7f54e3c674ae794a52e7b6bb1516a8095e9618",
       "sourceStory": "Registration and advance reach a writer with nested signing and next\nthresholds. Its seal-only sibling binds to that live input and passes both\ncomparison gates in the environment of the same execution.",

@@ -1118,6 +1118,14 @@ entitlementSpecPath :: FilePath
 entitlementSpecPath =
     "offchain/deployment-test/Cardano/KERI/Deployment/BountyEntitlementSpec.hs"
 
+{- | The registry derivation specification, which applies parameters to the compiled programs on its own, apart from the
+production derivation, to compare the artifacts the derivation produces. It is a test that applies, so it is counted
+beside the production appliers and its applications are declared.
+-}
+registryScriptsSpecPath :: FilePath
+registryScriptsSpecPath =
+    "offchain/deployment-test/Cardano/KERI/Deployment/RegistryScriptsSpec.hs"
+
 {- | The checkpoint E2E driver, which applies the #271 commitment parameters to
 deploy that program on a throwaway devnet (#280).
 
@@ -1186,7 +1194,7 @@ defaultScanConfig root =
     ScanConfig
         { scanRoot = root
         , scanHorizonRoot = "offchain/deployment"
-        , scanHorizonExtras = [cageBuilderPath]
+        , scanHorizonExtras = [cageBuilderPath, registryScriptsSpecPath]
         , scanExclusions =
             [ "offchain/deployment-test/Cardano/KERI/Deployment/ScriptAritySpec.hs"
             , entitlementSpecPath
@@ -1484,17 +1492,19 @@ disappearing are equally a catch.
 declaredApplications :: [CensusRow]
 declaredApplications =
     [ CensusRow deploymentScriptPath "applyCommitmentParams" 1
-    , CensusRow deploymentScriptPath "applyDataArgs" 4
+    , CensusRow deploymentScriptPath "applyDataArgs" 3
     , CensusRow deploymentScriptPath "applyProgram" 1
     , CensusRow deploymentScriptPath "mkAppliedArtifact" 9
+    , CensusRow (deploymentModule "Registry") "mkAppliedArtifact" 1
     , CensusRow cageBuilderPath "applyParams" 1
+    , CensusRow registryScriptsSpecPath "applyDataArgs" 4
     ]
 
 {- | The version-shaped name occurrences this candidate declares.
 
 Every row is a name the corrected tree still uses, and each is a use rather
-than a residue: the manifest and endpoint-board schema versions are published
-fields, @v1CheckpointVersion@ is the surviving checkpoint-family constant the
+than a residue: the manifest, endpoint-board, registry record and snapshot
+schema versions are published fields, @v1CheckpointVersion@ is the surviving checkpoint-family constant the
 register no longer applies, and @cageVersion@ belongs to the cage harness.  A
 row disappearing is as much a catch as a row appearing, so cutting one of these
 without amending this table fails the control.
@@ -1512,11 +1522,18 @@ declaredVersions =
         (deploymentModule "EndpointBoardTransaction")
         "endpointBoardManifestSchemaVersion"
         1
+    , CensusRow (deploymentModule "RegistryFiles") "RecordUnknownSchemaVersion" 2
+    , CensusRow (deploymentModule "RegistryFiles") "legacySchemaVersion" 4
+    , CensusRow (deploymentModule "RegistryFiles") "recordSchemaVersion" 6
+    , CensusRow (deploymentModule "RegistryFiles") "version" 4
+    , CensusRow (deploymentModule "RegistrySnapshot") "SnapshotUnknownSchemaVersion" 2
+    , CensusRow (deploymentModule "RegistrySnapshot") "schemaVersion" 5
+    , CensusRow (deploymentModule "RegistrySnapshot") "version" 3
     , CensusRow (deploymentModule "Manifest") "manifestSchemaVersion" 4
     , CensusRow (deploymentModule "Manifest") "parameterCheckpointVersion" 3
     , CensusRow (deploymentModule "Manifest") "v1CheckpointVersion" 2
     , CensusRow deploymentScriptPath "v1CheckpointVersion" 7
-    , CensusRow deploymentScriptPath "version" 10
+    , CensusRow deploymentScriptPath "version" 8
     , CensusRow deploymentScriptPath "versionTag" 2
     , CensusRow cageBuilderPath "cageVersion" 4
     ]
@@ -1816,6 +1833,16 @@ selfTestLegs =
                 config
                     { scanExclusions =
                         scanExclusions config <> ["offchain/deployment/Absent.hs"]
+                    }
+            )
+    , SelfTestLeg "registry-scripts-spec-extra-removed" $ \_ config ->
+        pure
+            ( Right
+                config
+                    { scanHorizonExtras =
+                        filter
+                            (/= registryScriptsSpecPath)
+                            (scanHorizonExtras config)
                     }
             )
     , SelfTestLeg "declared-extra-absent" $ \_ config ->

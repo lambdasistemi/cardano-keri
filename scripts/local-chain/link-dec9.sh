@@ -76,6 +76,41 @@ sed 's/^/  release-identity: /' "$WORK/release-identity.json" | tee -a "$WORK/li
 sed 's/^/  reference-outputs: /' "$WORK/reference-outputs.json" | tee -a "$WORK/link.log" >/dev/null
 sed 's/^/  deploy: /' "$WORK/deploy.out" | tee -a "$WORK/link.log" >/dev/null
 
+# --- the duplicate attempt (DUPLICATE=1): the same signed registration, after its checkpoint settled, in the same registry ---
+snap() { # snap <label>: what the chain and the booker's wallet hold at this moment
+    curl -s "$URL/tip" >"$WORK/dup-$1.tip.json"
+    curl -s -X POST "$URL/address_utxos" -H 'content-type: application/json' -d "{\"_addresses\":[\"$BOOKER\"]}" | jq -c 'sort_by(.tx_hash, .tx_index) | map({tx_hash, tx_index, value})' >"$WORK/dup-$1.booker-utxos.json"
+    curl -s -X POST "$URL/address_txs" -H 'content-type: application/json' -d "{\"_addresses\":[\"$BOOKER\"],\"_after_block_height\":0}" | jq -c 'map(.tx_hash) | sort' >"$WORK/dup-$1.booker-txs.json" 2>/dev/null || echo null >"$WORK/dup-$1.booker-txs.json"
+    log "  snapshot $1: tip $(jq -c '.[0] | {block_no, hash}' "$WORK/dup-$1.tip.json"); booker utxos $(jq 'length' "$WORK/dup-$1.booker-utxos.json"), booker transactions $(jq 'length' "$WORK/dup-$1.booker-txs.json" 2>/dev/null || echo unknown)"
+}
+reads() { # reads <label> <name> <aid>: both installed readers, kept
+    for command in checkpoint status; do
+        "$CKERI" "$command" --aid "$3" --koios-url "$URL" --network-time "$TIME_DIR" --network-magic $MAGIC \
+            --release-identity "$WORK/release-identity.json" --reference-record "$WORK/reference-outputs.json" --blueprint "$BLUEPRINT" \
+            >"$WORK/dup-$1-$command-$2.out" 2>"$WORK/dup-$1-$command-$2.err"
+        log "  $1 read: ckeri $command --aid $3 exit $?"
+    done
+}
+duplicate_attempt() { # duplicate_attempt <name> <export> <aid>
+    local name=$1 export=$2 aid=$3
+    log "== duplicate attempt: the same signed registration of $name, after its checkpoint settled"
+    log "  input: $export sha256 $(sha256sum "$export" | cut -c1-64), $(stat -c %s "$export") bytes"
+    snap "pre-$name"; reads pre "$name" "$aid"
+    "$CKERI" registry register "${common[@]}" "${provider[@]}" --funding-address "$BOOKER" --vault "$WORK/booker.vault" \
+        --release-identity "$WORK/release-identity.json" --reference-record "$WORK/reference-outputs.json" \
+        --kli-export "$export" >"$WORK/duplicate-$name.out" 2>"$WORK/duplicate-$name.err"
+    local code=$?
+    echo "$code" >"$WORK/duplicate-$name.exit"
+    log "  command: ckeri registry register --kli-export $export (same registry, same wallet): exit $code"
+    sed 's/^/  stdout: /' "$WORK/duplicate-$name.out" | tee -a "$WORK/link.log" >/dev/null
+    sed 's/^/  stderr: /' "$WORK/duplicate-$name.err" | head -12 | tee -a "$WORK/link.log" >/dev/null
+    snap "post-$name"; reads post "$name" "$aid"
+    log "  booker utxos unchanged: $([[ "$(cat "$WORK/dup-pre-$name.booker-utxos.json")" == "$(cat "$WORK/dup-post-$name.booker-utxos.json")" ]] && echo yes || echo NO); booker transactions unchanged: $([[ "$(cat "$WORK/dup-pre-$name.booker-txs.json")" == "$(cat "$WORK/dup-post-$name.booker-txs.json")" ]] && echo yes || echo NO)"
+    for command in checkpoint status; do
+        log "  $command read unchanged by the attempt: $(cmp -s "$WORK/dup-pre-$command-$name.out" "$WORK/dup-post-$command-$name.out" && echo yes || echo NO)"
+    done
+}
+
 txsize() { curl -s -X POST "$URL/tx_cbor" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$1\"]}" | jq -r '.[0].cbor' >"$WORK/$2.hex"; log "  $2: signed size $(( $(wc -c <"$WORK/$2.hex") / 2 )) bytes"; ( source "$NODE_ENV"; $INSPECT "$WORK/$2.hex" ) >"$WORK/$2.inspect" 2>"$WORK/$2.inspect.err" || log "  $2: inspect failed: $(tail -2 "$WORK/$2.inspect.err")"; }
 for entry in $ENTRIES; do
     name=${entry%%:*}; kind=${entry##*:}
@@ -96,6 +131,9 @@ for entry in $ENTRIES; do
     FOLDTX=$(sed -n 's/^fold-transaction: //p' "$WORK/fold-$name.out")
     log "ok: folded $name: fold $FOLDTX consuming $REQ"
     txsize "$FOLDTX" "fold-$name"
+    if [[ "${DUPLICATE:-0}" == 1 ]]; then
+        for kv in ${ENTRY_AIDS:-}; do [[ "${kv%%=*}" == "$name" ]] && duplicate_attempt "$name" "$EXPORTS/$name.cesr" "${kv#*=}"; done
+    fi
     # what the chain holds of the delivered checkpoint, kept as the facade serves it (inline datum included)
     curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$FOLDTX\"],\"_inputs\":true,\"_assets\":true,\"_scripts\":true}" >"$WORK/fold-$name.tx_info.json"
 done

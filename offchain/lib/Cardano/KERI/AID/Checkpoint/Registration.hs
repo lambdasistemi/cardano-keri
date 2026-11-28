@@ -64,6 +64,7 @@ module Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationError (..),
     eventBinding,
     eventBindingOver,
+    futureThresholdMatches,
     registrationPredicate,
     registrationPredicateOver,
     qualifiedOfView,

@@ -30,7 +30,7 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     proofTokenName,
     registrationPredicateOver,
  )
-import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
     hashProofBurnData,
     hashProofMintData,
@@ -123,6 +123,29 @@ spec = describe "offset-free registration evidence" $ do
         it "keeps admitting the reduced clause and the numeric zero" $ do
             futureCaseExport "D next exact one" >>= accepted
             prefixCaseExport "D zero next with digest" >>= accepted
+        -- draft #600 at ce10e471, CardanoKeri.Application.InceptionPrefix.verify: the datum's key state
+        -- must equal the signed event's key state (decide (keys = e.keyState)), and Fraction derives
+        -- DecidableEq: the pairs are compared as pairs, so a signed 2/4 is not a datum 1/2.
+        let withNext label next = do
+                export <- futureCaseExport label
+                pure
+                    ( registrationPredicateOver
+                        context
+                        (inceptionQualified export)
+                        ((inceptionDatum export){cdNextThreshold = Weighted next})
+                        1_007_000_000
+                        (inceptionEvidence export)
+                    )
+        it "refuses a datum that carries 1/2 + 1/2 for the signed 2/4 + 2/4, at the next threshold" $
+            withNext "D next unreduced" [[Weight 1 2, Weight 1 2]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+        it "refuses a datum that carries 2/4 + 2/4 for the signed 1/2 + 1/2, at the next threshold" $
+            withNext "D next exact one" [[Weight 2 4, Weight 2 4]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+        it "refuses a datum that carries 2/2 and 2/2 for the signed 1 and 1, at the next threshold" $
+            withNext "D next partial coverage" [[Weight 2 2], [Weight 2 2]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+        it "keeps admitting the datum that carries the signed pairs literally" $ do
+            withNext "D next unreduced" [[Weight 2 4, Weight 2 4]] >>= (`shouldBe` Right ())
+            withNext "D next exact one" [[Weight 1 2, Weight 1 2]] >>= (`shouldBe` Right ())
+            withNext "D next partial coverage" [[Weight 1 1], [Weight 1 1]] >>= (`shouldBe` Right ())
         let refusedAtR4 label = it ("refuses " <> T.unpack label <> " at the inception rule") $ do
                 export <- futureCaseExport label
                 case registrationPredicateOver

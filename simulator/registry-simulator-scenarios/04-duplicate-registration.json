@@ -106,7 +106,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "writer/11/1"
             }
           },
           "rival": {
@@ -134,7 +135,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "sibling/11/1"
             },
             "structureVerified": true,
             "signatures": [
@@ -164,7 +166,8 @@
                   "cuts": [],
                   "adds": [],
                   "witnessThreshold": 0,
-                  "extension": []
+                  "extension": [],
+                  "eventDigest": "sibling/11/1"
                 },
                 "verified": true
               }

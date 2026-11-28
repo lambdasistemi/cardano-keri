@@ -705,7 +705,8 @@
                 "cuts": [],
                 "adds": [],
                 "witnessThreshold": 0,
-                "extension": []
+                "extension": [],
+                "eventDigest": "sibling/0/2"
               },
               "structureVerified": true,
               "signatures": [
@@ -735,7 +736,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/2"
                   },
                   "verified": true
                 }

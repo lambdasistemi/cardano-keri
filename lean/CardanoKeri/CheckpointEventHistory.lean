@@ -36,15 +36,158 @@ def EventHistory.predecessor : EventHistory → Predecessor
 its fields to the initial datum, verifies its controller signatures and checks
 its receipts (checkpoint/observer.ak 65–111, registration.ak 310–352 and
 363–410). This check is on decoded evidence under the signature and structure
-interpretation, for an inception of the selected identifier. -/
+interpretation, for an inception of the selected identifier. KERI 1.1
+`spec/spec-body.md` at fbdd4a61, line 556, excludes the rotation fields
+`p`, `br` and `ba` from an inception. In this decoded content their absence
+is represented by zero for the prior digest and empty lists for both deltas.
+The wire reader must check field absence in the signed body. -/
 def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : Bool :=
   let e := event.event
   let receipts := verifiedSigners e event.receipts
-  e.aid == aid && e.sn == 0 && e.kind == .inception && event.structureVerified &&
+  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty &&
+    e.nextThreshold.fitsNextKeys e.nextKeys.length
+  e.aid == aid && e.sn == 0 && e.kind == .inception &&
+    (event.structureVerified && inceptionFields && e.weightsAtMostOne && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&
     e.threshold.satisfied e.keys (verifiedSigners e event.signatures) &&
     (if e.witnessThreshold == 0 then event.receipts.isEmpty
      else decide (e.witnessThreshold ≤ (witnesses.filter receipts.contains).length))
+
+/-- Given a signed event and initial witnesses, when registration accepts its
+inception opening, the decoded writer has no prior digest or witness deltas. -/
+theorem inception_has_no_rotation_fields {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.priorDigest = 0 ∧ event.event.cuts = [] ∧ event.event.adds = [] := by
+  simp [inceptionWrites, Bool.and_eq_true] at accepted
+  grind
+
+/-- Given a signed inception, when registration opens its writer, each
+denominator in the next threshold it stores is positive. -/
+theorem inception_next_denominators_positive {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.nextThreshold.positiveDenominators = true := by
+  simp only [inceptionWrites, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.1.2.2
+
+/-- Given a signed rotation, when it passes against its predecessor, each
+denominator in the next threshold it declares is positive. -/
+theorem rotation_next_denominators_positive {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    signed.event.nextThreshold.positiveDenominators = true := by
+  simp only [rotationValid, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.2.2
+
+/-- Given a signed inception, when its registration opening passes, each
+individual signing weight in its current and next rules is at most one,
+including the outer and member weights of groups (keripy admission profile). -/
+theorem inception_weights_at_most_one {aid : Nat} {event : SignedEvent} {witnesses : List Nat}
+    (accepted : inceptionWrites aid event witnesses = true) :
+    event.event.threshold.weightsAtMostOne = true ∧ event.event.nextThreshold.weightsAtMostOne = true := by
+  simp only [inceptionWrites, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
+  exact accepted.1.1.1.1.1.2.1.2
+
+/-- Given a writer or rival rotation, when it validates against its predecessor,
+the prior signing rule and both rules in the event satisfy keripy’s ceiling. -/
+theorem rotation_weights_at_most_one {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    prior.nextThreshold.weightsAtMostOne = true ∧ signed.event.threshold.weightsAtMostOne = true ∧
+    signed.event.nextThreshold.weightsAtMostOne = true := by
+  simp only [rotationValid, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
+  exact ⟨accepted.1.1.1.1.2.1.1.2, accepted.1.1.1.1.2.1.2⟩
+
+/-- Given an admitted rotation, when the next rule is read from its signed
+body, its width fits its declared digests and its weighted clauses and groups
+meet the minimum for a declaration. -/
+theorem rotation_next_rule_fits {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    signed.event.nextThreshold.fitsNextKeys signed.event.nextKeys.length = true := by
+  simp only [rotationValid, Bool.and_eq_true] at accepted
+  grind
+
+/-- Given an admitted rotation, its cuts are prior witnesses, its additions
+are new, and any nonempty resulting set has a positive receipt threshold. -/
+theorem rotation_witness_changes_valid {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    (∀ w ∈ signed.event.cuts, w ∈ prior.witnesses) ∧
+    (∀ w ∈ signed.event.adds, w ∉ prior.witnesses) ∧
+    (derivedWitnesses prior signed.event ≠ [] → 0 < signed.event.witnessThreshold) := by
+  simp [rotationValid, receiptsValid] at accepted
+  grind
+
+/-- Given any keys and signer subset, checking numeric signing threshold zero
+returns false, including when every key signed. -/
+theorem zero_signing_threshold_unsatisfied (keys signers : List Nat) :
+    (Threshold.count 0).satisfied keys signers = false := by rfl
+
+/-- Given a decoded rotation with numeric signing threshold zero, neither
+the signatures it carries nor the predecessor can make it a valid rotation. -/
+theorem rotation_zero_signing_threshold_refused (prior : Predecessor) (signed : SignedEvent)
+    (zero : signed.event.threshold = .count 0) : rotationValid prior signed = false := by
+  simp [rotationValid, signingValid, zero, zero_signing_threshold_unsatisfied]
+
+/-- Given authenticated openings for the installed writer and the presented
+rival, when the KERI digest has no collision on these two signed byte bodies,
+digest inequality holds exactly when their bytes differ. -/
+theorem opened_digest_conflict_iff_signed_bytes_differ
+    (digestOf : ByteArray → String) (writer rival : Content) (writerBytes rivalBytes : ByteArray)
+    (writerOpening : writer.eventDigest = digestOf writerBytes)
+    (rivalOpening : rival.eventDigest = digestOf rivalBytes)
+    (collisionResistance : digestOf writerBytes = digestOf rivalBytes → writerBytes = rivalBytes) :
+    writer.eventDigest ≠ rival.eventDigest ↔ writerBytes ≠ rivalBytes := by
+  rw [writerOpening, rivalOpening]
+  exact ⟨fun different equal => different (congrArg digestOf equal),
+    fun different equal => different (collisionResistance equal)⟩
+
+/-- Equality after erasing the new field is exactly equality of the twelve
+decoded fields used by the published comparison, including the extension. -/
+def priorComparisonContent (e : Content) : Content := { e with eventDigest := "" }
+
+/-- Given a rotated tip and an otherwise valid same-position rival, when the
+same deterministic old decoder opens each signed body and each own SAID opens
+its body without a collision on this pair, the comparison retains every old
+conflict. Its only additional conflicts are different signed bodies with the
+same old decoded content. -/
+theorem accepts_iff_old_conflict_or_collapsed_bodies
+    (tip : CheckpointConviction.Tip) (rival : SignedEvent) (prior : Predecessor)
+    (previous : tip.previous = some prior) (rotated : tip.epoch ≠ 0)
+    (named : tip.aid = rival.event.aid) (position : tip.sn = rival.event.sn)
+    (valid : rotationValid prior rival = true)
+    (decode : ByteArray → Option Content) (digestOf : ByteArray → String)
+    (wb rb : ByteArray)
+    (decodedWriter : decode wb = some (priorComparisonContent tip.writer))
+    (decodedRival : decode rb = some (priorComparisonContent rival.event))
+    (writerOpening : tip.writer.eventDigest = digestOf wb)
+    (rivalOpening : rival.event.eventDigest = digestOf rb)
+    (collisionResistance : digestOf wb = digestOf rb → wb = rb) :
+    CheckpointConviction.accepts tip rival = true ↔
+      priorComparisonContent tip.writer ≠ priorComparisonContent rival.event ∨
+      (priorComparisonContent tip.writer = priorComparisonContent rival.event ∧ wb ≠ rb) := by
+  have identical (h : wb = rb) : priorComparisonContent tip.writer = priorComparisonContent rival.event :=
+    Option.some.inj (decodedWriter.symm.trans ((congrArg decode h).trans decodedRival))
+  rw [CheckpointConviction.accepts_iff]
+  simp only [previous, Option.some.injEq, exists_eq_left', named, position, valid, true_and]
+  rw [opened_digest_conflict_iff_signed_bytes_differ digestOf _ _ wb rb writerOpening rivalOpening collisionResistance]
+  constructor
+  · intro different
+    by_cases eq : priorComparisonContent tip.writer = priorComparisonContent rival.event
+    · exact Or.inr ⟨eq, different.2⟩
+    · exact Or.inl eq
+  · exact fun h => ⟨rotated, h.elim (fun ne same => ne (identical same)) And.right⟩
+
+/-- For a faithful old opening of this pair, equal decoded content determines
+equal bytes. In that case the old content test and the digest test agree. -/
+theorem digest_conflict_iff_faithful_old_conflict
+    (writer rival : Content) (wb rb : ByteArray)
+    (decode : ByteArray → Option Content) (digestOf : ByteArray → String)
+    (decodedWriter : decode wb = some (priorComparisonContent writer))
+    (decodedRival : decode rb = some (priorComparisonContent rival))
+    (faithful : decode wb = decode rb → wb = rb)
+    (writerOpening : writer.eventDigest = digestOf wb) (rivalOpening : rival.eventDigest = digestOf rb)
+    (collisionResistance : digestOf wb = digestOf rb → wb = rb) :
+    writer.eventDigest ≠ rival.eventDigest ↔ priorComparisonContent writer ≠ priorComparisonContent rival := by
+  rw [opened_digest_conflict_iff_signed_bytes_differ digestOf _ _ wb rb writerOpening rivalOpening collisionResistance]
+  exact ⟨fun different same => different (faithful (decodedWriter.trans ((congrArg some same).trans decodedRival.symm))),
+    fun different same => different (Option.some.inj (decodedWriter.symm.trans ((congrArg decode same).trans decodedRival)))⟩
 
 /-- The controller's registration starts the history. A relay of a rotation
 supplies the successor event over the stored predecessor. The advance checks
@@ -64,7 +207,7 @@ theorem stored_rotation_valid {aid : Nat} {previous : EventHistory} {event : Sig
     previous.authenticated aid = true ∧ rotationValid previous.predecessor event = true :=
   by simpa only [EventHistory.authenticated, Bool.and_eq_true] using accepted
 
-/-- Given an authenticated rotation and different rival content at the same
+/-- Given an authenticated rotation and a different rival event digest at the same
 native sequence, when the two-event definition is evaluated for that stored
 writer, then duplicity is equivalent to the rival's validity against the
 same predecessor. -/
@@ -72,7 +215,7 @@ theorem rotated_duplicity_iff_rival_valid {aid : Nat} {previous : EventHistory}
     {writer rival : SignedEvent}
     (accepted : (EventHistory.rotation previous writer).authenticated aid = true)
     (samePosition : writer.event.sn = rival.event.sn)
-    (conflict : writer.event ≠ rival.event) :
+    (conflict : writer.event.eventDigest ≠ rival.event.eventDigest) :
     duplicityAt (previous.epoch + 1) writer.event.sn
       ⟨previous.epoch + 1, previous.predecessor, writer⟩ rival = true ↔
       rotationValid previous.predecessor rival = true := by

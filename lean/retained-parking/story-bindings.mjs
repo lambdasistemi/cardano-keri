@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 const root=path.resolve(import.meta.dirname,'../..');
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const dir=path.join(root,'lean/CardanoKeri');
-const files=fs.readdirSync(dir).filter(f=>/^(Attestation|Application|Checkpoint|Registry|Consumer|Reader|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
+const files=fs.readdirSync(dir).filter(f=>/^(AbandonmentExamples|Attestation|Application|Checkpoint|InceptionPrefix|Registry|Consumer|Reader|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
 function separator(text, wanted) {
   let depth = 0;
   let letBinding = false;
@@ -45,7 +45,7 @@ export function collect(){
       rows.push({declaration,path:relative,line:text.slice(0,ev.index).split('\n').length,
         statement,statementSha256:hash(statement),sourceStory:narrative,
         story:{given:given||'No additional local parameters; use the definitions in this module.',
-          when: file.startsWith('Application')?'Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.':file.startsWith('Consumer')?'Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.':file.startsWith('Reader')?'Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.':file.startsWith('Registry')?'Observe the Registry transition, projection or custody relation named by this theorem.':file==='Samaritan.lean'?'Observe the booking split or accepted fold accounting named by this theorem.':'Observe the local Checkpoint or associated system relation named by this theorem.',
+          when: file==='InceptionPrefix.lean'?'Check the signed inception and its prefix in the indexed booking, or read its kind from the delivered datum.':file.startsWith('Application')?'Evaluate the KERI application judgement on the application-held observation, booking, spend or approval named by this theorem.':file.startsWith('Consumer')?'Evaluate the exact consumer holding, naming premises or bounded joint bridge named by this theorem.':file.startsWith('Reader')?'Read the answer the reader gives on the evidence, or the chain state the evidence is about, named by this theorem.':file.startsWith('Registry')?'Observe the Registry transition, projection or custody relation named by this theorem.':file==='Samaritan.lean'?'Observe the booking split or accepted fold accounting named by this theorem.':'Observe the local Checkpoint or associated system relation named by this theorem.',
           then},storySha256:hash(JSON.stringify({narrative,given,then}))});
     }
   }

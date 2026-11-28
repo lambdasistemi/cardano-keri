@@ -1,0 +1,14 @@
+{"id":"T01","satisfied":{"":false,"0":true}}
+{"id":"T02","satisfied":{"":false,"0":false,"01":true,"012":true,"02":true,"1":false,"12":true,"2":false}}
+{"id":"T03","satisfied":{"":false,"0":false,"01":false,"012":true,"02":false,"1":false,"12":false,"2":false}}
+{"id":"T06","satisfied":{"":false,"0":false,"01":true,"1":false}}
+{"id":"T07","satisfied":{"":false,"0":false,"01":true,"012":true,"02":true,"1":false,"12":true,"2":false}}
+{"id":"T08","satisfied":{"":false,"0":false,"01":false,"012":true,"02":false,"1":false,"12":false,"2":false}}
+{"id":"T09","satisfied":{"":false,"0":false,"01":false,"012":true,"0123":true,"013":true,"02":false,"023":true,"03":false,"1":false,"12":false,"123":true,"13":false,"2":false,"23":false,"3":false}}
+{"id":"T10","satisfied":{"":false,"0":false,"01":false,"012":true,"02":false,"1":false,"12":false,"2":false}}
+{"id":"T14","satisfied":{"":false,"0":true}}
+{"id":"T18","satisfied":{"":false,"0":false,"01":false,"012":false,"0123":false,"01234":true,"0124":false,"013":false,"0134":false,"014":false,"02":false,"023":false,"0234":false,"024":false,"03":false,"034":false,"04":false,"1":false,"12":false,"123":false,"1234":false,"124":false,"13":false,"134":false,"14":false,"2":false,"23":false,"234":false,"24":false,"3":false,"34":false,"4":false}}
+{"id":"T19","satisfied":{"":false,"0":false,"01":false,"012":true,"02":false,"1":false,"12":false,"2":false}}
+{"id":"T26","satisfied":{"":false,"0":false,"01":true,"1":false}}
+{"id":"T28","satisfied":{"":false,"0":false,"01":true,"012":true,"0123":true,"01234":true,"012345":true,"01235":true,"0124":true,"01245":true,"0125":true,"013":true,"0134":true,"01345":true,"0135":true,"014":true,"0145":true,"015":true,"02":false,"023":true,"0234":true,"02345":true,"0235":true,"024":true,"0245":true,"025":true,"03":false,"034":true,"0345":true,"035":true,"04":false,"045":true,"05":false,"1":false,"12":false,"123":true,"1234":true,"12345":true,"1235":true,"124":true,"1245":true,"125":true,"13":false,"134":true,"1345":true,"135":true,"14":false,"145":true,"15":false,"2":false,"23":false,"234":false,"2345":true,"235":false,"24":false,"245":false,"25":false,"3":false,"34":false,"345":false,"35":false,"4":false,"45":false,"5":false}}
+{"id":"T30","satisfied":{"":false,"0":true,"01":true,"1":true}}

@@ -1,6 +1,5 @@
 // Reviewed rule-to-source bindings. Each anchor must identify exactly one code line.
 // A forked implementation may override a row's "main" or "january" assessment.
-export const januaryRevision = 'b4f62b653d70653ba022a82fb935ced131b853db';
 const model = name => 'lean/CardanoKeri/' + name + '.lean';
 const ck = name => 'onchain/lib/cardano_keri/checkpoint/' + name + '.ak';
 const app = name => 'onchain/lib/cardano_keri/application/' + name + '.ak';

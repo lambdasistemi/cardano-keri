@@ -2,7 +2,7 @@
   "version": 1,
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Checkpoint.lean": "9d724a646a4b4fe5eac3f77379294e9a5db9b4172b6487316651074ccad0ad63",
+    "lean/CardanoKeri/Checkpoint.lean": "1d951ed3908771e52c65758f254e1a8edd74d1e103cdb64aa8a4b33f5ddf53a1",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",

@@ -54,7 +54,7 @@ deployed registry runs it yet.
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `5426e7b55085485d425beeadc8eec1f44a509f52` |
+| Lean model revision | `3ac4aa71715340293830b2e73f1de6dbce7b868e` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |

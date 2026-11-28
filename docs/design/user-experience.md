@@ -67,6 +67,8 @@ bond and the pool go back to that address, whatever Alice's keys sign.
 The UI should show the AID; the controller threshold; the witness threshold;
 the expected checkpoint policy and asset; each of the three sums; the transaction IDs of the registration (in version 1 the premint and the Register transaction; in the accepted design the booking and the fold); and the confirmation depth. Under the accepted design it should also show that the checkpoint is **juvenile** until the slot `born_at + W`, where `born_at` is the booking's validity upper bound and can precede the fold; at that slot the checkpoint stops being juvenile.
 
+Before registering a non-transferable identifier, plan for its checkpoint deposit and freeze bond to stay locked indefinitely. The owner has no withdrawal path. A transferable identifier whose last rotation commits to no next keys also loses rotation authority. Ending that authority leaves the checkpoint and its funds in place. A valid conflicting rotation at the same sequence can still convict that checkpoint.
+
 ## Rotate
 
 Alice rotates in KERI first. Her KERI software creates the event and collects

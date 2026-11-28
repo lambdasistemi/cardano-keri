@@ -66,7 +66,7 @@ export function admittedWeights(threshold) {
   return threshold.weighted.clauses.every(clause => clause.every(term =>
     term.key ? admitted(term.key.weight) : admitted(term.group.weight) && term.group.members.every(admitted)));
 }
-function nextRuleFits(threshold, keyCount) {
+export function nextRuleFits(threshold, keyCount) {
   if (threshold.count) return threshold.count.required <= keyCount;
   const clauses = threshold.weighted.clauses;
   const reachesOne = weights => atLeastOne(weights.map(fraction).reduce(fractionAdd, [0n, 1n]));

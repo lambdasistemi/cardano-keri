@@ -286,11 +286,8 @@ private def WritersAuthenticated (s : Sys) : Prop :=
 
 private theorem initial_writer_authenticated {env : Env} {aid datum history}
     (installed : env.initialHistory aid datum = some history) : history.authenticated aid = true := by
-  unfold Env.initialHistory at installed
-  split at installed <;> try contradiction
-  split at installed <;> try contradiction
-  dsimp only at installed
-  split at installed <;> simp_all
+  obtain ⟨_, _, _, _, _, _, _, _, valid, _, rfl⟩ := Env.initialHistory_opening installed
+  exact valid
 
 private theorem rotation_writer_authenticated {s : Sys} {env : Env} {aid sn history}
     (prior : WritersAuthenticated s) (accepted : s.rotationHistory env aid sn = some history) :
@@ -410,15 +407,9 @@ private theorem set_live_writers {s : Sys} {aid state writer} (old : LiveWriters
 /-- Given an admitted inception read, when the initial history is installed, then it has epoch and native sequence zero. -/
 private theorem inception_position {env : Env} {aid datum history}
     (found : env.initialHistory aid datum = some history) : WriterAt (some history) ⟨0, 0⟩ := by
-  unfold Env.initialHistory at found
-  split at found <;> try contradiction
-  split at found <;> try contradiction
-  dsimp only at found
-  split at found <;> try contradiction
-  rename_i valid
-  cases found
+  obtain ⟨_, _, _, _, _, _, _, _, valid, _, rfl⟩ := Env.initialHistory_opening found
   refine ⟨_, rfl, rfl, ?_⟩
-  simp only [EventHistory.authenticated, inceptionWrites, Bool.and_eq_true, beq_iff_eq] at valid
+  simp only [inceptionWrites, Bool.and_eq_true, beq_iff_eq] at valid
   exact valid.1.1.1.1.1.1.1.2
 
 /-- Given the live source, when its authenticated rotation history is found, then the writer advances one epoch and records the proposed native sequence. -/
@@ -529,13 +520,9 @@ private theorem set_data_matches {s : Sys} {aid st w spend}
 private theorem registration_extends {env : Env} {aid raw h}
     (installed : env.initialHistory aid raw = some h) (s : Sys) :
     ExtendsWriter s aid (some h) := by
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, rfl⟩ := Env.initialHistory_opening installed
   intro old e rot
   cases rot
-  unfold Env.initialHistory at installed
-  split at installed <;> try contradiction
-  split at installed <;> try contradiction
-  dsimp only at installed
-  split at installed <;> simp_all
 
 private theorem local_extends (s : Sys) (env : Env) (aid : AID) (action : Action) :
     ExtendsWriter s aid (s.localWriter env aid action).join := by

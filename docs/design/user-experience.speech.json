@@ -107,6 +107,10 @@
     {
       "text": "The UI should show the AID; the controller threshold; the witness threshold; the expected checkpoint policy and asset; each of the three sums; the transaction IDs of the registration (in version 1 the premint and the Register transaction; in the accepted design the booking and the fold); and the confirmation depth. Under the accepted design it should also show that the checkpoint is juvenile until the slot born_at + W, where born_at is the booking's validity upper bound and can precede the fold; at that slot the checkpoint stops being juvenile.",
       "pause": 400
+    },
+    {
+      "text": "Before registering a non-transferable identifier, plan for its checkpoint deposit and freeze bond to stay locked indefinitely. The owner has no withdrawal path. A transferable identifier whose last rotation commits to no next keys also loses rotation authority. Ending that authority leaves the checkpoint and its funds in place. A valid conflicting rotation at the same sequence can still convict that checkpoint.",
+      "pause": 400
     }
   ],
   "rotate": [
@@ -249,6 +253,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "3edda5bc52459cebadcc0bbf6fdbfee8ad4bae917256454d9ec42804babeb291"
+    "sha256": "4e949160d5c2499a1f3bc984dd792990f5de9df1320a0d4a3cea28661b2cca5c"
   }
 }

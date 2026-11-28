@@ -17,8 +17,10 @@ def env (aid : AID) : Env := {
     (epoch == 1 && sn == 1 && next == 2))),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
-  inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
-    some (Duplicity.writerFixture aid 0 .inception, []) else none,
+  inceptionBytes := fun subject raw => if subject == aid && raw == 777 then some [1] else none,
+  inceptionOpening := {
+    prefixCode := fun subject => if subject == aid then some "D" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some ⟨Duplicity.writerFixture aid 0 .inception, []⟩ else none },
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := KeyReads.symbolic
@@ -483,10 +485,10 @@ private def threshold : Duplicity.Threshold := .weighted [[.group ⟨1, 1⟩ [�
 
 private def writer (aid sn : Nat) : Duplicity.SignedEvent :=
   let content := { (Duplicity.writerFixture aid sn .rotation).event with
-    threshold := threshold, nextThreshold := threshold }
+    eventDigest := s!"nested-writer/{aid}/{sn}", threshold := threshold, nextThreshold := threshold }
   Duplicity.signed content [aid] []
 
-private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1] } [11] []
+private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1], eventDigest := "lifecycle-sibling" } [11] []
 private def history := EventHistory.rotation origin.inception (writer 11 1)
 private def comparison : CheckpointConviction.Comparison :=
   ⟨history.datum.tip KeyEncoding.symbolic 1, sibling⟩

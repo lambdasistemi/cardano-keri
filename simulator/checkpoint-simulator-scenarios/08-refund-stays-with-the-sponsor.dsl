@@ -290,8 +290,9 @@ step:
             adds: []
             witnessThreshold: 0
             extension: []
+            eventDigest: "sibling/0/2"
           structureVerified: true
-          signatures: [{"signer":0,"event":{"aid":0,"sn":2,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+          signatures: [{"signer":0,"event":{"aid":0,"sn":2,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/2"},"verified":true}]
           receipts: []
         payee: 3
         openedAt: 13

@@ -14,7 +14,7 @@ export const toInternal = x => {
     return n;
   }
   if (Array.isArray(x)) return x.map(toInternal);
-  if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, toInternal(v)]));
+  if (x && typeof x === 'object') return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, k === 'eventDigest' ? v : toInternal(v)]));
   return x;
 };
 export const toWire = x => {

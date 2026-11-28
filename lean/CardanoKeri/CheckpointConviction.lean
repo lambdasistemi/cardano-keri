@@ -51,20 +51,20 @@ structure Tip where
 abbrev Rival := Duplicity.SignedEvent
 
 /-- At a rotated checkpoint the mint judges one rival using the previous
-commitments and the rival's own rules. Difference is over the complete event. -/
+commitments and the rival's own rules. The authenticated writer and rival must have distinct event digests. -/
 def accepts (tip : Tip) (rival : Rival) : Bool :=
   match tip.previous with
   | none => false
   | some previous =>
     tip.epoch != 0 && tip.aid == rival.event.aid && tip.sn == rival.event.sn &&
-      Duplicity.rotationValid previous rival && decide (tip.writer ≠ rival.event)
+      Duplicity.rotationValid previous rival && decide (tip.writer.eventDigest ≠ rival.event.eventDigest)
 
 /-- Given one decoded spend, it accepts exactly a conflicting, valid rotation
 at this identifier and sequence with a carried predecessor. -/
 theorem accepts_iff (tip : Tip) (rival : Rival) :
     accepts tip rival = true ↔ ∃ previous, tip.previous = some previous ∧
       tip.epoch ≠ 0 ∧ tip.aid = rival.event.aid ∧ tip.sn = rival.event.sn ∧
-      Duplicity.rotationValid previous rival = true ∧ tip.writer ≠ rival.event := by
+      Duplicity.rotationValid previous rival = true ∧ tip.writer.eventDigest ≠ rival.event.eventDigest := by
   cases h : tip.previous <;> simp [accepts, h, and_assoc]
 
 structure Comparison where

@@ -299,11 +299,11 @@ const envDepositAuthorized = (env, e) => envHas(env, 'depositAuthorized', [e]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
 // Concrete transcription of CardanoKeri.Duplicity. The public scenario table
 // selects a documented example pair; it does not assert a duplicity verdict.
-const { thresholdSatisfied, verifiedSigners, derivedWitnesses, signingValid, receiptsValid, rotationValid } = checkpointEvidence;
+const { admittedWeights, thresholdSatisfied, verifiedSigners, derivedWitnesses, signingValid, receiptsValid, rotationValid } = checkpointEvidence;
 function concreteDuplicityAt(epoch, sn, context, rival) {
   return context.epoch === epoch && context.accepted.event.sn === sn &&
     rotationValid(context.prior, context.accepted) && rotationValid(context.prior, rival) &&
-    context.accepted.event.sn === rival.event.sn && canon(context.accepted.event) !== canon(rival.event);
+    context.accepted.event.sn === rival.event.sn && context.accepted.event.eventDigest !== rival.event.eventDigest;
 }
 // The trace table selects the finite observation for the already selected identifier.
 function observedSpend(env, aid, epoch, sn) {
@@ -1245,7 +1245,7 @@ function checkCorpus(corpus) {
 
 export {
   hasOutput, representativeHeld,
-  thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, observedSpend,
+  admittedWeights, thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, observedSpend,
   canon, isNat, commitmentFor, entitles, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
   validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
   EV_KINDS, EV_ARITY, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, bondOpOk, stateKind, liveOf, present, payment, flow, held, paid, snOf, leafOf, leafKind, rotated, premium, bHeldOf,

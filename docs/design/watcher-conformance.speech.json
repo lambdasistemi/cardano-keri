@@ -1,4 +1,18 @@
 {
+  "watcher-conformance-review": [
+    {
+      "text": "Watcher conformance review.",
+      "pause": 500
+    },
+    {
+      "text": "Superseded lifecycle",
+      "pause": 400
+    },
+    {
+      "text": "This dated record describes parking, revival and the owner's close as they stood when it was written. The accepted design has since removed them: there is no owner exit, and a checkpoint is alive until it is convicted (#493). The text below is kept as written.",
+      "pause": 400
+    }
+  ],
   "the-consumer-story": [
     {
       "text": "The consumer story.",
@@ -27,11 +41,11 @@
       "pause": 500
     },
     {
-      "text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The checkpoint now evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
+      "text": "A proof submitter needs a valid competing rotation to be recognized even when it exposes a different subset of committed keys or adds new keys and witnesses. The Lean checkpoint model evaluates both ordinary, non-delegated rotations against a common authenticated predecessor. Each branch must satisfy the prior-next threshold and its own current threshold using signatures bound to that branch. Each derives its own witness list by removing cuts before adding witnesses and must carry enough distinct, verified receipts from that resulting list.",
       "pause": 400
     },
     {
-      "text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and differ in complete content, including seals and other content that the checkpoint projection does not retain. The first accepted event stays the reference; presenting a rival does not roll the tip back. Sequence zero, delegated identities and interaction conflicts are refused by this profile.",
+      "text": "Weighted signing thresholds use exact rational arithmetic, conjunctive clauses and nested groups. Both rotations must occupy the checkpoint's native sequence and have distinct authenticated event digests. The digests identify the signed bodies, including seals and the original spelling of a signing weight. Two rotations can decode to identical weights and still conflict. Replaying the same signed body leaves the writer’s digest unchanged. The model keeps the first accepted event as the reference and excludes sequence zero, delegated identities and interaction conflicts from this profile.",
       "pause": 400
     },
     {
@@ -39,7 +53,11 @@
       "pause": 400
     },
     {
-      "text": "Declared technical boundary: keys and their committed digests share an abstract identity after a verified opening. Signature verification, wire structure, self-addressing identifiers and prior-link validation are primitive results bound to complete event content. The decoder must represent all remaining bytes injectively in the event's extension field. The environment must authenticate the predecessor and recorded accepted event. Byte encoding, cryptographic soundness and that context authentication are not proved here. No Aiken conviction path is accepted by this model change.",
+      "text": "The controller at booking or the submitter at advance must bind the installed writer digest to its signed bytes. At conviction, the policy reads the writer digest from the spent checkpoint and checks the convictor’s opening of the rival digest against the rival’s signed bytes. The predecessor must be authenticated. Comparing the digests assumes collision resistance for this pair of signed bodies.",
+      "pause": 400
+    },
+    {
+      "text": "Keys and their commitments share an identity after a verified opening. The model takes wire structure, prior links, signatures and receipts as verified inputs. Implementing these bindings in the decoder and validators remains open. The earlier decoded-content comparison agrees with the digest test when its decoding distinguishes the two signed bodies, including their extension bytes.",
       "pause": 400
     },
     {
@@ -315,6 +333,6 @@
   ],
   "_source": {
     "file": "watcher-conformance.md",
-    "sha256": "ccbe5ca9a2de8dc8741c9e1825582573a7890f7664af436aea5d20ece7bc8ba6"
+    "sha256": "8357946f7fe6f0e611fe3f60f6b96df42ab392fc38091df9f47b953ef5cc347d"
   }
 }

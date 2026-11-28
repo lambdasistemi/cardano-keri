@@ -9,7 +9,7 @@
       "given": "An empty registry, Alice's inception evidence and a complete registration booking.",
       "when": "Alice posts its observed value, application tag, ready tag and interval.",
       "then": "The request is pending; no carrier or binding exists until a fold. A mismatched declared value is refused, and so is a booking without inception evidence.",
-      "scenarioSha256": "d40c80e92488ca03af66bfab965816bf3281c09460411be1c7d0599f68dc4201",
+      "scenarioSha256": "957c24ea7952ef7fbe2fb696e734d1076f246f6ceb5f897e5ce9541991a1c720",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -42,7 +42,7 @@
       "given": "A pending registration, whose inception evidence was shown when it was booked.",
       "when": "Hal spends the request and registry in a complete economic fold.",
       "then": "The destination receives the tagged carrier, the key becomes active, a token alias is allocated, and the generation advances. The fold succeeds the same with no inception evidence at hand.",
-      "scenarioSha256": "85a41d504bf9e0a0ee54382343187bb89ef857df5713d8ddb1cc05194b024733",
+      "scenarioSha256": "2b47e254290b10447387790e20059de87dbcaf72fdbdcd13915f490b2e2719f9",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -79,7 +79,7 @@
       "given": "Two folders have proposals for the same registry generation.",
       "when": "One fold succeeds before the other is attempted.",
       "then": "The first delivery remains; the stale generation is refused.",
-      "scenarioSha256": "60adc20c5afdc5426dde1c0db2aed9a38440778e9c9f91040c3de588a6543069",
+      "scenarioSha256": "6bb5dfaf71501b693256405ddc7000a9617cfaef88ab4d9ce5da66c5b8225335",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -122,7 +122,7 @@
       "given": "A key already has its first delivered carrier, and a second registration of the same key is booked.",
       "when": "A folder tries to process the duplicate, Sam tries to return it before its deadline, and Sam returns it after the deadline citing the active key.",
       "then": "Booking alone cannot replace the carrier and processing fails. Nothing spends the duplicate before its deadline; after it the return removes the request and pays the contents less the tip to its refund address.",
-      "scenarioSha256": "68e13ce1cebbea7f6a72d8f741fb9c326b02c31b371c2682c3b07c9d36bab2a6",
+      "scenarioSha256": "69138f13d6dc783ed91dd09f93ea777c6e243c16ed3d99d44ec44da4cb9b7966",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -181,7 +181,7 @@
       "given": "Alice booked a registration with a recorded refund address; nobody has folded it.",
       "when": "Alice tries to take it back inside the processing window, or with an interval that starts before the deadline, then returns it at the deadline.",
       "then": "Both early attempts are refused: until the deadline only a fold may spend the request, the requester included. At the deadline the return needs no signature and pays the contents less the tip to the refund address.",
-      "scenarioSha256": "7be108e99a6b0ab441168dcd0a82d6b137241b5ada0eca3d392dd478df54980f",
+      "scenarioSha256": "309c55a45178d719e42f54ced19bc8b3bde623b5296f84d98666356a2e92213d",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -224,7 +224,7 @@
       "given": "A registration remains pending beyond its deadline.",
       "when": "Sam reads the current registry and returns it, or tries to return it before the deadline, or tries to pay the refund to himself.",
       "then": "The request is removed and the contents less its tip reach Alice's refund address; Sam keeps the tip as his fee. The early return and the redirected refund are refused.",
-      "scenarioSha256": "e8fa7498ce1706de83cff44ac48767dd9bbbc2863ca5cb6ba3538db086a155aa",
+      "scenarioSha256": "88e2179a66f1f67636b9b9c7997dac777f1dc80482e90608e9eaa1a1d53633c9",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -267,7 +267,7 @@
       "given": "A pending registration has a bounded processing window.",
       "when": "Hal processes a nonempty batch within that window, or tries the empty/late alternatives.",
       "then": "The valid delivery succeeds; empty and out-of-window folds refuse without a successor state.",
-      "scenarioSha256": "7f8befb12d6e96c43885ed025ff10493d556a5d9eb1137765bc437c7436ba350",
+      "scenarioSha256": "d10d7d736e62518e8bf57d24a2b3f3045179deb82f32776df4a056f05ee3619c",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -310,7 +310,7 @@
       "given": "The registry fixes its application policy.",
       "when": "A folder supplies that policy, with or without inception evidence at hand, or substitutes a different policy.",
       "then": "The correct fold succeeds; a substituted application policy is refused.",
-      "scenarioSha256": "48d5bc9d26957a7d424fb70a212e510cb766fedc6107ea8db7e073940be6e3ac",
+      "scenarioSha256": "662e9668b5947bd83150c3b45f0efad4dcbf555e199f65af1beaa62626565b55",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -353,7 +353,7 @@
       "given": "A live carrier retains its token, key and min-ADA, and nobody has convicted it.",
       "when": "Sam tries to book it as a termination.",
       "then": "The booking is refused because only a convicted carrier can be booked. There is no owner exit to collect, and waiting creates no sweep entitlement.",
-      "scenarioSha256": "f74c9b3990355e9518263554bb74998e88f793f58544a1c8c3347b8edc15db30",
+      "scenarioSha256": "ab969453bace5869797fc2c0858f7521aed558f14a8ec56da999ec314c69b742",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -394,7 +394,7 @@
       "given": "A live carrier has duplicity evidence at its current key.",
       "when": "Cora convicts it, Sam books its termination, and Hal processes that exact pending request.",
       "then": "Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.",
-      "scenarioSha256": "4cccae0e9f8bca1545dfbb0cc651b50a30c425d6e1cc25b412cf47b7b8376343",
+      "scenarioSha256": "88a2fdf0b10a1acb62ac57f833342c12c05618ef88538ded94e1712d1ea67699",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -481,7 +481,7 @@
       "given": "A convicted carrier has been booked into pending termination custody.",
       "when": "Other parties try local moves, or a return of the pending termination, before the actual consuming fold.",
       "then": "The pending request remains whole until the fold consumes it. The return applies to registrations only; it is not a termination exit.",
-      "scenarioSha256": "2a6c222371b2998fc04c86c41dd99513d5d6a5c605afaee3cbcc9bd0cb88e833",
+      "scenarioSha256": "ea9b3ab3f3d7b7dc7f152ac2b0faaee34053417be83744c512de128f4ced1bd4",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",
@@ -548,7 +548,7 @@
       "given": "Complete pending requests retain their own references and custody.",
       "when": "A folder processes selected requests, or tries duplicated inputs and inconsistent timestamps; the mixed-custody branch also interleaves another registration and its return after the deadline.",
       "then": "Duplicate inputs and backdated booking refuse. Completing one identity preserves the other pending entry through the mixed fold and the registration return; its own later consuming fold completes it.",
-      "scenarioSha256": "525dd5e42dd6f3a6e6c172651e369f4e41fd668cb3c12064a929417acb21e163",
+      "scenarioSha256": "8ab97ac22a98be2cbd2296f93ae0a15fc35d80519f76217d499aea12341694c8",
       "anchors": [
         {
           "declaration": "CardanoKeri.Registry.bookRegistration",

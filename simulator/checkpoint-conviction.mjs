@@ -8,7 +8,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 export function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {
@@ -51,11 +51,43 @@ export function signingValid(prior, signed) {
 }
 export function receiptsValid(prior, signed) {
   const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
-  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
+  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) &&
+    event.cuts.every(w => prior.witnesses.includes(w)) &&
+    event.adds.every(w => !prior.witnesses.includes(w)) &&
+    (witnesses.length === 0 || event.witnessThreshold > 0) &&
+    event.witnessThreshold <= witnesses.length &&
     event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
+}
+// The keripy event profile applies to both declared rules. A next rule is
+// checked for valid fractions here, even though its keys sign a later event.
+export function admittedWeights(threshold) {
+  if (threshold.count) return true;
+  const admitted = w => BigInt(w.denominator) > 0n && BigInt(w.numerator) <= BigInt(w.denominator);
+  return threshold.weighted.clauses.every(clause => clause.every(term =>
+    term.key ? admitted(term.key.weight) : admitted(term.group.weight) && term.group.members.every(admitted)));
+}
+export function nextRuleFits(threshold, keyCount) {
+  if (threshold.count) return threshold.count.required <= keyCount;
+  const clauses = threshold.weighted.clauses;
+  const reachesOne = weights => atLeastOne(weights.map(fraction).reduce(fractionAdd, [0n, 1n]));
+  let width = 0;
+  return clauses.length > 0 && clauses.every(clause => {
+    const top = [];
+    for (const term of clause) {
+      top.push((term.key ?? term.group).weight);
+      if (term.key) width++;
+      else {
+        width += term.group.members.length;
+        if (!reachesOne(term.group.members)) return false;
+      }
+    }
+    return reachesOne(top);
+  }) && width <= keyCount;
 }
 export function rotationValid(prior, signed) {
   return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
+    admittedWeights(prior.nextThreshold) && admittedWeights(signed.event.threshold) && admittedWeights(signed.event.nextThreshold) &&
+    nextRuleFits(signed.event.nextThreshold, signed.event.nextKeys.length) &&
     signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
 }
 
@@ -63,21 +95,21 @@ export function acceptsComparison(comparison) {
   const {tip, rival} = toInternal(comparison);
   return tip.previous !== null && tip.epoch !== 0n &&
     tip.aid === rival.event.aid && tip.sn === rival.event.sn &&
-    rotationValid(tip.previous, rival) && !equal(tip.writer, rival.event);
+    rotationValid(tip.previous, rival) && tip.writer.eventDigest !== rival.event.eventDigest;
 }
 
 // CheckpointConviction.Fixtures.comparison with the symbolic key interpretation.
 export function convictionFixture(identifier, epoch, sequence) {
   const [aid, e, sn] = toInternal([identifier, epoch, sequence]);
   const one = {count: {required: 1n}};
-  const writer = {aid, sn, kind: e === 0n ? 'inception' : 'rotation', priorDigest: 0n,
+  const writer = {aid, sn, eventDigest: `writer/${aid}/${sn}`, kind: e === 0n ? 'inception' : 'rotation', priorDigest: 0n,
     keys: [aid], threshold: one, nextKeys: [aid], nextThreshold: one,
     cuts: [], adds: [], witnessThreshold: 0n, extension: []};
   const previous = e === 0n ? null : {aid, sn: sn > 0n ? sn - 1n : 0n, delegated: false,
     nextKeys: [aid], nextThreshold: one, witnesses: []};
   const keys = {curKeys: [[aid]], curThreshold: one, nextKeys: [[aid]], nextThreshold: one,
     witnesses: [], toad: 0n};
-  const event = {...writer, nextKeys: [aid + 1n]};
+  const event = {...writer, eventDigest: `sibling/${aid}/${sn}`, nextKeys: [aid + 1n]};
   return toWire({output: {tx: 105n + (aid > 11n ? aid - 11n : 0n), index: 0n},
     comparison: {tip: {aid, epoch: e, sn, keys, previous, writer},
       rival: {event, structureVerified: true, signatures: [{signer: aid, event, verified: true}], receipts: []}}});

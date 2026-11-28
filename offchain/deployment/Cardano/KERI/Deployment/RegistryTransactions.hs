@@ -1241,7 +1241,7 @@ checkpointMove parameters deployment references payer move kind budgets = do
                             <> " lovelace the ledger asks of the output that pays it"
                         )
                     )
-    firstFunded budgets (fundings [spentIn] (payerFunds payer)) $ \chosen funding -> do
+    firstFunded budgets (fundings (payerRules payer) [spentIn] (payerFunds payer)) $ \chosen funding -> do
         let spent = moveSpent move : fundingInputs funding
             inputs = Set.fromList (map fst spent)
             mintIx policy = fromIntegral (mintingIndex policy minted)

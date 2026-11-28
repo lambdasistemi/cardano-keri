@@ -61,6 +61,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Fetch the historical census fixture
+        run: git fetch origin 81646212756d758705d486d26c841bff0155c3eb
       - name: Run census self-test and live sweep
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-version-remnant-sweep
 

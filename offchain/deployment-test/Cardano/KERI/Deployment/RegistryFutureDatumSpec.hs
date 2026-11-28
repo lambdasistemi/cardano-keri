@@ -6,10 +6,16 @@ Description : The datum the builder creates for a weighted future declaration, a
 
 For the three keripy inceptions of Q-069's flat weighted rows the booking record is built by the
 production constructors and its initial datum decoded: the ordered commitments, and the literal
-numerator and denominator of every weight, set beside the pairs of the signed event. Three things
-are kept apart for the literal @2/4@ row: the signed spelling (@2/4@), the datum a fixture would
-carry if the weights were not reduced (@2/4@, which the datum codec cannot read back), and the datum
-the builder creates (@1/2@).
+numerator and denominator of every weight, set beside the pairs of the signed event.
+
+The governing statement is the model's booking: in draft #600 at `ce10e471`
+(`lean/InceptionPrefixReference.lean`, `book` and the row "D next unreduced") the committed
+datum's key state is the key state of the signed evidence, and the weights of that row are the
+pair (2,4) in both; the application compares the six datum fields with the signed event "in the
+same decoded domain" (the December acceptance map), and the validator's reconstruction rebuilds the
+signed spelling from the datum's pairs (the NOTE-119 candidate handoff: the builder must "preserve
+the signed pairs through construction and codec readback"). A signed 2/4 is therefore a datum pair
+(2,4): not (1,2), and not a datum the codec cannot read.
 -}
 module Cardano.KERI.Deployment.RegistryFutureDatumSpec (spec) where
 
@@ -24,7 +30,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.EventDecoder (DecodedEstablishmentEvent (..), decodeEstablishmentEvent)
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
-import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..), normaliseWeights, parseThresholdSpelling)
+import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..), parseThresholdSpelling)
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.RegistryBookingShapeSpec (Scenario (..), scenarioOf)
@@ -32,7 +38,7 @@ import Cardano.KERI.Deployment.RegistryTransactionsSpec (deposit)
 import Control.Monad (void)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as B8
-import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 pairs :: Threshold -> [[(Integer, Integer)]]
 pairs = \case
@@ -43,13 +49,35 @@ spec :: Spec
 spec =
     describe "the builder-created datum of a weighted future declaration, against the signed bytes (Q-069)" $
         mapM_
-            row
-            [ ("future:D next unreduced", [[(2, 4), (2, 4)]], [[(1, 2), (1, 2)]], 2)
-            , ("future:D next partial coverage", [[(1, 1)], [(1, 1)]], [[(1, 1)], [(1, 1)]], 3)
-            , ("future:D next exact one", [[(1, 2), (1, 2)]], [[(1, 2), (1, 2)]], 2)
+            (\r -> row r >> codecReads r)
+            [ ("future:D next unreduced", [[(2, 4), (2, 4)]], 2)
+            , ("future:D next partial coverage", [[(1, 1)], [(1, 1)]], 3)
+            , ("future:D next exact one", [[(1, 2), (1, 2)]], 2)
             ]
   where
-    row (name, signedPairs, datumPairs, commitments) = it name $ do
+    codecReads (name, signedPairs, _) = it (name <> ": the datum codec reads back a datum that carries the signed pairs") $ do
+        s <- scenarioOf [(name, deposit)]
+        export <- case scExports s of
+            [e] -> pure e
+            _ -> fail "one request was expected"
+        signedThreshold <-
+            either
+                (\e -> fail ("the signed bytes do not decode: " <> show e))
+                (either fail pure . parseThresholdSpelling . deeNt)
+                (decodeEstablishmentEvent (reEventBytes (inceptionEvidence export)))
+        let literalDatum =
+                asPlcData
+                    ( V2
+                        ( liveOfInception
+                            ""
+                            0
+                            (inceptionDatum export){cdNextThreshold = signedThreshold}
+                            (inceptionQualified export)
+                        )
+                    )
+        fmap (\d -> case d of V2 Live{lvKeys} -> pairs (kmNextThreshold lvKeys); _ -> []) (checkpointDatumFromData literalDatum)
+            `shouldBe` Just signedPairs
+    row (name, signedPairs, commitments) = it name $ do
         s <- scenarioOf [(name, deposit)]
         (export, record) <- case (scExports s, scRecords s) of
             ([e], [r]) -> pure (e, r)
@@ -95,12 +123,9 @@ spec =
                 <> show (length nextKeys)
                 <> ")"
         pairs signedThreshold `shouldBe` signedPairs
-        pairs datumThreshold `shouldBe` datumPairs
-        datumThreshold `shouldBe` normaliseWeights signedThreshold
+        -- the builder's datum carries the signed pairs, literally
+        pairs datumThreshold `shouldBe` signedPairs
+        datumThreshold `shouldBe` signedThreshold
         length nextKeys `shouldBe` commitments
         -- the commitments are the signed ones, in order, as 32 raw bytes
         nextKeys `shouldBe` cdNextKeys (inceptionDatum export)
-        case literalReadBack of
-            Nothing | signedPairs /= datumPairs -> pure ()
-            Just () | signedPairs == datumPairs -> pure ()
-            other -> expectationFailure ("the codec reads the literal weights as " <> show other)

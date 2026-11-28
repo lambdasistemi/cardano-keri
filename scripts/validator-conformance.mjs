@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {entryPoints, januaryRevision, rules} from '../lean/conformance/rules.mjs';
+import {entryPoints, rules} from '../lean/conformance/rules.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const target = path.join(root, 'lean/VALIDATOR-CONFORMANCE.md');
@@ -17,12 +17,25 @@ if (args.some(flag => !['--write', '--check', '--published'].includes(flag)) ||
   throw Error('Use --write or --check, optionally with --published to refresh the January review ref.');
 }
 const github = 'https://github.com/lambdasistemi/cardano-keri';
-let january = januaryRevision;
+const pin = 'lean/conformance/january-source-revision';
+const january = readFileSync(path.join(root, pin), 'utf8').trim();
+if (!/^[0-9a-f]{40}$/.test(january)) throw Error('Expected a full Git commit in ' + pin);
 if (args.includes('--published')) {
-  git('fetch', '--quiet', '--no-tags', 'origin', 'refs/pull/592/head');
-  january = git('rev-parse', 'FETCH_HEAD').trim();
-  if (january !== januaryRevision) throw Error('Review updated January source ' + january +
-    ', update januaryRevision in lean/conformance/rules.mjs, then regenerate.');
+  const ref = 'refs/pull/592/head';
+  git('fetch', '--quiet', '--no-tags', 'origin', ref);
+  const published = git('rev-parse', 'FETCH_HEAD').trim();
+  if (published !== january) {
+    // The commit recording the reviewed source cannot contain its own SHA.
+    if (git('rev-parse', '--is-shallow-repository').trim() === 'true') {
+      git('fetch', '--quiet', '--no-tags', '--unshallow', 'origin', ref);
+    }
+    git('merge-base', '--is-ancestor', january, published);
+    const changed = git('diff', '--name-only', january, published, '--', '.',
+      ':(exclude)' + pin, ':(exclude)lean/VALIDATOR-CONFORMANCE.md',
+      ':(exclude)docs/architecture/registry-identities.md').trim();
+    if (changed) throw Error('Review updated January source ' + published +
+      ' and update ' + pin + ' before regenerating. Changed paths:\n' + changed);
+  }
 }
 const sources = new Map();
 const januaryFiles = new Set(git('ls-tree', '-r', '--name-only', january).trimEnd().split('\n'));
@@ -96,9 +109,10 @@ function countLine(tree, label) {
   return '**' + label + '**: ' + totals.enforced + ' enforced, ' + totals.partial + ' partly enforced, ' +
     totals.missing + ' not enforced (' + (totals.partial + totals.missing) + ' open of ' + assessed.length + ').';
 }
-const registrationOnMain = read('main','lean/CardanoKeri/ApplicationInceptionPrefix.lean') === null
-  ? 'Main’s application model currently retains the economic inception premise. The standalone #590 draft supplies the signed opening.'
-  : 'Main’s application model includes the indexed signed inception opening.';
+const registrationOnMain = read('main','lean/CardanoKeri/InceptionPrefix.lean') !== null ||
+  read('main','lean/CardanoKeri/ApplicationInceptionPrefix.lean') !== null
+  ? 'Main’s application model includes the indexed signed inception opening.'
+  : 'Main’s application model retains the economic inception premise.';
 const differences = [];
 const mainRotation = read('main','lean/CardanoKeri/Duplicity.lean');
 if (!mainRotation.includes('0 < n && n <=')) differences.push('zero signing threshold (#596)');
@@ -117,8 +131,8 @@ function fingerprint(tree) {
 const output = [
   '# Validator conformance', '', countLine('main', 'Main'), '', countLine('january', 'January'), '',
   'The December target is structural registration decoding and admission of key-derived identifiers. The first inventory covers registration, ordinary advance, conviction and the consumer-vector projection. Each cell links the Lean decision or premise and the Aiken decision that implements it or still needs to change. A source-level match describes that decision only. Transaction execution and budgets require separate evidence.', '',
-  'Main is the checkout containing this report. January is the published [prefix-model draft](' + github + '/pull/592) at `' + january +
-  '`. Both columns inspect the validator sources in their own tree. The January column excludes unpublished validator work.', '',
+  'Main is the checkout containing this report. January uses the reviewed source of the [prefix-model pull request](' + github + '/pull/592) at `' + january +
+  '`. The freshness check compares that source with the published branch. Only the conformance report and the two revision records may differ.', '',
   '| Rule | Main model and enforcement | January model and enforcement | Tracking |', '| --- | --- | --- | --- |',
   ...assessed.map(formatRow), '',
   registrationOnMain + ' The January rotation model includes the #595, #596 and #598 corrections.' +

@@ -243,6 +243,19 @@ stringSetting name description =
         , Opt.help description
         ]
 
+{- | A setting given on the command line only. The packaged @ckeri@ exports @CKERI_BLUEPRINT@, so the
+environment must not choose the registry a read command reads: only these flags do.
+-}
+flagSetting :: String -> String -> Opt.Parser String
+flagSetting name description =
+    Opt.setting
+        [ Opt.reader Opt.str
+        , Opt.option
+        , Opt.long name
+        , Opt.metavar "VALUE"
+        , Opt.help description
+        ]
+
 intSetting :: String -> Maybe Int -> String -> Opt.Parser Int
 intSetting name defaultValue description =
     maybe id Opt.withDefault defaultValue $
@@ -1119,9 +1132,9 @@ data RegistryReadMode
 
 registryReadFlagsParser :: Opt.Parser RegistryReadFlags
 registryReadFlagsParser = do
-    rrReleaseIdentity <- Opt.optional (stringSetting "release-identity" "Read the rebuilt registry: the release identity file registry deploy wrote")
-    rrReferenceRecord <- Opt.optional (stringSetting "reference-record" "Read the rebuilt registry: the reference-output record registry deploy wrote")
-    rrBlueprint <- Opt.optional (stringSetting "blueprint" "Read the rebuilt registry: the immutable Aiken plutus.json")
+    rrReleaseIdentity <- Opt.optional (flagSetting "release-identity" "Read the rebuilt registry: the release identity file registry deploy wrote")
+    rrReferenceRecord <- Opt.optional (flagSetting "reference-record" "Read the rebuilt registry: the reference-output record registry deploy wrote")
+    rrBlueprint <- Opt.optional (flagSetting "blueprint" "Read the rebuilt registry: the immutable Aiken plutus.json")
     rrNetworkMagic <- intSetting "network-magic" (Just 1) "Cardano network magic of the rebuilt registry's provider"
     rrKoiosTokenFile <-
         Opt.optional $

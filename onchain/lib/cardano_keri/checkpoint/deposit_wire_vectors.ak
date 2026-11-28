@@ -8,6 +8,8 @@ use cardano/transaction.{OutputReference}
 
 pub const payee_output_index: Int = 5
 
+pub const successor_index: Int = 2
+
 pub const signatures: List<(Int, ByteArray)> =
   [
     (
@@ -32,10 +34,10 @@ pub const spent_ref: OutputReference =
 pub const aid: ByteArray =
   #"4541414141414141414141414141414141414141414141414141414141414141414141414141414141414141"
 
-pub const keep_redeemer_cbor: ByteArray = #"d8799f05d87980ff"
+pub const keep_redeemer_cbor: ByteArray = #"d8799f05d8798002ff"
 
 pub const deposit_redeemer_cbor: ByteArray =
-  #"d8799f05d87a9f9f9f005840c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1ff9f025840c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2ffffffff"
+  #"d8799f05d87a9f9f9f005840c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1ff9f025840c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2ffffff02ff"
 
 pub const intent_cbor: ByteArray =
   #"d8799f582263617264616e6f2d6b6572692f636865636b706f696e742f6465706f7369742f763101581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0d8799f5820e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e019012cff582c4541414141414141414141414141414141414141414141414141414141414141414141414141414141414141c24901000000000000000e031a004c4b40ff"

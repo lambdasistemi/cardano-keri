@@ -28,6 +28,7 @@ use cardano/transaction.{
   InlineDatum, Output, OutputReference, Transaction, Withdraw,
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
+use cardano_keri/checkpoint/attest_support.{change_mint}
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, Live, TerminationPending,
 }
@@ -74,7 +75,7 @@ pub fn bond_deposit(signatures: List<(Int, ByteArray)>) -> Data {
 /// `Advance { payee_output_index, bond }`: spend constructor zero.
 pub fn advance_redeemer(payee_output_index: Int, bond: Data) -> Data {
   let index: Data = payee_output_index
-  builtin.constr_data(0, [index, bond])
+  builtin.constr_data(0, [index, bond, builtin.i_data(0)])
 }
 
 /// The signatures of a case of the connected rotation, by name.
@@ -206,8 +207,6 @@ pub fn vector_case(
     interval.everything,
     0,
   )
-  let credential = Script(advance_hash)
-  let envelope: Data = observed
   Case {
     network: f.network_id,
     own_ref,
@@ -215,8 +214,7 @@ pub fn vector_case(
     observed,
     tx: Transaction {
       ..base,
-      withdrawals: [Pair(credential, 0)],
-      redeemers: [Pair(Withdraw(credential), envelope)],
+      mint: merge(base.mint, change_mint(advance_hash, observed.claim, 0)),
     },
   }
 }
@@ -296,12 +294,9 @@ pub fn connected_tx(
     interval.everything,
     0,
   )
-  let credential = Script(advance_hash)
-  let redeemer: Data = observed
   Transaction {
     ..base,
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
+    mint: merge(base.mint, change_mint(advance_hash, observed.claim, 0)),
   }
 }
 

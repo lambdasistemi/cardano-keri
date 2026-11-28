@@ -40,6 +40,11 @@ module Cardano.KERI.Deployment.ScriptAritySpec (
     derivedControlMain,
 ) where
 
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (
+    AdvanceAttestation (..),
+    deriveAdvanceAttestation,
+    deriveAttestedCheckpoint,
+ )
 import Cardano.KERI.Deployment.EndpointBoardManifest (
     frozenEndpointBoardPolicyId,
  )
@@ -50,16 +55,20 @@ import Cardano.KERI.Deployment.Manifest (
 import Cardano.KERI.Deployment.RegistryFixture (fixtureApplicationPolicy, fixtureRegistry)
 import Cardano.KERI.Deployment.Script (
     Blueprint (..),
+    Observers (..),
     RegistryIdentity (..),
     ScriptArtifact (..),
     Validator (..),
     applyCommitmentParams,
     applyParams,
+    deployedCheckpointTerms,
     deriveBoardScript,
+    deriveObserverScripts,
     deriveV1Scripts,
     extractCompiledCodeExact,
     loadBlueprint,
     mkAppliedArtifact,
+    scriptHashBytes,
     scriptHashText,
     v1CheckpointVersion,
     v1CommitmentParameters,
@@ -201,6 +210,80 @@ spec :: Spec
 spec = do
     boardTargetApplicationSpec
     registerAritySpec
+    attestedGenerationSpec
+
+{- | The attested generation of the current source build
+(@KERI_ATTESTED_BLUEPRINT@), beside the deployed generation's historical
+inventory above, which is unchanged. The census over the current build holds the
+historical classification and the two policies of the two-policy advance, each
+bound by the production derivation: what the derivation applied is recovered from
+the artifact and compared with the arity the blueprint declares and with the
+arguments the derivation is specified to apply. The checkpoint of this generation
+is bound the same way, to the change policy's hash.
+-}
+attestedGenerationSpec :: Spec
+attestedGenerationSpec =
+    describe "S576 attested generation arity" $ do
+        it "s576_every_attested_group_is_classified_and_bound" $ do
+            path <- getEnv "KERI_ATTESTED_BLUEPRINT"
+            bytes <- BS.readFile path
+            value <- either fail pure (Aeson.eitherDecodeStrict' bytes)
+            titles <- either fail pure (validatorTitles value)
+            declared <- either fail pure (declaredParameters value)
+            programs <- either fail pure (compiledPrograms value)
+            blueprint <- loadBlueprint path >>= either fail pure
+            let classified = map fst groupBoundaries <> map fst attestedGroups
+                declaredFor' group =
+                    case [length ps | (title, ps) <- Map.toList declared, validatorOf title == group] of
+                        (n : _) -> n
+                        [] -> -1
+                programOfGroup group =
+                    case [program | (title, program) <- Map.toList programs, validatorOf title == group] of
+                        (program : _) -> pure program
+                        [] -> fail (T.unpack group <> " carries no compiled code")
+            -- the census of the attested blueprint: every group classified, none stale
+            groupCensus titles classified `shouldBe` Right ()
+            -- shown able to fail: a group the classification does not know
+            groupCensus (titles <> ["s576_new.s576_new.mint"]) classified `shouldSatisfy` isLeft
+            -- the two policies and the checkpoint, bound by the production derivation
+            attestation <- either fail pure (deriveAdvanceAttestation blueprint)
+            observers <- either fail pure (deriveObserverScripts deployedCheckpointTerms blueprint)
+            checkpoint <-
+                either
+                    fail
+                    pure
+                    ( deriveAttestedCheckpoint
+                        deployedCheckpointTerms
+                        fixtureRegistry
+                        fixtureApplicationPolicy
+                        attestation
+                        observers
+                        blueprint
+                    )
+            let factHash = scriptHashBytes (artifactScriptHash (attestationFact attestation))
+                changeHash = scriptHashBytes (artifactScriptHash (attestationChange attestation))
+                recovered group artifact = do
+                    raw <- programOfGroup group
+                    either fail pure (appliedArguments raw (artifactProgram artifact))
+            factArguments <- recovered "event_attestation.event_attestation" (attestationFact attestation)
+            changeArguments <- recovered "advance_attestation.advance_attestation" (attestationChange attestation)
+            checkpointArguments <- recovered "checkpoint_register.checkpoint_register" checkpoint
+            factArguments `shouldBe` [I v1CheckpointVersion]
+            changeArguments `shouldBe` [I v1CheckpointVersion, B factHash]
+            length factArguments `shouldBe` declaredFor' "event_attestation.event_attestation"
+            length changeArguments `shouldBe` declaredFor' "advance_attestation.advance_attestation"
+            length checkpointArguments `shouldBe` declaredFor' "checkpoint_register.checkpoint_register"
+            -- the third argument of the checkpoint is the change policy, not the advance observer
+            take 1 (drop 2 checkpointArguments) `shouldBe` [B changeHash]
+            take 1 (drop 2 checkpointArguments)
+                `shouldNotBe` [B (scriptHashBytes (artifactScriptHash (observerAdvance observers)))]
+
+-- | The groups of the attested generation that the historical inventory does not hold.
+attestedGroups :: [(Text, ())]
+attestedGroups =
+    [ ("event_attestation.event_attestation", ())
+    , ("advance_attestation.advance_attestation", ())
+    ]
 
 registerAritySpec :: Spec
 registerAritySpec = beforeAll withFixture $

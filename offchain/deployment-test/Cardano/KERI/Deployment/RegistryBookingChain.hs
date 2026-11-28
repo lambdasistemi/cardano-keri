@@ -813,7 +813,7 @@ worldDeployment world = do
     scripts <-
         either fail pure $
             deriveRegistryScripts stateTemplate testTerms (riSeed (deployedIdentity (worldDeployed world))) (worldBlueprint world)
-    pure (Tx.RegistryDeployment Testnet testTerms scripts)
+    pure (Tx.RegistryDeployment Testnet testTerms scripts Nothing)
 
 -- | The outputs the registry's transactions read by reference, as the chain holds them now.
 worldReferences :: World -> IO Tx.RegistryReferences

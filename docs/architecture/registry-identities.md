@@ -51,6 +51,19 @@ application mint of these scripts verifies the inception at the booking, through
 an attestation minted in the same transaction. The evidence is local: no
 deployed registry runs it yet.
 
+The rows headed Attested are the registry of the attested generation over the
+same terms and the same reference seed: the application, the state script and
+the registry's name are the same programs, and the checkpoint validator requires
+the attestation of the change policy in the transaction's mint field, which the
+fact policy and the change policy mint. They are derived from the current source
+build; every other row is the deployed generation's, whose blueprint is committed
+as `offchain/deployed-generation/plutus.json`. A deployment given the attested
+blueprint (`ckeri registry deploy --blueprint <it>`; the default blueprint of
+`ckeri` is the deployed generation's) publishes the reference scripts of the fact
+policy and the change policy before the checkpoint validator's, and the release
+identity and the reference record it writes name this generation's scripts; a
+blueprint of the other generation is refused when they are read back.
+
 <!-- identities:begin -->
 | What | Value |
 |---|---|
@@ -77,6 +90,13 @@ deployed registry runs it yet.
 | Checkpoint validator script hash | `f7cb75d0a4d43cf00cf452acc91cb07e4e0f370efc19ace725694da2` |
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
+| Attested registry application, state script and name | `the same` |
+| Attested fact policy hash | `d245219785d72bc3620eae79334e42b75fb40b16b6cc3ce00a67a466` |
+| Attested fact policy program bytes | `10629` |
+| Attested change policy hash | `eb52cb2ed997047c3a633fbe982551dbd58effc3dea020176d34c5df` |
+| Attested change policy program bytes | `8355` |
+| Attested checkpoint validator script hash | `80fba48f91cdcd81e1d7bdc3b37c4104c61d5006009d81431688acab` |
+| Attested checkpoint validator program bytes | `8911` |
 <!-- identities:end -->
 
 ## How each value is produced
@@ -86,7 +106,8 @@ deployed registry runs it yet.
 | Lean model revision: the last commit that changed `lean/` | `git log -1 --no-merges --format=%H -- lean` (needs the full history) |
 | Public Singular commit | the `revision=` line of `onchain/stage-dependencies.sh` |
 | Aiken compiler | the compiler the blueprint records, which the pinned compiler wrote when it built the blueprint from the sources |
-| Terms, script hashes and program bytes | `bash scripts/registry-identities.sh` |
+| Terms, script hashes and program bytes of the deployed generation | `bash scripts/registry-identities.sh`, over the blueprint committed as `offchain/deployed-generation/plutus.json` |
+| The rows headed Attested: the fact policy, the change policy and the checkpoint validator that requires their attestation | the same command, over the current source build, with the same devnet terms and the all-zero reference seed |
 | The whole table against the page | `bash scripts/check-identities.sh` |
 
 `scripts/registry-identities.sh` compiles the scripts from the tracked sources

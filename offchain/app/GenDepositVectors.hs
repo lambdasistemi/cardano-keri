@@ -22,7 +22,7 @@ import Cardano.KERI.AID.Checkpoint.Deposit (
     depositDomain,
     depositIntentPreimage,
  )
-import Cardano.KERI.AID.Checkpoint.Wire (advanceSpendRedeemerData)
+import Cardano.KERI.AID.Checkpoint.Wire (advanceAttestedSpendRedeemerData)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -41,6 +41,9 @@ main = do
 
 payeeIndex :: Integer
 payeeIndex = 5
+
+successorIndex :: Integer
+successorIndex = 2
 
 -- | The signatures of the deposit option: every field distinct.
 signatures :: [(Int, ByteString)]
@@ -75,6 +78,7 @@ output =
         , "use cardano/transaction.{OutputReference}"
         , ""
         , "pub const payee_output_index: Int = " <> show payeeIndex
+        , "pub const successor_index: Int = " <> show successorIndex
         , ""
         , "pub const signatures: List<(Int, ByteArray)> ="
         , "  [" <> commaSeparated [pair i s | (i, s) <- signatures] <> "]"
@@ -90,10 +94,10 @@ output =
         , "pub const aid: ByteArray = " <> hex (diAid intent)
         , ""
         , "pub const keep_redeemer_cbor: ByteArray = "
-            <> hex (cbor (advanceSpendRedeemerData payeeIndex Keep))
+            <> hex (cbor (advanceAttestedSpendRedeemerData payeeIndex Keep successorIndex))
         , ""
         , "pub const deposit_redeemer_cbor: ByteArray = "
-            <> hex (cbor (advanceSpendRedeemerData payeeIndex (Deposit signatures)))
+            <> hex (cbor (advanceAttestedSpendRedeemerData payeeIndex (Deposit signatures) successorIndex))
         , ""
         , "pub const intent_cbor: ByteArray = " <> hex (depositIntentPreimage intent)
         ]

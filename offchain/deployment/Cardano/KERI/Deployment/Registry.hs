@@ -17,6 +17,8 @@ module Cardano.KERI.Deployment.Registry (
     registryMinimumDeposit,
     registryInitialFloor,
     deriveRegistryScripts,
+    AttestedRegistry (..),
+    deriveAttestedRegistryScripts,
 ) where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
@@ -32,11 +34,17 @@ import Cardano.KERI.AID.Application (
 import Cardano.KERI.AID.Checkpoint.FreezeBond (freezeBondValid)
 import Cardano.KERI.AID.Checkpoint.Registration (validRegistrationDeposit)
 import Cardano.KERI.AID.Checkpoint.Value (checkpointMinAda)
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (
+    AdvanceAttestation (..),
+    deriveAdvanceAttestation,
+    deriveAttestedCheckpoint,
+ )
 import Cardano.KERI.Deployment.Script (
     Blueprint,
     CheckpointTerms (..),
     Observers (..),
     ScriptArtifact (..),
+    blueprintIsAttested,
     computeScriptHash,
     deriveAttestationScript,
     deriveCheckpointScript,
@@ -119,6 +127,96 @@ deriveRegistryScripts ::
     Blueprint ->
     Either String RegistryScripts
 deriveRegistryScripts template terms seed blueprint = do
+    foundation <- deriveFoundation template terms seed blueprint
+    checkpoint <-
+        deriveCheckpointScript
+            (registryCheckpointTerms terms)
+            (foundationRegistry foundation)
+            (foundationApplicationPolicy foundation)
+            (foundationObservers foundation)
+            blueprint
+    pure (withCheckpoint foundation checkpoint)
+
+{- | The registry of the attested generation: its scripts, whose checkpoint requires
+the change attestation in the mint field, and the two policies that mint it. The
+scripts other than the checkpoint are those of 'deriveRegistryScripts' over the same
+terms and seed; the observers are the deployed generation's, of which the
+enforcement and entitlement hashes are the checkpoint's parameters and the advance
+observer is unused.
+-}
+data AttestedRegistry = AttestedRegistry
+    { attestedScripts :: !RegistryScripts
+    , attestedPolicies :: !AdvanceAttestation
+    }
+    deriving stock (Eq, Show)
+
+{- | Derive the registry of the attested generation from a blueprint that carries
+the two policies. The same terms are refused as 'deriveRegistryScripts' refuses, and a
+blueprint of the deployed generation is refused: it has no change policy to apply.
+-}
+deriveAttestedRegistryScripts ::
+    ByteString ->
+    RegistryTerms ->
+    OutputReference ->
+    Blueprint ->
+    Either String AttestedRegistry
+deriveAttestedRegistryScripts template terms seed blueprint = do
+    unless (blueprintIsAttested blueprint) $
+        Left "this blueprint is of the deployed generation: it carries no change policy to apply the checkpoint to"
+    foundation <- deriveFoundation template terms seed blueprint
+    policies <- deriveAdvanceAttestation blueprint
+    checkpoint <-
+        deriveAttestedCheckpoint
+            (registryCheckpointTerms terms)
+            (foundationRegistry foundation)
+            (foundationApplicationPolicy foundation)
+            policies
+            (foundationObservers foundation)
+            blueprint
+    pure AttestedRegistry{attestedScripts = withCheckpoint foundation checkpoint, attestedPolicies = policies}
+
+-- | The scripts of a registry but its checkpoint validator, which depend on the generation.
+data Foundation = Foundation
+    { foundationObservers :: !Observers
+    , foundationAttestation :: !ScriptArtifact
+    , foundationApplication :: !ScriptArtifact
+    , foundationTemplate :: !ByteString
+    , foundationStateProgram :: !SBS.ShortByteString
+    , foundationStateHash :: !ByteString
+    , foundationSeed :: !OutputReference
+    , foundationRegistry :: !RegistryIdentity
+    }
+
+foundationApplicationPolicy :: Foundation -> ByteString
+foundationApplicationPolicy = scriptHashBytes . artifactScriptHash . foundationApplication
+
+-- | The registry's scripts with the checkpoint validator of a generation.
+withCheckpoint :: Foundation -> ScriptArtifact -> RegistryScripts
+withCheckpoint foundation checkpoint =
+    RegistryScripts
+        { scriptsObservers = foundationObservers foundation
+        , scriptsAttestation = foundationAttestation foundation
+        , scriptsApplication = foundationApplication foundation
+        , scriptsTemplate = foundationTemplate foundation
+        , scriptsStateProgram = foundationStateProgram foundation
+        , scriptsStateHash = foundationStateHash foundation
+        , scriptsSeed = foundationSeed foundation
+        , scriptsRegistry = foundationRegistry foundation
+        , scriptsCheckpoint = checkpoint
+        }
+
+{- | Everything of a registry's scripts but the checkpoint validator: the terms are
+checked, then the observers, the booking attestation, the application, the state
+script and the registry's name are derived. They are the same programs in both
+generations.
+-}
+deriveFoundation ::
+    ByteString ->
+    RegistryTerms ->
+    OutputReference ->
+    Blueprint ->
+    Either String Foundation
+deriveFoundation template terms seed blueprint = do
     let checkpointTerms = registryCheckpointTerms terms
     unless (validRegistrationDeposit (termsDeposit checkpointTerms)) $
         Left "the registration deposit is below its floor: the observer refuses every registration"
@@ -164,16 +262,14 @@ deriveRegistryScripts template terms seed blueprint = do
     if stateHash == statePolicy template applicationPolicy
         then pure ()
         else Left "the state script's hash is not the state policy of the application"
-    checkpoint <- deriveCheckpointScript checkpointTerms registry applicationPolicy observers blueprint
     pure
-        RegistryScripts
-            { scriptsObservers = observers
-            , scriptsAttestation = attestation
-            , scriptsApplication = application
-            , scriptsTemplate = template
-            , scriptsStateProgram = program
-            , scriptsStateHash = stateHash
-            , scriptsSeed = seed
-            , scriptsRegistry = registry
-            , scriptsCheckpoint = checkpoint
+        Foundation
+            { foundationObservers = observers
+            , foundationAttestation = attestation
+            , foundationApplication = application
+            , foundationTemplate = template
+            , foundationStateProgram = program
+            , foundationStateHash = stateHash
+            , foundationSeed = seed
+            , foundationRegistry = registry
             }

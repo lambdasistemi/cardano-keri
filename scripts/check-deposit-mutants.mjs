@@ -47,13 +47,16 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const onchain = join(root, 'onchain');
 
 const REGISTER = 'validators/checkpoint_register.ak';
-const OBSERVER = 'lib/cardano_keri/checkpoint/observer.ak';
+const ATTEST = 'lib/cardano_keri/checkpoint/attest.ak';
+const SPLIT = 'lib/cardano_keri/checkpoint/split.ak';
+const FACT_POLICY = 'validators/event_attestation.ak';
 const DEPOSIT = 'lib/cardano_keri/checkpoint/deposit.ak';
 const ADVANCE = 'lib/cardano_keri/checkpoint/advance.ak';
 const THRESHOLD = 'lib/cardano_keri/checkpoint/threshold.ak';
 
 const CONNECTED = 'checkpoint_register_deposit_tests';
 const VECTORS = 'checkpoint_register_deposit_vector_tests';
+const CORPUS = 'checkpoint_register_deposit_corpus_tests';
 
 const t = (module, ...names) => names.map((name) => ({ module, name }));
 
@@ -219,9 +222,9 @@ const mutants = [
   },
   {
     name: 'frame-identifier',
-    premise: 'the identifier is kept',
-    edits: [{ file: OBSERVER, from: '  expect new_aid == aid\n', to: '' }],
-    killers: t(CONNECTED, 'deposit_that_changes_the_identifier_is_refused'),
+    premise: 'the identifier is kept (the change policy: the spend arm reads the token, not the datum identifier)',
+    edits: [{ file: ATTEST, from: '  expect new_aid == aid\n', to: '' }],
+    killers: t(CONNECTED, 'deposit_change_policy_accepts_the_honest_claim', 'deposit_that_changes_the_identifier_is_refused_at_the_change_policy'),
   },
   {
     name: 'mints-nothing',
@@ -231,15 +234,28 @@ const mutants = [
   },
   {
     name: 'rotation-evidence',
-    premise: 'the rotation is witnessed and later (the unchanged advance predicate)',
-    edits: [{ file: OBSERVER, from: 'advance_predicate(spent, new, evidence) == AdvancePredicateValid\n}', to: 'advance_predicate(spent, new, evidence) == AdvancePredicateValid || True\n}' }],
-    killers: t(CONNECTED, 'deposit_with_a_rotation_signed_by_too_few_keys_is_refused', 'deposit_with_an_unevidenced_rotation_is_refused'),
+    premise: 'the rotation is signed at the current threshold and receipted (the fact policy)',
+    edits: [{ file: FACT_POLICY, from: '          list.all(facts, signed_ok),\n', to: '          list.all(facts, fn(_) { True }),\n' }],
+    killers: t(
+      CONNECTED,
+      'deposit_all_three_purposes_accept_the_honest_deposit',
+      'deposit_with_a_rotation_signed_by_too_few_keys_is_refused_at_the_fact_policy',
+      'deposit_with_a_rotation_receipted_by_too_few_witnesses_is_refused_at_the_fact_policy',
+      'deposit_with_an_unevidenced_rotation_is_refused_at_the_fact_policy',
+      'deposit_with_a_forged_controller_signature_is_refused_at_the_fact_policy',
+    ),
+  },
+  {
+    name: 'rotation-is-later',
+    premise: 'the rotation\'s sequence number is later than the spent checkpoint\'s (the change policy)',
+    edits: [{ file: SPLIT, from: '    new.native_sn > spent.native_sn,\n', to: '    new.native_sn >= spent.native_sn,\n' }],
+    killers: t(CORPUS, 'cell_present_s3_sn2_e0', 'cell_present_s3_sn1_e0'),
   },
   {
     name: 'observation-names-the-spent-output',
-    premise: 'the observation names the spent output',
-    edits: [{ file: REGISTER, from: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {', to: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy\n            } else {' }],
-    killers: t(CONNECTED, 'deposit_spend_arm_alone_accepts_the_honest_claim', 'deposit_claiming_another_output_for_the_observer_is_refused'),
+    premise: 'the change attestation names the spent output',
+    edits: [{ file: REGISTER, from: '    spent: own_ref,\n    successor_index,\n  }\n  quantity_of', to: '    spent: OutputReference { transaction_id: #"", output_index: 0 },\n    successor_index,\n  }\n  quantity_of' }],
+    killers: t(CONNECTED, 'deposit_spend_arm_alone_accepts_the_honest_claim', 'deposit_claiming_another_output_for_the_spend_arm_is_refused'),
   },
 ];
 

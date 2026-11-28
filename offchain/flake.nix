@@ -528,6 +528,21 @@
           keriBlueprintPath =
             if (e2eWiring ? blueprint) then "${e2eWiring.blueprint}" else "";
 
+          # #576 R2: the blueprint above is the CURRENT source build, whose
+          # checkpoint is of the attested generation (it requires the change
+          # attestation in the mint field). The observer-era derivations
+          # (deriveV1Scripts, deriveRegistryScripts, the registry deployment),
+          # the builders and their journeys are of the DEPLOYED generation, and
+          # run against the blueprint of that generation: the committed build
+          # of the sources at 8fdfcf6c (the last commit before the two-policy
+          # advance), whose checkpoint reads the advance observer's withdrawal.
+          # `KERI_CHECKPOINT_BLUEPRINT` is that one; `KERI_ATTESTED_BLUEPRINT`
+          # is the current source build. The observer-era derivation refuses
+          # the attested blueprint (`attestedBlueprintRefusal`), so the CLI,
+          # whose default is the current build, cannot publish the wrong
+          # generation.
+          keriDeployedBlueprintPath = "${./deployed-generation/plutus.json}";
+
           # #263 (DAT-263-BOARD-BINDING / EDGE-263-04): the RECOVERED deployed
           # endpoint-board artifact, bound separately from
           # `KERI_CHECKPOINT_BLUEPRINT` and never aliased to it. That blueprint
@@ -604,7 +619,8 @@
               export KERI_PUBLIC_SURFACE_GHC_LIBDIR="${surfaceGhcLibdir}"
               export KERI_PUBLIC_SURFACE_PACKAGE_DBS="${surfacePackageDb}"
 
-              export KERI_CHECKPOINT_BLUEPRINT="${keriBlueprintPath}"
+              export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
+              export KERI_ATTESTED_BLUEPRINT="${keriBlueprintPath}"
               if [ ! -s "$KERI_CHECKPOINT_BLUEPRINT" ]; then
                 echo "FAIL: KERI_CHECKPOINT_BLUEPRINT is unset or empty; runDeployWith's complete entrypoint property cannot run" >&2
                 exit 1
@@ -1139,7 +1155,12 @@
               name = "ckeri";
               runtimeInputs = [ ckeriExe pkgs.cacert pkgs.git ];
               text = ''
-                export CKERI_BLUEPRINT="''${CKERI_BLUEPRINT:-${blueprint}}"
+                # #576 R2: the default is the blueprint of the DEPLOYED generation,
+                # which the registry commands and their identities are of; the
+                # current source build is of the attested generation, which the
+                # observer-era derivations refuse until a deployment path
+                # publishes it. `--blueprint` and CKERI_BLUEPRINT override.
+                export CKERI_BLUEPRINT="''${CKERI_BLUEPRINT:-${keriDeployedBlueprintPath}}"
                 export SSL_CERT_FILE="''${SSL_CERT_FILE:-${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt}"
                 exec ${ckeriExe}/bin/ckeri "$@"
               '';
@@ -1148,7 +1169,8 @@
               name = "deployment-tests";
               runtimeInputs = [ deploymentTestsExe ];
               text = ''
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
+                export KERI_ATTESTED_BLUEPRINT="${blueprint}"
                 export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
                 # #263: the recovered deployed board artifact, distinct from
                 # the source-built checkpoint blueprint above.
@@ -1185,7 +1207,8 @@
                 pkgs.diffutils
               ];
               text = ''
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
+                export KERI_ATTESTED_BLUEPRINT="${blueprint}"
                 export KERI_BOARD_MANIFEST="${inputs.deployPreprod}/board-manifest.json"
                 export KERI_BOARD_BLUEPRINT="${inputs.deployPreprod}/endpoint-board-blueprint.json"
                 exec ${deploymentTestsExe}/bin/deployment-tests "$@"
@@ -1227,7 +1250,7 @@
               text = ''
                 export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
                 cd "${inputs.cardano-node-clients}"
                 e2e-tests --match "#136 register a small identity end to end" --match "#343 consumer predicate on the local chain" --match "#351 ckeri registry deploy creates" "$@"
                 # The registry journey runs on its own, and the runner fails when its selection matches no
@@ -1263,7 +1286,7 @@
               text = ''
                 export E2E_GENESIS_DIR="${timingGenesis}"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
                 cd "${inputs.cardano-node-clients}"
                 exec e2e-tests --match "#351 measurement" "$@"
               '';
@@ -1274,7 +1297,7 @@
               text = ''
                 export E2E_GENESIS_DIR="${cageGenesis}"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
                 cd "${inputs.cardano-node-clients}"
                 exec e2e-tests --match "#99 cage withDevnet Phase-2 smoke" "$@"
               '';
@@ -1290,7 +1313,7 @@
               runtimeInputs = [ e2eExe cardanoNode pkgs.coreutils pkgs.which ];
               text = ''
                 export E2E_GENESIS_DIR="${inputs.cardano-node-clients}/e2e-test/genesis"
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
                 cd "${inputs.cardano-node-clients}"
                 exec e2e-tests --match "#175 follower live leg" "$@"
               '';
@@ -1316,7 +1339,7 @@
                 # cage boundary sweep; only the checkpoint runner is widened.
                 export E2E_GENESIS_DIR="${cageGenesis}"
                 export KERI_CAGE_BLUEPRINT="${blueprint}"
-                export KERI_CHECKPOINT_BLUEPRINT="${blueprint}"
+                export KERI_CHECKPOINT_BLUEPRINT="${keriDeployedBlueprintPath}"
                 export KERI_CAGE_SWEEP=1
                 export KERI_CAGE_SWEEP_OUT="''${KERI_CAGE_SWEEP_OUT:-$PWD/e2e/sweep-boundary.md}"
                 exec e2e-tests --match "sweeps batch size" "$@"
@@ -2097,7 +2120,8 @@
           # command and fail under the other. It is therefore a real derivation
           # environment attribute, which `-c` does honour.
           devShells.default = project.shell.overrideAttrs (_previous: {
-            KERI_CHECKPOINT_BLUEPRINT = keriBlueprintPath;
+            KERI_CHECKPOINT_BLUEPRINT = keriDeployedBlueprintPath;
+            KERI_ATTESTED_BLUEPRINT = keriBlueprintPath;
             # #263: same reasoning as the line above -- the focused commands
             # `nix develop -c cabal run local-write-path-tests` and
             # `... deployment-tests` must observe the SAME board binding the

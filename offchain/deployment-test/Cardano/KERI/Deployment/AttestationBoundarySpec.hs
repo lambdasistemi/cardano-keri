@@ -55,6 +55,16 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationIssueData,
     bookingAttestationName,
  )
+import Cardano.KERI.Deployment.LedgerContext (
+    accepted,
+    ada,
+    between,
+    input,
+    mintingContext,
+    mintingContextWith,
+    output,
+    value,
+ )
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -68,7 +78,6 @@ import Cardano.KERI.Deployment.Script (
     scriptHashBytes,
  )
 import Control.Monad ((>=>))
-import Control.Monad.Writer (runWriterT)
 import Data.Aeson (Value (..), eitherDecodeFileStrict)
 import Data.Aeson.Key qualified as K
 import Data.Aeson.KeyMap qualified as KM
@@ -76,143 +85,14 @@ import Data.ByteArray.Encoding (Base (Base16), convertFromBase)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
-import Data.List (elemIndex, sortOn)
+import Data.List (elemIndex)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
-import PlutusLedgerApi.Test.V3.EvaluationContext (costModelParamsForTesting)
-import PlutusLedgerApi.V3 (
-    CostModelApplyError,
-    EvaluationContext,
-    ExBudget,
-    MajorProtocolVersion (..),
-    VerboseMode (..),
-    deserialiseScript,
-    evaluateScriptCounting,
-    mkEvaluationContext,
- )
 import System.Environment (getEnv)
 import Test.Hspec (Spec, describe, it, shouldBe)
-
--- ---------------------------------------------------------------------------
--- The ledger's evaluator
--- ---------------------------------------------------------------------------
-
-evaluationContext :: EvaluationContext
-evaluationContext =
-    case runWriterT (mkEvaluationContext (map snd costModelParamsForTesting)) of
-        Left err -> error (show (err :: CostModelApplyError))
-        Right (ctx, _) -> ctx
-
--- | Whether the ledger accepts the applied program over the script context.
-accepted :: ScriptArtifact -> Data -> Bool
-accepted artifact context =
-    case deserialiseScript (MajorProtocolVersion 10) (artifactProgram artifact) of
-        Left err -> error (show err)
-        Right script ->
-            case snd (evaluateScriptCounting (MajorProtocolVersion 10) Quiet evaluationContext script context) of
-                Left _ -> False
-                Right (_ :: ExBudget) -> True
-
--- ---------------------------------------------------------------------------
--- The version 3 script context, as Plutus Data
--- ---------------------------------------------------------------------------
-
-bool :: Bool -> Data
-bool b = Constr (if b then 1 else 0) []
-
-nothing :: Data
-nothing = Constr 1 []
-
-{- | A value as the ledger passes it: policies and names in ascending order, which
-the validators' value lookups rely on.
--}
-value :: [(ByteString, [(ByteString, Integer)])] -> Data
-value assets =
-    Map
-        [ (B policy, Map [(B name, I quantity) | (name, quantity) <- sortOn fst tokens])
-        | (policy, tokens) <- sortOn fst assets
-        ]
-
-address :: Credential -> Data
-address (KeyCredential h) = Constr 0 [Constr 0 [B h], nothing]
-address (ScriptCredential h) = Constr 0 [Constr 1 [B h], nothing]
-
-output :: Credential -> Data -> Maybe Data -> Data
-output credential val datum =
-    Constr
-        0
-        [ address credential
-        , val
-        , maybe (Constr 0 []) (\d -> Constr 2 [d]) datum
-        , nothing
-        ]
-
-input :: Integer -> Data -> Data
-input index out = Constr 0 [Constr 0 [B (BS.replicate 32 0x55), I index], out]
-
-ada :: Integer -> [(ByteString, [(ByteString, Integer)])]
-ada lovelace = [("", [("", lovelace)])]
-
--- | The validity range of a transaction valid at any time.
-anyTime :: Data
-anyTime =
-    Constr
-        0
-        [ Constr 0 [Constr 0 [], bool True]
-        , Constr 0 [Constr 2 [], bool True]
-        ]
-
--- | The validity range from @lower@ (inclusive) to @upper@ (exclusive).
-between :: Integer -> Integer -> Data
-between lower upper =
-    Constr
-        0
-        [ Constr 0 [Constr 1 [I lower], bool True]
-        , Constr 0 [Constr 1 [I upper], bool False]
-        ]
-
--- | A version 3 minting script context.
-mintingContext ::
-    ByteString -> [Data] -> [Data] -> [(ByteString, [(ByteString, Integer)])] -> Data -> Data
-mintingContext policy = mintingContextWith policy [] anyTime
-
-mintingContextWith ::
-    ByteString ->
-    [Data] ->
-    Data ->
-    [Data] ->
-    [Data] ->
-    [(ByteString, [(ByteString, Integer)])] ->
-    Data ->
-    Data
-mintingContextWith policy references validity inputs outputs minted redeemer =
-    Constr
-        0
-        [ Constr
-            0
-            [ List inputs
-            , List references
-            , List outputs
-            , I 0
-            , value minted
-            , List []
-            , Map []
-            , validity
-            , List []
-            , Map []
-            , Map []
-            , B (BS.replicate 32 0x99)
-            , Map []
-            , List []
-            , nothing
-            , nothing
-            ]
-        , redeemer
-        , Constr 0 [B policy]
-        ]
 
 -- ---------------------------------------------------------------------------
 -- The inception of the committed keripy fixture @reg_2key@

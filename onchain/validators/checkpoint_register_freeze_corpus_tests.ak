@@ -23,9 +23,15 @@
 ////   absent, convicted       no checkpoint output to spend: 12 cells, not realizable
 ////                           as a transaction
 
+use advance_attestation
+use aiken/builtin
 use cardano/transaction.{Transaction}
+use cardano_keri/checkpoint/attest_support.{
+  event_policy, freeze_fact, with_fact,
+}
 use checkpoint_observer
 use checkpoint_register
+use event_attestation
 use freeze_fixture.{
   Freeze, advance_hash, corpus_freeze, corpus_freeze_pending, d_reg,
   enforcement_hash, entitlement_hash, freeze_bond, freeze_redeemer, network_id,
@@ -52,13 +58,42 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
   )
 }
 
-fn run(f: Freeze) -> Bool {
-  run_spend(freeze_redeemer(f.hunter_output_index), f.tx) && checkpoint_observer.observer_advance.withdraw(
-    0,
-    f.observed,
-    0,
-    f.tx,
+/// The spend arm and the two new policies over one transaction: (spend, fact policy, change policy). The fact asset of the
+/// evidence is added to the mint field beside the change asset the fixture already minted; each purpose is judged alone.
+fn three(f: Freeze) -> (Bool, Bool, Bool) {
+  let fact = freeze_fact(f.observed, f.tx)
+  let tx = with_fact(f.tx, fact)
+  let fact_data: Data = fact
+  let envelope_data: Data = f.observed
+  (
+    run_spend(freeze_redeemer(f.hunter_output_index), tx),
+    event_attestation.event_attestation.mint(
+      0,
+      builtin.constr_data(0, [builtin.list_data([fact_data])]),
+      event_policy,
+      tx,
+    ),
+    advance_attestation.advance_attestation.mint(
+      0,
+      event_policy,
+      builtin.constr_data(
+        0,
+        [
+          builtin.list_data(
+            [builtin.constr_data(0, [envelope_data, builtin.i_data(0)])],
+          ),
+        ],
+      ),
+      advance_hash,
+      tx,
+    ),
   )
+}
+
+/// The spending arm and both policies, all three accepting.
+fn run(f: Freeze) -> Bool {
+  let (spent, fact, change) = three(f)
+  spent && fact && change
 }
 
 /// Lean grid state 1 (termination pending) x freeze(sn' = 0) x the rotation evidenced: refused.

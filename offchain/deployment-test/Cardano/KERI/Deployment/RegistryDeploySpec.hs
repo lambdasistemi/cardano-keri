@@ -28,6 +28,8 @@ module Cardano.KERI.Deployment.RegistryDeploySpec (
     testTerms,
     newChain,
     chainRuntime,
+    chainRuntimeUnder,
+    freeOutputs,
     deployOn,
     loadTestBlueprint,
     pricedParameters,
@@ -46,15 +48,19 @@ import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.Registry (
+    AttestedRegistry (..),
     RegistryScripts (..),
     RegistryTerms (..),
+    deriveAttestedRegistryScripts,
     deriveRegistryScripts,
  )
-import Cardano.KERI.Deployment.RegistryChain (RegistryRuntime (..), ValidityEnd (..))
+import Cardano.KERI.Deployment.RegistryChain (Loaded (..), Refusal (..), RegistryRuntime (..), ValidityEnd (..), loadDeployment)
 import Cardano.KERI.Deployment.RegistryDeploy
 import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptReference (..))
 import Cardano.KERI.Deployment.RegistryTransactions (
+    RegistryDeployment (..),
     outputReferenceOf,
  )
 import Cardano.KERI.Deployment.Script (
@@ -69,6 +75,7 @@ import Cardano.KERI.Deployment.Script (
 import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.TransactionRuntime (
     TransactionRuntime (..),
+    signWithPaymentKey,
     transactionId,
  )
 import Cardano.KERI.Deployment.TransactionRuntime.Fixtures (testPParams)
@@ -77,6 +84,7 @@ import Cardano.Ledger.Alonzo.PParams (ppPricesL)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (TransactionScriptFailure (UnknownTxIn))
 import Cardano.Ledger.Alonzo.Scripts (Prices (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
+import Cardano.Ledger.Api.PParams (ppCoinsPerUTxOByteL)
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData)
 import Cardano.Ledger.Api.Tx (bodyTxL, estimateMinFeeTx, witsTxL)
 import Cardano.Ledger.Api.Tx.Body (
@@ -105,15 +113,15 @@ import Cardano.Ledger.BaseTypes (
     TxIx (..),
     boundRational,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CoinPerByte (..), compactCoinOrError)
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxCert (
     ConwayDelegCert (ConwayRegCert),
     ConwayTxCert (ConwayTxCertDeleg),
  )
-import Cardano.Ledger.Core (PParams, Script, ppMaxTxSizeL)
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (StakeRefNull))
+import Cardano.Ledger.Core (PParams, Script, ppMaxTxSizeL, sizeTxF)
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (StakeRefBase, StakeRefNull))
 import Cardano.Ledger.Hashes (KeyHash (..), ScriptHash (..), extractHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
@@ -122,11 +130,12 @@ import Cardano.Node.Client.Ledger (ConwayTx)
 import Cardano.Node.Client.Provider (EvaluateTxResult)
 import Cardano.Node.Client.Submitter (SubmitResult (..))
 import Control.Exception (throwIO)
-import Control.Monad (forM_, when)
+import Control.Monad (forM, forM_, when)
+import Data.Aeson (Value, object, (.=))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
-import Data.Either (isRight)
+import Data.Either (fromLeft, isRight)
 import Data.Foldable (toList)
 import Data.IORef (IORef, atomicModifyIORef', modifyIORef', newIORef, readIORef)
 import Data.List (isInfixOf)
@@ -262,7 +271,19 @@ holds, a submission is accepted when it spends what exists and balances, and
 the faults say what goes wrong.
 -}
 chainRuntime :: Faults -> IORef Chain -> RegistryRuntime
-chainRuntime faults chainRef =
+chainRuntime = chainRuntimeWith chainParameters
+
+-- | The protocol parameters of a node whose ledger asks nothing of an output for its size.
+freeOutputs :: PParams ConwayEra
+freeOutputs = pricedParameters & ppCoinsPerUTxOByteL .~ CoinPerByte (compactCoinOrError (Coin 0))
+
+-- | The same runtime, over a node that answers other protocol parameters.
+chainRuntimeUnder :: PParams ConwayEra -> Faults -> IORef Chain -> RegistryRuntime
+chainRuntimeUnder = chainRuntimeWith . const
+
+-- | The runtime of a node that answers the protocol parameters the chain gives.
+chainRuntimeWith :: (Chain -> PParams ConwayEra) -> Faults -> IORef Chain -> RegistryRuntime
+chainRuntimeWith parameters faults chainRef =
     RegistryRuntime
         { rtNetwork = Testnet
         , rtUtxosAt = \address -> do
@@ -279,7 +300,7 @@ chainRuntime faults chainRef =
             pure (Map.restrictKeys (chainOutputs chain) wanted)
         , rtTransactions =
             TransactionRuntime
-                { trQueryProtocolParams = touch >> (chainParameters <$> readIORef chainRef)
+                { trQueryProtocolParams = touch >> (parameters <$> readIORef chainRef)
                 , trEvaluate = \tx -> do
                     touch
                     n <- atomicModifyIORef' chainRef (\c -> (c{chainEvaluations = chainEvaluations c + 1}, chainEvaluations c))
@@ -408,6 +429,20 @@ testTerms =
         , registryMinimumAda = 2_000_000
         , registryTerminationCarrier = 1_500_000
         }
+
+-- | A payment key in the shape of a key file, to sign fixture transactions with: nothing on the in-memory chain checks it.
+paymentKeyEnvelope :: Value
+paymentKeyEnvelope =
+    object
+        [ "type" .= ("PaymentSigningKeyShelley_ed25519" :: String)
+        , "description" .= ("Payment Signing Key" :: String)
+        , "cborHex" .= ("5820" <> concat (replicate 32 "ab") :: String)
+        ]
+
+loadAttestedBlueprint :: IO Blueprint
+loadAttestedBlueprint = do
+    path <- getEnv "KERI_ATTESTED_BLUEPRINT"
+    loadBlueprint path >>= either fail pure
 
 loadTestBlueprint :: IO Blueprint
 loadTestBlueprint = do
@@ -746,6 +781,45 @@ spec = describe "#351 deploying a registry" $ do
             (outcome, chain) <- runOn noFaults blueprint bad walletOutputs
             outcome `shouldBe` Left (DeployFailure [] Nothing allSteps (TermsRefused [DepositBelowFloor]))
             chainCalls chain `shouldBe` 0
+        it "refuses a premium that cannot fund its own output, zero or one lovelace below the ledger's minimum, naming both, before any transaction" $ do
+            blueprint <- loadTestBlueprint
+            let required = largestPremiumOutputMinimum
+            -- the minimum is the ledger's for the output, found here from the fixture parameters and not from the code under test
+            required `shouldSatisfy` (> 0)
+            required `shouldSatisfy` (< termsPremium (registryCheckpointTerms testTerms))
+            forM_ [0, required - 1] $ \supplied -> do
+                let low = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsPremium = supplied}}
+                (outcome, chain) <- runOn noFaults blueprint low walletOutputs
+                outcome `shouldBe` Left (DeployFailure [] Nothing allSteps (TermsRefused [PremiumBelowOutputMinimum supplied required]))
+                chainSubmissions chain `shouldBe` 0
+        it "refuses a zero premium although the node's ledger asks nothing of an output, naming both amounts, before any output is asked for" $ do
+            blueprint <- loadTestBlueprint
+            let zero = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsPremium = 0}}
+            chainRef <- newIORef (newChain walletOutputs)
+            outcome <- deployRegistry (chainRuntimeUnder freeOutputs noFaults chainRef) (\_ -> pure ()) (requestFor blueprint zero)
+            outcome `shouldBe` Left (DeployFailure [] Nothing allSteps (TermsRefused [PremiumBelowOutputMinimum 0 1]))
+            chain <- readIORef chainRef
+            -- the protocol parameters were the only thing asked: no wallet output, no submission
+            chainCalls chain `shouldBe` 1
+            chainSubmissions chain `shouldBe` 0
+        it "admits a premium of one lovelace where the node's ledger asks nothing of an output" $ do
+            blueprint <- loadTestBlueprint
+            let one = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsPremium = 1}}
+            chainRef <- newIORef (newChain walletOutputs)
+            outcome <- deployRegistry (chainRuntimeUnder freeOutputs noFaults chainRef) (\_ -> pure ()) (requestFor blueprint one)
+            -- the terms are admitted: whatever stops the deployment later, the chain of the fixture applying its own
+            -- minimum, is no refusal of them
+            let refusedTerms = case outcome of
+                    Left failure | TermsRefused _ <- failureCause failure -> True
+                    _ -> False
+            refusedTerms `shouldBe` False
+        it "admits a premium of exactly the ledger's minimum for its output, and the lovelace above it" $ do
+            blueprint <- loadTestBlueprint
+            forM_ [largestPremiumOutputMinimum, largestPremiumOutputMinimum + 1] $ \supplied -> do
+                let at = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsPremium = supplied}}
+                (outcome, chain) <- runOn noFaults blueprint at walletOutputs
+                _ <- expectDeployed outcome
+                chainSubmissions chain `shouldSatisfy` (> 0)
         it "refuses terms that name another network than the node's" $ do
             blueprint <- loadTestBlueprint
             let other = testTerms{registryCheckpointTerms = (registryCheckpointTerms testTerms){termsNetwork = 1}}
@@ -769,6 +843,112 @@ spec = describe "#351 deploying a registry" $ do
                 Right _ -> fail "scripts were derived from an empty blueprint"
             chainSubmissions chain `shouldBe` 0
 
+    describe "a deployment of the attested generation" $ do
+        it "publishes the two policies before the checkpoint's reference script, creates the registry, and registers no stake credential" $ do
+            attested <- loadAttestedBlueprint
+            chainRef <- newIORef (newChain (walletOutputs <> moreFunds))
+            outcome <- deployOn noFaults chainRef (requestFor attested testTerms)
+            outcomeOf <- expectDeployed outcome
+            map landedStep (deployedLanded outcomeOf) `shouldBe` attestedSteps
+            chain <- readIORef chainRef
+            length (chainAccepted chain) `shouldBe` length attestedSteps
+            forM_ (chainAccepted chain) $ \tx -> registrationsOf tx `shouldBe` Set.empty
+            chainRegistered chain `shouldBe` Set.empty
+            -- the record and the identity name the generation's scripts, the hashes of the derivation of the identity
+            registry <-
+                either fail pure $
+                    deriveAttestedRegistryScripts stateTemplate testTerms (riSeed (deployedIdentity outcomeOf)) attested
+            let scripts = attestedScripts registry
+                policies = attestedPolicies registry
+                record = deployedRecord outcomeOf
+                hashOf = scriptHashBytes . artifactScriptHash
+            riCheckpointValidator (deployedIdentity outcomeOf) `shouldBe` hashOf (scriptsCheckpoint scripts)
+            fmap scriptHash (recordFactPolicy record) `shouldBe` Just (hashOf (attestationFact policies))
+            fmap scriptHash (recordChangePolicy record) `shouldBe` Just (hashOf (attestationChange policies))
+            scriptHash (recordCheckpoint record) `shouldBe` hashOf (scriptsCheckpoint scripts)
+            -- each published output holds the reference script the record names
+            forM_
+                [ (recordFactPolicy record, attestationFact policies)
+                , (recordChangePolicy record, attestationChange policies)
+                ]
+                $ \(reference, artifact) -> do
+                    ScriptReference (OutputReference transaction index) hash <- maybe (fail "the record names no policy") pure reference
+                    let ref = TxIn (TxId (unsafeMakeSafeHash (fromJust (hashFromBytes transaction)))) (TxIx (fromInteger index))
+                    hash `shouldBe` hashOf artifact
+                    fmap (^. referenceScriptTxOutL) (Map.lookup ref (chainOutputs chain))
+                        `shouldBe` Just (SJust (mkCageScript (artifactProgram artifact)))
+        it "records the signed sizes of its publications, each under the transaction size limit and each paying the fee its signed size costs, beside the deployed generation's" $ do
+            attested <- loadAttestedBlueprint
+            deployedBlueprint <- loadTestBlueprint
+            let sizesOn blueprint = do
+                    chainRef <- newIORef (newChain (walletOutputs <> moreFunds))
+                    _ <- deployOn noFaults chainRef (requestFor blueprint testTerms) >>= expectDeployed
+                    chain <- readIORef chainRef
+                    -- the in-memory runtime hands transactions back unsigned: each is signed here, by the code a
+                    -- deployment signs with, with a payment key of this fixture, and measured as it is serialised
+                    signed <- forM (reverse (chainAccepted chain)) $ \tx ->
+                        either (fail . show) pure (signWithPaymentKey paymentKeyEnvelope tx)
+                    forM_ signed $ \tx -> do
+                        let Coin paid = tx ^. bodyTxL . feeTxBodyL
+                            -- the signed transaction carries its witness: no allowance for one more
+                            Coin required = estimateMinFeeTx pricedParameters tx 0 0 0
+                        paid `shouldSatisfy` (>= required)
+                    pure [tx ^. sizeTxF | tx <- signed]
+            attestedSizes <- sizesOn attested
+            deployedSizes <- sizesOn deployedBlueprint
+            -- one size per step, in order: the template, the booking attestation, the application, the state script, the
+            -- hash proof, the fact policy, the change policy, the checkpoint validator, the genesis
+            attestedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 10_879, 8_605, 9_161, 1_123]
+            deployedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 9_207, 1_123]
+            -- the transaction size limit of the networks (16,384 bytes), which the in-memory chain does not enforce
+            all (<= 16_384) (attestedSizes <> deployedSizes) `shouldBe` True
+        it "is the deployed generation's seven steps with the two policies published before the checkpoint" $
+            attestedSteps
+                `shouldBe` takeWhile (/= PublishCheckpoint) allSteps
+                    <> [PublishFactPolicy, PublishChangePolicy]
+                    <> dropWhile (/= PublishCheckpoint) allSteps
+        it "is read back by the registry commands' loader from the files it wrote, and not over the other generation's blueprint" $ do
+            attested <- loadAttestedBlueprint
+            deployedBlueprint <- loadTestBlueprint
+            chainRef <- newIORef (newChain (walletOutputs <> moreFunds))
+            outcome <- deployOn noFaults chainRef (requestFor attested testTerms)
+            outcomeOf <- expectDeployed outcome
+            let identity = deployedIdentity outcomeOf
+                record = deployedRecord outcomeOf
+                runtime = chainRuntime noFaults chainRef
+            loaded <- loadDeployment runtime attested identity record
+            case loaded of
+                Right found -> do
+                    isJust (loadedPolicyReferences found) `shouldBe` True
+                    isJust (deploymentPolicies (loadedDeployment found)) `shouldBe` True
+                Left refused -> fail ("the loader refused the attested deployment: " <> show refused)
+            -- the other generation's blueprint derives another checkpoint validator: refused, with the way out named
+            crossed <- loadDeployment runtime deployedBlueprint identity record
+            case crossed of
+                Left (DeploymentDisagrees reason) -> do
+                    reason `shouldSatisfy` ("checkpoint-validator" `isInfixOf`)
+                    reason `shouldSatisfy` ("--blueprint" `isInfixOf`)
+                other -> fail ("expected a refusal naming the checkpoint validator, got " <> show (either show (const "loaded") other))
+            -- a record that names no policies, with the attested blueprint and identity: refused
+            bare <- loadDeployment runtime attested identity record{recordFactPolicy = Nothing, recordChangePolicy = Nothing}
+            fromLeft (DeploymentDisagrees "loaded") bare
+                `shouldBe` DeploymentDisagrees "the blueprint is of the attested generation, and the record names no attestation policies"
+            -- the hashes of the record beside a reference to an output that does not carry the policy's script: a
+            -- scriptless output (the configuration record) and the other policy's output, for each of the two
+            factReference <- maybe (fail "the record names no fact policy") pure (recordFactPolicy record)
+            changeReference <- maybe (fail "the record names no change policy") pure (recordChangePolicy record)
+            let refusedAs name expected altered = do
+                    result <- loadDeployment runtime attested identity altered
+                    (name, fromLeft (DeploymentDisagrees "loaded") result) `shouldBe` (name :: String, DeploymentDisagrees expected)
+                notCarrying which = "the output at the " <> which <> " policy reference does not carry the " <> which <> " policy's reference script"
+            refusedAs "fact at a scriptless output" (notCarrying "fact") record{recordFactPolicy = Just factReference{scriptOutput = recordConfiguration record}}
+            refusedAs "fact at the change policy's output" (notCarrying "fact") record{recordFactPolicy = Just factReference{scriptOutput = scriptOutput changeReference}}
+            refusedAs "change at a scriptless output" (notCarrying "change") record{recordChangePolicy = Just changeReference{scriptOutput = recordConfiguration record}}
+            refusedAs "change at the fact policy's output" (notCarrying "change") record{recordChangePolicy = Just changeReference{scriptOutput = scriptOutput factReference}}
+            -- a record naming other policies than the blueprint derives: refused
+            other <- loadDeployment runtime attested identity record{recordFactPolicy = fmap (\r -> r{scriptHash = BS.replicate 28 0}) (recordFactPolicy record)}
+            fromLeft (DeploymentDisagrees "loaded") other
+                `shouldBe` DeploymentDisagrees "the record names other attestation policies than the blueprint derives"
     describe "a deployment that stops" $ do
         it "names what landed and what did not, when the node refuses the n-th transaction, for every n" $ do
             blueprint <- loadTestBlueprint
@@ -893,6 +1073,18 @@ moreFunds =
 -- ---------------------------------------------------------------------
 -- Small helpers
 -- ---------------------------------------------------------------------
+
+{- | The ledger's minimum for an output that pays a premium to the payee that makes it largest: a base address of two
+script credentials, holding lovelace alone. Found here from the fixture parameters by settling the size the minimum
+itself makes the output.
+-}
+largestPremiumOutputMinimum :: Integer
+largestPremiumOutputMinimum = settle (settle (settle 0))
+  where
+    largest = Addr Testnet (ScriptHashObj (scriptHashOf 0x01)) (StakeRefBase (ScriptHashObj (scriptHashOf 0x02)))
+    settle coin =
+        let Coin least = getMinCoinTxOut pricedParameters (mkBasicTxOut largest (inject (Coin coin)) :: TxOut ConwayEra)
+         in max coin least
 
 expectDeployed :: Either DeployFailure Deployed -> IO Deployed
 expectDeployed = either (fail . ("the deployment stopped: " <>) . show) pure

@@ -17,7 +17,7 @@
 # refused: a check that cannot fail proves nothing.
 set -euo pipefail
 
-rows=23
+rows=30
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 page=${1:-$root/docs/architecture/registry-identities.md}
@@ -99,6 +99,36 @@ awk '
 ' "$page" > "$work/c-char.md"
 cmp -s "$page" "$work/c-char.md" && { echo "character control left the page as it was" >&2; exit 1; }
 refused "one character of a stated hash" "$work/c-char.md" "$derived"
+
+# a stale value of each kind of row of the attested generation: a policy identifier, the checkpoint
+# validator's hash and the applied sizes, each changed on a copy of the page
+stale_row() {
+  local label=$1 out=$2
+  awk -v label="$label" '
+    index($0, "| " label " |") == 1 && !done {
+      match($0, /`[^`]*`/)
+      value = substr($0, RSTART + 1, RLENGTH - 2)
+      if (value ~ /^[0-9]+$/) value = value + 1
+      else value = substr(value, 1, length(value) - 1) (substr(value, length(value)) == "0" ? "1" : "0")
+      $0 = substr($0, 1, RSTART) value substr($0, RSTART + RLENGTH - 1)
+      done = 1
+    }
+    { print }
+  ' "$page" > "$out"
+  cmp -s "$page" "$out" && { echo "the stale-row control for '$label' left the page as it was" >&2; exit 1; }
+  return 0
+}
+for label in \
+  "Attested fact policy hash" "Attested fact policy program bytes" \
+  "Attested change policy hash" "Attested change policy program bytes" \
+  "Attested checkpoint validator script hash" "Attested checkpoint validator program bytes" \
+  "Attested registry application, state script and name"; do
+  stale_row "$label" "$work/c-stale.md"
+  refused "a stale '$label'" "$work/c-stale.md" "$derived"
+done
+# the derived side moved while the page did not: the page is stale against the attested derivation
+sed 's/^\(Attested change policy hash\)|.*/\1|0000000000000000000000000000000000000000000000000000000000/' "$derived" > "$work/d-attested.txt"
+refused "an attested derived value that moved" "$page" "$work/d-attested.txt"
 
 # a stated row deleted
 grep -v '^| State script hash |' "$page" > "$work/c-deleted.md"

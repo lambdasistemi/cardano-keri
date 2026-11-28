@@ -8,6 +8,7 @@ live validator decodes.
 -}
 module Cardano.KERI.AID.Checkpoint.Wire (
     advanceSpendRedeemerData,
+    advanceAttestedSpendRedeemerData,
     advanceObserverRedeemerData,
     advanceEvidenceData,
     convictObserverRedeemerData,
@@ -17,6 +18,7 @@ module Cardano.KERI.AID.Checkpoint.Wire (
     freezeEvidenceData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
+    freezeAttestedSpendRedeemerData,
     topUpSpendRedeemerData,
     releaseSpendRedeemerData,
     bookingAttestationBurnData,
@@ -117,6 +119,14 @@ advanceSpendRedeemerData :: Integer -> BondOption -> Data
 advanceSpendRedeemerData payeeOutputIndex bond =
     Constr 0 [I payeeOutputIndex, bondOptionData bond]
 
+{- | The attested generation's @Advance@ arm: the deployed generation's two fields (payee output
+index, bond option) followed by the index of the output that is the successor; the change
+attestation's claim names the same index. The deployed generation's encoder above is unchanged.
+-}
+advanceAttestedSpendRedeemerData :: Integer -> BondOption -> Integer -> Data
+advanceAttestedSpendRedeemerData payeeOutputIndex bond successorIndex =
+    Constr 0 [I payeeOutputIndex, bondOptionData bond, I successorIndex]
+
 {- | The dedicated Advance observer envelope: action one, checkpoint policy,
 the named spent output reference, and the unchanged rotation evidence.
 -}
@@ -144,6 +154,13 @@ nothing renumbers; it names the output that receives the freeze bond.
 freezeSpendRedeemerData :: Integer -> Data
 freezeSpendRedeemerData hunterOutputIndex =
     Constr 3 [I hunterOutputIndex]
+
+{- | The attested generation's @Freeze@ arm: the hunter output index and the successor index. The
+deployed generation's encoder above is unchanged.
+-}
+freezeAttestedSpendRedeemerData :: Integer -> Integer -> Data
+freezeAttestedSpendRedeemerData hunterOutputIndex successorIndex =
+    Constr 3 [I hunterOutputIndex, I successorIndex]
 
 {- | The TopUp arm is spend constructor four, appended after Freeze so nothing
 renumbers; it carries the amount added to the pool, in lovelace.

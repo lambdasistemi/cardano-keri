@@ -1,5 +1,6 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.RegistryDeploy
@@ -29,6 +30,7 @@ module Cardano.KERI.Deployment.RegistryDeploy (
     -- * What it does and what it reports
     Step (..),
     allSteps,
+    attestedSteps,
     Landed (..),
     DeployError (..),
     DeployFailure (..),
@@ -38,6 +40,7 @@ module Cardano.KERI.Deployment.RegistryDeploy (
     -- * The terms a registry is deployed with
     TermRefusal (..),
     refuseTerms,
+    refuseTermsUnder,
 
     -- * What a deployment derives
     releaseIdentityOf,
@@ -58,9 +61,12 @@ import Cardano.KERI.AID.Checkpoint.Value (checkpointMinAda)
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.Registry (
+    AttestedRegistry (..),
     RegistryScripts (..),
     RegistryTerms (..),
+    deriveAttestedRegistryScripts,
     deriveRegistryScripts,
  )
 import Cardano.KERI.Deployment.RegistryChain (
@@ -85,6 +91,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
     isFundable,
     isPlainFunding,
     outputReferenceOf,
+    premiumOutputMinimum,
     publishReferenceScript,
     publishTemplate,
     publishTemplateAndSeed,
@@ -94,6 +101,7 @@ import Cardano.KERI.Deployment.Script (
     CheckpointTerms (..),
     Observers (..),
     ScriptArtifact (..),
+    blueprintIsAttested,
     mkCageScript,
     scriptHashBytes,
  )
@@ -175,13 +183,42 @@ data Step
     | PublishApplication
     | PublishState
     | PublishHashProof
+    | -- | the fact policy of the attested generation
+      PublishFactPolicy
+    | -- | the change policy of the attested generation
+      PublishChangePolicy
     | PublishCheckpoint
     | CreateRegistry
     deriving stock (Eq, Show, Enum, Bounded)
 
--- | Every step, in order.
+-- | Every step of the deployed generation, in order.
 allSteps :: [Step]
-allSteps = [minBound .. maxBound]
+allSteps =
+    [ PublishTemplate
+    , PublishAttestation
+    , PublishApplication
+    , PublishState
+    , PublishHashProof
+    , PublishCheckpoint
+    , CreateRegistry
+    ]
+
+{- | Every step of the attested generation, in order: the two policies whose change attestation the
+checkpoint requires are published before the checkpoint's own reference script. No step registers a
+stake credential, withdraws or certifies anything.
+-}
+attestedSteps :: [Step]
+attestedSteps =
+    [ PublishTemplate
+    , PublishAttestation
+    , PublishApplication
+    , PublishState
+    , PublishHashProof
+    , PublishFactPolicy
+    , PublishChangePolicy
+    , PublishCheckpoint
+    , CreateRegistry
+    ]
 
 -- | A transaction that settled, with what it cost and what it leaves locked.
 data Landed = Landed
@@ -269,7 +306,21 @@ data TermRefusal
       MinimumAdaNotTheCheckpoints
     | -- | the termination carrier and the tip exceed the minimum ADA
       TerminationCarrierExceedsMinimumAda
+    | -- | the premium cannot fund the output that pays it: the premium supplied, then the ledger's minimum for that output
+      PremiumBelowOutputMinimum !Integer !Integer
     deriving stock (Eq, Show)
+
+{- | What is wrong with the terms under the protocol parameters, before a transaction: a premium below the ledger's
+minimum for the output that pays it, zero included, cannot fund that output on its own.
+-}
+refuseTermsUnder :: PParams ConwayEra -> RegistryTerms -> [TermRefusal]
+refuseTermsUnder parameters terms =
+    [ PremiumBelowOutputMinimum premium required
+    | let premium = termsPremium (registryCheckpointTerms terms)
+          required = premiumOutputMinimum parameters
+    , premium >= 0
+    , premium < required
+    ]
 
 {- | Everything wrong with the terms, before a transaction: each amount or
 duration at or above zero, the deposit and the freeze bond at their floors,
@@ -383,11 +434,12 @@ deployRegistry runtime onLanded request = do
                     { failureLanded = landed
                     , failureStoppedAt = step
                     , failureNotLanded =
-                        [s | s <- allSteps, s `notElem` map landedStep landed]
+                        [s | s <- stepsOf (requestBlueprint request), s `notElem` map landedStep landed]
                     , failureCause = cause
                     }
   where
     terms = requestTerms request
+    stepsOf blueprint = if blueprintIsAttested blueprint then attestedSteps else allSteps
     transactions = rtTransactions runtime
     network = rtNetwork runtime
     payerAddress' = requestPayer request
@@ -490,18 +542,27 @@ deployRegistry runtime onLanded request = do
         let discriminator = termsNetwork (registryCheckpointTerms terms)
         when (discriminator /= networkDiscriminator network) $
             stop Nothing (NetworkDisagrees discriminator)
+        -- what the ledger asks of the output that pays the premium is the protocol parameters' to say
+        premiumParameters <- onNode Nothing (trQueryProtocolParams transactions)
+        let underParameters = refuseTermsUnder premiumParameters terms
+        unless (null underParameters) $ stop Nothing (TermsRefused underParameters)
         wallet0 <- onNode Nothing (rtUtxosAt runtime payerAddress')
         (candidate, _) <- maybe (stop Nothing NoSeedOutput) pure (chooseSeed (rtFunding runtime) wallet0)
         -- a wallet whose only output of lovelace alone is the seed candidate has nothing to pay the publications
         -- with once the seed is set aside: the publication of the template then makes the seed, as public
         -- Singular's chained seed does, and the registry is created from it
         let chained = null [ref | (ref, out) <- wallet0, ref /= candidate, isFundable out]
+        -- the generation is the blueprint's: the attested one derives the two policies and a checkpoint that
+        -- requires their change attestation, the deployed one the checkpoint that reads the observer's withdrawal
         let derivedFor seed =
                 either
                     (stop Nothing . ScriptsRefused)
                     pure
-                    (deriveRegistryScripts stateTemplate terms (outputReferenceOf seed) (requestBlueprint request))
-        scripts0 <- derivedFor candidate
+                    ( if blueprintIsAttested (requestBlueprint request)
+                        then (\attested -> (attestedScripts attested, Just (attestedPolicies attested))) <$> deriveAttestedRegistryScripts stateTemplate terms (outputReferenceOf seed) (requestBlueprint request)
+                        else (,Nothing) <$> deriveRegistryScripts stateTemplate terms (outputReferenceOf seed) (requestBlueprint request)
+                    )
+        (scripts0, policies0) <- derivedFor candidate
         let observers0 = scriptsObservers scripts0
             lovelace = requestReferenceLovelace request
         -- the publications are paid from outputs that carry nothing but lovelace and assets: if those hold
@@ -517,6 +578,10 @@ deployRegistry runtime onLanded request = do
                             , mkCageScript (artifactProgram (observerHashProof observers0))
                             , mkCageScript (artifactProgram (scriptsCheckpoint scripts0))
                             ]
+                                <> [ mkCageScript (artifactProgram artifact)
+                                   | Just attested <- [policies0]
+                                   , artifact <- [attestationFact attested, attestationChange attested]
+                                   ]
                       ]
             needed = sum [fromMaybe (minimumHolding checkParams holder) lovelace | holder <- holders]
             held
@@ -538,10 +603,11 @@ deployRegistry runtime onLanded request = do
                         publication landedRef [candidate] PublishTemplate $ \params payer end ->
                             publishTemplate end params payer (templateLovelace params) (scriptsTemplate scripts0)
                     pure (templateIn, candidate)
-        scripts <- if chained then derivedFor seedIn else pure scripts0
-        unless (seedFreeHashes scripts == seedFreeHashes scripts0) $
+        let policyHashes = fmap (\attested -> (artifactScriptHash (attestationFact attested), artifactScriptHash (attestationChange attested)))
+        (scripts, policies) <- if chained then derivedFor seedIn else pure (scripts0, policies0)
+        unless (seedFreeHashes scripts == seedFreeHashes scripts0 && policyHashes policies == policyHashes policies0) $
             stop (Just PublishTemplate) (ScriptsRefused "the scripts the first publications carry depend on the seed")
-        let deployment = RegistryDeployment network terms scripts
+        let deployment = RegistryDeployment network terms scripts policies
             observers = scriptsObservers scripts
             publishedScript = publishScript landedRef [seedIn] lovelace
         attestationIn <-
@@ -555,6 +621,12 @@ deployRegistry runtime onLanded request = do
         hashProofIn <-
             publishedScript PublishHashProof $
                 mkCageScript (artifactProgram (observerHashProof observers))
+        policyIns <- case policies of
+            Nothing -> pure Nothing
+            Just attested -> do
+                factIn <- publishedScript PublishFactPolicy (mkCageScript (artifactProgram (attestationFact attested)))
+                changeIn <- publishedScript PublishChangePolicy (mkCageScript (artifactProgram (attestationChange attested)))
+                pure (Just (factIn, changeIn))
         checkpointIn <-
             publishedScript PublishCheckpoint $
                 mkCageScript (artifactProgram (scriptsCheckpoint scripts))
@@ -611,6 +683,10 @@ deployRegistry runtime onLanded request = do
                         published hashProofIn (artifactScriptHash (observerHashProof observers))
                     , recordCheckpoint =
                         published checkpointIn (artifactScriptHash (scriptsCheckpoint scripts))
+                    , recordFactPolicy =
+                        (\(factIn, _) -> published factIn (maybe (error "policies") (artifactScriptHash . attestationFact) policies)) <$> policyIns
+                    , recordChangePolicy =
+                        (\(_, changeIn) -> published changeIn (maybe (error "policies") (artifactScriptHash . attestationChange) policies)) <$> policyIns
                     , recordConfiguration =
                         outputReferenceOf (TxIn genesisId (TxIx (fromInteger configuration)))
                     , recordRegistryState = outputReferenceOf (TxIn genesisId (TxIx 0))

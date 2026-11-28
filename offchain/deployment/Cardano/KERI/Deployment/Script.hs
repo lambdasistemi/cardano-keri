@@ -47,6 +47,8 @@ module Cardano.KERI.Deployment.Script (
     deriveObserverScripts,
     deriveAttestationScript,
     deriveCheckpointScript,
+    blueprintIsAttested,
+    attestedBlueprintRefusal,
     observerArtifacts,
     deriveV1Scripts,
     requireValidator,
@@ -90,6 +92,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Char (isDigit)
 import Data.List (find)
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -621,6 +624,27 @@ deriveObserverScripts terms blueprint = do
   where
     require = requireValidator blueprint
 
+{- | Whether a blueprint is of the attested generation: its checkpoint reads the
+attestation of a change policy from the transaction's mint field, and the change
+policy is one of its validators. The deployed generation's checkpoint reads the
+withdrawal of the advance observer instead; the two are told apart by that
+validator, and no deployed identity has it.
+-}
+blueprintIsAttested :: Blueprint -> Bool
+blueprintIsAttested blueprint =
+    isJust (extractValidatorExact "advance_attestation.advance_attestation.mint" blueprint)
+
+{- | Why the observer-era derivations refuse a blueprint of the attested generation:
+they would link its checkpoint to the advance observer's hash, a program that
+checkpoint does not consult, and publish it.
+-}
+attestedBlueprintRefusal :: String
+attestedBlueprintRefusal =
+    "this blueprint is of the attested generation: its checkpoint requires the "
+        <> "change attestation in the mint field, and the observer-era derivation would "
+        <> "link it to the advance observer. It is derived by deriveAttestedCheckpoint; "
+        <> "no deployment path publishes that generation yet"
+
 -- | Apply the checkpoint validator to a registry, the policy of its application, the observers and the terms.
 deriveCheckpointScript ::
     CheckpointTerms ->
@@ -630,6 +654,7 @@ deriveCheckpointScript ::
     Blueprint ->
     Either String ScriptArtifact
 deriveCheckpointScript terms registry applicationPolicy observers blueprint = do
+    if blueprintIsAttested blueprint then Left attestedBlueprintRefusal else Right ()
     (checkpointValidator, checkpointProgram) <-
         requireValidator
             blueprint

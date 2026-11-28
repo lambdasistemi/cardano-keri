@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TupleSections #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.RegistryChain
@@ -69,11 +70,14 @@ import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV2 (..), liveOfKeyState)
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.RefusalAt (renderEvaluationFailure)
 import Cardano.KERI.Deployment.Registry (
+    AttestedRegistry (..),
     RegistryScripts (..),
     RegistryTerms (..),
+    deriveAttestedRegistryScripts,
     deriveRegistryScripts,
  )
 import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptReference (..))
@@ -93,6 +97,8 @@ import Cardano.KERI.Deployment.Script (
     Blueprint,
     CheckpointTerms (..),
     ScriptArtifact (..),
+    blueprintIsAttested,
+    mkCageScript,
     scriptHashBytes,
  )
 import Cardano.KERI.Deployment.TransactionRuntime (TransactionRuntime (..), transactionId)
@@ -100,7 +106,7 @@ import Cardano.Ledger.Address (AccountAddress, Addr)
 import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Api.Tx (bodyTxL)
 import Cardano.Ledger.Api.Tx.Body (feeTxBodyL)
-import Cardano.Ledger.Api.Tx.Out (TxOut, valueTxOutL)
+import Cardano.Ledger.Api.Tx.Out (TxOut, referenceScriptTxOutL, valueTxOutL)
 import Cardano.Ledger.BaseTypes (Network (..), TxIx (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -124,7 +130,8 @@ import Data.Functor ((<&>))
 import Data.List (find)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe.Strict (StrictMaybe (SJust))
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Text (Text)
@@ -176,6 +183,8 @@ data Loaded = Loaded
     , loadedReferences :: !RegistryReferences
     , loadedFoldReferences :: ![(TxIn, TxOut ConwayEra)]
     -- ^ what a fold reads by reference besides the registry's own scripts: the hash-proof policy
+    , loadedPolicyReferences :: !(Maybe ((TxIn, TxOut ConwayEra), (TxIn, TxOut ConwayEra)))
+    -- ^ the fact policy and the change policy, published, of a registry of the attested generation
     }
 
 -- | Where a refusal was made.
@@ -312,11 +321,18 @@ termsOfIdentity identity =
         , registryTerminationCarrier = riTerminationCarrier identity
         }
 
+{- | The deployment an identity names, derived from the blueprint of its generation: the attested
+generation's from a blueprint that carries the change policy, the deployed generation's from one that
+does not. The checkpoint validator the identity names is the check that the blueprint is of the identity's
+generation.
+-}
 deriveDeployment :: Blueprint -> ReleaseIdentity -> Either Refusal RegistryDeployment
 deriveDeployment blueprint identity = do
-    scripts <-
+    (scripts, policies) <-
         first (DeploymentDisagrees . ("the scripts cannot be derived from the identity: " <>)) $
-            deriveRegistryScripts stateTemplate terms (riSeed identity) blueprint
+            if blueprintIsAttested blueprint
+                then (\attested -> (attestedScripts attested, Just (attestedPolicies attested))) <$> deriveAttestedRegistryScripts stateTemplate terms (riSeed identity) blueprint
+                else (,Nothing) <$> deriveRegistryScripts stateTemplate terms (riSeed identity) blueprint
     let release = riRelease identity
         application = scriptHashBytes (artifactScriptHash (scriptsApplication scripts))
         disagreements =
@@ -331,8 +347,14 @@ deriveDeployment blueprint identity = do
             , derived /= named
             ]
     unless (null disagreements) $
-        Left (DeploymentDisagrees ("the blueprint derives other scripts than the identity names: " <> unwords disagreements))
-    pure (RegistryDeployment (if riNetwork identity == 0 then Testnet else Mainnet) terms scripts)
+        Left
+            ( DeploymentDisagrees
+                ( "the blueprint derives other scripts than the identity names: "
+                    <> unwords disagreements
+                    <> [c | "checkpoint-validator" `elem` disagreements, c <- "; the identity may be of the other generation: select the blueprint of its generation with --blueprint"]
+                )
+            )
+    pure (RegistryDeployment (if riNetwork identity == 0 then Testnet else Mainnet) terms scripts policies)
   where
     terms = termsOfIdentity identity
 
@@ -343,21 +365,26 @@ loadDeployment ::
     ReferenceRecord ->
     IO (Either Refusal Loaded)
 loadDeployment rt blueprint identity record =
-    case deriveDeployment blueprint identity of
+    case deriveDeployment blueprint identity >>= \deployment -> deployment <$ checkRecordGeneration deployment record of
         Left refusal -> pure (Left refusal)
         Right deployment -> do
-            let named =
+            let policies = [txInOfReference (scriptOutput reference) | Just reference <- [recordFactPolicy record, recordChangePolicy record]]
+                named =
                     [ txInOfReference (scriptOutput (recordApplication record))
                     , txInOfReference (scriptOutput (recordState record))
                     , txInOfReference (recordConfiguration record)
                     , txInOfReference (scriptOutput (recordAttestation record))
                     , txInOfReference (scriptOutput (recordHashProof record))
                     ]
+                        <> policies
             found <- rtOutputs rt (Set.fromList named)
             let missing = [ref | ref <- named, not (Map.member ref found)]
                 pick ref = (,) ref <$> Map.lookup ref found
             pure $ case traverse pick named of
-                Just [application, state, configuration, attestation, hashProof]
+                Just (application : state : configuration : attestation : hashProof : published)
+                    | null missing
+                    , Just reason <- unusablePolicyReference deployment published ->
+                        Left (DeploymentDisagrees reason)
                     | null missing ->
                         Right
                             Loaded
@@ -371,8 +398,42 @@ loadDeployment rt blueprint identity record =
                                         , referenceHashProof = hashProof
                                         }
                                 , loadedFoldReferences = [hashProof]
+                                , loadedPolicyReferences = case published of
+                                    [fact, change] -> Just (fact, change)
+                                    _ -> Nothing
                                 }
                 _ -> Left (ReferenceOutputsMissing missing)
+
+{- | Why a fetched policy output is not the one the record claims, if it is not: the output at the fact
+reference carries the fact policy's reference script, and the output at the change reference the change
+policy's, as the derivation gives them. The hashes written in the record are not enough: they can sit beside
+a reference to an output without that script, or with the other policy's.
+-}
+unusablePolicyReference :: RegistryDeployment -> [(TxIn, TxOut ConwayEra)] -> Maybe String
+unusablePolicyReference deployment published = case (deploymentPolicies deployment, published) of
+    (Just policies, [(_, fact), (_, change)]) ->
+        listToMaybe
+            [ "the output at the " <> name <> " policy reference does not carry the " <> name <> " policy's reference script"
+            | (name, artifact, out) <- [("fact", attestationFact policies, fact), ("change", attestationChange policies, change)]
+            , (out ^. referenceScriptTxOutL) /= SJust (mkCageScript (artifactProgram artifact))
+            ]
+    _ -> Nothing
+
+{- | The record names the attestation policies of a registry of the attested generation, and
+those of the blueprint's derivation, and none for the deployed generation: a record of the one is
+not a record of the other.
+-}
+checkRecordGeneration :: RegistryDeployment -> ReferenceRecord -> Either Refusal ()
+checkRecordGeneration deployment record =
+    case (deploymentPolicies deployment, recordFactPolicy record, recordChangePolicy record) of
+        (Nothing, Nothing, Nothing) -> Right ()
+        (Just policies, Just fact, Just change)
+            | scriptHash fact == hashOf (attestationFact policies) && scriptHash change == hashOf (attestationChange policies) -> Right ()
+            | otherwise -> Left (DeploymentDisagrees "the record names other attestation policies than the blueprint derives")
+        (Nothing, _, _) -> Left (DeploymentDisagrees "the record names attestation policies, and the blueprint is of the deployed generation")
+        (Just _, _, _) -> Left (DeploymentDisagrees "the blueprint is of the attested generation, and the record names no attestation policies")
+  where
+    hashOf = scriptHashBytes . artifactScriptHash
 
 -- | The input an output reference of a record names.
 txInOfReference :: OutputReference -> TxIn

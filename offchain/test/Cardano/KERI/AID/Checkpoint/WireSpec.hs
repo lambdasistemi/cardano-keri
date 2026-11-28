@@ -16,6 +16,7 @@ import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Registration (RegistrationEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
+    advanceAttestedSpendRedeemerData,
     advanceEvidenceData,
     advanceObserverRedeemerData,
     advanceSpendRedeemerData,
@@ -27,6 +28,7 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     convictSpendRedeemerData,
     enforcementEvidenceData,
     enforcementProofData,
+    freezeAttestedSpendRedeemerData,
     freezeEvidenceData,
     freezeObserverRedeemerData,
     freezeSpendRedeemerData,
@@ -277,6 +279,17 @@ spec = describe "#136 Register observer wire" $ do
                     ]
                 , advanceEvidenceData advanceEvidence
                 ]
+
+    it "encodes the attested generation's Advance arm with the successor index after the bond option" $
+        advanceAttestedSpendRedeemerData 4 Keep 2
+            `shouldBe` Constr 0 [I 4, Constr 0 [], I 2]
+
+    it "encodes the attested generation's Advance arm with the deposit option and the successor index" $
+        advanceAttestedSpendRedeemerData 4 (Deposit [(1, BS.replicate 64 0xa1)]) 2
+            `shouldBe` Constr 0 [I 4, Constr 1 [List [List [I 1, B (BS.replicate 64 0xa1)]]], I 2]
+
+    it "encodes the attested generation's Freeze arm with the successor index" $
+        freezeAttestedSpendRedeemerData 5 2 `shouldBe` Constr 3 [I 5, I 2]
 
     it "encodes Advance signature tuples as two-item lists" $
         advanceEvidenceData advanceEvidence

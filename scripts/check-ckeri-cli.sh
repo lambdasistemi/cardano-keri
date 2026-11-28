@@ -577,5 +577,122 @@ expect_failure_path \
   "$ckeri" --config-file "$workspace/registry.yaml" registry deploy "${registry_terms[@]}" \
   --release-identity-out registry-option-marker/identity.json
 
+# The packaged default blueprint is the deployed generation's, and an explicit blueprint wins over
+# it, observed as the file the process opens (a registry command that loads its identity opens the
+# blueprint before it reaches the node): the packaged default is the committed
+# offchain/deployed-generation/plutus.json by content, not the current source build, which is of
+# the attested generation the observer-era derivations refuse.
+#
+# Each invocation has its own trace and passes only on what its own trace records: the tracer must
+# have run to the end of the traced process (a missing or empty trace is a failure, never a
+# fallback to an earlier one), and the blueprint named is a file that invocation opened. The default
+# invocation clears CKERI_BLUEPRINT, so a caller that already points at the deployed blueprint
+# cannot stand in for the packaged default.
+nixpkgs=github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46
+deployed_sha="$(sha256sum "$worktree/offchain/deployed-generation/plutus.json" | cut -d' ' -f1)"
+printf '{"type":"PaymentSigningKeyShelley_ed25519","description":"","cborHex":"5820%s"}\n' \
+  "$(printf 'ab%.0s' $(seq 1 32))" >"$workspace/none.skey"
+printf '{}\n' >"$workspace/request.json"
+cp "$worktree/offchain/deployed-generation/plutus.json" "$workspace/override-plutus.json"
+cp "$worktree/offchain/deployed-generation/plutus.json" "$workspace/flag-plutus.json"
+return_args=(
+  registry return --network-magic 1 --node-socket none.socket
+  --funding-address addr_test1vqg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygxrcya6
+  --signing-key-file "$workspace/none.skey"
+  --release-identity "$worktree/offchain/deployment-test/fixtures/registry-v1/release-identity.json"
+  --reference-record "$worktree/offchain/deployment-test/fixtures/registry-v1/reference-outputs.json"
+  --request "$workspace/request.json"
+)
+tracer=(nix shell "$nixpkgs#strace" --command strace)
+# The traced command records its own pid (a process of the tracee, not a line of the trace) and then
+# becomes the command, so the pid is the command's whatever the trace says.
+# The blueprint files one invocation opened to a file descriptor, from a trace of its own that
+# records the exit of that command: a missing or empty trace, a trace of other processes' exits only
+# (the threads and children of a traced process exit ahead of it), and an open that returned an
+# error (any errno, not only ENOENT) are failures. The command's own exit status is read from its
+# exit record and must be a normal exit; that it is nonzero here (the fixture record is of an earlier
+# form) is not a failure.
+blueprints_opened() {
+  local trace command_pid
+  trace="$(mktemp "$workspace/trace.XXXXXX")"
+  pidfile="$(mktemp "$workspace/pid.XXXXXX")"
+  "${tracer[@]}" -f -e trace=openat -o "$trace" \
+    sh -c 'printf "%s\n" "$$" >"$1"; shift; exec "$@"' sh "$pidfile" "$@" >/dev/null 2>&1 || true
+  command_pid="$(cat "$pidfile" 2>/dev/null || true)"
+  [[ "$command_pid" =~ ^[0-9]+$ ]] || { echo "the command did not run: $*" >&2; return 1; }
+  grep -aqE "^$command_pid \+\+\+ exited with [0-9]+ \+\+\+$" "$trace" \
+    || { echo "the trace does not record the exit of the command ($command_pid): $*" >&2; return 1; }
+  { grep -aE '^[0-9]+ openat\(.*plutus.json".*\) = [0-9]+$' "$trace" \
+      | grep -o '"[^"]*plutus.json"' | tr -d '"' | sort -u; } || true
+}
+# One file, and it is the expected one: by path for an override, by content for the default.
+only_opened() {
+  local opened
+  opened="$(blueprints_opened "${@:2}")" || return 1
+  [[ -n "$opened" && "$(printf '%s\n' "$opened" | wc -l)" -eq 1 ]] || {
+    echo "expected one blueprint opened, got: ${opened:-none}" >&2; return 1; }
+  case "$1" in
+    sha:*) [[ "$(sha256sum "$opened" | cut -d' ' -f1)" == "${1#sha:}" ]] ;;
+    *) [[ "$opened" == "$1" ]] ;;
+  esac || { echo "expected ${1}, opened $opened" >&2; return 1; }
+}
+# the packaged default: the caller's CKERI_BLUEPRINT cleared
+only_opened "sha:$deployed_sha" env -u CKERI_BLUEPRINT "$ckeri" "${return_args[@]}" \
+  || { echo "the packaged default is not the deployed generation's blueprint" >&2; exit 1; }
+# the environment overrides the default
+only_opened "$workspace/override-plutus.json" env CKERI_BLUEPRINT="$workspace/override-plutus.json" \
+  "$ckeri" "${return_args[@]}" \
+  || { echo "CKERI_BLUEPRINT did not override the packaged default" >&2; exit 1; }
+# the option wins over the environment
+only_opened "$workspace/flag-plutus.json" env CKERI_BLUEPRINT="$workspace/override-plutus.json" \
+  "$ckeri" "${return_args[@]}" --blueprint "$workspace/flag-plutus.json" \
+  || { echo "--blueprint did not win over CKERI_BLUEPRINT" >&2; exit 1; }
+
+# Controls, each shown able to fail, after valid traces exist. A control is a tracer that does not
+# produce the trace the check requires, or a file the command cannot open.
+refused() { # the invocation must be refused by only_opened
+  local what="$1"; shift
+  if "$@" 2>/dev/null; then echo "control: $what" >&2; exit 1; fi
+}
+default_invocation=(env -u CKERI_BLUEPRINT "$ckeri" "${return_args[@]}")
+# a wrong expectation: the default taken for the flag's file
+refused "the default was taken for the flag's file" \
+  only_opened "$workspace/flag-plutus.json" "${default_invocation[@]}"
+# a tracer that does not trace, and one that fails
+refused "a tracer that did not run passed" \
+  bash -c "$(declare -f blueprints_opened only_opened); workspace='$workspace'; tracer=(true); only_opened sha:$deployed_sha \"\$@\"" _ "${default_invocation[@]}"
+refused "a failed tracer passed" \
+  bash -c "$(declare -f blueprints_opened only_opened); workspace='$workspace'; tracer=(false); only_opened sha:$deployed_sha \"\$@\"" _ "${default_invocation[@]}"
+# a trace of thread exits only: the command ran, the trace records the exit of another process and
+# the open of the expected file, but not the exit of the command
+thread_exit_only_tracer() { # strace -f -e trace=openat -o FILE command...: the FILE is the fifth argument
+  local out="$5"; shift 5
+  "$@" >/dev/null 2>&1 || true
+  printf '%s openat(AT_FDCWD, "%s", O_RDONLY) = 3\n%s +++ exited with 0 +++\n' \
+    424242 "$workspace/override-plutus.json" 424242 >"$out"
+}
+refused "a trace of another process's exit passed" \
+  bash -c "$(declare -f blueprints_opened only_opened thread_exit_only_tracer); workspace='$workspace'; tracer=(thread_exit_only_tracer); only_opened '$workspace/override-plutus.json' \"\$@\"" _ \
+  env CKERI_BLUEPRINT="$workspace/override-plutus.json" "$ckeri" "${return_args[@]}"
+# a failed open at the expected path, with a normal exit of the command in the trace: first a trace
+# written to say so, then the real thing, a file the process may not read (EACCES, not ENOENT)
+failed_open_tracer() { # the command ran; its trace records the expected open as an error
+  local out="$5"; shift 5
+  "$@" >/dev/null 2>&1 || true
+  printf '%s openat(AT_FDCWD, "%s", O_RDONLY) = -1 EACCES (Permission denied)\n%s +++ exited with 1 +++\n' \
+    "$(cat "$pidfile")" "$workspace/override-plutus.json" "$(cat "$pidfile")" >"$out"
+}
+refused "an open that failed with EACCES passed" \
+  bash -c "$(declare -f blueprints_opened only_opened failed_open_tracer); workspace='$workspace'; tracer=(failed_open_tracer); only_opened '$workspace/override-plutus.json' \"\$@\"" _ \
+  env CKERI_BLUEPRINT="$workspace/override-plutus.json" "$ckeri" "${return_args[@]}"
+if [[ "$(id -u)" != 0 ]]; then
+  cp "$worktree/offchain/deployed-generation/plutus.json" "$workspace/denied-plutus.json"
+  chmod 000 "$workspace/denied-plutus.json"
+  refused "a blueprint the process could not read passed" \
+    only_opened "$workspace/denied-plutus.json" \
+    env CKERI_BLUEPRINT="$workspace/denied-plutus.json" "$ckeri" "${return_args[@]}"
+fi
+
+echo "ckeri packaged default blueprint is the deployed generation's; environment and option overrides win: OK"
 echo "ckeri opt-env-conf surface and option/environment/YAML precedence: OK"
 echo "ckeri outside-checkout manifest diagnostics: 4/4 exercised"

@@ -612,7 +612,9 @@ test the_top_up_redeemer_is_the_fifth_spend_constructor_with_its_amount() {
 }
 
 test the_freeze_redeemer_keeps_its_constructor() {
-  expect checkpoint_register.Freeze { hunter_output_index } = freeze_redeemer(1)
+  expect checkpoint_register.Freeze { hunter_output_index, .. } = freeze_redeemer(
+    1,
+  )
   hunter_output_index == 1
 }
 

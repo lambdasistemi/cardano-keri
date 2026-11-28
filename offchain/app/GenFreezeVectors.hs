@@ -19,9 +19,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (KeyMaterial (..), canonicalCbor)
 import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
+    freezeAttestedSpendRedeemerData,
     freezeEvidenceData,
     freezeObserverRedeemerData,
-    freezeSpendRedeemerData,
  )
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
@@ -43,9 +43,10 @@ policy, spentTxId :: ByteString
 policy = BS.replicate 28 0xc0
 spentTxId = BS.replicate 32 0xe0
 
-spentIndex, hunterIndex :: Integer
+spentIndex, hunterIndex, successorIndex :: Integer
 spentIndex = 7
 hunterIndex = 5
+successorIndex = 2
 
 -- | A small freeze evidence: every field distinct, so a transposition shows.
 evidence :: FreezeEvidence
@@ -97,6 +98,7 @@ output =
         , "use cardano_keri/checkpoint/threshold.{Unweighted}"
         , ""
         , "pub const hunter_output_index: Int = " <> show hunterIndex
+        , "pub const successor_index: Int = " <> show successorIndex
         , ""
         , "pub const policy: ByteArray = " <> hex policy
         , ""
@@ -136,7 +138,7 @@ output =
         , "    },"
         , "  }"
         , ""
-        , "pub const spend_redeemer_cbor: ByteArray = " <> hex (cbor (freezeSpendRedeemerData hunterIndex))
+        , "pub const spend_redeemer_cbor: ByteArray = " <> hex (cbor (freezeAttestedSpendRedeemerData hunterIndex successorIndex))
         , ""
         , "pub const evidence_cbor: ByteArray = " <> hex (cbor (freezeEvidenceData evidence))
         , ""

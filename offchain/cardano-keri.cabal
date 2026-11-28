@@ -74,6 +74,7 @@ library
     Cardano.KERI.AID.Cage.Types
     Cardano.KERI.AID.CESR
     Cardano.KERI.AID.Checkpoint.Advance
+    Cardano.KERI.AID.Checkpoint.AdvanceAttestation
     Cardano.KERI.AID.Checkpoint.BountyCommitment
     Cardano.KERI.AID.Checkpoint.Datum
     Cardano.KERI.AID.Checkpoint.Deposit
@@ -184,6 +185,7 @@ library deployment
   exposed-modules:
     Cardano.KERI.AID.E2E.Datum
     Cardano.KERI.Deployment.Advance
+    Cardano.KERI.Deployment.AdvanceAttestationScripts
     Cardano.KERI.Deployment.AdvanceTransaction
     Cardano.KERI.Deployment.EndpointBoard
     Cardano.KERI.Deployment.EndpointBoardManifest
@@ -531,9 +533,12 @@ test-suite deployment-tests
   hs-source-dirs:   deployment-test
   main-is:          Main.hs
   other-modules:
+    Cardano.KERI.Deployment.AdvanceAttestationBoundarySpec
     Cardano.KERI.Deployment.AdvancePackageSpec
     Cardano.KERI.Deployment.AdvanceSpec
+    Cardano.KERI.Deployment.AdvanceVectors
     Cardano.KERI.Deployment.AttestationBoundarySpec
+    Cardano.KERI.Deployment.AttestedRegistrySpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
@@ -545,10 +550,13 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.KoiosSettlementSpec
     Cardano.KERI.Deployment.KoiosStandIn
     Cardano.KERI.Deployment.KoiosSubmissionSpec
+    Cardano.KERI.Deployment.LedgerContext
+    Cardano.KERI.Deployment.LedgerEvaluation
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RecordedHistory
     Cardano.KERI.Deployment.RegistrationSpec
+    Cardano.KERI.Deployment.RegistryAdvanceEvaluationSpec
     Cardano.KERI.Deployment.RegistryApplicationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
     Cardano.KERI.Deployment.RegistryBookingChain

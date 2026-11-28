@@ -67,6 +67,7 @@ const keys = list(list(nat));
 const keyMaterial = record({curKeys: keys, curThreshold: threshold, nextKeys: keys, nextThreshold: threshold,
   witnesses: keys, toad: integer});
 const content = record({...fields('aid sn priorDigest witnessThreshold'),
+  eventDigest: (x, p) => typeof x === 'string' ? x : error(p),
   kind: enumeration(['inception', 'rotation', 'interaction', 'delegatedInception', 'delegatedRotation']),
   keys: list(nat), threshold, nextKeys: list(nat), nextThreshold: threshold,
   cuts: list(nat), adds: list(nat), extension: list(nat)});

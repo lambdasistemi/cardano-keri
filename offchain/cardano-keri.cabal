@@ -25,6 +25,8 @@ build-type:    Simple
 -- wildcard.
 data-files:
   deployment-test/fixtures/*.cesr
+  deployment-test/fixtures/compiled/*.cesr
+  deployment-test/fixtures/compiled/SHA256SUMS
   deployment-test/fixtures/koios/*.cbor
   deployment-test/fixtures/koios/*.json
   deployment-test/fixtures/koios-recorded/*.json
@@ -80,10 +82,12 @@ library
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
     Cardano.KERI.AID.Checkpoint.EventDecoder
+    Cardano.KERI.AID.Checkpoint.EventScan
     Cardano.KERI.AID.Checkpoint.Freeze
     Cardano.KERI.AID.Checkpoint.FreezeBond
     Cardano.KERI.AID.Checkpoint.InceptionPrefix
     Cardano.KERI.AID.Checkpoint.Message
+    Cardano.KERI.AID.Checkpoint.Qualified
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Checkpoint.TopUp
@@ -540,6 +544,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.AttestationBoundarySpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.CompiledEntryPointsSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.FreezePackageSpec
@@ -1155,6 +1160,8 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FreezeSpec
     Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec
     Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec
+    Cardano.KERI.AID.Checkpoint.InvBindAdversarialSpec
+    Cardano.KERI.AID.Checkpoint.InvBindFrozenGrammarSpec
     Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec
     Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec
     Cardano.KERI.AID.Checkpoint.InvBindSpec
@@ -1226,13 +1233,11 @@ executable gen-registration-vectors
   default-language: GHC2021
   hs-source-dirs:   app
   main-is:          GenRegistrationVectors.hs
-  other-modules:    LegacyRegistration
   build-depends:
     , aeson
     , base
     , bytestring
     , cardano-keri
-    , containers
     , memory        >=0.18 && <0.19
     , text
 

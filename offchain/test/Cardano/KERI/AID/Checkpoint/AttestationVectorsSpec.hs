@@ -33,7 +33,7 @@ import Data.Text.Encoding qualified as TE
 import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data (Data (..))
 import PlutusTx.Builtins.Internal (BuiltinByteString (..), BuiltinData (..), serialiseData)
-import Test.Hspec (Spec, describe, expectationFailure, it, pendingWith, shouldBe)
+import Test.Hspec (Spec, describe, expectationFailure, it, shouldBe)
 
 type Parsed a = Either String a
 
@@ -98,7 +98,6 @@ spec = describe "booking attestation parity vectors" $ do
         claims `shouldNotBeEmpty` "claims"
         mapM_ checkClaim claims
     it "writes each Issue redeemer with its evidence as the vectors do" $ do
-        pendingWith "awaits the validators' three-field booking vectors: scripts/attestation-vectors.mjs still writes the nine-offset evidence type of main; this row returns when their offset-free types merge (frozen interface, NOTE-027)"
         vectors <- loadVectors
         issues <- either fail pure (field "issues" vectors >>= array)
         issues `shouldNotBeEmpty` "issues"

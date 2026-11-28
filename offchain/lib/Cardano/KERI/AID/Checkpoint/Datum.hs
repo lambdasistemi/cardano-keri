@@ -63,10 +63,17 @@ module Cardano.KERI.AID.Checkpoint.Datum (
     DatumError (..),
     keyStateWellFormed,
     inceptionKeyStateWellFormed,
+    keyStateInceptionWellFormed,
     datumV2WellFormed,
+    datumV2InceptionWellFormed,
 
     -- * The key-state view of a version 2 checkpoint
     keyStateView,
+    QualifiedSpelling (..),
+    qualifiedSpellingOf,
+    qualifiedOfView,
+    identitySpelling,
+    spellingOfView,
     datumKeyState,
     datumFacts,
     isTerminationPending,
@@ -87,12 +94,15 @@ import Cardano.Crypto.Hash.Class (
 import Cardano.KERI.AID.CESR (
     aidDigest,
     qb64Aid,
+    qb64Verkey,
  )
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, keyPayloads, qualify)
 import Cardano.KERI.AID.Checkpoint.Threshold (
-    Threshold,
+    Threshold (..),
     ThresholdError,
     futureThresholdFromData,
     futureWellFormed,
+    nextDeclarationWellFormed,
     wellFormed,
  )
 import Control.Monad (
@@ -376,6 +386,8 @@ data DatumError
       same F18 'wellFormed' predicate.
       -}
       NextIllFormed ThresholdError
+    | -- | A current key is not a qualified verification key (44 characters, code @B@ or @D@).
+      KeyNotQualified
     | -- | A witness verkey is not exactly 32 bytes.
       WitnessWidth
     | -- | The witness set has a duplicate 'Verkey'.
@@ -427,6 +439,42 @@ numeric zero threshold with no commitments, or with commitments, is valid.
 inceptionKeyStateWellFormed :: KeyStateView -> Either DatumError ()
 inceptionKeyStateWellFormed = keyStateWith futureWellFormed
 
+{- | Well-formedness of the key state an inception declares: the same rules, and a next declaration that is either a
+non-empty set with a well-formed threshold ('nextDeclarationWellFormed') or the empty set with threshold zero.
+-}
+keyStateInceptionWellFormed :: KeyStateView -> Either DatumError ()
+keyStateInceptionWellFormed KeyStateView{..} = do
+    unless (BS.length cdCesrAid == 32) (Left CesrAidWidth)
+    keyMaterialDeclaration cdCurKeys cdCurThreshold cdNextKeys cdNextThreshold cdWitnesses cdToad
+
+keyMaterialDeclaration ::
+    [ByteString] -> Threshold -> [ByteString] -> Threshold -> [ByteString] -> Integer -> Either DatumError ()
+keyMaterialDeclaration cur curT next nextT wits toad = do
+    first ThresholdIllFormed (wellFormed cur curT)
+    -- a numeric zero is a valid declared future with or without commitments (draft #600, draft model's inception rule)
+    unless (nextT == Unweighted 0) $
+        first NextIllFormed (nextDeclarationWellFormed next nextT)
+    unless (all ((== 32) . BS.length) wits) (Left WitnessWidth)
+    when (length (nub wits) /= length wits) (Left DuplicateWitness)
+    unless toadOk (Left ToadRange)
+  where
+    toadOk
+        | null wits = toad == 0
+        | otherwise = 1 <= toad && toad <= fromIntegral (length wits)
+
+{- | Write-time validity of the version 2 datum an inception writes: 'datumV2WellFormed' with the inception's next
+declaration.
+-}
+datumV2InceptionWellFormed :: CheckpointDatumV2 -> Either DatumError ()
+datumV2InceptionWellFormed = \case
+    Live{lvSn, lvEpoch, lvBornAt, lvKeys = KeyMaterial{..}} -> do
+        unless (lvSn >= 0) (Left NegativeSn)
+        unless (lvEpoch >= 0) (Left NegativeEpoch)
+        unless (lvBornAt >= 0) (Left NegativeBornAt)
+        raw <- maybe (Left KeyNotQualified) Right (keyPayloads kmCurKeys)
+        keyMaterialDeclaration raw kmCurThreshold kmNextKeys kmNextThreshold kmWitnesses kmToad
+    d@TerminationPending{} -> datumV2WellFormed d
+
 {- | Write-time validity of a version 2 datum: the numbers it carries are
 non-negative and its key material obeys the key-state rules. No rule on
 the identifier text or the refund address.
@@ -444,7 +492,8 @@ datumV2WellFormed = \case
 
 keysWellFormed :: KeyMaterial -> Either DatumError ()
 keysWellFormed KeyMaterial{..} = do
-    first ThresholdIllFormed (wellFormed kmCurKeys kmCurThreshold)
+    raw <- maybe (Left KeyNotQualified) Right (keyPayloads kmCurKeys)
+    first ThresholdIllFormed (wellFormed raw kmCurThreshold)
     first NextIllFormed (wellFormed kmNextKeys kmNextThreshold)
     unless (all ((== 32) . BS.length) kmWitnesses) (Left WitnessWidth)
     when (length (nub kmWitnesses) /= length kmWitnesses) (Left DuplicateWitness)
@@ -460,26 +509,28 @@ predicates read, built from the facts of a version 2 checkpoint: the raw
 checkpoint counter and the sequence number for the native sequence number.
 -}
 keyStateView ::
-    -- | the raw 32-byte identifier digest
+    -- | the raw 32-byte identifier payload
     ByteString ->
     -- | the sequence number
     Integer ->
     -- | the epoch
     Integer ->
     KeyMaterial ->
-    KeyStateView
-keyStateView rawAid sn epoch KeyMaterial{..} =
-    KeyStateView
-        { cdCesrAid = rawAid
-        , cdCurKeys = kmCurKeys
-        , cdCurThreshold = kmCurThreshold
-        , cdNextKeys = kmNextKeys
-        , cdNextThreshold = kmNextThreshold
-        , cdWitnesses = kmWitnesses
-        , cdToad = kmToad
-        , cdSeq = epoch
-        , cdNativeSn = sn
-        }
+    Maybe KeyStateView
+keyStateView rawAid sn epoch KeyMaterial{..} = do
+    rawKeys <- keyPayloads kmCurKeys
+    pure
+        KeyStateView
+            { cdCesrAid = rawAid
+            , cdCurKeys = rawKeys
+            , cdCurThreshold = kmCurThreshold
+            , cdNextKeys = kmNextKeys
+            , cdNextThreshold = kmNextThreshold
+            , cdWitnesses = kmWitnesses
+            , cdToad = kmToad
+            , cdSeq = epoch
+            , cdNativeSn = sn
+            }
 
 {- | The key state of a live checkpoint, in the record the shared predicates and
 the readers use: a live version 2 datum whose identifier is canonical. A
@@ -489,7 +540,7 @@ present, not consumable).
 datumKeyState :: CheckpointDatum -> Maybe KeyStateView
 datumKeyState = \case
     V2 Live{lvAid, lvSn, lvEpoch, lvKeys} ->
-        (\raw -> keyStateView raw lvSn lvEpoch lvKeys) <$> aidDigest lvAid
+        aidDigest lvAid >>= \raw -> keyStateView raw lvSn lvEpoch lvKeys
     V2 TerminationPending{} -> Nothing
 
 -- | Whether the datum is a convicted checkpoint awaiting completion.
@@ -509,7 +560,7 @@ datumFacts = \case
 keyMaterialOf :: KeyStateView -> KeyMaterial
 keyMaterialOf KeyStateView{..} =
     KeyMaterial
-        { kmCurKeys = cdCurKeys
+        { kmCurKeys = map (qualify codeD) cdCurKeys
         , kmCurThreshold = cdCurThreshold
         , kmNextKeys = cdNextKeys
         , kmNextThreshold = cdNextThreshold
@@ -598,3 +649,35 @@ liveOfInception refund bornAt view QualifiedIdentity{..} =
         live@Live{lvKeys} ->
             live{lvAid = qiAid, lvKeys = lvKeys{kmCurKeys = qiCurKeys}}
         pending -> pending
+
+-- | The qualified spellings the datum keeps: the identifier and each current key, exactly as the event signed them.
+data QualifiedSpelling = QualifiedSpelling
+    { qsAid :: !ByteString
+    , qsCurKeys :: ![ByteString]
+    }
+    deriving stock (Show, Eq)
+
+-- | The qualified spellings of an identifier text and a datum's key material.
+qualifiedSpellingOf :: ByteString -> KeyMaterial -> QualifiedSpelling
+qualifiedSpellingOf aid KeyMaterial{kmCurKeys} = QualifiedSpelling aid kmCurKeys
+
+{- | The qualified identity of a datum whose identifier carries the E code and whose current keys carry the D code, in
+the spelling of 'liveOfInception'.
+-}
+qualifiedOfView :: KeyStateView -> QualifiedIdentity
+qualifiedOfView d =
+    QualifiedIdentity
+        { qiAid = qb64Aid (cdCesrAid d)
+        , qiCurKeys = map qb64Verkey (cdCurKeys d)
+        }
+
+-- | The reconstruction's spelling of a qualified identity.
+identitySpelling :: QualifiedIdentity -> QualifiedSpelling
+identitySpelling QualifiedIdentity{..} = QualifiedSpelling qiAid qiCurKeys
+
+{- | The qualified spellings of a view whose identifier is an @E@ digest and whose current keys are @D@ keys, the way
+keripy spells an inception or a rotation.
+-}
+spellingOfView :: KeyStateView -> QualifiedSpelling
+spellingOfView KeyStateView{cdCesrAid, cdCurKeys} =
+    QualifiedSpelling (qb64Aid cdCesrAid) (map (qualify codeD) cdCurKeys)

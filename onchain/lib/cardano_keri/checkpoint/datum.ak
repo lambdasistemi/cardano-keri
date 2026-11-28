@@ -13,7 +13,10 @@
 use aiken/builtin
 use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/threshold.{Invalid, Threshold, ThresholdError}
+use cardano_keri/checkpoint/qualified
+use cardano_keri/checkpoint/threshold.{
+  Invalid, Threshold, ThresholdError, Unweighted,
+}
 
 // ---------------------------------------------------------
 // Types (constructor order + field order frozen against the Lean vectors)
@@ -110,6 +113,8 @@ pub type DatumError {
   /// The pre-rotation `(next_keys, next_threshold)` pair failed the same
   /// F18 `well_formed` predicate.
   NextIllFormed(ThresholdError)
+  /// A current key is not a qualified verification key (44 characters, code `B` or `D`).
+  KeyNotQualified
   /// A witness verkey is not exactly 32 bytes.
   WitnessWidth
   /// The witness set has a duplicate verkey.
@@ -151,6 +156,24 @@ pub fn key_state_well_formed(d: KeyStateView) -> DatumVerdict {
   }
 }
 
+/// Well-formedness of the key state an inception declares: the same rules, and a next declaration that is either a
+/// non-empty set with a well-formed threshold or the empty set with threshold zero. Only an inception may declare
+/// no next keys; every later key state keeps `key_state_well_formed`.
+pub fn key_state_inception_well_formed(d: KeyStateView) -> DatumVerdict {
+  if bytearray.length(d.cesr_aid) != 32 {
+    DatumInvalid(CesrAidWidth)
+  } else {
+    key_material_declaration_verdict(
+      d.cur_keys,
+      d.cur_threshold,
+      d.next_keys,
+      d.next_threshold,
+      d.witnesses,
+      d.toad,
+    )
+  }
+}
+
 /// Write-time validity of a version 2 datum (the Lean leaves it to the
 /// writer): the numbers it carries are non-negative and its key material is
 /// the version 1 key material rule. No rule on `aid` or `refund_to`.
@@ -177,15 +200,75 @@ pub fn datum_v2_well_formed(d: CheckpointDatumV2) -> DatumVerdict {
   }
 }
 
+/// Write-time validity of the version 2 datum an inception writes: `datum_v2_well_formed` with the inception's next
+/// declaration.
+pub fn datum_v2_inception_well_formed(d: CheckpointDatumV2) -> DatumVerdict {
+  when d is {
+    Live { sn, epoch, born_at, keys, .. } ->
+      if sn < 0 {
+        DatumInvalid(NegativeSn)
+      } else if epoch < 0 {
+        DatumInvalid(NegativeEpoch)
+      } else if born_at < 0 {
+        DatumInvalid(NegativeBornAt)
+      } else {
+        when qualified.key_payloads(keys.cur_keys) is {
+          None -> DatumInvalid(KeyNotQualified)
+          Some(raw_keys) ->
+            key_material_declaration_verdict(
+              raw_keys,
+              keys.cur_threshold,
+              keys.next_keys,
+              keys.next_threshold,
+              keys.witnesses,
+              keys.toad,
+            )
+        }
+      }
+    TerminationPending { .. } -> datum_v2_well_formed(d)
+  }
+}
+
 fn keys_verdict(k: KeyMaterial) -> DatumVerdict {
-  key_material_verdict(
-    k.cur_keys,
-    k.cur_threshold,
-    k.next_keys,
-    k.next_threshold,
-    k.witnesses,
-    k.toad,
-  )
+  when qualified.key_payloads(k.cur_keys) is {
+    None -> DatumInvalid(KeyNotQualified)
+    Some(raw_keys) ->
+      key_material_verdict(
+        raw_keys,
+        k.cur_threshold,
+        k.next_keys,
+        k.next_threshold,
+        k.witnesses,
+        k.toad,
+      )
+  }
+}
+
+/// The key material of an inception: the empty next set with threshold zero is a declaration of no next keys, any other
+/// next pair by `threshold.next_declaration_well_formed`.
+fn key_material_declaration_verdict(
+  cur_keys: List<ByteArray>,
+  cur_threshold: Threshold,
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
+  witnesses: List<ByteArray>,
+  toad: Int,
+) -> DatumVerdict {
+  let current = threshold.well_formed(cur_keys, cur_threshold)
+  when current is {
+    Invalid(e) -> DatumInvalid(ThresholdIllFormed(e))
+    _ ->
+      if next_keys == [] && next_threshold == Unweighted(0) {
+        witnesses_verdict(witnesses, toad)
+      } else {
+        when
+          threshold.next_declaration_well_formed(next_keys, next_threshold)
+        is {
+          Invalid(e) -> DatumInvalid(NextIllFormed(e))
+          _ -> witnesses_verdict(witnesses, toad)
+        }
+      }
+  }
 }
 
 /// The current and next key-set + threshold F18 checks (the Slice-5
@@ -204,19 +287,21 @@ fn key_material_verdict(
     _ ->
       when threshold.well_formed(next_keys, next_threshold) is {
         Invalid(e) -> DatumInvalid(NextIllFormed(e))
-        _ ->
-          if !list.all(witnesses, fn(w) { bytearray.length(w) == 32 }) {
-            DatumInvalid(WitnessWidth)
-          } else if list.length(list.unique(witnesses)) != list.length(
-            witnesses,
-          ) {
-            DatumInvalid(DuplicateWitness)
-          } else if !toad_ok(toad, list.length(witnesses)) {
-            DatumInvalid(ToadRange)
-          } else {
-            DatumValid
-          }
+        _ -> witnesses_verdict(witnesses, toad)
       }
+  }
+}
+
+// Rule 14: witness verkeys exactly 32 bytes, no duplicates, `toad` in range.
+fn witnesses_verdict(witnesses: List<ByteArray>, toad: Int) -> DatumVerdict {
+  if !list.all(witnesses, fn(w) { bytearray.length(w) == 32 }) {
+    DatumInvalid(WitnessWidth)
+  } else if list.length(list.unique(witnesses)) != list.length(witnesses) {
+    DatumInvalid(DuplicateWitness)
+  } else if !toad_ok(toad, list.length(witnesses)) {
+    DatumInvalid(ToadRange)
+  } else {
+    DatumValid
   }
 }
 

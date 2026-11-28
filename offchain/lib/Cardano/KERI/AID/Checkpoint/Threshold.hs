@@ -39,6 +39,8 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
     fitsNextKeys,
     parseThresholdSpelling,
     futureThresholdFromData,
+    nextDeclarationWellFormed,
+    spans,
     evaluate,
 ) where
 
@@ -120,6 +122,8 @@ data ThresholdError
       WeightOutOfBound
     | -- | Rule 12: a clause's weights sum to @< 1@ (unsatisfiable).
       UnsatisfiableClause
+    | -- | A declaration of next commitments has more weights than commitments.
+      DeclarationWidth
     deriving stock (Show, Eq)
 
 {- | Frozen V1 upper bound on a 'Weight' denominator: @2^32 = 4294967296@
@@ -307,23 +311,53 @@ wellFormed keys th = do
                 (sum (map length clauses) == length keys)
                 (Left PartitionMismatch)
             -- Rules 7-11: each weight is canonical and bounded.
-            mapM_ checkWeight (concat clauses)
+            mapM_ (checkWeight True) (concat clauses)
             -- Rule 12: each clause is satisfiable (sum of weights >= 1).
             mapM_ checkClauseSum clauses
   where
     n = fromIntegral (length keys) :: Integer
 
-    checkWeight (Weight num den) = do
-        when (den <= 0) (Left NonPositiveDen)
-        when (num < 0) (Left NegativeNum)
-        when (num > den) (Left OverUnityWeight)
-        unless (gcd num den == 1) (Left UnreducedWeight)
-        unless (den <= maxWeightDenom) (Left WeightOutOfBound)
+    checkWeight = checkWeightIn
 
-    checkClauseSum c =
-        unless
-            (sum [num % den | Weight num den <- c] >= 1)
-            (Left UnsatisfiableClause)
+    checkClauseSum = checkClauseSumIn
+
+checkWeightIn :: Bool -> Weight -> Either ThresholdError ()
+checkWeightIn reduced (Weight num den) = do
+    when (den <= 0) (Left NonPositiveDen)
+    when (num < 0) (Left NegativeNum)
+    when (num > den) (Left OverUnityWeight)
+    when (reduced && gcd num den /= 1) (Left UnreducedWeight)
+    unless (den <= maxWeightDenom) (Left WeightOutOfBound)
+
+checkClauseSumIn :: [Weight] -> Either ThresholdError ()
+checkClauseSumIn c =
+    unless
+        (sum [num % den | Weight num den <- c] >= 1)
+        (Left UnsatisfiableClause)
+
+{- | The declaration of next commitments an inception makes: the commitments are non-empty, 32 bytes each and distinct,
+and the threshold is a numeric one within them or weighted clauses that are each non-empty, whose weights number at
+most the commitments (the clauses need not partition them), whose individual weights have a positive denominator
+within the bound and lie between zero and one, in any spelling, and whose every clause totals at least one. Every
+other key state is checked by 'wellFormed'.
+-}
+nextDeclarationWellFormed :: [ByteString] -> Threshold -> Either ThresholdError ()
+nextDeclarationWellFormed keys th = case th of
+    Weighted clauses -> do
+        wellFormed keys (Unweighted 1)
+        when (null clauses || any null clauses) (Left EmptyClause)
+        when (sum (map length clauses) > length keys) (Left DeclarationWidth)
+        mapM_ (checkWeightIn False) (concat clauses)
+        mapM_ checkClauseSumIn clauses
+    _ -> wellFormed keys th
+
+{- | Whether a declared threshold can authorize over @n@ commitments: a numeric threshold always can, a weighted one
+only when its weights number exactly @n@ (the model's member width).
+-}
+spans :: Threshold -> Int -> Bool
+spans th n = case th of
+    Unweighted _ -> True
+    Weighted clauses -> sum (map length clauses) == n
 
 -- ---------------------------------------------------------
 -- Evaluation

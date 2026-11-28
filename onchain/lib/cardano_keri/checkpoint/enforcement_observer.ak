@@ -27,6 +27,7 @@ use cardano_keri/checkpoint/message.{aid_digest}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_convict,
 }
+use cardano_keri/checkpoint/qualified
 use cardano_keri/checkpoint/role.{Active}
 
 /// The payee this envelope authorizes, for a caller that owns the payout.
@@ -76,9 +77,10 @@ fn observe_convict_impl(
   // The tip the conviction is about: the live checkpoint's key state, its
   // epoch and sequence number standing for the predicate's counter and
   // native sequence number.
+  expect Some(tip_cur) = qualified.key_payloads(keys.cur_keys)
   let tip = KeyStateView {
     cesr_aid: digest,
-    cur_keys: keys.cur_keys,
+    cur_keys: tip_cur,
     cur_threshold: keys.cur_threshold,
     next_keys: keys.next_keys,
     next_threshold: keys.next_threshold,

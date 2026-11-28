@@ -118,6 +118,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     liveOfInception,
     liveOfKeyState,
     rotatedLive,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.Deposit (
     BondOption (..),
@@ -1023,7 +1024,7 @@ productionRegisterAdvanceScenario env = do
             honest{aeWitReceipts = take 1 (aeWitReceipts honest)}
         spent = rotateSpentCheckpoint env registered
         created = rsCreated fixture
-    case advancePredicate spent created honest of
+    case advancePredicate spent created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Advance: signed evidence failed the pure predicate: "
@@ -1128,7 +1129,7 @@ productionRegisterFreezeScenario env = do
                 advanced
                 created
                 label
-    case advancePredicate (rotateSpentCheckpoint env advanced) created honest of
+    case advancePredicate (rotateSpentCheckpoint env advanced) created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Freeze: signed evidence failed the pure predicate: "
@@ -1362,6 +1363,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env registered)
         (rsCreated firstRotation)
+        (spellingOfView (rsCreated firstRotation))
         firstEvidence of
         Left predicateError ->
             fail
@@ -1405,6 +1407,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env firstAdvanced)
         (rsCreated recordedRotation)
+        (spellingOfView (rsCreated recordedRotation))
         recordedEvidence of
         Left predicateError ->
             fail
@@ -1694,7 +1697,6 @@ loadRotateStoryFixture = do
                 inceptionReceipts
     rotation <- either fail pure (atKey "rot" family)
     rotationKed <- either fail pure (atKey "ked" rotation)
-    offsets <- either fail pure (atKey "offsets" family)
     raw <- either fail pure (textAt "raw_hex" rotation >>= decodeHex)
     currentKeys <-
         either fail pure $
@@ -1738,16 +1740,6 @@ loadRotateStoryFixture = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = fromInteger (offset "t" offsets)
-                , aeOffI = fromInteger (offset "i" offsets)
-                , aeOffS = fromInteger (offset "s" offsets)
-                , aeOffK = map fromInteger (offsetsAt "k" offsets)
-                , aeOffKt = fromInteger (offset "kt" offsets)
-                , aeOffN = map fromInteger (offsetsAt "n" offsets)
-                , aeOffNt = fromInteger (offset "nt" offsets)
-                , aeOffBr = map fromInteger (offsetsAt "br" offsets)
-                , aeOffBa = map fromInteger (offsetsAt "ba" offsets)
-                , aeOffBt = fromInteger (offset "bt" offsets)
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1771,16 +1763,6 @@ loadRotateStoryFixture = do
                         >>= decodeHex
                         <&> genKeyDSIGN . mkSeedFromBytes
                 )
-    offset key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerAt key value)
-    offsetsAt key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerArrayAt key value)
 
 loadConvictStoryFixture :: IO ConvictStoryFixture
 loadConvictStoryFixture = do
@@ -1864,7 +1846,6 @@ rotateStoryFrom ::
 rotateStoryFrom registration prior record rotationSigners currentSigners = do
     event <- atKey "event" record
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
     nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
@@ -1891,16 +1872,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = intOffset "t" offsets
-                , aeOffI = intOffset "i" offsets
-                , aeOffS = intOffset "s" offsets
-                , aeOffK = intOffsets "k" offsets
-                , aeOffKt = intOffset "kt" offsets
-                , aeOffN = intOffsets "n" offsets
-                , aeOffNt = intOffset "nt" offsets
-                , aeOffBr = intOffsets "br" offsets
-                , aeOffBa = intOffsets "ba" offsets
-                , aeOffBt = intOffset "bt" offsets
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1914,19 +1885,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
             , rsRotationSigners = rotationSigners
             , rsCurrentSigners = currentSigners
             }
-  where
-    intOffset key value =
-        fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerAt key value)
-    intOffsets key value =
-        map fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerArrayAt key value)
 
 seedSignersAt ::
     Text ->

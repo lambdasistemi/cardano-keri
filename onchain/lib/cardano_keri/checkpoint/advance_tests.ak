@@ -27,21 +27,31 @@
 //// index, bad signature, duplicate index, wrong-member index, cut-witness
 //// receipt, outgoing-only quorum, non-empty receipts at toad=0).
 
+use aiken/collection/list
 use cardano_keri/checkpoint/advance.{
-  AE10ToadMismatch, AE1EventTypeMismatch, AE2AidMismatch, AE3SequenceMismatch,
-  AE4CurKeysMismatch, AE5CurThresholdMismatch, AE6NextKeysMismatch,
-  AE7NextThresholdMismatch, AE8WitCutMismatch, AE9WitAddMismatch,
-  AdvEventBinding, AdvMessageInvalid, AdvReceiptQuorumUnsatisfied,
+  AEEventNotCanonical, AdvEventBinding, AdvMessageInvalid,
+  AdvReceiptQuorumUnsatisfied, AdvanceEventInvalid, AdvanceEventValid,
   AdvanceEvidence, AdvancePredicateInvalid, AdvancePredicateValid,
-  AdvancePredicateVerdict, advance_predicate,
+  AdvancePredicateVerdict, advance_predicate, event_binding,
 }
 use cardano_keri/checkpoint/advance_vectors as vec
+use cardano_keri/checkpoint/binding_reference.{
+  RotationAddDiffers, RotationAidDiffers, RotationAxis, RotationBound,
+  RotationCurKeysDiffer, RotationCurThresholdDiffers, RotationCutDiffers,
+  RotationNextKeysDiffer, RotationNextThresholdDiffers, RotationSequenceDiffers,
+  RotationToadDiffers, RotationTypeDiffers, RotationUndecodable, rotation_axis,
+}
 use cardano_keri/checkpoint/datum.{KeyStateView, ToadRange}
+use cardano_keri/checkpoint/event_decoder.{ErrVersionPrefix}
 use cardano_keri/checkpoint/message.{
   Eq5SequenceMismatch, Eq6CurrentQuorumUnsatisfied,
   Eq6PriorNextQuorumUnsatisfied, Eq7CreatedStateMismatch, Eq8CreatedIllFormed,
   EqW1CutInvalid, EqW2AddInvalid, SpentCheckpoint,
 }
+use cardano_keri/checkpoint/registration.{QualifiedSpelling}
+use cardano_keri/checkpoint/registration_vectors as reg
+use cardano_keri/checkpoint/spelling_fixture
+use cardano_keri/checkpoint/threshold.{Threshold, Unweighted, Weight, Weighted}
 
 // ---------------------------------------------------------
 // Harness: parity + pinned-constructor check per vector
@@ -57,7 +67,7 @@ fn parity(
   recorded: AdvancePredicateVerdict,
   pinned: AdvancePredicateVerdict,
 ) -> Bool {
-  advance_predicate(spent, created, e) == recorded && recorded == pinned
+  advance_predicate(spent, created, spelling_fixture.of_view(created), e) == recorded && recorded == pinned
 }
 
 // ---------------------------------------------------------
@@ -117,237 +127,165 @@ test pos_owner_replay() {
   let first_run = advance_predicate(
     vec.pos_adv_wit_2key_spent,
     vec.pos_adv_wit_2key_created,
+    spelling_fixture.of_view(vec.pos_adv_wit_2key_created),
     vec.pos_adv_wit_2key_evidence,
   )
   let second_run = advance_predicate(
     vec.pos_adv_wit_2key_spent,
     vec.pos_adv_wit_2key_created,
+    spelling_fixture.of_view(vec.pos_adv_wit_2key_created),
     vec.pos_adv_wit_2key_evidence,
   )
   first_run == AdvancePredicateValid && second_run == AdvancePredicateValid
 }
 
 // ---------------------------------------------------------
-// V6: AE1-AE10 event-binding negatives (one per axis)
+// V6: AE0-AE10 event-binding negatives (one per axis), each against the matched honest binding
 // ---------------------------------------------------------
 
-test ae1_off_t_at_i_rejects() {
-  parity(
-    vec.ae1_off_t_at_i_spent,
-    vec.ae1_off_t_at_i_created,
-    vec.ae1_off_t_at_i_evidence,
-    vec.ae1_off_t_at_i_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE1EventTypeMismatch)),
+fn honest_spelling() -> QualifiedSpelling {
+  spelling_fixture.of_view(vec.pos_adv_wit_2key_created)
+}
+
+/// The production binding refuses, and the reference reading names the field that differs.
+fn refused_at(
+  axis: RotationAxis,
+  created: KeyStateView,
+  q: QualifiedSpelling,
+  e: AdvanceEvidence,
+) -> Bool {
+  event_binding(created, q, e) == AdvanceEventInvalid(AEEventNotCanonical) && rotation_axis(
+    created,
+    q,
+    e.wit_cut,
+    e.wit_add,
+    e.event_bytes,
+  ) == axis
+}
+
+test ae_honest_binding_holds() {
+  event_binding(
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
+  ) == AdvanceEventValid && rotation_axis(
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence.wit_cut,
+    vec.pos_adv_wit_2key_evidence.wit_add,
+    vec.pos_adv_wit_2key_evidence.event_bytes,
+  ) == RotationBound
+}
+
+test ae0_undecodable_bytes_rejects() {
+  refused_at(
+    RotationUndecodable(ErrVersionPrefix),
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    AdvanceEvidence { ..vec.pos_adv_wit_2key_evidence, event_bytes: "rot" },
   )
 }
 
-test ae2_off_i_shift_rejects() {
-  parity(
-    vec.ae2_off_i_shift_spent,
-    vec.ae2_off_i_shift_created,
-    vec.ae2_off_i_shift_evidence,
-    vec.ae2_off_i_shift_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE2AidMismatch)),
+test ae1_inception_rejects() {
+  refused_at(
+    RotationTypeDiffers,
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    AdvanceEvidence {
+      ..vec.pos_adv_wit_2key_evidence,
+      event_bytes: reg.pos_2key_evidence.event_bytes,
+    },
   )
 }
 
-test ae3_off_s_at_t_rejects() {
-  parity(
-    vec.ae3_off_s_at_t_spent,
-    vec.ae3_off_s_at_t_created,
-    vec.ae3_off_s_at_t_evidence,
-    vec.ae3_off_s_at_t_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE3SequenceMismatch)),
+test ae2_other_identifier_rejects() {
+  refused_at(
+    RotationAidDiffers,
+    vec.pos_adv_wit_2key_created,
+    QualifiedSpelling { ..honest_spelling(), aid: reg_aid_text() },
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae4_overlap_k_rejects() {
-  parity(
-    vec.ae4_overlap_k_spent,
-    vec.ae4_overlap_k_created,
-    vec.ae4_overlap_k_evidence,
-    vec.ae4_overlap_k_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE4CurKeysMismatch)),
+test ae3_other_sequence_rejects() {
+  refused_at(
+    RotationSequenceDiffers,
+    KeyStateView { ..vec.pos_adv_wit_2key_created, native_sn: 2 },
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae5_off_kt_at_bt_rejects() {
-  parity(
-    vec.ae5_off_kt_at_bt_spent,
-    vec.ae5_off_kt_at_bt_created,
-    vec.ae5_off_kt_at_bt_evidence,
-    vec.ae5_off_kt_at_bt_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE5CurThresholdMismatch)),
+test ae4_other_current_keys_rejects() {
+  let q = honest_spelling()
+  refused_at(
+    RotationCurKeysDiffer,
+    vec.pos_adv_wit_2key_created,
+    QualifiedSpelling { ..q, cur_keys: list.reverse(q.cur_keys) },
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae6_off_n_at_k_rejects() {
-  parity(
-    vec.ae6_off_n_at_k_spent,
-    vec.ae6_off_n_at_k_created,
-    vec.ae6_off_n_at_k_evidence,
-    vec.ae6_off_n_at_k_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE6NextKeysMismatch)),
+test ae5_other_current_threshold_rejects() {
+  refused_at(
+    RotationCurThresholdDiffers,
+    KeyStateView {
+      ..vec.pos_adv_wit_2key_created,
+      cur_threshold: Unweighted(1),
+    },
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae7_off_nt_at_kt_rejects() {
-  parity(
-    vec.ae7_off_nt_at_kt_spent,
-    vec.ae7_off_nt_at_kt_created,
-    vec.ae7_off_nt_at_kt_evidence,
-    vec.ae7_off_nt_at_kt_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE7NextThresholdMismatch)),
+test ae6_other_next_keys_rejects() {
+  let created = vec.pos_adv_wit_2key_created
+  refused_at(
+    RotationNextKeysDiffer,
+    KeyStateView { ..created, next_keys: list.reverse(created.next_keys) },
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae8_off_br_at_ba_rejects() {
-  parity(
-    vec.ae8_off_br_at_ba_spent,
-    vec.ae8_off_br_at_ba_created,
-    vec.ae8_off_br_at_ba_evidence,
-    vec.ae8_off_br_at_ba_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE8WitCutMismatch)),
+test ae7_other_next_threshold_rejects() {
+  refused_at(
+    RotationNextThresholdDiffers,
+    KeyStateView {
+      ..vec.pos_adv_wit_2key_created,
+      next_threshold: Unweighted(1),
+    },
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
   )
 }
 
-test ae9_off_ba_at_br_rejects() {
-  parity(
-    vec.ae9_off_ba_at_br_spent,
-    vec.ae9_off_ba_at_br_created,
-    vec.ae9_off_ba_at_br_evidence,
-    vec.ae9_off_ba_at_br_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE9WitAddMismatch)),
+test ae8_other_cut_rejects() {
+  refused_at(
+    RotationCutDiffers,
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    AdvanceEvidence { ..vec.pos_adv_wit_2key_evidence, wit_cut: [] },
   )
 }
 
-test ae10_off_bt_at_kt_rejects() {
-  parity(
-    vec.ae10_off_bt_at_kt_spent,
-    vec.ae10_off_bt_at_kt_created,
-    vec.ae10_off_bt_at_kt_evidence,
-    vec.ae10_off_bt_at_kt_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE10ToadMismatch)),
+test ae9_other_add_rejects() {
+  refused_at(
+    RotationAddDiffers,
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    AdvanceEvidence { ..vec.pos_adv_wit_2key_evidence, wit_add: [] },
   )
 }
 
-// ---------------------------------------------------------
-// A-001 condition 1: the offset-misdirection family
-// ---------------------------------------------------------
-
-test mis_trunc_i_rejects() {
-  parity(
-    vec.mis_trunc_i_spent,
-    vec.mis_trunc_i_created,
-    vec.mis_trunc_i_evidence,
-    vec.mis_trunc_i_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE2AidMismatch)),
+test ae10_other_toad_rejects() {
+  refused_at(
+    RotationToadDiffers,
+    KeyStateView { ..vec.pos_adv_wit_2key_created, toad: 3 },
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
   )
 }
-
-test mis_neg_i_rejects() {
-  parity(
-    vec.mis_neg_i_spent,
-    vec.mis_neg_i_created,
-    vec.mis_neg_i_evidence,
-    vec.mis_neg_i_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE2AidMismatch)),
-  )
-}
-
-test mis_dup_k_rejects() {
-  parity(
-    vec.mis_dup_k_spent,
-    vec.mis_dup_k_created,
-    vec.mis_dup_k_evidence,
-    vec.mis_dup_k_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE4CurKeysMismatch)),
-  )
-}
-
-test mis_br_into_k_rejects() {
-  parity(
-    vec.mis_br_into_k_spent,
-    vec.mis_br_into_k_created,
-    vec.mis_br_into_k_evidence,
-    vec.mis_br_into_k_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE8WitCutMismatch)),
-  )
-}
-
-test mis_short_k_rejects() {
-  parity(
-    vec.mis_short_k_spent,
-    vec.mis_short_k_created,
-    vec.mis_short_k_evidence,
-    vec.mis_short_k_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE4CurKeysMismatch)),
-  )
-}
-
-test mis_short_n_rejects() {
-  parity(
-    vec.mis_short_n_spent,
-    vec.mis_short_n_created,
-    vec.mis_short_n_evidence,
-    vec.mis_short_n_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE6NextKeysMismatch)),
-  )
-}
-
-test mis_empty_br_rejects() {
-  parity(
-    vec.mis_empty_br_spent,
-    vec.mis_empty_br_created,
-    vec.mis_empty_br_evidence,
-    vec.mis_empty_br_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE8WitCutMismatch)),
-  )
-}
-
-test mis_empty_ba_rejects() {
-  parity(
-    vec.mis_empty_ba_spent,
-    vec.mis_empty_ba_created,
-    vec.mis_empty_ba_evidence,
-    vec.mis_empty_ba_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE9WitAddMismatch)),
-  )
-}
-
-test mis_t_into_p_rejects() {
-  parity(
-    vec.mis_t_into_p_spent,
-    vec.mis_t_into_p_created,
-    vec.mis_t_into_p_evidence,
-    vec.mis_t_into_p_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE1EventTypeMismatch)),
-  )
-}
-
-test mis_kt_into_d_rejects() {
-  parity(
-    vec.mis_kt_into_d_spent,
-    vec.mis_kt_into_d_created,
-    vec.mis_kt_into_d_evidence,
-    vec.mis_kt_into_d_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE5CurThresholdMismatch)),
-  )
-}
-
-test mis_bt_into_a_rejects() {
-  parity(
-    vec.mis_bt_into_a_spent,
-    vec.mis_bt_into_a_created,
-    vec.mis_bt_into_a_evidence,
-    vec.mis_bt_into_a_verdict,
-    AdvancePredicateInvalid(AdvEventBinding(AE10ToadMismatch)),
-  )
-}
-
-// ---------------------------------------------------------
-// V5: controller-evidence negatives (folded into eq6)
-// ---------------------------------------------------------
 
 test ctrl_bad_index_rejects() {
   parity(
@@ -527,6 +465,7 @@ test permissionless_holds_wit_2key() {
   advance_predicate(
     vec.pos_adv_wit_2key_spent,
     vec.pos_adv_wit_2key_created,
+    spelling_fixture.of_view(vec.pos_adv_wit_2key_created),
     vec.pos_adv_wit_2key_evidence,
   ) == AdvancePredicateValid
 }
@@ -535,6 +474,7 @@ test permissionless_holds_keep() {
   advance_predicate(
     vec.pos_adv_keep_spent,
     vec.pos_adv_keep_created,
+    spelling_fixture.of_view(vec.pos_adv_keep_created),
     vec.pos_adv_keep_evidence,
   ) == AdvancePredicateValid
 }
@@ -631,4 +571,86 @@ test v7_downgrade_nonempty_receipts_rejects() {
     vec.v7_downgrade_nonempty_receipts_verdict,
     AdvancePredicateInvalid(AdvReceiptQuorumUnsatisfied),
   )
+}
+
+fn reg_aid_text() -> ByteArray {
+  spelling_fixture.of_view(reg.pos_2key_datum).aid
+}
+
+// ---------------------------------------------------------
+// A checkpoint that declared no next keys cannot be advanced: a zero threshold over no commitments would be
+// satisfied by no evidence at all, and the pre-rotation gate would open to anyone.
+// ---------------------------------------------------------
+
+fn abandoned_spent() -> SpentCheckpoint {
+  SpentCheckpoint {
+    ..vec.pos_adv_wit_2key_spent,
+    next_keys: [],
+    next_threshold: Unweighted(0),
+  }
+}
+
+test an_advance_from_a_checkpoint_with_no_next_keys_is_refused() {
+  advance_predicate(
+    abandoned_spent(),
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
+  ) == AdvancePredicateInvalid(AdvMessageInvalid(Eq6PriorNextQuorumUnsatisfied))
+}
+
+/// The matched control: the same advance from the checkpoint with its commitments is accepted.
+test the_same_advance_from_a_checkpoint_with_next_keys_is_accepted() {
+  advance_predicate(
+    vec.pos_adv_wit_2key_spent,
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
+  ) == AdvancePredicateValid
+}
+
+// ---------------------------------------------------------
+// The prior declaration authorizes a rotation only at its exact member width: a weighted next declaration whose weights
+// number fewer than its commitments may be made at an inception, and no signer list satisfies it afterwards.
+// ---------------------------------------------------------
+
+fn whole_clauses() -> Threshold {
+  Weighted([[Weight { num: 1, den: 1 }], [Weight { num: 1, den: 1 }]])
+}
+
+fn declared_by(
+  next_keys: List<ByteArray>,
+  next_threshold: Threshold,
+) -> SpentCheckpoint {
+  SpentCheckpoint { ..vec.pos_adv_wit_2key_spent, next_keys, next_threshold }
+}
+
+fn advance_from(spent: SpentCheckpoint) -> AdvancePredicateVerdict {
+  advance_predicate(
+    spent,
+    vec.pos_adv_wit_2key_created,
+    honest_spelling(),
+    vec.pos_adv_wit_2key_evidence,
+  )
+}
+
+/// Two whole-weight clauses over three commitments: the two revealed keys are the first two commitments, so every
+/// revealed position is satisfied, yet the declaration has width two and three commitments.
+test an_advance_from_a_partial_width_prior_declaration_is_refused() {
+  advance_from(
+    declared_by(
+      list.concat(
+        vec.pos_adv_wit_2key_spent.next_keys,
+        [#"0909090909090909090909090909090909090909090909090909090909090909"],
+      ),
+      whole_clauses(),
+    ),
+  ) == AdvancePredicateInvalid(AdvMessageInvalid(Eq6PriorNextQuorumUnsatisfied))
+}
+
+/// The matched control: the same clauses over exactly two commitments authorize the same rotation.
+test an_advance_from_an_exact_width_prior_declaration_is_accepted() {
+  advance_from(
+    declared_by(vec.pos_adv_wit_2key_spent.next_keys, whole_clauses()),
+  ) == AdvancePredicateValid
 }

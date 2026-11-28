@@ -1,6 +1,6 @@
 {
   "base": "ec03505d53fed007537abb9b685d28ac9f4fdcb6c259b4a7c7dafae807fe9e4d",
-  "note": "Top-level string validity rows on the grammar base (I02 of the #589 comparison): single defects, declared size fixed up; sha256 of each body for both readers.",
+  "note": "Top-level string validity rows on the grammar base (the keripy inception I02 of the comparison corpus): single errors, declared size fixed up; sha256 of each body for both readers.",
   "rows": [
     {
       "error": null,

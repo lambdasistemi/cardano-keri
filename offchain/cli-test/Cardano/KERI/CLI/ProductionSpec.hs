@@ -16,6 +16,7 @@ module Cardano.KERI.CLI.ProductionSpec (spec) where
 import Cardano.Crypto.Hash.Class (hashFromBytes)
 import Cardano.KERI.CLI (Instructions (Status), runInstructions)
 import Cardano.KERI.CLI.Backend (BackendSettings (..))
+import Cardano.KERI.Deployment.RegistryBookingCommand (RegistryReadFlags (..))
 import Cardano.KERI.Indexer.Query.Server (mkQueryApplication)
 import Cardano.KERI.Indexer.Query.Tx (QueryHandle (..))
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
@@ -63,9 +64,11 @@ spec = describe "runInstructions / runBackendStatusCLI production composition (N
                             , backendKoiosUrl = "https://unused.example.invalid"
                             , backendKoiosToken = Nothing
                             }
-                result <- try @SomeException (runInstructions (Status settings))
+                result <- try @SomeException (runInstructions (Status settings firstDeploymentFlags))
                 result `shouldSatisfy` isRight
   where
+    -- the first deployment, read through its manifest: no registry flag
+    firstDeploymentFlags = RegistryReadFlags Nothing Nothing Nothing 1 Nothing Nothing
     isRight (Right ()) = True
     isRight (Left _) = False
 

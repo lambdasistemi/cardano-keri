@@ -62,16 +62,6 @@ advanceEvidence :: AdvanceEvidence
 advanceEvidence =
     AdvanceEvidence
         { aeEventBytes = "rot"
-        , aeOffT = 1
-        , aeOffI = 2
-        , aeOffS = 3
-        , aeOffK = [4]
-        , aeOffKt = 5
-        , aeOffN = [6]
-        , aeOffNt = 7
-        , aeOffBr = [8]
-        , aeOffBa = [9]
-        , aeOffBt = 10
         , aeWitCut = ["cut"]
         , aeWitAdd = ["add"]
         , aeCtrlSigs = [(0, BS.replicate 64 0xc1)]
@@ -256,16 +246,6 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "rot"
-                , I 1
-                , I 2
-                , I 3
-                , List [I 4]
-                , I 5
-                , List [I 6]
-                , I 7
-                , List [I 8]
-                , List [I 9]
-                , I 10
                 , List [B "cut"]
                 , List [B "add"]
                 , List [List [I 0, B (BS.replicate 64 0xc1)]]

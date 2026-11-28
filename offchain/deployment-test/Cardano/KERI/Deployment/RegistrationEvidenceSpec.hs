@@ -19,6 +19,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     KeyMaterial (..),
     KeyStateView (..),
     QualifiedIdentity (..),
+    identitySpelling,
     liveOfInception,
  )
 import Cardano.KERI.AID.Checkpoint.InceptionPrefix (PrefixKind (..))
@@ -28,7 +29,7 @@ import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationError (..),
     RegistrationEvidence (..),
     proofTokenName,
-    registrationPredicateOver,
+    registrationPredicate,
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..), Weight (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
@@ -137,11 +138,11 @@ spec = describe "offset-free registration evidence" $ do
                         (inceptionEvidence export)
                     )
         it "refuses a datum that carries 1/2 + 1/2 for the signed 2/4 + 2/4, at the next threshold" $
-            withNext "D next unreduced" [[Weight 1 2, Weight 1 2]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+            withNext "D next unreduced" [[Weight 1 2, Weight 1 2]] >>= (`shouldBe` Left R6EventNotCanonical)
         it "refuses a datum that carries 2/4 + 2/4 for the signed 1/2 + 1/2, at the next threshold" $
-            withNext "D next exact one" [[Weight 2 4, Weight 2 4]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+            withNext "D next exact one" [[Weight 2 4, Weight 2 4]] >>= (`shouldBe` Left R6EventNotCanonical)
         it "refuses a datum that carries 2/2 and 2/2 for the signed 1 and 1, at the next threshold" $
-            withNext "D next partial coverage" [[Weight 2 2], [Weight 2 2]] >>= (`shouldBe` Left E7NextThresholdMismatch)
+            withNext "D next partial coverage" [[Weight 2 2], [Weight 2 2]] >>= (`shouldBe` Left R6EventNotCanonical)
         it "keeps admitting the datum that carries the signed pairs literally" $ do
             withNext "D next unreduced" [[Weight 2 4, Weight 2 4]] >>= (`shouldBe` Right ())
             withNext "D next exact one" [[Weight 1 2, Weight 1 2]] >>= (`shouldBe` Right ())
@@ -162,20 +163,23 @@ spec = describe "offset-free registration evidence" $ do
                 it (name <> ": " <> what) $ do
                     refs <- loadReferences
                     export <- exportOf (pick (T.pack name) refs)
+                    let (q, d) = mutate (inceptionQualified export, inceptionDatum export)
                     registrationPredicateOver
                         context
-                        (inceptionQualified export)
-                        (mutate (inceptionDatum export))
+                        q
+                        d
                         1_007_000_000
                         (inceptionEvidence export)
                         `shouldBe` Left expected
-        refused "pos_2key" "identifier" (\d -> d{cdCesrAid = BS.map (+ 1) (cdCesrAid d)}) E2AidMismatch
-        refused "pos_2key" "current keys" (\d -> d{cdCurKeys = reverse (cdCurKeys d)}) E4CurKeysMismatch
-        refused "pos_2key" "current threshold" (\d -> d{cdCurThreshold = other (cdCurThreshold d)}) E5CurThresholdMismatch
-        refused "pos_2key" "next keys" (\d -> d{cdNextKeys = map (BS.map (+ 1)) (cdNextKeys d)}) E6NextKeysMismatch
-        refused "pos_2key" "next threshold" (\d -> d{cdNextThreshold = other (cdNextThreshold d)}) E7NextThresholdMismatch
-        refused "pos_2key" "witnesses" (\d -> d{cdWitnesses = [BS.replicate 32 7]}) E8WitnessesMismatch
-        refused "pos_2key" "witness threshold" (\d -> d{cdToad = 1}) E9ToadMismatch
+        -- the reconstruction rebuilds the event from the datum's own spellings: the qualified identity and the
+        -- datum move together, so a mutation changes both sides it reaches
+        refused "pos_2key" "identifier" (\(q, d) -> (q{qiAid = flipFirst (qiAid q)}, d{cdCesrAid = BS.map (+ 1) (cdCesrAid d)})) R6EventNotCanonical
+        refused "pos_2key" "current keys" (\(q, d) -> (q{qiCurKeys = reverse (qiCurKeys q)}, d{cdCurKeys = reverse (cdCurKeys d)})) R6EventNotCanonical
+        refused "pos_2key" "current threshold" (\(q, d) -> (q, d{cdCurThreshold = other (cdCurThreshold d)})) R6EventNotCanonical
+        refused "pos_2key" "next keys" (\(q, d) -> (q, d{cdNextKeys = map (BS.map (+ 1)) (cdNextKeys d)})) R6EventNotCanonical
+        refused "pos_2key" "next threshold" (\(q, d) -> (q, d{cdNextThreshold = other (cdNextThreshold d)})) R6EventNotCanonical
+        refused "pos_2key" "witnesses" (\(q, d) -> (q, d{cdWitnesses = [BS.replicate 32 7]})) R6EventNotCanonical
+        refused "pos_2key" "witness threshold" (\(q, d) -> (q, d{cdToad = 1})) R6EventNotCanonical
         it "I01: a key spelled with another code than the signed one is refused as the current keys" $ do
             refs <- loadReferences
             export <- exportOf (pick "I01" refs)
@@ -187,7 +191,7 @@ spec = describe "offset-free registration evidence" $ do
                 (inceptionDatum export)
                 1_007_000_000
                 (inceptionEvidence export)
-                `shouldBe` Left E4CurKeysMismatch
+                `shouldBe` Left R6EventNotCanonical
     describe "the sequence number is the canonical spelling" $ do
         -- a key-derived prefix is not a digest of the body, so the spelling is the only difference
         let spelledAs replacement =
@@ -205,7 +209,7 @@ spec = describe "offset-free registration evidence" $ do
                         (inceptionDatum export)
                         1_007_000_000
                         evidence
-                        `shouldBe` Left E3SequenceMismatch
+                        `shouldBe` Left R6EventNotCanonical
         mapM_ spelledAs ["00", "0x0", "", "1", "A", "\\u0030", "\\u0030\\u0030"]
         it "a respelled body of a self-addressing prefix is refused earlier, as not derived" $ do
             refs <- loadReferences
@@ -217,7 +221,7 @@ spec = describe "offset-free registration evidence" $ do
                 (inceptionDatum export)
                 1_007_000_000
                 (inceptionEvidence export){reEventBytes = respell (refEvent r) "\"s\":\"0\"" "\"s\":\"00\""}
-                `shouldBe` Left E2AidMismatch
+                `shouldBe` Left R6EventNotCanonical
     describe "the controller signatures bind the exact signed bytes" $
         it "a grammar-valid body with another own SAID is refused at the quorum, after every binding check" $ do
             refs <- loadReferences
@@ -238,8 +242,14 @@ spec = describe "offset-free registration evidence" $ do
     context = DeploymentContext{dcMinAda = 2_000_000, dcDReg = 1_000_000_000}
     other (Unweighted n) = Unweighted (n + 1)
     other t = t
+    flipFirst t = BS.take 1 t <> (if BS.index t 1 == 0x41 then "B" else "A") <> BS.drop 2 t
     -- another valid E-code digest: the second character of the payload changed
     swapSecond t = BS.take 2 t <> (if BS.index t 2 == 0x41 then "B" else "A") <> BS.drop 3 t
+
+-- | The registration predicate over a qualified identity, as the importer carries it.
+registrationPredicateOver ::
+    DeploymentContext -> QualifiedIdentity -> KeyStateView -> Integer -> RegistrationEvidence -> Either RegistrationError ()
+registrationPredicateOver ctx q d = registrationPredicate ctx d (identitySpelling q)
 
 accepted :: InceptionExport -> IO ()
 accepted export =

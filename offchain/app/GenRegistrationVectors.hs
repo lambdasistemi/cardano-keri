@@ -31,18 +31,23 @@ module Main (main) where
 import Cardano.KERI.AID.CESR (
     Primitive (..),
     parsePrimitive,
+    qb64Aid,
+    qb64Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     DatumError (..),
     KeyStateView (..),
+    QualifiedSpelling (..),
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
     InceptionError (..),
     RegistrationError (..),
+    RegistrationEvidence (..),
     proofTokenName,
     qb64WitnessVerkey,
     registrationDepositFloor,
+    registrationPredicate,
     respellHex,
     respellThreshold,
  )
@@ -71,7 +76,6 @@ import Data.List (intercalate)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
-import LegacyRegistration (RegistrationEvidence (..), registrationPredicate)
 import Numeric (readHex)
 import System.Environment (getArgs)
 import Text.Read (readMaybe)
@@ -152,6 +156,7 @@ assertVerdict s =
         registrationPredicate
             (scCtx s)
             (scDatum s)
+            (spellingOf (scDatum s))
             (scLovelace s)
             (scEvidence s)
 
@@ -181,16 +186,6 @@ regCase fx key = do
     kt <- thresholdField ked "kt"
     nt <- thresholdField ked "nt"
     bt <- hexIntField ked "bt"
-    offs <- note (key <> ".offsets missing") (lookupKey "offsets" sub)
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offB <- offList offs "b"
     eventSigs <- sigList sub "event_sigs"
     receipts <- optionalSigList sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
@@ -213,23 +208,11 @@ regCase fx key = do
             , rcEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = eventSigs
                     , reWitReceipts = receipts
                     }
             , rcOldMessageSigs = obsoleteSigs
             }
-  where
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- ---------------------------------------------------------
 -- Scenarios (mirror the S2 RegistrationSpec families)
@@ -335,7 +318,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum dip)
         funded
         (rcEvidence dip)
-        (Left E1EventTypeMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e1_drt"
         "reg_drt: real keripy delegated rotation -> E1"
@@ -343,7 +326,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum drt)
         funded
         (rcEvidence drt)
-        (Left E1EventTypeMismatch)
+        (Left R6EventNotCanonical)
     , let d = (rcDatum wit){cdCesrAid = cdCesrAid (rcDatum wgt)}
        in sc
             "e2_crossed_aid"
@@ -352,15 +335,7 @@ buildScenarios wit wgt dip drt r2k r7k =
             d
             funded
             (rcEvidence wit)
-            (Left E2AidMismatch)
-    , sc
-        "e3_off_s_at_t"
-        "off_s pointed at t -> E3"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffS = reOffT (rcEvidence wit)}
-        (Left E3SequenceMismatch)
+            (Left R6EventNotCanonical)
     , let d =
             (rcDatum wit)
                 { cdCurKeys = take 2 (cdCurKeys (rcDatum wgt))
@@ -372,7 +347,7 @@ buildScenarios wit wgt dip drt r2k r7k =
             d
             funded
             (rcEvidence wit)
-            (Left E4CurKeysMismatch)
+            (Left R6EventNotCanonical)
     , sc
         "e5_kt_restated"
         "restated unweighted kt -> E5"
@@ -380,7 +355,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdCurThreshold = Unweighted 1}
         funded
         (rcEvidence wit)
-        (Left E5CurThresholdMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e5_weighted_mutated"
         "mutated weighted clause -> E5"
@@ -391,7 +366,7 @@ buildScenarios wit wgt dip drt r2k r7k =
             }
         funded
         (rcEvidence wgt)
-        (Left E5CurThresholdMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e6_next_flipped"
         "substituted next digest -> E6"
@@ -399,7 +374,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdNextKeys = flipFirst (cdNextKeys (rcDatum wit))}
         funded
         (rcEvidence wit)
-        (Left E6NextKeysMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e7_nt_restated"
         "restated nt -> E7"
@@ -407,7 +382,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdNextThreshold = Unweighted 1}
         funded
         (rcEvidence wit)
-        (Left E7NextThresholdMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e8_witness_flipped"
         "substituted witness verkey -> E8"
@@ -415,7 +390,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdWitnesses = flipFirst (cdWitnesses (rcDatum wit))}
         funded
         (rcEvidence wit)
-        (Left E8WitnessesMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e8_witness_count"
         "witness count mismatch -> E8"
@@ -423,7 +398,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdWitnesses = drop 1 (cdWitnesses (rcDatum wit))}
         funded
         (rcEvidence wit)
-        (Left E8WitnessesMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "e9_toad_restated"
         "restated toad -> E9"
@@ -431,7 +406,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         (rcDatum wit){cdToad = 1}
         funded
         (rcEvidence wit)
-        (Left E9ToadMismatch)
+        (Left R6EventNotCanonical)
     , sc
         "r7_old_message_sigs"
         "obsolete InceptionMessage-only signatures -> R7"
@@ -522,7 +497,7 @@ buildScenarios wit wgt dip drt r2k r7k =
         ctx0
         (rcDatum wit)
         funded
-        (rcEvidence wit){reEventBytes = flipLast (rcRaw wit)}
+        (rcEvidence wit){reCtrlSigs = reCtrlSigs (rcEvidence wgt)}
         (Left R7QuorumUnsatisfied)
     , sc
         "r7_receipts_empty"
@@ -618,105 +593,6 @@ buildScenarios wit wgt dip drt r2k r7k =
         (boundary - 1)
         (rcEvidence wit)
         (Left R8DepositBelowMinimum)
-    , sc
-        "mis_off_i_shift"
-        "misdirection: off_i shifted by one -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = reOffI (rcEvidence wit) + 1}
-        (Left E2AidMismatch)
-    , let k0 = first1 (reOffK (rcEvidence wit))
-       in sc
-            "mis_overlap_k"
-            "misdirection: overlapping spans off_k[1]=off_k[0]+1 -> E4"
-            ctx0
-            (rcDatum wit)
-            funded
-            (rcEvidence wit){reOffK = [k0, k0 + 1]}
-            (Left E4CurKeysMismatch)
-    , sc
-        "mis_k_into_n"
-        "misdirection: off_k pointed into n (D vs E code) -> E4"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffK = reOffN (rcEvidence wit)}
-        (Left E4CurKeysMismatch)
-    , sc
-        "mis_k_into_b"
-        "misdirection: off_k pointed into b (D vs B code) -> E4"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffK = take 2 (reOffB (rcEvidence wit))}
-        (Left E4CurKeysMismatch)
-    , sc
-        "mis_i_at_k"
-        "misdirection: off_i pointed at a k entry (E vs D code) -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = first1 (reOffK (rcEvidence wit))}
-        (Left E2AidMismatch)
-    , sc
-        "mis_b_at_k"
-        "misdirection: off_b pointed at k entries (B vs D code) -> E8"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit)
-            { reOffB =
-                reOffK (rcEvidence wit)
-                    <> drop 2 (reOffB (rcEvidence wit))
-            }
-        (Left E8WitnessesMismatch)
-    , sc
-        "mis_trunc_i"
-        "misdirection: off_i at the byte tail (truncated) -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = BS.length (rcRaw wit) - 10}
-        (Left E2AidMismatch)
-    , let k0 = first1 (reOffK (rcEvidence wit))
-       in sc
-            "mis_trunc_k"
-            "misdirection: last off_k at the tail (truncated) -> E4"
-            ctx0
-            (rcDatum wit)
-            funded
-            (rcEvidence wit)
-                { reOffK = [k0, BS.length (rcRaw wit) - 20]
-                }
-            (Left E4CurKeysMismatch)
-    , sc
-        "mis_neg_i"
-        "misdirection: negative off_i -> E2"
-        ctx0
-        (rcDatum wit)
-        funded
-        (rcEvidence wit){reOffI = -1}
-        (Left E2AidMismatch)
-    , let k0raw = first1 (cdCurKeys (rcDatum wit))
-          k0off = first1 (reOffK (rcEvidence wit))
-          d = (rcDatum wit){cdCurKeys = [k0raw, k0raw]}
-       in sc
-            "mis_dup_k"
-            "misdirection: duplicated offsets duplicate the key -> R4 F18"
-            ctx0
-            d
-            funded
-            (rcEvidence wit)
-                { reOffK = [k0off, k0off]
-                }
-            ( Left
-                ( R4InceptionInvalid
-                    ( InceptionIllFormed
-                        (ThresholdIllFormed DuplicateKey)
-                    )
-                )
-            )
     ]
   where
     sc = Scenario
@@ -730,12 +606,6 @@ first1 [] = error "fixture list unexpectedly empty"
 flipFirst :: [ByteString] -> [ByteString]
 flipFirst [] = []
 flipFirst (x : xs) = BS.cons (255 - BS.head x) (BS.tail x) : xs
-
--- | Flip the final byte without disturbing any E1-E9 field slice.
-flipLast :: ByteString -> ByteString
-flipLast raw
-    | BS.null raw = raw
-    | otherwise = BS.init raw <> BS.singleton (255 - BS.last raw)
 
 -- | Flip one signature byte while preserving its 64-byte shape.
 flipSignature :: ByteString -> ByteString
@@ -864,14 +734,6 @@ intField value k = note (k <> " missing or not an integer") $ do
         Number s -> Just (truncate s)
         _ -> Nothing
 
-intArrayField :: Value -> Text -> Either String [Integer]
-intArrayField value k = do
-    elems <- arrayField value k
-    traverse asInt elems
-  where
-    asInt (Number s) = Right (truncate s)
-    asInt _ = Left (T.unpack k <> ": element is not an integer")
-
 arrayField :: Value -> Text -> Either String [Value]
 arrayField value k = note (k <> " missing or not an array") $ do
     field <- lookupKey k value
@@ -911,9 +773,7 @@ render wit wgt scenarios =
             , ""
             , "use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed}"
             , "use cardano_keri/checkpoint/registration.{"
-            , "  DeploymentContext, E1EventTypeMismatch, E2AidMismatch, E3SequenceMismatch,"
-            , "  E4CurKeysMismatch, E5CurThresholdMismatch, E6NextKeysMismatch,"
-            , "  E7NextThresholdMismatch, E8WitnessesMismatch, E9ToadMismatch,"
+            , "  DeploymentContext, R6EventNotCanonical, R6PrefixMismatch,"
             , "  InceptionIllFormed, InceptionNativeSnNonZero,"
             , "  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,"
             , "  R7WitnessQuorumUnsatisfied,"
@@ -1026,15 +886,6 @@ renderEvidence e =
         <> intercalate
             ", "
             [ "event_bytes: " <> hexLit (reEventBytes e)
-            , "off_t: " <> show (reOffT e)
-            , "off_i: " <> show (reOffI e)
-            , "off_s: " <> show (reOffS e)
-            , "off_k: " <> intList (reOffK e)
-            , "off_kt: " <> show (reOffKt e)
-            , "off_n: " <> intList (reOffN e)
-            , "off_nt: " <> show (reOffNt e)
-            , "off_b: " <> intList (reOffB e)
-            , "off_bt: " <> show (reOffBt e)
             , "ctrl_sigs: " <> sigLits (reCtrlSigs e)
             , "wit_receipts: " <> sigLits (reWitReceipts e)
             ]
@@ -1051,15 +902,8 @@ renderError = \case
     R3GenesisDatumMismatch -> "R3GenesisDatumMismatch"
     R4InceptionInvalid ie ->
         "R4InceptionInvalid(" <> renderInceptionError ie <> ")"
-    E1EventTypeMismatch -> "E1EventTypeMismatch"
-    E2AidMismatch -> "E2AidMismatch"
-    E3SequenceMismatch -> "E3SequenceMismatch"
-    E4CurKeysMismatch -> "E4CurKeysMismatch"
-    E5CurThresholdMismatch -> "E5CurThresholdMismatch"
-    E6NextKeysMismatch -> "E6NextKeysMismatch"
-    E7NextThresholdMismatch -> "E7NextThresholdMismatch"
-    E8WitnessesMismatch -> "E8WitnessesMismatch"
-    E9ToadMismatch -> "E9ToadMismatch"
+    R6EventNotCanonical -> "R6EventNotCanonical"
+    R6PrefixMismatch -> "R6PrefixMismatch"
     R7QuorumUnsatisfied -> "R7QuorumUnsatisfied"
     R7WitnessQuorumUnsatisfied -> "R7WitnessQuorumUnsatisfied"
     R8DepositBelowMinimum -> "R8DepositBelowMinimum"
@@ -1075,6 +919,7 @@ renderInceptionError = \case
 renderDatumError :: DatumError -> String
 renderDatumError = \case
     CesrAidWidth -> "CesrAidWidth"
+    KeyNotQualified -> "KeyNotQualified"
     ThresholdIllFormed te ->
         "ThresholdIllFormed(" <> renderThresholdError te <> ")"
     NextIllFormed te ->
@@ -1102,9 +947,6 @@ renderThreshold (Weighted clauses) =
 byteList :: [ByteString] -> String
 byteList xs = "[" <> intercalate ", " (map hexLit xs) <> "]"
 
-intList :: [Int] -> String
-intList xs = "[" <> intercalate ", " (map show xs) <> "]"
-
 sigLits :: [(Int, ByteString)] -> String
 sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"
   where
@@ -1112,3 +954,11 @@ sigLits xs = "[" <> intercalate ", " (map one xs) <> "]"
 
 hexLit :: ByteString -> String
 hexLit b = "#\"" <> BC.unpack (convertToBase Base16 b) <> "\""
+
+-- | The qualified spellings of a fixture's key state: the identifier as an @E@ digest, each current key as a @D@ key.
+spellingOf :: KeyStateView -> QualifiedSpelling
+spellingOf d =
+    QualifiedSpelling
+        { qsAid = qb64Aid (cdCesrAid d)
+        , qsCurKeys = map qb64Verkey (cdCurKeys d)
+        }

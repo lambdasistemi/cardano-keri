@@ -35,12 +35,14 @@ use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, DatumValid, KeyMaterial, Live, TerminationPending,
   datum_v2_well_formed,
 }
+use cardano_keri/checkpoint/spelling_fixture.{qualified_datum}
 use cardano_keri/checkpoint/threshold.{Unweighted, Weight, Weighted}
 
 /// The writer's read of a `Data`: the version 2 datum under outer constructor 1, then
-/// write-time validity. A `Data` of any other shape does not read.
+/// write-time validity. A `Data` of any other shape does not read. The Lean vectors spell the current keys raw; the
+/// December datum keeps them qualified, so the read is judged with each current key qualified.
 fn writer_accepts(data: Data) -> Bool {
-  datum_v2_well_formed(datum.read(data)) == DatumValid
+  datum_v2_well_formed(qualified_datum(datum.read(data))) == DatumValid
 }
 
 /// Whether the ledger's parse reads the bytes as one whole `Data`.

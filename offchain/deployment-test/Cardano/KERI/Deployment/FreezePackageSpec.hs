@@ -22,6 +22,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
  )
 import Cardano.KERI.AID.Checkpoint.Freeze (FreezeEvidence (..))
 import Cardano.KERI.AID.Checkpoint.Message (SpentCheckpoint (..), deriveAidAssetName)
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Value (RotationSettlement (..))
 import Cardano.KERI.AID.Checkpoint.Wire (
     asPlcData,
@@ -202,7 +203,7 @@ floorOf manifest = frozenFloorOf manifest + bondOf manifest
 keysOf :: KeyStateView -> KeyMaterial
 keysOf view =
     KeyMaterial
-        { kmCurKeys = cdCurKeys view
+        { kmCurKeys = map (qualify codeD) (cdCurKeys view)
         , kmCurThreshold = cdCurThreshold view
         , kmNextKeys = cdNextKeys view
         , kmNextThreshold = cdNextThreshold view

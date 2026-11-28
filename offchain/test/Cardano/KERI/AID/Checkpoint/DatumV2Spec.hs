@@ -27,6 +27,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     datumKeyState,
     datumV2WellFormed,
  )
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
@@ -167,7 +168,7 @@ spec = describe "version 2 checkpoint datum" $ do
             rows
     describe "write-time validity" $ do
         it "accepts the vector rows" $
-            map (\(_, value, _) -> datumV2WellFormed value) rows
+            map (\(_, value, _) -> datumV2WellFormed (qualifiedDatum value)) rows
                 `shouldBe` replicate (length rows) (Right ())
         it "refuses a negative sequence number" $
             datumV2WellFormed (live (-1) 0 False) `shouldBe` Left NegativeSn
@@ -177,7 +178,7 @@ spec = describe "version 2 checkpoint datum" $ do
             datumV2WellFormed (liveOf aidText 0 0 False (-1) keys)
                 `shouldBe` Left NegativeBornAt
         it "refuses key material with a toad beyond its witnesses" $
-            datumV2WellFormed (liveOf aidText 0 0 False 100 keys{kmToad = 1})
+            datumV2WellFormed (qualifiedDatum (liveOf aidText 0 0 False 100 keys{kmToad = 1}))
                 `shouldBe` Left ToadRange
     describe "outer constructor 0 is refused" $ do
         it "refuses the nine-field record under constructor 0" $
@@ -209,10 +210,10 @@ spec = describe "version 2 checkpoint datum" $ do
         it "is the E-code text of a 32-byte digest" $
             (qb64Aid <$> aidDigest aidText) `shouldBe` Just aidText
         it "yields the key state a reader sees" $
-            fmap cdNativeSn (datumKeyState (V2 (live 4 2 True)))
+            fmap cdNativeSn (datumKeyState (V2 (qualifiedDatum (live 4 2 True))))
                 `shouldBe` Just 4
         it "reads the epoch as the checkpoint counter" $
-            fmap cdSeq (datumKeyState (V2 (live 4 2 False))) `shouldBe` Just 2
+            fmap cdSeq (datumKeyState (V2 (qualifiedDatum (live 4 2 False)))) `shouldBe` Just 2
         it "has no key state for a pending termination: it is no active checkpoint" $
             datumKeyState (V2 pending) `shouldBe` Nothing
         it "refuses the earlier four-field pending layout (Lean pending-with-keys)" $
@@ -231,3 +232,11 @@ spec = describe "version 2 checkpoint datum" $ do
         it "refuses a malformed identifier" $
             datumKeyState (V2 (liveOf (BC.pack "not an aid") 0 0 False 100 keys))
                 `shouldBe` Nothing
+
+{- | The Lean vectors spell the current keys as raw 32 byte keys; the December datum keeps them as qualified texts, so a
+vector is judged with each current key qualified.
+-}
+qualifiedDatum :: CheckpointDatumV2 -> CheckpointDatumV2
+qualifiedDatum d = case d of
+    Live{lvKeys} -> d{lvKeys = lvKeys{kmCurKeys = map (qualify codeD) (kmCurKeys lvKeys)}}
+    TerminationPending{} -> d

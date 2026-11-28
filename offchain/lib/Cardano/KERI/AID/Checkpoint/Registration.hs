@@ -1,40 +1,19 @@
 {- |
 Module      : Cardano.KERI.AID.Checkpoint.Registration
-Description : #114 registration predicate + E1-E9 event binding
+Description : The registration predicate and the binding of an inception to the datum it books
 
-Validator-free schema-support layer for the registration path (the
-@Register@ mint branch), same shape as
-"Cardano.KERI.AID.Checkpoint.Enforcement": pure predicates over an
-evidence record plus the genesis datum, returning
-@Either RegistrationError ()@ with one constructor per check.
+Validator-free schema-support layer for the registration path, mirroring `checkpoint/registration.ak`: pure
+predicates over an evidence record plus the genesis datum, returning @Either RegistrationError ()@.
 
-The evidence carries the full keripy @icp@ serialization and
-prover-supplied per-field offsets. Offsets __locate__ content, they
-never define it: every expected slice is computed from the datum
-(derivation-code-prefixed qb64 or an exact keripy re-spelling), so
-pointing an offset at a different field of the genuine event
-compares differently-coded bytes and fails (the A-001
-offset-misdirection argument; spec "Why offset misdirection
-fails").
+The evidence carries the signed @icp@, the controller signatures and the witness receipts. Nothing in it is positioned
+by the prover: the canonical inception is rebuilt from the datum's qualified spellings and compared with the signed
+bytes whole ('eventBinding'). The datum keeps the qualified text of the identifier and of each current key; the raw
+payloads are derived for the signature checks.
 
-Checks composed here are the pure R3\/R4\/R6\/R7\/R8 subset:
-
-* __R3__ — genesis datum: @seq == 0@.
-* __R6__ — the E1-E9 event-binding slice set ('eventBinding'). E1
-  runs before R4 because the verified @t@ slice is what derives
-  R4's 'EventType' (spec E1 "feeds R4's event_type"): a @dip@\/
-  @drt@\/@rot@ event rejects at E1.
-* __R4__ — the frozen #68 inception schema predicate over the datum.
-* __R7__ — controller signatures and witness receipts over exact KERI
-  event bytes; distinct verified controller positions satisfy @kt@ and
-  distinct witness positions satisfy @toad@.
-* __R8__ — deposit arithmetic over the deployment context.
-
-Transaction-shape checks (R1\/R2\/R5 token presence) are the S5
-validator layer; R5 appears here only as the proof-token name
-derivation 'proofTokenName'. The H1 @<= 1024@ byte length tier is
-the S4 hash-proof policy's scope — this predicate carries no length
-guard.
+Checks composed here are the pure R3\/R4\/R6\/R7\/R8 subset: R3 genesis datum, R6 the binding, R4 the inception
+schema predicate over the datum (with the inception's next declaration), R7 controller signatures and witness
+receipts over the exact event bytes, R8 deposit arithmetic. Transaction-shape checks (R1\/R2\/R5) are the validator
+layer; R5 appears here only as the proof-token name derivation 'proofTokenName'.
 -}
 module Cardano.KERI.AID.Checkpoint.Registration (
     -- * Deployment context
@@ -42,11 +21,15 @@ module Cardano.KERI.AID.Checkpoint.Registration (
 
     -- * Registration evidence
     RegistrationEvidence (..),
+    QualifiedSpelling (..),
 
     -- * B-code qb64 and canonical keripy re-spelling
     qb64WitnessVerkey,
     respellHex,
     respellThreshold,
+    hex6,
+    thresholdJson,
+    listJson,
 
     -- * Proof-token name (R5 derivation)
     proofTokenName,
@@ -63,39 +46,27 @@ module Cardano.KERI.AID.Checkpoint.Registration (
     -- * The registration predicate
     RegistrationError (..),
     eventBinding,
-    eventBindingOver,
-    futureThresholdMatches,
     registrationPredicate,
-    registrationPredicateOver,
-    qualifiedOfView,
 ) where
 
 import Cardano.KERI.AID.CESR (
-    Primitive (..),
-    parsePrimitive,
     qb64Aid,
-    qb64Verkey,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CesrAid,
     DatumError,
     KeyStateView (..),
-    QualifiedIdentity (..),
+    QualifiedSpelling (..),
     Verkey,
     blake2b_256,
-    inceptionKeyStateWellFormed,
+    keyStateInceptionWellFormed,
  )
-import Cardano.KERI.AID.Checkpoint.EventDecoder (
-    DecodedEstablishmentEvent (..),
-    EventVariant (..),
-    decodeEstablishmentEvent,
- )
-import Cardano.KERI.AID.Checkpoint.InceptionPrefix (verifyPrefixBinding)
+import Cardano.KERI.AID.Checkpoint.EventScan (anchorAfter)
+import Cardano.KERI.AID.Checkpoint.Qualified (codeB, codeD, codeE, digestPayload)
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     Weight (..),
     evaluate,
-    parseThresholdSpelling,
  )
 import Cardano.KERI.AID.Ed25519 (
     verifyEd25519,
@@ -116,6 +87,7 @@ import Data.ByteString (
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BS8
 import Data.IntSet qualified as IntSet
+import Data.Maybe (isNothing)
 
 -- ---------------------------------------------------------
 -- Deployment context
@@ -148,14 +120,11 @@ validRegistrationDeposit dReg = dReg >= registrationDepositFloor
 -- Registration evidence
 -- ---------------------------------------------------------
 
-{- | The @Register@ redeemer evidence: the exact signed keripy @icp@
-serialization and the attachments over it. No position is carried: the
-fields of the event are read from the bytes by the structural decoder
-("Cardano.KERI.AID.Checkpoint.EventDecoder"), so a submitter cannot choose
-where a validator reads.
+{- | The @Register@ redeemer evidence: the signed @icp@ as keripy serialized it, the controller signatures and the witness
+receipts.
 
-'reCtrlSigs' index into the datum's @cur_keys@ and 'reWitReceipts'
-index into its witnesses. Both authenticate exact 'reEventBytes'.
+'reCtrlSigs' index into the datum's @cur_keys@ and 'reWitReceipts' index into its witnesses. Both authenticate exact
+'reEventBytes'.
 -}
 data RegistrationEvidence = RegistrationEvidence
     { reEventBytes :: !ByteString
@@ -266,7 +235,7 @@ validateInceptionDatum et d = do
     unless (et == Icp) (Left DelegatedInceptionRejected)
     unless (BS.length (cdCesrAid d) == 32) (Left InceptionAidWidth)
     unless (cdNativeSn d == 0) (Left InceptionNativeSnNonZero)
-    first InceptionIllFormed (inceptionKeyStateWellFormed d)
+    first InceptionIllFormed (keyStateInceptionWellFormed d)
 
 -- ---------------------------------------------------------
 -- The registration predicate
@@ -284,40 +253,15 @@ data RegistrationError
       @native_sn@, F18 + rule 14).
       -}
       R4InceptionInvalid InceptionError
-    | {- | E1: the bytes are not one complete @icp@ event: the structural
-      decoder refuses them, or the decoded type is not @icp@ (@dip@\/@drt@\/
-      @rot@ all reject here; the decoded type feeds R4's event type).
+    | {- | R6: the signed bytes are not the canonical inception of the datum: rebuilt from the datum's spellings they differ
+      anywhere before the anchor, the digest @d@ is not an @E@ digest, or the anchor is not one complete array that the
+      closing brace follows.
       -}
-      E1EventTypeMismatch
-    | {- | E2: the signed @i@ is not bound to its prefix kind (a basic prefix is
-      the sole signing key; a self-addressing prefix is the digest of the signed
-      body), or its raw 32 bytes are not the datum's identifier.
+      R6EventNotCanonical
+    | {- | R6: the identifier does not fit its derivation code: a key must be the sole current key under threshold one (a
+      @B@ key also with empty next keys, witnesses and anchor), a digest must be the event's own digest.
       -}
-      E2AidMismatch
-    | -- | E3: the @s@ slice is not @\"0\"@ (an @icp@ has @s = 0@).
-      E3SequenceMismatch
-    | {- | E4: @k@ offset count or a slice differs from the datum's
-      @cur_keys@ D-code qb64 — the keys-must-match gate.
-      -}
-      E4CurKeysMismatch
-    | {- | E5: the @kt@ slice is not the canonical re-spelling of
-      @cur_threshold@.
-      -}
-      E5CurThresholdMismatch
-    | {- | E6: @n@ offset count or a slice differs from the datum's
-      @next_keys@ E-code qb64.
-      -}
-      E6NextKeysMismatch
-    | {- | E7: the @nt@ slice is not the canonical re-spelling of
-      @next_threshold@.
-      -}
-      E7NextThresholdMismatch
-    | {- | E8: @b@ offset count or a slice differs from the datum's
-      witness B-code qb64.
-      -}
-      E8WitnessesMismatch
-    | -- | E9: the @bt@ slice is not the hex re-spelling of @toad@.
-      E9ToadMismatch
+      R6PrefixMismatch
     | {- | R7: the distinct positions with a verifying signature over
       the exact @event_bytes@ do not satisfy @cur_threshold@.
       -}
@@ -330,126 +274,105 @@ data RegistrationError
       R8DepositBelowMinimum
     deriving stock (Show, Eq)
 
-{- | The signed @i@ is bound to its prefix kind and carries exactly the datum's
-32 identifier bytes: the key of a basic prefix (codes B and D), the digest of a
-self-addressing one (code E).
+{- | R6 — the binding of the event to the datum, by reconstruction: the canonical inception is rebuilt from the datum's
+own validated spellings, the digest @d@ read at its fixed place, and the whole event compared once up to the anchor,
+which the one anchor scanner then reads and ends at the closing brace. No other field is scanned.
 -}
-identifierBound :: DecodedEstablishmentEvent -> QualifiedIdentity -> CesrAid -> Bool
-identifierBound ev q aid =
-    either (const False) (const True) (verifyPrefixBinding ev)
-        && deeAid ev == qiAid q
-        && case parsePrimitive (qiAid q) of
-            Right (Ed25519PublicKey raw, rest) -> BS.null rest && raw == aid
-            Right (SelfAddressing raw, rest) -> BS.null rest && raw == aid
-            _ -> False
-
--- | The 32 raw bytes of one complete qualified Ed25519 public key (code B or D).
-rawKey :: ByteString -> Maybe ByteString
-rawKey text = case parsePrimitive text of
-    Right (Ed25519PublicKey raw, rest) | BS.null rest -> Just raw
-    _ -> Nothing
-
-{- | The signed future threshold against the datum's. A numeric threshold is compared by its exact
-spelling, as the current threshold is. A weighted one is compared as decoded, pair for pair: the
-datum carries the numerator and denominator the event was signed with (an unreduced @2/4@ is the
-pair (2,4) in the event and in the datum), and the model's key state of the signed evidence equals
-the datum's key state with every fraction compared structurally (draft #600,
-@CardanoKeri.Application.InceptionPrefix.verify@).
--}
-futureThresholdMatches :: ByteString -> Threshold -> Bool
-futureThresholdMatches signed = \case
-    declared@(Unweighted _) -> signed == respellThreshold declared
-    declared@(Weighted _) -> either (const False) (== declared) (parseThresholdSpelling signed)
-
-{- | R6 — the E1-E9 event binding. The event is decoded from its bytes
-alone (E1 refuses what does not decode); every expected value is computed from the datum
-(derivation-code-prefixed qb64 or an exact keripy re-spelling) and compared
-with the decoder's projection of the same field. There is no position to
-point at another field: field identity comes from the parse.
--}
-eventBindingOver ::
-    QualifiedIdentity ->
+eventBinding ::
     KeyStateView ->
+    QualifiedSpelling ->
     RegistrationEvidence ->
     Either RegistrationError ()
-eventBindingOver q d e = do
-    ev <-
-        either
-            (const (Left E1EventTypeMismatch))
-            Right
-            (decodeEstablishmentEvent (reEventBytes e))
-    unless (deeVariant ev == VariantIcp) (Left E1EventTypeMismatch)
-    unless (identifierBound ev q (cdCesrAid d)) (Left E2AidMismatch)
-    unless (deeSeq ev == "0") (Left E3SequenceMismatch)
-    unless
-        (deeK ev == qiCurKeys q && map rawKey (qiCurKeys q) == map Just (cdCurKeys d))
-        (Left E4CurKeysMismatch)
-    unless
-        (deeKt ev == respellThreshold (cdCurThreshold d))
-        (Left E5CurThresholdMismatch)
-    unless
-        (deeN ev == map qb64Aid (cdNextKeys d))
-        (Left E6NextKeysMismatch)
-    unless
-        (futureThresholdMatches (deeNt ev) (cdNextThreshold d))
-        (Left E7NextThresholdMismatch)
-    unless
-        (deeB ev == map qb64WitnessVerkey (cdWitnesses d))
-        (Left E8WitnessesMismatch)
-    unless
-        (deeBt ev == respellHex (cdToad d))
-        (Left E9ToadMismatch)
+eventBinding d q e
+    | size < 1 || size > 1024 = Left R6EventNotCanonical
+    | isNothing (digestPayload said) = Left R6EventNotCanonical
+    | n >= size || BS.take n raw /= prefix = Left R6EventNotCanonical
+    | otherwise = case anchorAfter raw n of
+        Nothing -> Left R6EventNotCanonical
+        Just (count, end)
+            | end + 1 /= size || BS.index raw end /= 125 -> Left R6EventNotCanonical
+            | prefixBinding d q said (count == 0) -> Right ()
+            | otherwise -> Left R6PrefixMismatch
+  where
+    raw = reEventBytes e
+    size = BS.length raw
+    said = BS.take 44 (BS.drop 40 raw)
+    prefix =
+        BS.concat
+            [ "{\"v\":\"KERI10JSON"
+            , hex6 size
+            , "_\",\"t\":\"icp\",\"d\":\""
+            , said
+            , "\",\"i\":\""
+            , qsAid q
+            , "\",\"s\":\"0\",\"kt\":"
+            , thresholdJson (cdCurThreshold d)
+            , ",\"k\":"
+            , listJson (qsCurKeys q)
+            , ",\"nt\":"
+            , thresholdJson (cdNextThreshold d)
+            , ",\"n\":"
+            , listJson (map qb64Aid (cdNextKeys d))
+            , ",\"bt\":\""
+            , respellHex (cdToad d)
+            , "\",\"b\":"
+            , listJson (map qb64WitnessVerkey (cdWitnesses d))
+            , ",\"c\":[],\"a\":"
+            ]
+    n = BS.length prefix
 
-{- | The qualified spelling of a datum whose identifier carries the E code and
-whose current keys carry the D code: the datum of a self-addressing, transferable
-inception. A basic prefix whose signing key has the B code is read with
-'registrationPredicateOver' and its own qualified identity.
+{- | The identifier fits its derivation code. A digest identifier is the event's own digest. A key identifier is the
+sole current key, signing alone; a non-transferable one also leaves nothing to rotate to, witness or anchor.
 -}
-qualifiedOfView :: KeyStateView -> QualifiedIdentity
-qualifiedOfView d =
-    QualifiedIdentity
-        { qiAid = qb64Aid (cdCesrAid d)
-        , qiCurKeys = map qb64Verkey (cdCurKeys d)
-        }
+prefixBinding :: KeyStateView -> QualifiedSpelling -> ByteString -> Bool -> Bool
+prefixBinding d q said anchorEmpty
+    | code == codeE = said == qsAid q
+    | code == codeD = soleKey
+    | code == codeB = soleKey && null (cdNextKeys d) && null (cdWitnesses d) && anchorEmpty
+    | otherwise = False
+  where
+    code = BS.head (qsAid q)
+    soleKey = qsCurKeys q == [qsAid q] && cdCurThreshold d == Unweighted 1
 
--- | R6 over the E and D spelling of the datum ('qualifiedOfView').
-eventBinding :: KeyStateView -> RegistrationEvidence -> Either RegistrationError ()
-eventBinding d = eventBindingOver (qualifiedOfView d) d
+-- | Six lowercase hexadecimal digits of a size.
+hex6 :: Int -> ByteString
+hex6 n = BS.replicate (6 - BS.length h) 48 <> h
+  where
+    h = respellHex (fromIntegral n)
 
--- | The registration predicate over the E and D spelling of the datum.
+-- | A threshold as its JSON value: the quoted hexadecimal string, or the array.
+thresholdJson :: Threshold -> ByteString
+thresholdJson t
+    | BS.take 1 spelled == "[" = spelled
+    | otherwise = "\"" <> spelled <> "\""
+  where
+    spelled = respellThreshold t
+
+-- | A list of qualified texts as a JSON array of strings.
+listJson :: [ByteString] -> ByteString
+listJson [] = "[]"
+listJson items = "[\"" <> BS.intercalate "\",\"" items <> "\"]"
+
+{- | The pure registration predicate: R3, R6, R4, R7, R8, in order. The @lovelace@ argument is the state output's value
+the R8 arithmetic runs over; transaction shape itself (R1\/R2\/R5) is the validator layer.
+-}
 registrationPredicate ::
     DeploymentContext ->
+    -- | The inline datum @D@ of the genesis state output, as a raw view.
     KeyStateView ->
-    Integer ->
-    RegistrationEvidence ->
-    Either RegistrationError ()
-registrationPredicate ctx d = registrationPredicateOver ctx (qualifiedOfView d) d
-
-{- | The pure registration predicate: R3, R6 (E1-E9), R4, R7, R8,
-in order. R6 precedes R4 because E1's verified @t@ slice is what
-derives R4's 'EventType' (after E1 only 'Icp' can reach it);
-misdirected offsets that force a duplicate datum key slip past E4
-only to fail R4's F18 (rule 2). The @lovelace@ argument is the
-state output's value the R8 arithmetic runs over; transaction
-shape itself (R1\/R2\/R5) is the S5 validator layer.
--}
-registrationPredicateOver ::
-    DeploymentContext ->
-    -- | The qualified identifier and current keys the committed datum carries.
-    QualifiedIdentity ->
-    -- | The inline datum @D@ of the genesis state output.
-    KeyStateView ->
+    -- | The qualified spellings of the identifier and the current keys.
+    QualifiedSpelling ->
     -- | The state output's lovelace (R8).
     Integer ->
     RegistrationEvidence ->
     Either RegistrationError ()
-registrationPredicateOver ctx q d lovelace e = do
+registrationPredicate ctx d q lovelace e = do
     unless (validRegistrationDeposit (dcDReg ctx)) (Left DRegBelowMinimum)
     -- R3: genesis projection.
     unless (cdSeq d == 0) (Left R3GenesisDatumMismatch)
-    -- R6: the event-binding slice set (E1 derives R4's type).
-    eventBindingOver q d e
-    -- R4: the frozen #68 schema predicate, reused.
+    -- R6: the binding of the event to the datum.
+    eventBinding d q e
+    -- R4: the schema predicate over the datum, with the inception's next declaration.
     first R4InceptionInvalid (validateInceptionDatum Icp d)
     -- R7: distinct controller positions over exact event bytes.
     let signed =

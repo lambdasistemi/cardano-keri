@@ -24,17 +24,16 @@ use aiken/crypto.{verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{KeyStateView, ThresholdIllFormed}
 use cardano_keri/checkpoint/registration.{
-  DRegBelowMinimum, DeploymentContext, E1EventTypeMismatch, E2AidMismatch,
-  E3SequenceMismatch, E4CurKeysMismatch, E5CurThresholdMismatch,
-  E6NextKeysMismatch, E7NextThresholdMismatch, E8WitnessesMismatch,
-  E9ToadMismatch, InceptionIllFormed, InceptionNativeSnNonZero,
-  R3GenesisDatumMismatch, R4InceptionInvalid, R7QuorumUnsatisfied,
+  DRegBelowMinimum, DeploymentContext, InceptionIllFormed,
+  InceptionNativeSnNonZero, R3GenesisDatumMismatch, R4InceptionInvalid,
+  R6EventNotCanonical, R6PrefixMismatch, R7QuorumUnsatisfied,
   R7WitnessQuorumUnsatisfied, R8DepositBelowMinimum, RegistrationEvidence,
   RegistrationInvalid, RegistrationValid, RegistrationVerdict, proof_token_name,
   qb64_witness_verkey, registration_deposit_floor, registration_predicate,
-  respell_hex, respell_threshold, slice_matches, valid_registration_deposit,
+  respell_hex, respell_threshold, valid_registration_deposit,
 }
 use cardano_keri/checkpoint/registration_vectors as vec
+use cardano_keri/checkpoint/spelling_fixture
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, Unweighted, Weight, Weighted,
 }
@@ -54,7 +53,7 @@ fn parity(
   recorded: RegistrationVerdict,
   pinned: RegistrationVerdict,
 ) -> Bool {
-  registration_predicate(ctx, d, lovelace, e) == recorded && recorded == pinned
+  registration_predicate(ctx, d, spelling_fixture.of_view(d), lovelace, e) == recorded && recorded == pinned
 }
 
 // ---------------------------------------------------------
@@ -124,24 +123,7 @@ test respell_threshold_unity_weight() {
 }
 
 test respell_weighted_kt_parity() {
-  let respelled = respell_threshold(vec.pos_weighted_datum.cur_threshold)
-  let e = vec.pos_weighted_evidence
-  respelled == vec.weighted_kt_respell && slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respelled,
-  )
-}
-
-// The witnessed fixture's kt/nt/bt slices ARE the re-spellings.
-test respell_slices_witnessed() {
-  let e = vec.pos_witnessed_evidence
-  let d = vec.pos_witnessed_datum
-  slice_matches(e.event_bytes, e.off_kt, respell_threshold(d.cur_threshold)) && slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(d.next_threshold),
-  ) && slice_matches(e.event_bytes, e.off_bt, respell_hex(d.toad))
+  respell_threshold(vec.pos_weighted_datum.cur_threshold) == vec.weighted_kt_respell
 }
 
 // ---------------------------------------------------------
@@ -156,31 +138,6 @@ test witness_qb64_parity() {
       qb64_witness_verkey(raw) == qb64 && bytearray.take(qb64, 1) == #"42"
     },
   )
-}
-
-fn all_witness_slices(
-  bytes: ByteArray,
-  offs: List<Int>,
-  wits: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> wits == []
-    [o, ..os] ->
-      when wits is {
-        [] -> False
-        [w, ..ws] ->
-          slice_matches(bytes, o, qb64_witness_verkey(w)) && all_witness_slices(
-            bytes,
-            os,
-            ws,
-          )
-      }
-  }
-}
-
-test witness_qb64_is_event_slice() {
-  let e = vec.pos_witnessed_evidence
-  all_witness_slices(e.event_bytes, e.off_b, vec.pos_witnessed_datum.witnesses)
 }
 
 // ---------------------------------------------------------
@@ -231,12 +188,14 @@ test pos_owner_replay() {
   let first_run = registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     vec.pos_witnessed_evidence,
   )
   let second_run = registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     vec.pos_witnessed_evidence,
   )
@@ -292,7 +251,7 @@ test e1_dip_rejects() {
     vec.e1_dip_lovelace,
     vec.e1_dip_evidence,
     vec.e1_dip_verdict,
-    RegistrationInvalid(E1EventTypeMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -303,7 +262,7 @@ test e1_drt_rejects() {
     vec.e1_drt_lovelace,
     vec.e1_drt_evidence,
     vec.e1_drt_verdict,
-    RegistrationInvalid(E1EventTypeMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -314,18 +273,7 @@ test e2_crossed_aid_rejects() {
     vec.e2_crossed_aid_lovelace,
     vec.e2_crossed_aid_evidence,
     vec.e2_crossed_aid_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-test e3_off_s_at_t_rejects() {
-  parity(
-    vec.e3_off_s_at_t_ctx,
-    vec.e3_off_s_at_t_datum,
-    vec.e3_off_s_at_t_lovelace,
-    vec.e3_off_s_at_t_evidence,
-    vec.e3_off_s_at_t_verdict,
-    RegistrationInvalid(E3SequenceMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -337,7 +285,7 @@ test e4_squat_rejects() {
     vec.e4_squat_lovelace,
     vec.e4_squat_evidence,
     vec.e4_squat_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -348,7 +296,7 @@ test e5_kt_restated_rejects() {
     vec.e5_kt_restated_lovelace,
     vec.e5_kt_restated_evidence,
     vec.e5_kt_restated_verdict,
-    RegistrationInvalid(E5CurThresholdMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -359,7 +307,7 @@ test e5_weighted_mutated_rejects() {
     vec.e5_weighted_mutated_lovelace,
     vec.e5_weighted_mutated_evidence,
     vec.e5_weighted_mutated_verdict,
-    RegistrationInvalid(E5CurThresholdMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -370,7 +318,7 @@ test e6_next_flipped_rejects() {
     vec.e6_next_flipped_lovelace,
     vec.e6_next_flipped_evidence,
     vec.e6_next_flipped_verdict,
-    RegistrationInvalid(E6NextKeysMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -381,7 +329,7 @@ test e7_nt_restated_rejects() {
     vec.e7_nt_restated_lovelace,
     vec.e7_nt_restated_evidence,
     vec.e7_nt_restated_verdict,
-    RegistrationInvalid(E7NextThresholdMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -392,7 +340,7 @@ test e8_witness_flipped_rejects() {
     vec.e8_witness_flipped_lovelace,
     vec.e8_witness_flipped_evidence,
     vec.e8_witness_flipped_verdict,
-    RegistrationInvalid(E8WitnessesMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -403,7 +351,7 @@ test e8_witness_count_rejects() {
     vec.e8_witness_count_lovelace,
     vec.e8_witness_count_evidence,
     vec.e8_witness_count_verdict,
-    RegistrationInvalid(E8WitnessesMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -414,7 +362,7 @@ test e9_toad_restated_rejects() {
     vec.e9_toad_restated_lovelace,
     vec.e9_toad_restated_evidence,
     vec.e9_toad_restated_verdict,
-    RegistrationInvalid(E9ToadMismatch),
+    RegistrationInvalid(R6EventNotCanonical),
   )
 }
 
@@ -441,6 +389,7 @@ test r7_event_own_controller_sigs_accept() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     event_own_witnessed_evidence(),
   ) == RegistrationValid
@@ -450,6 +399,7 @@ test r7_old_inception_message_only_sigs_reject() {
   registration_predicate(
     vec.r7_old_message_sigs_ctx,
     vec.r7_old_message_sigs_datum,
+    spelling_fixture.of_view(vec.r7_old_message_sigs_datum),
     vec.r7_old_message_sigs_lovelace,
     vec.r7_old_message_sigs_evidence,
   ) == RegistrationInvalid(R7QuorumUnsatisfied)
@@ -460,6 +410,7 @@ test r7_controller_negative_index_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -473,6 +424,7 @@ test r7_controller_out_of_range_index_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -486,6 +438,7 @@ test r7_controller_bad_signature_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -495,16 +448,14 @@ test r7_controller_bad_signature_rejects() {
 }
 
 test r7_controller_crossed_event_bytes_rejects() {
+  // the signatures of another event of the same keys, over other bytes
   let e = event_own_witnessed_evidence()
-  let n = bytearray.length(e.event_bytes)
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
-    RegistrationEvidence {
-      ..e,
-      event_bytes: bytearray.concat(bytearray.take(e.event_bytes, n - 1), #"00"),
-    },
+    RegistrationEvidence { ..e, ctrl_sigs: vec.pos_2key_evidence.ctrl_sigs },
   ) == RegistrationInvalid(R7QuorumUnsatisfied)
 }
 
@@ -512,6 +463,7 @@ test r7_witness_receipt_free_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence { ..event_own_witnessed_evidence(), wit_receipts: [] },
   ) == RegistrationInvalid(R7WitnessQuorumUnsatisfied)
@@ -521,6 +473,7 @@ test r7_witness_below_toad_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -533,6 +486,7 @@ test r7_witness_duplicate_index_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -545,6 +499,7 @@ test r7_witness_negative_index_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -557,6 +512,7 @@ test r7_witness_out_of_range_index_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -569,6 +525,7 @@ test r7_witness_wrong_key_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -581,6 +538,7 @@ test r7_witness_bad_signature_rejects() {
   registration_predicate(
     vec.pos_witnessed_ctx,
     vec.pos_witnessed_datum,
+    spelling_fixture.of_view(vec.pos_witnessed_datum),
     vec.pos_witnessed_lovelace,
     RegistrationEvidence {
       ..event_own_witnessed_evidence(),
@@ -596,6 +554,7 @@ test r7_toad_zero_requires_literal_empty_receipts() {
   registration_predicate(
     vec.pos_2key_ctx,
     vec.pos_2key_datum,
+    spelling_fixture.of_view(vec.pos_2key_datum),
     vec.pos_2key_lovelace,
     RegistrationEvidence {
       ..vec.pos_2key_evidence,
@@ -649,17 +608,6 @@ test r7_wrong_controller_keys_rejects() {
     vec.r7_wrong_controller_keys_lovelace,
     vec.r7_wrong_controller_keys_evidence,
     vec.r7_wrong_controller_keys_verdict,
-    RegistrationInvalid(R7QuorumUnsatisfied),
-  )
-}
-
-test r7_crossed_event_bytes_rejects_vector() {
-  parity(
-    vec.r7_crossed_event_bytes_ctx,
-    vec.r7_crossed_event_bytes_datum,
-    vec.r7_crossed_event_bytes_lovelace,
-    vec.r7_crossed_event_bytes_evidence,
-    vec.r7_crossed_event_bytes_verdict,
     RegistrationInvalid(R7QuorumUnsatisfied),
   )
 }
@@ -763,125 +711,13 @@ test r8_deposit_short_rejects() {
     RegistrationInvalid(R8DepositBelowMinimum),
   )
 }
-
 // ---------------------------------------------------------
 // Verdict parity: the A-001 offset-misdirection family
 // ---------------------------------------------------------
 
-test mis_off_i_shift_rejects() {
-  parity(
-    vec.mis_off_i_shift_ctx,
-    vec.mis_off_i_shift_datum,
-    vec.mis_off_i_shift_lovelace,
-    vec.mis_off_i_shift_evidence,
-    vec.mis_off_i_shift_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-test mis_overlap_k_rejects() {
-  parity(
-    vec.mis_overlap_k_ctx,
-    vec.mis_overlap_k_datum,
-    vec.mis_overlap_k_lovelace,
-    vec.mis_overlap_k_evidence,
-    vec.mis_overlap_k_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
 // D-code expected bytes vs E-code n entries: prefix confusion fails.
-test mis_k_into_n_rejects() {
-  parity(
-    vec.mis_k_into_n_ctx,
-    vec.mis_k_into_n_datum,
-    vec.mis_k_into_n_lovelace,
-    vec.mis_k_into_n_evidence,
-    vec.mis_k_into_n_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
 // D-code expected bytes vs B-code b entries: prefix confusion fails.
-test mis_k_into_b_rejects() {
-  parity(
-    vec.mis_k_into_b_ctx,
-    vec.mis_k_into_b_datum,
-    vec.mis_k_into_b_lovelace,
-    vec.mis_k_into_b_evidence,
-    vec.mis_k_into_b_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
 // E-code expected bytes vs a D-code k entry: prefix confusion fails.
-test mis_i_at_k_rejects() {
-  parity(
-    vec.mis_i_at_k_ctx,
-    vec.mis_i_at_k_datum,
-    vec.mis_i_at_k_lovelace,
-    vec.mis_i_at_k_evidence,
-    vec.mis_i_at_k_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
 // B-code expected bytes vs D-code k entries: prefix confusion fails.
-test mis_b_at_k_rejects() {
-  parity(
-    vec.mis_b_at_k_ctx,
-    vec.mis_b_at_k_datum,
-    vec.mis_b_at_k_lovelace,
-    vec.mis_b_at_k_evidence,
-    vec.mis_b_at_k_verdict,
-    RegistrationInvalid(E8WitnessesMismatch),
-  )
-}
-
-test mis_trunc_i_rejects() {
-  parity(
-    vec.mis_trunc_i_ctx,
-    vec.mis_trunc_i_datum,
-    vec.mis_trunc_i_lovelace,
-    vec.mis_trunc_i_evidence,
-    vec.mis_trunc_i_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
-test mis_trunc_k_rejects() {
-  parity(
-    vec.mis_trunc_k_ctx,
-    vec.mis_trunc_k_datum,
-    vec.mis_trunc_k_lovelace,
-    vec.mis_trunc_k_evidence,
-    vec.mis_trunc_k_verdict,
-    RegistrationInvalid(E4CurKeysMismatch),
-  )
-}
-
-test mis_neg_i_rejects() {
-  parity(
-    vec.mis_neg_i_ctx,
-    vec.mis_neg_i_datum,
-    vec.mis_neg_i_lovelace,
-    vec.mis_neg_i_evidence,
-    vec.mis_neg_i_verdict,
-    RegistrationInvalid(E2AidMismatch),
-  )
-}
-
 // Duplicated offsets force a duplicate datum key: slips past E4 only to
 // fail R4's F18 rule 2 (the A-001 misdirection collapse argument).
-test mis_dup_k_rejects() {
-  parity(
-    vec.mis_dup_k_ctx,
-    vec.mis_dup_k_datum,
-    vec.mis_dup_k_lovelace,
-    vec.mis_dup_k_evidence,
-    vec.mis_dup_k_verdict,
-    RegistrationInvalid(
-      R4InceptionInvalid(InceptionIllFormed(ThresholdIllFormed(DuplicateKey))),
-    ),
-  )
-}

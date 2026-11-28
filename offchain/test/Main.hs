@@ -20,6 +20,8 @@ import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
 import Cardano.KERI.AID.Checkpoint.FreezeSpec qualified as FreezeSpec
 import Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec qualified as FutureDeclarationSpec
 import Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec qualified as InceptionPrefixSpec
+import Cardano.KERI.AID.Checkpoint.InvBindAdversarialSpec qualified as InvBindAdversarialSpec
+import Cardano.KERI.AID.Checkpoint.InvBindFrozenGrammarSpec qualified as InvBindFrozenGrammarSpec
 import Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec qualified as InvBindGrammarSpec
 import Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec qualified as InvBindPrefixSpec
 import Cardano.KERI.AID.Checkpoint.InvBindSpec qualified as InvBindSpec
@@ -58,6 +60,8 @@ main = hspec $ do
     FutureDeclarationSpec.spec
     AdvanceFixturesSpec.spec
     AdvanceSpec.spec
+    InvBindAdversarialSpec.spec
+    InvBindGrammarSpec.spec
     DatumSpec.spec
     DatumV2Spec.spec
     DeployedGenerationSpec.spec
@@ -66,7 +70,7 @@ main = hspec $ do
     Keri68OracleSpec.spec
     EnforcementSpec.spec
     InceptionPrefixSpec.spec
-    InvBindGrammarSpec.spec
+    InvBindFrozenGrammarSpec.spec
     InvBindPrefixSpec.spec
     InvBindSpec.spec
     InvBindTopStringsSpec.spec

@@ -233,22 +233,12 @@ enforcementProofData EnforcementProofV1{..} =
         , asPlcData epReveal
         ]
 
--- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 15 fields.
+-- | The Aiken @AdvanceEvidence@ record: @Constr 0@ of 5 fields.
 advanceEvidenceData :: AdvanceEvidence -> Data
 advanceEvidenceData AdvanceEvidence{..} =
     Constr
         0
         [ B aeEventBytes
-        , I (fromIntegral aeOffT)
-        , I (fromIntegral aeOffI)
-        , I (fromIntegral aeOffS)
-        , intListData aeOffK
-        , I (fromIntegral aeOffKt)
-        , intListData aeOffN
-        , I (fromIntegral aeOffNt)
-        , intListData aeOffBr
-        , intListData aeOffBa
-        , I (fromIntegral aeOffBt)
         , List (map B aeWitCut)
         , List (map B aeWitAdd)
         , signatureListData aeCtrlSigs
@@ -292,9 +282,6 @@ the name from its own evidence.
 -}
 hashProofBurnData :: Data
 hashProofBurnData = Constr 0 [B "", B ""]
-
-intListData :: (Integral a) => [a] -> Data
-intListData = List . map (I . fromIntegral)
 
 -- | Aiken tuples are Data lists, not record-shaped constructors.
 signatureListData :: [(Int, ByteString)] -> Data

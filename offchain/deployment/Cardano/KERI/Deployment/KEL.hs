@@ -330,31 +330,7 @@ parseRotationExport stream = do
     digestOffset <- scalarOffset raw "d" (rotationDigest event)
     unless (blake3Hash (blankDigest raw digestOffset) == digest) $
         Left "KEL rotation SAID does not bind the exact event bytes"
-    evidence <-
-        AdvanceEvidence
-            raw
-            <$> scalarOffset raw "t" (rotationType event)
-            <*> scalarOffset raw "i" (rotationEventAid event)
-            <*> scalarOffset raw "s" (rotationSequence event)
-            <*> traverse (arrayOffset raw "k") (rotationCurrentKeys event)
-            <*> thresholdOffset
-                raw
-                "kt"
-                (rotationCurrentThreshold event)
-                (thresholdSpelling $ rotationCurrentThreshold event)
-            <*> traverse (arrayOffset raw "n") (rotationNextKeys event)
-            <*> thresholdOffset
-                raw
-                "nt"
-                (rotationNextThreshold event)
-                (thresholdSpelling $ rotationNextThreshold event)
-            <*> traverse (arrayOffset raw "br") (rotationWitnessCuts event)
-            <*> traverse (arrayOffset raw "ba") (rotationWitnessAdds event)
-            <*> scalarOffset raw "bt" (rotationToad event)
-            <*> pure witnessCuts
-            <*> pure witnessAdds
-            <*> pure []
-            <*> pure witnessReceipts
+    let evidence = AdvanceEvidence raw witnessCuts witnessAdds [] witnessReceipts
     pure
         RotationExport
             { rotationAid = rotationEventAid event
@@ -643,66 +619,6 @@ scalarOffset raw field value = do
     unless (needle `BS.isPrefixOf` BS.drop offset raw) $
         Left (T.unpack field <> " value does not match event bytes")
     pure offset
-
-arrayOffset :: ByteString -> Text -> Text -> Either String Int
-arrayOffset raw field value = do
-    let prefix = TE.encodeUtf8 ("\"" <> field <> "\":[")
-        needle = TE.encodeUtf8 ("\"" <> value <> "\"")
-    start <- findBytes (T.unpack field <> " array") prefix raw
-    relative <-
-        findBytes
-            (T.unpack field <> " array value")
-            needle
-            (BS.drop start raw)
-    pure (start + relative + 1)
-
-thresholdOffset ::
-    ByteString ->
-    Text ->
-    Threshold ->
-    ByteString ->
-    Either String Int
-thresholdOffset raw field threshold spelling =
-    case threshold of
-        Unweighted _ ->
-            scalarOffset raw field (TE.decodeUtf8 spelling)
-        Weighted _ -> do
-            let prefix = TE.encodeUtf8 ("\"" <> field <> "\":")
-            start <- findBytes (T.unpack field <> " field") prefix raw
-            let offset = start + BS.length prefix
-            unless (spelling `BS.isPrefixOf` BS.drop offset raw) $
-                Left (T.unpack field <> " threshold does not match event bytes")
-            pure offset
-
-thresholdSpelling :: Threshold -> ByteString
-thresholdSpelling = \case
-    Unweighted value -> B8.pack (showHex value)
-    Weighted [clause] -> renderClause clause
-    Weighted clauses ->
-        "[" <> BS.intercalate "," (map renderClause clauses) <> "]"
-  where
-    renderClause weights =
-        "["
-            <> BS.intercalate
-                ","
-                (map (quote . renderWeight) weights)
-            <> "]"
-    renderWeight (Weight numerator 1) = B8.pack (show numerator)
-    renderWeight (Weight numerator denominator) =
-        B8.pack (show numerator <> "/" <> show denominator)
-    quote value = "\"" <> value <> "\""
-
-showHex :: Integer -> String
-showHex value
-    | value < 16 = [hexDigit value]
-    | otherwise =
-        showHex (value `div` 16) <> [hexDigit (value `mod` 16)]
-  where
-    hexDigit digit
-        | digit < 10 =
-            toEnum (fromEnum '0' + fromIntegral digit)
-        | otherwise =
-            toEnum (fromEnum 'a' + fromIntegral digit - 10)
 
 findBytes :: String -> ByteString -> ByteString -> Either String Int
 findBytes label needle haystack =

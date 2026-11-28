@@ -42,7 +42,8 @@ use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_convict,
 }
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
-use cardano_keri/checkpoint/threshold.{Unweighted}
+use cardano_keri/checkpoint/spelling_fixture.{qualified_keys}
+use cardano_keri/checkpoint/threshold.{Threshold, Unweighted, Weight, Weighted}
 use checkpoint_observer
 use checkpoint_register
 use registry_fixture.{
@@ -166,7 +167,7 @@ fn run_spend(redeemer: Data, own_ref: OutputReference, tx: Transaction) -> Bool 
 
 fn keys_of(d: KeyStateView) -> KeyMaterial {
   KeyMaterial {
-    cur_keys: d.cur_keys,
+    cur_keys: qualified_keys(d.cur_keys),
     cur_threshold: d.cur_threshold,
     next_keys: d.next_keys,
     next_threshold: d.next_threshold,
@@ -1919,4 +1920,48 @@ test convict_refuses_a_checkpoint_that_holds_only_the_retired_register_token() f
 
 test convict_refuses_a_successor_at_a_staked_address() fail {
   convict_over(with_successor_address(convict_base(), staked(policy)))
+}
+
+// ---- the prior declaration authorizes at its exact member width -------------------------------------------------------
+
+fn rotate_from(old: KeyStateView) -> Bool {
+  run_advance(
+    1,
+    advance_tx(
+      v2_data(live(old, False, False, refund_enterprise_key())),
+      v2_data(adv_new(False)),
+      floor_unfrozen + 3_000_000,
+      floor_unfrozen + 1_000_000,
+      [paid(hunter_pkh, premium)],
+    ),
+  )
+}
+
+fn whole_clauses() -> Threshold {
+  Weighted([[Weight { num: 1, den: 1 }], [Weight { num: 1, den: 1 }]])
+}
+
+/// Two whole-weight clauses over three commitments: width two, three commitments.
+test advance_refuses_a_partial_width_prior_declaration() fail {
+  rotate_from(
+    KeyStateView {
+      ..adv_old_v1(),
+      next_keys: list.concat(
+        spent.next_keys,
+        [#"0909090909090909090909090909090909090909090909090909090909090909"],
+      ),
+      next_threshold: whole_clauses(),
+    },
+  )
+}
+
+/// The matched control: the same clauses over exactly two commitments.
+test advance_accepts_an_exact_width_prior_declaration() {
+  rotate_from(
+    KeyStateView {
+      ..adv_old_v1(),
+      next_keys: spent.next_keys,
+      next_threshold: whole_clauses(),
+    },
+  )
 }

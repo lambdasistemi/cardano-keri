@@ -15,7 +15,7 @@ stated admission rule does not name, so it may be a case the model admits.
 -}
 module Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec (spec) where
 
-import Cardano.KERI.AID.Checkpoint.Registration (futureThresholdMatches, respellThreshold)
+import Cardano.KERI.AID.Checkpoint.Registration (thresholdJson)
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     ThresholdError (..),
@@ -26,7 +26,7 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import PlutusTx.IsData.Class (FromData (..), ToData (..))
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
 
 commitments :: Int -> [ByteString]
 commitments n = [BS.replicate 32 (fromIntegral k) | k <- [1 .. n]]
@@ -71,29 +71,25 @@ spec = describe "the future declaration of an inception" $ do
             futureThresholdFromData (toBuiltinData (Weighted [[Weight (-1) 2]])) `shouldBe` Nothing
         it "reads a numeric threshold" $
             futureThresholdFromData (toBuiltinData (Unweighted 0)) `shouldBe` Just (Unweighted 0)
-    describe "E7: the signed future threshold against the datum's, pair for pair (draft #600 at ce10e471, InceptionPrefix.verify)" $ do
+    describe "the spelling the reconstruction compares keeps every pair (draft #600 at ce10e471, InceptionPrefix.verify)" $ do
         let weights = [(n, d) | d <- [1 .. 6], n <- [0 .. d]]
             scalings = [2, 3 :: Integer]
-        it "matches a datum that carries the signed pairs, over every pair with denominator 1 to 6" $
-            and [futureThresholdMatches (respellThreshold (Weighted [[Weight n d, Weight n d]])) (Weighted [[Weight n d, Weight n d]]) | (n, d) <- weights]
-                `shouldBe` True
-        it "refuses a datum whose pair has the same value but another numerator and denominator, in both directions" $
+            spelled = thresholdJson . Weighted
+        it "writes one spelling for one declaration, over every pair with denominator 1 to 6" $
+            and [spelled [[Weight n d, Weight n d]] == spelled [[Weight n d, Weight n d]] | (n, d) <- weights] `shouldBe` True
+        it "writes another spelling for a pair of the same value with another numerator and denominator" $
             [ (n, d, k)
             | (n, d) <- weights
             , k <- scalings
-            , futureThresholdMatches (respellThreshold (Weighted [[Weight (n * k) (d * k)]])) (Weighted [[Weight n d]])
-                || futureThresholdMatches (respellThreshold (Weighted [[Weight n d]])) (Weighted [[Weight (n * k) (d * k)]])
+            , spelled [[Weight (n * k) (d * k)]] == spelled [[Weight n d]]
             ]
                 `shouldBe` []
-        it "refuses a datum that differs in one pair of a clause, in clause order, or in clause count" $ do
-            let signed = respellThreshold (Weighted [[Weight 1 2, Weight 1 3], [Weight 1 1]])
-            futureThresholdMatches signed (Weighted [[Weight 1 2, Weight 1 3], [Weight 1 1]]) `shouldBe` True
-            futureThresholdMatches signed (Weighted [[Weight 1 3, Weight 1 2], [Weight 1 1]]) `shouldBe` False
-            futureThresholdMatches signed (Weighted [[Weight 1 2, Weight 1 3]]) `shouldBe` False
-            futureThresholdMatches signed (Weighted [[Weight 1 2, Weight 2 6], [Weight 1 1]]) `shouldBe` False
-        it "keeps the numeric threshold by exact spelling" $ do
-            futureThresholdMatches (respellThreshold (Unweighted 1)) (Unweighted 1) `shouldBe` True
-            futureThresholdMatches (respellThreshold (Unweighted 2)) (Unweighted 1) `shouldBe` False
+        it "writes another spelling for another pair, clause order or clause count" $ do
+            let base = spelled [[Weight 1 2, Weight 1 3], [Weight 1 1]]
+            base `shouldBe` spelled [[Weight 1 2, Weight 1 3], [Weight 1 1]]
+            base `shouldSatisfy` (/= spelled [[Weight 1 3, Weight 1 2], [Weight 1 1]])
+            base `shouldSatisfy` (/= spelled [[Weight 1 2, Weight 1 3]])
+            base `shouldSatisfy` (/= spelled [[Weight 1 2, Weight 2 6], [Weight 1 1]])
   where
     row name count threshold expected =
         it name $ futureWellFormed (commitments count) threshold `shouldBe` expected

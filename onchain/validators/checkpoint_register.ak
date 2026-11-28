@@ -24,6 +24,7 @@ use cardano_keri/checkpoint/freeze_bond.{freeze_bond_valid}
 use cardano_keri/checkpoint/observer.{
   ObserverEnvelope, observe_advance, observe_convict, observe_freeze,
 }
+use cardano_keri/checkpoint/qualified
 use cardano_keri/checkpoint/refund
 use cardano_keri/checkpoint/registration.{valid_registration_deposit}
 use cardano_keri/checkpoint/role.{Active}
@@ -363,12 +364,13 @@ fn validate_advance(
   // current keys, proved by the rotation observer) signed the intent for this
   // spent output and this amount, `B - bHeld`: the bond when the spent state is
   // frozen, nothing when it is not.
+  expect Some(new_cur_raw) = qualified.key_payloads(new_keys.cur_keys)
   expect
     when bond is {
       Keep -> new_frozen == frozen
       Deposit { signatures } ->
         !new_frozen && deposit_authorized(
-          new_keys.cur_keys,
+          new_cur_raw,
           new_keys.cur_threshold,
           signatures,
           required_intent(

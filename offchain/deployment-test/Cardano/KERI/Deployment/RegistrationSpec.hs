@@ -40,8 +40,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (V2),
     KeyStateView (..),
     liveOfInception,
+    qualifiedOfView,
  )
-import Cardano.KERI.AID.Checkpoint.Registration (qualifiedOfView)
+
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (Unweighted))
 import Cardano.KERI.AID.Checkpoint.Wire (asPlcData)
 import Cardano.KERI.ChainQuery (

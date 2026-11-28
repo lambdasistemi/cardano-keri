@@ -10242,6 +10242,38 @@
     "v": "f17c4e10757c"
    }
   ],
+  "the-unchecked-link-to-the-previous-event": [
+   {
+    "index": 0,
+    "name": "docs-design-key-compromise/the-unchecked-link-to-the-previous-event-00",
+    "pause_ms": 500,
+    "v": "1ba02a7a3a9d"
+   },
+   {
+    "index": 1,
+    "name": "docs-design-key-compromise/the-unchecked-link-to-the-previous-event-01",
+    "pause_ms": 400,
+    "v": "30a7ce304b14"
+   },
+   {
+    "index": 2,
+    "name": "docs-design-key-compromise/the-unchecked-link-to-the-previous-event-02",
+    "pause_ms": 400,
+    "v": "ff4decb77f1a"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-key-compromise/the-unchecked-link-to-the-previous-event-03",
+    "pause_ms": 400,
+    "v": "e8570578d734"
+   },
+   {
+    "index": 4,
+    "name": "docs-design-key-compromise/the-unchecked-link-to-the-previous-event-04",
+    "pause_ms": 400,
+    "v": "9c874f941817"
+   }
+  ],
   "what-the-stolen-current-keys-authorize": [
    {
     "index": 0,
@@ -10285,13 +10317,13 @@
     "index": 1,
     "name": "docs-design-key-compromise/when-the-fork-is-real-not-merely-suspected-01",
     "pause_ms": 400,
-    "v": "113843c5dd0b"
+    "v": "95c9e15140ba"
    },
    {
     "index": 2,
     "name": "docs-design-key-compromise/when-the-fork-is-real-not-merely-suspected-02",
     "pause_ms": 400,
-    "v": "a70cf67daded"
+    "v": "3ebc2310e13d"
    }
   ],
   "why-we-do-not-replicate-first-seen": [
@@ -10317,7 +10349,7 @@
     "index": 3,
     "name": "docs-design-key-compromise/why-we-do-not-replicate-first-seen-03",
     "pause_ms": 300,
-    "v": "803cac3a2922"
+    "v": "bf9e506b51a8"
    },
    {
     "index": 4,

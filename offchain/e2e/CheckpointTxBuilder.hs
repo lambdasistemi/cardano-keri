@@ -393,6 +393,7 @@ import System.IO (
  )
 import System.Process qualified as Proc
 import System.Timeout (timeout)
+import Text.Read (readMaybe)
 
 data CheckpointEnv = CheckpointEnv
     { envCheckpointScript :: !(Script ConwayEra)
@@ -700,9 +701,27 @@ mkCheckpointEnvWith registryTerms blueprintPath lsq ltxs seed = do
             , envHashProofReference = Nothing
             , envConfiguration = Nothing
             , envProvider = mkN2CProvider lsq
-            , envSubmitter = mkN2CSubmitter ltxs
+            , envSubmitter = delayedSubmitter (mkN2CSubmitter ltxs)
             , envOwner = genesisAddr
             }
+
+{- | Fault injection of the harness (#382): when @KERI_E2E_PRE_SUBMIT_DELAY_MS@ is set, wait that many
+milliseconds before every submission, so that a validity interval computed earlier expires the way it does
+on a loaded runner. Unset or zero, nothing changes.
+-}
+delayedSubmitter :: Submitter IO -> Submitter IO
+delayedSubmitter inner =
+    inner
+        { submitTx = \tx -> do
+            delay <- injectedSubmitDelayMs
+            when (delay > 0) $ do
+                dbg ("injected pre-submit delay: " <> show delay <> " ms")
+                threadDelay (delay * 1000)
+            submitTx inner tx
+        }
+
+injectedSubmitDelayMs :: IO Int
+injectedSubmitDelayMs = maybe 0 (fromMaybe 0 . readMaybe) <$> lookupEnv "KERI_E2E_PRE_SUBMIT_DELAY_MS"
 
 requireArtifact :: Text -> [ScriptArtifact] -> IO ScriptArtifact
 requireArtifact name artifacts =

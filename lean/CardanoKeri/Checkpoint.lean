@@ -41,14 +41,14 @@ inductive BondOp where
 
 /-- Evidence at one checkpoint spend. For keep, deposit and freeze, the party
 relaying the later rotation supplies its public event, signatures and receipts
-to the checkpoint observer. For deposit, the controller additionally signs the
+to the advance minting policy. For deposit, the controller additionally signs the
 spend-bound intent with the successor keys. For poison, the controller presents
 the current-key quorum in the modeled poison spend. For conviction, the
 convictor presents one rival. The conviction mint checks it against the
 previous commitments carried in the spent tip. The separate two-event read serves the KERI conformance question. -/
 structure Env where
 
-  rotationTo : Epoch → Seq → Seq → Bool
+  advanceReads : Attestation.AdvanceReads
 
   -- The keys of epoch `e` signed the deposit of the rotation that opens `e`.
   depositAuthorized : Epoch → Bool
@@ -58,7 +58,7 @@ structure Env where
   -- The conviction mint decodes the spent active datum and the rival in
   -- the same checkpoint transaction. Signature verification is a primitive.
   presentedSpend : Epoch → Seq → Option Registry.Conviction := fun _ _ => none
-  attestationMinted : Registry.Conviction → Bool := fun _ => false
+  convictionReads : Attestation.ConvictionReads
   keyReads : KeyReads := ⟨fun _ => none, fun _ => none⟩
 
   -- A history reader can independently evaluate the KERI two-event definition.
@@ -66,11 +66,17 @@ structure Env where
 
   convictionRival : Epoch → Seq → Option CardanoKeri.Duplicity.SignedEvent
 
-  -- The registration observer reads the identified inception from the event
-  -- and datum admitted at booking. The advance observer reads the signed
+  -- The booking policy reads the identified inception from the event
+  -- and datum admitted at booking. The advance policy reads the signed
   -- rotation presented for the spent identifier and the proposed successor.
   inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
   rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
+
+def Env.rotationTo (env : Env) := env.advanceReads.attested .advance
+def Env.freezeTo (env : Env) := env.advanceReads.attested .freeze
+
+def Env.attestationMinted (env : Env) (observed : Registry.Conviction) : Bool :=
+  env.convictionReads.attested observed.output
 
 /-- The convictor mints the attestation in this transaction for this
 specific output and claim. A held or previously burned token supplies no mint. -/
@@ -111,9 +117,9 @@ def Env.duplicityAt (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
 def Env.acceptsRival (env : Env) (epoch : Epoch) (sn : Seq) : Bool :=
   ((env.comparison epoch sn).map (fun c => c.acceptsAt epoch sn)).getD false
 
-/-- The commitment binds the decoded observer evidence for one rival. The
+/-- The commitment binds the decoded conviction evidence for one rival. The
 wire offsets and canonical encoding of the complete evidence digest are
-technical representation obligations of the enforcement observer. -/
+technical representation obligations of the enforcement policy. -/
 abbrev Evidence := CheckpointConviction.Rival
 
 def Env.evidenceAt (env : Env) (aid : AID) (epoch : Epoch) (sn : Seq) : Option Evidence := do
@@ -352,7 +358,7 @@ inductive Step (p : Params) (env : Env) : Action → Slot → State → Flow →
       Step p env .poison now (.present l) {} (.present { l with poisoned := true })
 
   | freeze {l : Live} (now : Slot) (sn' : Seq) (payee : Addr)
-      (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+      (hev : env.freezeTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
       (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
       Step p env (.freeze sn' payee) now (.present l)
         { hunter := some { addr := payee, b := p.B } }
@@ -405,7 +411,7 @@ def stepFn (p : Params) (env : Env) (a : Action) (now : Slot) (s : State) : Opti
         some ({}, .present { l with poisoned := true })
       else none
   | .freeze sn' payee, .present l =>
-      if env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧ l.frozen = false ∧
+      if env.freezeTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧ l.frozen = false ∧
          l.poisoned = false then
         some ({ hunter := some { addr := payee, b := p.B } }, .present { l with frozen := true })
       else none
@@ -719,7 +725,9 @@ def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
 uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
 def Action.authorizedFor (a : Action) (env : SystemEnv) (aid : AID) (s : State) : Prop :=
   match a, s with
-  | .rotate target .keep _, .present l | .freeze target _, .present l =>
+  | .freeze target _, .present l =>
+    (env aid).freezeTo l.epoch l.sn target = true
+  | .rotate target .keep _, .present l =>
     (env aid).rotationTo l.epoch l.sn target = true
   | .rotate target .deposit _, .present l =>
     (env aid).rotationTo l.epoch l.sn target = true ∧
@@ -763,7 +771,7 @@ def SweepEvent (s s' : Sys) : Prop :=
     c.expiresAt < now ∧ s' = s.retire c.marker
 
 /-- A certificate presents two projections of the earlier spend. Compare their
-ledger outpoint and full observer evidence before associating the histories.
+ledger outpoint and full conviction evidence before associating the histories.
 The termination mint itself only spends the named pending output. -/
 def bookingSharesConviction (s : Sys) (aid : AID) (origin : Origin) (ref : Singular.OutRef) : Bool :=
   match s.convictions aid with

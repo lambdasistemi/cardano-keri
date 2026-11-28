@@ -1,6 +1,7 @@
 /* Stakeholders organize proposed moves; they grant no authority. Evidence and
  * transaction inputs are judged by the same core for every card. The display
  * clock selects proposal intervals and is not a Registry state transition. */
+import * as A from './attestation.mjs';
 import { convictionFixture } from './checkpoint-conviction.mjs';
 import * as B from './registry-fixtures.mjs';
 import { decodeInput } from './registry-wire.mjs';
@@ -39,8 +40,9 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
   const offer = (label, action) => chain.push({ kind: actionTag(action), label, action });
   const aid = CAST[actorId]?.aid;
   if (aid) {
-    offer('book a registration request', B.registrationAction(params, state, aid, toWire(fresh), toWire(time)));
-    keri.push({ label: 'inception verifies', row: { inception: [aid] } });
+    const registration = B.registrationAction(params, state, aid, toWire(fresh), toWire(time));
+    offer('book a registration request', registration);
+    keri.push({ label: 'supply the booking mint', row: {bookings: [A.sampleBooking(state.config.applicationPolicy, registration.bookRegistration.booking.request)]} });
     for (const b of exact.registrations.filter(b => b.request.key === BigInt(aid))) {
       offer(`return request ${b.request.reference.tx} after its deadline`, B.returnAction(params, state, toWire(b.request.reference), toWire(time), toWire(time + 1n)));
     }
@@ -68,6 +70,8 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
   }
   if (actorId === 'cora') for (const c of state.carriers) {
     offer(`convict AID ${c.aid}`, { convictCkpt: { aid: c.aid } });
+    const output = convictionFixture(c.aid, 1, 1).output;
+    keri.push({label: `supply the two conviction mints for AID ${c.aid}`, row: {convictionTransactions: [A.sampleConviction(output, c.aid)]}});
     keri.push({ label: `supply a conviction observation for AID ${c.aid}`, row: { convictions: [convictionFixture(c.aid, 1, 1)] } });
   }
   return { chain, keri };

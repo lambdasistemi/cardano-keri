@@ -87,7 +87,7 @@
       "pause": 300
     },
     {
-      "text": "if the pool is short and the checkpoint is neither frozen nor poisoned, it can freeze the checkpoint on its old keys with the same evidence. The freeze sets only the frozen bit in the datum and pays B to the payee it names. The checkpoint stays frozen until a depositing rotation restores the bond. A rotation with a short pool still lands, unpaid.",
+      "text": "if the pool is short and the checkpoint is neither frozen nor poisoned, it can freeze the checkpoint on its old keys with a later witnessed rotation and a freeze attestation for the spent checkpoint. The freeze sets only the frozen bit in the datum and pays B to the payee it names. The checkpoint stays frozen until a depositing rotation restores the bond. A rotation with a short pool still lands, unpaid.",
       "pause": 300
     },
     {
@@ -199,7 +199,7 @@
       "pause": 500
     },
     {
-      "text": "The hunter presents the same evidence it would use to advance: a later witnessed rotation with its receipts. The freeze runs the advance predicate and differs only in effect. It additionally requires that the pool is below P and that the checkpoint is neither frozen nor poisoned (one locked by the owner's own declaration, which is already unconsumable); B goes to the payee the freeze names.",
+      "text": "The hunter presents a later witnessed rotation with its receipts. The transaction must mint the freeze attestation for the checkpoint input it spends. The pool must be below P and the checkpoint must be neither frozen nor poisoned; B goes to the payee the freeze names.",
       "pause": 400
     }
   ],
@@ -317,6 +317,6 @@
   ],
   "_source": {
     "file": "super-watcher.md",
-    "sha256": "f52e87a68ddd35953ee5bb8043f250bf2a7463039791649b663a8aba9a0adebf"
+    "sha256": "653e7031a40ec32a680da73a822f9626d636937017e27ea152bad629636e41ed"
   }
 }

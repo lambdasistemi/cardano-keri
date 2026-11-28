@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.RegistryScenarioFixtures
 import Lean
 
@@ -42,14 +43,17 @@ instance : FromJson Params where
     else throw "D must be positive"
 
 structure EnvTable where
-  inception : List Nat := []
+  bookings : List Attestation.MintObservation := []
+  convictionTransactions : List Attestation.Production := []
   convictions : List Conviction := []
   deriving ToJson, FromJson
 
 def EnvTable.toEnv (table : EnvTable) : Env := {
-  inception := fun aid => table.inception.contains aid
+  bookingPolicy := Attestation.Fixtures.bookingPolicy
+  bookingTx := fun tx => (table.bookings.find? (·.identity == tx)).map (·.assets)
   presentedConviction := fun aid => table.convictions.find? (fun observed => observed.comparison.tip.aid == aid)
-  attestationMinted := fun observed => table.convictions.contains observed }
+  convictionReads := ⟨CardanoKeri.Attestation.Fixtures.policies, fun ref =>
+    (table.convictionTransactions.find? (·.output == ref)).map (·.observation)⟩ }
 
 partial def exactJson (j : Json) : Json := match j with
   | .num _ => match j.getInt? with

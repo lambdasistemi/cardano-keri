@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.DuplicityExamples
 import CardanoKeri.Registry
 import Singular.Lemmas.FoldWitnessTransaction
@@ -21,9 +22,12 @@ def convictionFixture (aid epoch sn : Nat) : Conviction :=
   ⟨⟨105 + (aid - 11), 0⟩, CheckpointConviction.Fixtures.comparison aid epoch sn⟩
 
 def env : Env := {
-  inception := fun _ => true
+  bookingPolicy := Attestation.Fixtures.bookingPolicy
+  bookingTx := Attestation.Fixtures.readBooking [⟨100,0,711,14⟩, ⟨101,0,712,14⟩,
+    ⟨102,0,713,14⟩, ⟨103,0,714,14⟩, ⟨104,0,715,14⟩, ⟨300,0,711,14⟩]
   presentedConviction := fun aid => some (convictionFixture aid 1 1),
-  attestationMinted := fun _ => true }
+  convictionReads := ⟨CardanoKeri.Attestation.Fixtures.policies, fun ref =>
+    if ref.tx ≥ 105 && ref.index == 0 then some (CardanoKeri.Attestation.Fixtures.convictionSpend ⟨ref.tx - 2, 0⟩) else none⟩ }
 
 structure Reached where
   state : Sys

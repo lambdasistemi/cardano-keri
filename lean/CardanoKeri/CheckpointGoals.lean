@@ -337,6 +337,7 @@ conviction. -/
 theorem T4_current_key_thief_cannot_rotate_or_freeze (p : Params) (env : Env) {a : Action} {t : Slot}
     {l : Live} {f : Flow} {s' : State}
     (hthief : ∀ sn', env.rotationTo l.epoch l.sn sn' = false)
+    (hfreeze : ∀ sn', env.freezeTo l.epoch l.sn sn' = false)
     (h : Step p env a t (.present l) f s') :
     a.actor ≠ .nextKeys ∧ (∀ sn' payee, a ≠ .freeze sn' payee) := by
   cases h <;> simp_all [Action.actor]
@@ -415,7 +416,7 @@ theorem T5_poison_enabled (p : Params) (env : Env) (t : Slot) (l : Live)
 /-- **T5c.** Given a later witnessed rotation, a short pool, the freeze bond
 held and no poison, the freeze is enabled. -/
 theorem T5_freeze_enabled (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr)
-    (hev : env.rotationTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
+    (hev : env.freezeTo l.epoch l.sn sn' = true) (hsn : l.sn < sn')
     (hpool : l.pool < p.P) (hb : l.frozen = false) (hclean : l.poisoned = false) :
     ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l') := by
   exact ⟨_, _, Step.freeze t sn' payee hev hsn hpool hb hclean⟩
@@ -1111,7 +1112,7 @@ hunter, datum otherwise untouched. -/
 theorem T15_b_leaves_only_by_freeze (p : Params) (env : Env) {a : Action} {t : Slot}
     {l l' : Live} {f : Flow} (h : Step p env a t (.present l) f (.present l'))
     (hheld : l.frozen = false) (hgone : l'.frozen = true) :
-    ∃ sn' payee, a = .freeze sn' payee ∧ env.rotationTo l.epoch l.sn sn' = true ∧ l.pool < p.P ∧
+    ∃ sn' payee, a = .freeze sn' payee ∧ env.freezeTo l.epoch l.sn sn' = true ∧ l.pool < p.P ∧
       l' = { l with frozen := true } ∧ f = { hunter := some { addr := payee, b := p.B } } := by
   cases h <;> first
     | exact ⟨_, _, rfl, ‹_›, ‹_›, rfl, rfl⟩
@@ -1238,7 +1239,7 @@ theorem Step.freeze_iff {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : 
     Step p env (.freeze sn' payee) now (.present l)
       { hunter := some { addr := payee, b := p.B } }
       (.present { l with frozen := true }) ↔
-    env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
+    env.freezeTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
     l.frozen = false ∧ l.poisoned = false := by
   constructor
   · intro h
@@ -1351,7 +1352,7 @@ variable (p : Params) (env : Env)
   Step p env (.freeze sn' payee) now (.present l)
     { hunter := some { addr := payee, b := p.B } }
     (.present { l with frozen := true }) ↔
-  env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
+  env.freezeTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧
   l.frozen = false ∧ l.poisoned = false)
 
 #check (Step.topUp_iff : ∀ (l : Live) (now : Slot) (x : Value),

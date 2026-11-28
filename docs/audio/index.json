@@ -1787,7 +1787,7 @@
     "index": 3,
     "name": "docs-architecture-identity-ops/shipped-today-03",
     "pause_ms": 400,
-    "v": "bbdf72c1abf8"
+    "v": "6a018df31881"
    },
    {
     "index": 4,
@@ -2069,7 +2069,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/top-up-new-in-the-accepted-design-01",
     "pause_ms": 400,
-    "v": "66264466ae35"
+    "v": "271d879f9dd8"
    }
   ],
   "under-the-accepted-design": [
@@ -2167,7 +2167,7 @@
     "index": 2,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_3-02",
     "pause_ms": 400,
-    "v": "8acfe11eba78"
+    "v": "2eff9acca70a"
    },
    {
     "index": 3,
@@ -2187,7 +2187,7 @@
     "index": 1,
     "name": "docs-architecture-identity-ops/under-the-accepted-design_4-01",
     "pause_ms": 400,
-    "v": "0095033dbae1"
+    "v": "e16315113d90"
    },
    {
     "index": 2,
@@ -3161,7 +3161,7 @@
     "index": 1,
     "name": "docs-architecture-system/the-same-plane-under-the-accepted-design-designed-01",
     "pause_ms": 400,
-    "v": "2f3e6a78eb89"
+    "v": "99061df4b156"
    },
    {
     "index": 2,
@@ -3661,7 +3661,7 @@
     "index": 6,
     "name": "docs-architecture-value-auth/under-the-accepted-design-06",
     "pause_ms": 300,
-    "v": "f6b5b5deab18"
+    "v": "15dd08c46aa2"
    }
   ],
   "value-authorization": [
@@ -11773,7 +11773,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/following-the-spent-checkpoint-back-to-its-writer-02",
     "pause_ms": 400,
-    "v": "fc3be733fcae"
+    "v": "086925f78b50"
    }
   ],
   "keris-application-on-the-public-registry": [
@@ -11805,7 +11805,7 @@
     "index": 4,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-04",
     "pause_ms": 300,
-    "v": "57e9f597f428"
+    "v": "4c32dbbbc50d"
    },
    {
     "index": 5,
@@ -11823,7 +11823,7 @@
     "index": 7,
     "name": "docs-design-registry-as-mpfs/keris-application-on-the-public-registry-07",
     "pause_ms": 300,
-    "v": "904b10f6990a"
+    "v": "6abb64976197"
    },
    {
     "index": 8,
@@ -11941,7 +11941,7 @@
     "index": 2,
     "name": "docs-design-registry-as-mpfs/the-machine-registrylean-02",
     "pause_ms": 400,
-    "v": "6d269e1374d4"
+    "v": "d3cc8d358d43"
    },
    {
     "index": 3,
@@ -12019,7 +12019,7 @@
     "index": 3,
     "name": "docs-design-registry-as-mpfs/where-the-registry-is-built-03",
     "pause_ms": 400,
-    "v": "87d4a69ad1a7"
+    "v": "d0dcc780b8ba"
    }
   ]
  },
@@ -12299,7 +12299,7 @@
     "index": 1,
     "name": "docs-design-super-watcher/freeze-accepted-design-01",
     "pause_ms": 400,
-    "v": "339043024bec"
+    "v": "481b766977a3"
    }
   ],
   "freshness-and-availability": [
@@ -12523,7 +12523,7 @@
     "index": 4,
     "name": "docs-design-super-watcher/the-hunters-wage-accepted-design-04",
     "pause_ms": 300,
-    "v": "3850281b37ff"
+    "v": "3bc257f9b1d9"
    },
    {
     "index": 5,
@@ -12647,7 +12647,7 @@
     "index": 10,
     "name": "docs-design-super-watcher/what-a-hunter-is-not-10",
     "pause_ms": 400,
-    "v": "75b9d181b639"
+    "v": "eb99d9b374b1"
    }
   ]
  },
@@ -13219,41 +13219,47 @@
     "index": 5,
     "name": "docs-design-trust-model/who-a-conviction-pays-05",
     "pause_ms": 400,
-    "v": "5ac9791675fa"
+    "v": "b76e221ddbb9"
    },
    {
     "index": 6,
     "name": "docs-design-trust-model/who-a-conviction-pays-06",
     "pause_ms": 400,
-    "v": "cef43ba148b6"
+    "v": "73e5f475d3ea"
    },
    {
     "index": 7,
     "name": "docs-design-trust-model/who-a-conviction-pays-07",
     "pause_ms": 400,
-    "v": "d23e5b2c7497"
+    "v": "cef43ba148b6"
    },
    {
     "index": 8,
     "name": "docs-design-trust-model/who-a-conviction-pays-08",
     "pause_ms": 400,
-    "v": "ac21ce6fcf46"
+    "v": "d23e5b2c7497"
    },
    {
     "index": 9,
     "name": "docs-design-trust-model/who-a-conviction-pays-09",
     "pause_ms": 400,
-    "v": "9cb7c2af9d1f"
+    "v": "ac21ce6fcf46"
    },
    {
     "index": 10,
     "name": "docs-design-trust-model/who-a-conviction-pays-10",
     "pause_ms": 400,
-    "v": "fa64445f93a9"
+    "v": "9cb7c2af9d1f"
    },
    {
     "index": 11,
     "name": "docs-design-trust-model/who-a-conviction-pays-11",
+    "pause_ms": 400,
+    "v": "fa64445f93a9"
+   },
+   {
+    "index": 12,
+    "name": "docs-design-trust-model/who-a-conviction-pays-12",
     "pause_ms": 400,
     "v": "f45b9034ddad"
    }
@@ -13392,50 +13398,30 @@
     "v": "139aa571006f"
    }
   ],
-  "leaving-and-coming-back": [
+  "no-way-out-but-conviction": [
    {
     "index": 0,
-    "name": "docs-design-user-experience/leaving-and-coming-back-00",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-00",
     "pause_ms": 500,
-    "v": "3b490fd0a4ba"
+    "v": "798884a29c9f"
    },
    {
     "index": 1,
-    "name": "docs-design-user-experience/leaving-and-coming-back-01",
+    "name": "docs-design-user-experience/no-way-out-but-conviction-01",
     "pause_ms": 400,
-    "v": "954550f900bb"
+    "v": "ac729c67501a"
    },
-   {
-    "index": 2,
-    "name": "docs-design-user-experience/leaving-and-coming-back-02",
-    "pause_ms": 300,
-    "v": "184b51e9bd3a"
-   },
-   {
-    "index": 3,
-    "name": "docs-design-user-experience/leaving-and-coming-back-03",
-    "pause_ms": 300,
-    "v": "a3495fe3f77b"
-   },
-   {
-    "index": 4,
-    "name": "docs-design-user-experience/leaving-and-coming-back-04",
-    "pause_ms": 300,
-    "v": "920dbbb1ed02"
-   },
-   {
-    "index": 5,
-    "name": "docs-design-user-experience/leaving-and-coming-back-05",
-    "pause_ms": 400,
-    "v": "578790aef5b4"
-   }
-  ],
-  "no-way-out-but-conviction": [
    {
     "index": 2,
     "name": "docs-design-user-experience/no-way-out-but-conviction-02",
     "pause_ms": 300,
     "v": "a3b7625ec5d9"
+   },
+   {
+    "index": 3,
+    "name": "docs-design-user-experience/no-way-out-but-conviction-03",
+    "pause_ms": 300,
+    "v": "dde9ebc31542"
    },
    {
     "index": 4,
@@ -13517,7 +13503,7 @@
     "index": 6,
     "name": "docs-design-user-experience/register-06",
     "pause_ms": 400,
-    "v": "1e78de981b18"
+    "v": "48415e620df9"
    },
    {
     "index": 7,
@@ -13555,7 +13541,7 @@
     "index": 4,
     "name": "docs-design-user-experience/rotate-04",
     "pause_ms": 400,
-    "v": "40fc5a06e46a"
+    "v": "237ef72b4dda"
    }
   ],
   "the-design-principle-the-owner-is-dumb-on-cardano": [
@@ -13569,7 +13555,7 @@
     "index": 1,
     "name": "docs-design-user-experience/the-design-principle-the-owner-is-dumb-on-cardano-01",
     "pause_ms": 400,
-    "v": "0c93f02f644c"
+    "v": "2a4f7159734a"
    },
    {
     "index": 2,

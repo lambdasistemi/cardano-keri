@@ -133,7 +133,7 @@ const REASON_WORDS = {
   "keri-carrier-missing": "This identity has no retained carrier at this point.",
   "keri-generation-mismatch": "This proposal names a registry generation that has already moved.",
   "keri-plugin-mismatch": "The proposed application policy differs from the registry configuration.",
-  "keri-inception-refused": "The key of this registration lacks its inception evidence.",
+  "keri-inception-refused": "The booking transaction lacks the inception attestation for this request output, datum and deposit.",
   "empty-fold": "Select at least one pending request to process.",
   "key-exists": "This key is already registered and cannot be registered again.",
   "not-phase1": "The complete transaction interval must fit the registration processing window.",
@@ -392,7 +392,7 @@ function renderPots() {
     ['Pending termination','Conviction retains the token and key. Booking moves whole custody to a request; another request cannot complete it.'],
     ['Retired registry key','Permanent. Its representative token was burned by the consuming fold.'],
     ['Time windows','Registration processing: '+c.processTime+' slots after the booking. Until then only a fold spends the request; from then anyone returns it, less its tip, to its refund address. Complete transaction bounds are checked.'],
-    ['Evidence table','The conviction observation names an indexed output and supplies the writer, its predecessor and the signed rival. The simulator checks event-bound signature and receipt reads. The fixture table supplies the abstract mint attestation.']])dl.append(h('dt',{},term),h('dd',{},body));
+    ['Evidence table','The conviction observation names an indexed output and supplies the writer, its predecessor and the signed rival. The simulator checks event-bound signature and receipt reads. A separate transaction observation must mint one enforcement token and one entitlement token for the spent checkpoint.']])dl.append(h('dt',{},term),h('dd',{},body));
 }
 
 function renderNarration() {
@@ -487,13 +487,17 @@ const backendMoveSlot=moveSlot;
 moveSlot=function(target){try{adoptTree(backendMoveSlot(currentTree(),target),true);$('slot-msg').textContent='';render();}catch(error){$('slot-msg').textContent=error.message;}};
 function renderEvidence() {
   const sess=cur(),env=sess.env;
-  const aids=[...new Set([11,12,13,...env.inception,...env.convictions.map(r=>r.comparison.tip.aid),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
-  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','inception','conviction observation'].map(t=>h('th',{},t))))),tb=h('tbody',{});
-  const cb=(kind,args,label)=>h('label',{},h('input',{type:'checkbox',dataset:{ev:kind,aid:kind==='inception'?args[0]:args[0].comparison.tip.aid},checked:evHas(env,kind,args),onchange:e=>{adoptTree(editEvidence(currentTree(),{[kind]:args},e.target.checked),true);render();}}),label);
+  const aids=[...new Set([11,12,13,...env.convictions.map(r=>r.comparison.tip.aid),...sess.state.carriers.map(c=>c.aid),...(app.extraAids||[])])];
+  const tbl=h('table',{class:'evtable'},h('thead',{},h('tr',{},...['AID','booking mint','conviction evidence','conviction mint'].map(t=>h('th',{},t))))),tb=h('tbody',{});
+  const cb=(kind,value,label,aid)=>h('label',{},h('input',{type:'checkbox',dataset:{ev:kind,aid},
+    checked:evHas(env,kind,[value]),onchange:e=>{adoptTree(editEvidence(currentTree(),{[kind]:[value]},e.target.checked),true);render();}}),label);
   for(const aid of aids){
     const read=env.convictions.find(r=>equal(r.comparison.tip.aid,aid))??Judgment.convictionFixture(aid,1,1);
-    tb.append(h('tr',{},h('td',{},aid),h('td',{},cb('inception',[aid],'verifies')),
-      h('td',{},cb('convictions',[read],read.output.tx+'#'+read.output.index))));
+    const actor=Object.keys(CAST).find(key=>equal(CAST[key].aid,aid));
+    const booking=actor && offersFor(actor,currentTree()).keri.find(k=>k.row.bookings)?.row.bookings[0];
+    const production=A.sampleConviction(read.output,aid);
+    tb.append(h('tr',{},h('td',{},aid),h('td',{},booking?cb('bookings',booking,'transaction '+booking.identity,aid):''),
+      h('td',{},cb('convictions',read,'signed rival',aid)),h('td',{},cb('convictionTransactions',production,read.output.tx+'#'+read.output.index,aid))));
   }
   tbl.append(tb);clear($('evbody')).append(tbl);
 }
@@ -581,7 +585,7 @@ function renderMoney() {
 }
 /* ---- the story player: a scenario becomes a tree ------------------------------ */
 function startFresh() {
-  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{inception:[],convictions:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
+  const sc=SCENARIOS[0];newTree({...newSession(sc.params,sc.config,{bookings:[],convictionTransactions:[],convictions:[]}),now:0},'An empty registry. Bring evidence, book a request, then process it.');
   app.story=null;app.punch=null;app.challenge=null;app.pastPunch=false;
 }
 const CHALLENGES={sweep:{title:'Sweep a live carrier',actor:'sam',goal:'Alice has a live carrier and the evidence table contains no accepted conviction for it. Try to book its termination and collect the booking premium.',won:()=>pathTo(app.cursor).map(node).some(n=>n.record?.action?.bookTermination&&n.record.result.ok),why:'A termination booking requires a convicted carrier: a live carrier cannot be booked (Registry.live_cannot_book). There is no owner exit to collect. Conviction needs duplicity at the carrier’s key; if you add that premise to the model evidence table, the premise has changed.'}};

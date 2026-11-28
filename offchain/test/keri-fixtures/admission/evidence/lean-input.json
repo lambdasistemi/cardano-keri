@@ -1,0 +1,568 @@
+{
+ "rows": [
+  {
+   "case": "I01",
+   "step": "icp",
+   "role": "subject",
+   "comparable": false,
+   "reason": "no persisted predecessor"
+  },
+  {
+   "case": "I02",
+   "step": "icp",
+   "role": "subject",
+   "comparable": false,
+   "reason": "no persisted predecessor"
+  },
+  {
+   "case": "I03a",
+   "step": "icp",
+   "role": "subject",
+   "comparable": false,
+   "reason": "no persisted predecessor"
+  },
+  {
+   "case": "R01",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 3,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     1,
+     2
+    ],
+    "nextThreshold": {
+     "count": 2
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 3,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 4,
+     "keys": [
+      1,
+      2
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [
+      5,
+      6
+     ],
+     "nextThreshold": {
+      "count": 2
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 1,
+      "verified": true
+     },
+     {
+      "signer": 2,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "R07",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 8,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     7,
+     12
+    ],
+    "nextThreshold": {
+     "count": 1
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 8,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 9,
+     "keys": [
+      7
+     ],
+     "threshold": {
+      "count": 1
+     },
+     "nextKeys": [
+      10,
+      11
+     ],
+     "nextThreshold": {
+      "count": 1
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 7,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "R08a",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 15,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     13,
+     14
+    ],
+    "nextThreshold": {
+     "weighted": [
+      [
+       {
+        "key": [
+         1,
+         2
+        ]
+       },
+       {
+        "key": [
+         1,
+         2
+        ]
+       }
+      ]
+     ]
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 15,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 16,
+     "keys": [
+      13,
+      14
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [
+      17,
+      18
+     ],
+     "nextThreshold": {
+      "weighted": [
+       [
+        {
+         "key": [
+          1,
+          2
+         ]
+        },
+        {
+         "key": [
+          1,
+          2
+         ]
+        }
+       ]
+      ]
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 13,
+      "verified": true
+     },
+     {
+      "signer": 14,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "R10c",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 21,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     19,
+     20
+    ],
+    "nextThreshold": {
+     "count": 2
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 21,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 22,
+     "keys": [
+      19,
+      20
+     ],
+     "threshold": {
+      "weighted": [
+       [
+        {
+         "key": [
+          1,
+          2
+         ]
+        },
+        {
+         "key": [
+          1,
+          2
+         ]
+        }
+       ]
+      ]
+     },
+     "nextKeys": [
+      23,
+      24
+     ],
+     "nextThreshold": {
+      "count": 2
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 19,
+      "verified": true
+     },
+     {
+      "signer": 20,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "R17",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 27,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     25,
+     26
+    ],
+    "nextThreshold": {
+     "count": 2
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 27,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 28,
+     "keys": [
+      25,
+      26
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [],
+     "nextThreshold": {
+      "count": 0
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 25,
+      "verified": true
+     },
+     {
+      "signer": 26,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "R18",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 31,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     29,
+     34
+    ],
+    "nextThreshold": {
+     "count": 1
+    },
+    "witnesses": []
+   },
+   "signed": {
+    "event": {
+     "aid": 31,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 32,
+     "keys": [
+      29,
+      30
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [
+      30,
+      33
+     ],
+     "nextThreshold": {
+      "count": 1
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 0,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 29,
+      "verified": true
+     },
+     {
+      "signer": 30,
+      "verified": true
+     }
+    ],
+    "receipts": []
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "W01",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 39,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     35,
+     36
+    ],
+    "nextThreshold": {
+     "count": 2
+    },
+    "witnesses": [
+     43,
+     37
+    ]
+   },
+   "signed": {
+    "event": {
+     "aid": 39,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 40,
+     "keys": [
+      35,
+      36
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [
+      41,
+      42
+     ],
+     "nextThreshold": {
+      "count": 2
+     },
+     "cuts": [
+      43
+     ],
+     "adds": [
+      38
+     ],
+     "witnessThreshold": 2,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 35,
+      "verified": true
+     },
+     {
+      "signer": 36,
+      "verified": true
+     }
+    ],
+    "receipts": [
+     {
+      "signer": 37,
+      "verified": true
+     },
+     {
+      "signer": 38,
+      "verified": true
+     }
+    ]
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "W09",
+   "step": "rot",
+   "role": "subject",
+   "comparable": true,
+   "prior": {
+    "aid": 48,
+    "sn": 0,
+    "delegated": false,
+    "nextKeys": [
+     44,
+     45
+    ],
+    "nextThreshold": {
+     "count": 2
+    },
+    "witnesses": [
+     46,
+     47
+    ]
+   },
+   "signed": {
+    "event": {
+     "aid": 48,
+     "sn": 1,
+     "kind": "rotation",
+     "priorDigest": 49,
+     "keys": [
+      44,
+      45
+     ],
+     "threshold": {
+      "count": 2
+     },
+     "nextKeys": [
+      50,
+      51
+     ],
+     "nextThreshold": {
+      "count": 2
+     },
+     "cuts": [],
+     "adds": [],
+     "witnessThreshold": 2,
+     "extension": []
+    },
+    "structureVerified": true,
+    "signatures": [
+     {
+      "signer": 44,
+      "verified": true
+     },
+     {
+      "signer": 45,
+      "verified": true
+     }
+    ],
+    "receipts": [
+     {
+      "signer": 46,
+      "verified": true
+     },
+     {
+      "signer": 47,
+      "verified": true
+     }
+    ]
+   },
+   "keripy": "accepted"
+  },
+  {
+   "case": "X01",
+   "step": "ixn",
+   "role": "subject",
+   "comparable": false,
+   "reason": "the model's admission surface is the rotation (rotationValid); interactions and inceptions have none"
+  },
+  {
+   "case": "X07",
+   "step": "ixn",
+   "role": "subject",
+   "comparable": false,
+   "reason": "the model's admission surface is the rotation (rotationValid); interactions and inceptions have none"
+  }
+ ]
+}

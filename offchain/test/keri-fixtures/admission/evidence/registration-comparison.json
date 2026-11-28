@@ -1,0 +1,26 @@
+[
+ {
+  "case": "I01",
+  "title": "1-of-1 inception, basic prefix",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "E2AidMismatch",
+  "direction": "WE-REFUSE"
+ },
+ {
+  "case": "I02",
+  "title": "2-of-3 integer threshold, all three sign",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "I03a",
+  "title": "weighted 1/2,1/2,1/2: keys 0 and 1 sign",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ }
+]

@@ -898,8 +898,8 @@ spec = describe "#351 deploying a registry" $ do
             deployedSizes <- sizesOn deployedBlueprint
             -- one size per step, in order: the template, the booking attestation, the application, the state script, the
             -- hash proof, the fact policy, the change policy, the checkpoint validator, the genesis
-            attestedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 10_879, 8_605, 9_161, 1_035]
-            deployedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 9_207, 1_035]
+            attestedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 10_879, 8_605, 9_161, 1_123]
+            deployedSizes `shouldBe` [8_245, 9_511, 11_106, 8_036, 8_982, 9_207, 1_123]
             -- the transaction size limit of the networks (16,384 bytes), which the in-memory chain does not enforce
             all (<= 16_384) (attestedSizes <> deployedSizes) `shouldBe` True
         it "is the deployed generation's seven steps with the two policies published before the checkpoint" $

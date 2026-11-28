@@ -105,7 +105,7 @@ def cell (name : String) (p : Params) (table : EvidenceTable) (machine : Machine
         ("checkpointFlow", toJson flow), ("registryFlow", toJson registryFlow)])], next)
   (CardanoKeri.Registry.TraceWire.exactJson (Json.mkObj [
     ("name", toJson name), ("params", toJson p), ("env", toJson (table.map fun (aid, evidence) =>
-      (aid, (toJson evidence).setObjVal! "writers" (toJson evidence.writers)))),
+      (aid, (evidence.toWire aid).setObjVal! "writers" (toJson evidence.writers)))),
     ("input", stateJson machine), ("command", toJson command), ("result", result)]), next)
 
 end CardanoKeri.Checkpoint.SystemWire

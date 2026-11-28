@@ -89,7 +89,7 @@
       "pause": 400
     },
     {
-      "text": "2. Checkpoint mint. The checkpoint transaction:",
+      "text": "2. Checkpoint mint. In the deployed generation the checkpoint transaction (the registry generation books, folds and returns instead, see Register in a registry):",
       "pause": 400
     },
     {
@@ -305,7 +305,7 @@
       "pause": 400
     },
     {
-      "text": "Instead a hunter freezes only when the owner's pool is short and the checkpoint is neither frozen nor poisoned: it presents exactly the advance evidence, and B goes to the payee the freeze names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores B. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores B.",
+      "text": "Instead a hunter freezes only when the owner's pool is short and the checkpoint is neither frozen nor poisoned: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint, and B goes to the payee the freeze names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores B. There is no deadline, no claim, no thaw window: the owner comes back by a rotation with deposit, which restores B.",
       "pause": 400
     },
     {
@@ -361,7 +361,7 @@
       "pause": 500
     },
     {
-      "text": "A different comparison and a different effect. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state, together with a rival rotation valid against the same previous commitments; the commitment's payee takes D_reg in full, and the freeze bond still held (none when frozen) and the pool go to the refund address. The checkpoint becomes a pending termination: the output and the token stay, consumers refuse it, and there is no local transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031). A termination booking then moves the pending output into the termination request, and only the fold that consumes that request burns the token and retires the key.",
+      "text": "The transaction producing the conviction output must mint both the enforcement and entitlement attestations for the spent checkpoint. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state, together with a rival rotation valid against the same previous commitments; the commitment's payee takes D_reg in full, and the freeze bond still held (none when frozen) and the pool go to the refund address. The checkpoint becomes a pending termination: the output and the token stay, consumers refuse it, and there is no local transition out — no rotate, no poison, no freeze, no top-up (D-030, D-031). A termination booking then moves the pending output into the termination request, and only the fold that consumes that request burns the token and retires the key.",
       "pause": 400
     },
     {
@@ -379,7 +379,7 @@
       "pause": 500
     },
     {
-      "text": "Top-up adds value to the pool, at least one premium at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
+      "text": "Top-up adds value to the pool, at least one premium P at a time and only once between two rotations. No signature, anyone. It is how a friend, an employer or a consortium pays for an identity's maintenance. A top-up spends the checkpoint output, so a stream of tiny ones could keep the controller's own rotation and the hunters' transactions from landing; the datum therefore carries a top-up mark that a top-up sets and every rotation clears, and a second top-up before the next rotation is refused. Registration asks for the same minimum: the first pool is at least P.",
       "pause": 400
     }
   ],
@@ -419,6 +419,6 @@
   ],
   "_source": {
     "file": "identity-ops.md",
-    "sha256": "04521d8007b2ada9d5cac7055b67cae32802b3aa43c2040c966ed960f191236f"
+    "sha256": "f9c42d31caa30cdc889bfd8df6a5ecdadb87b8534a5b12c9796ac191d3cb4c00"
   }
 }

@@ -68,7 +68,12 @@ def booking (r : Registration) : Singular.RegistrationBooking :=
 
 def registrationRow (r : Registration) : Json :=
   let b := booking r
-  let outcome := match CardanoKeri.Registry.bookRegistration registry CardanoKeri.Registry.Scenarios.env
+  -- Each row is a separate booking transaction. Its mint covers the amount
+  -- specified for that row, including the short-deposit refusal control.
+  let deposit := if r.short then 13 else 14 + r.pool0
+  let env := { CardanoKeri.Registry.Scenarios.env with
+    bookingTx := Attestation.Fixtures.readBooking [⟨100, 0, 711, deposit⟩] }
+  let outcome := match CardanoKeri.Registry.bookRegistration registry env
       (CardanoKeri.Registry.Sys.init CardanoKeri.Registry.Scenarios.cfg) b with
     | .ok _ => Json.mkObj [("booked", toJson true),
         ("pool", natJson (b.request.carrierAda - registry.Mc - params.D - params.B))]

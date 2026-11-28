@@ -101,7 +101,7 @@
       "pause": 300
     },
     {
-      "text": "Conviction becomes terminal, and a parked identity can come back. The chain follows KERI: no key event un-duplicates an identifier, so Convicted has no exit, while a parked identity reopens on a witnessed rotation later than the parked key state. An application must not cache \"absent forever\" for a parked AID, and must not expect a convicted one to return.",
+      "text": "Conviction is the only end, and it is terminal. The chain follows KERI: no key event un-duplicates an identifier, so Convicted has no exit. There is no owner exit either, so a registered AID is alive until it is convicted. An application must not expect a convicted one to return.",
       "pause": 300
     }
   ],

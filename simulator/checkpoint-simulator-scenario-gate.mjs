@@ -57,6 +57,8 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
+import { convictionFixture } from './checkpoint-conviction.mjs';
+import { sampleConviction } from './attestation.mjs';
 import { SYSTEM_THEOREMS, systemProperties } from './checkpoint-system-properties.mjs';
 import { createWindow } from './checkpoint-simulator-minidom.mjs';
 
@@ -103,6 +105,21 @@ function checkExactNat(core, corpus) {
   const CONSULTING = { rotationTo: { rotate: { "sn'": 2, op: 'keep', payee: 1 } }, depositAuthorized: { rotate: { "sn'": 2, op: 'deposit', payee: 1 } }, quorum: 'poison', duplicityAt: { convict: { payee: 1, commitment: core.commitmentFor(live().present.l, 1, 0) } } };
   const NOP = { topUp: { x: 2 } };
   const okEnv = core.envAdd(core.envAdd(core.emptyEnv(), { quorum: [1] }), { rotationTo: [1, 1, 2] });
+  // A scenario selector stays present throughout. Only the raw observed spend changes.
+  const acceptedMint = core.step(P, okEnv, CONSULTING.rotationTo, 2, live());
+  if (!acceptedMint.ok) problems.push('positive advance mint refused');
+  for (const [name, change] of [
+    ['held only', row => {row.transaction.outputs = [{assets: row.transaction.mint}]; row.transaction.mint = [];}],
+    ['wrong quantity', row => {row.transaction.mint[0][1] = 2;}],
+    ['another kind', row => {row.transaction.mint[0][0].name++;}],
+    ['another relying script', row => {row.transaction.mint[0][0].name += 8;}],
+    ['another reference', row => {row.input.index++; row.transaction.spent = [row.input];}],
+  ]) {
+    const changed = structuredClone(okEnv);
+    change(changed.mintTransactions.advances.find(row => row.kind === 'advance').observation);
+    if (core.step(P, changed, CONSULTING.rotationTo, 2, live()).reason !== 'no-witnessed-rotation')
+      problems.push('advance accepted ' + name);
+  }
   const got = r => (r.ok ? 'ok' : r.reason + (r.field !== undefined ? '/' + r.field : ''));
   // the entry point must refuse by name, with the offending field, before evaluating anything
   // an entry point that throws on a corrupted input has not refused it by name
@@ -272,6 +289,26 @@ function checkLocalSessions(core, corpus) {
   const P = { D: 1000, B: 5, P: 2, W: 10 };
   const asserted = new Set();
   let accepted = 0, refused = 0, t8Shown = 0, nonRegisterShown = 0, transitions = 0, distinctRegistered = 0;
+  const aid = 12, payee = 7;
+  const selected = core.seed(core.newSession(P, {aid, corpus}), core.present({
+    epoch: 1, sn: 1, pool: 4, bornAt: 0, refundTo: 6, frozen: false, poisoned: false, toppedUp: false}));
+  const fixture = convictionFixture(aid, 1, 1);
+  const action = {convict: {payee, commitment: core.commitmentFor(selected.state.present.l, payee, 0, aid)}};
+  const evidence = core.addEvidence(selected, {duplicityAt: [1, 1]});
+  const recorded = {...evidence.env, mintTransactions: {advances: [], convictions: [sampleConviction(fixture.output, aid)]}};
+  const compareSession = env => core.attempt({...selected, env, envAll: env}, action, 2).record;
+  const acceptedRecord = compareSession(recorded);
+  const replayed = core.replay(P, recorded, 0, selected.state, [[2, action]], aid);
+  if (!replayed.ok || core.canon(replayed.state) !== core.canon(acceptedRecord.state))
+    problems.push('selected AID 12: replay must reach the same pending checkpoint as the session');
+  if (!acceptedRecord.ok || !acceptedRecord.state.terminationPending ||
+      !acceptedRecord.theorems.T5_convict_enabled.exhibited || Object.values(acceptedRecord.theorems).some(t => !t.holds))
+    problems.push('selected AID 12: matching recorded conviction must reach pending with its theorem checks: ' + (acceptedRecord.reason || 'theorem mismatch'));
+  if (core.canon(evidence.env) !== core.canon(recorded) || core.canon(evidence.envAll) !== core.canon(recorded))
+    problems.push('selected AID 12: adding evidence must record the conviction at 106#0 in the current and accumulated tables');
+  const wrong = {...recorded, mintTransactions: {...recorded.mintTransactions,
+    convictions: [sampleConviction(convictionFixture(0, 1, 1).output, 0)]}};
+  if (compareSession(wrong).reason !== 'no-duplicity-proof') problems.push('selected AID 12: a different output supplied the conviction');
   for (let run = 0; run < 24; run++) {
     const rnd = prng(0x9e3779b9 + run * 7919);
     const pick = arr => arr[Math.floor(rnd() * arr.length)];
@@ -283,14 +320,14 @@ function checkLocalSessions(core, corpus) {
       const l = core.liveOf(st);
       const e = l ? l.epoch : 0, sn = l ? l.sn : 0;
       // evidence arrives at random, for this AID's current epoch and sequence
-      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { depositAuthorized: [e + 1] }, { rotationTo: [e, sn, sn + 2] }]));
+      if (rnd() < 0.5) s = core.addEvidence(s, pick([{ rotationTo: [e, sn, sn + 1] }, { quorum: [e] }, { duplicityAt: [e, sn] }, { depositAuthorized: [e + 1] }, { rotationTo: [e, sn, sn + 2] }]), aid);
       if (rnd() < 0.1) for (const k of core.EV_KINDS) for (const row of s.env[k].slice()) if (rnd() < 0.3) s = core.removeEvidence(s, { [k]: row });
       let action;
       if (core.stateKind(st) === 'absent' && rnd() < 0.7) action = { register: { refund: pick([1, 4, 6]), pool0: Math.floor(rnd() * 12) } };
       else action = pick([
         { rotate: { "sn'": pick([sn + 1, sn, sn + 2]), op: pick(core.BOND_OPS), payee: pick([1, 2, 4]) } },
         'poison', { freeze: { "sn'": sn + 1, payee: 2 } }, { topUp: { x: Math.floor(rnd() * 5) } },
-        { convict: { payee: pick([3, 3, 4]), commitment: core.commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 0, toppedUp: false }, 3, slot + pick([-1, 0, 1])) } },
+        { convict: { payee: pick([3, 3, 4]), commitment: core.commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 1, pool: 0, toppedUp: false }, 3, slot + pick([-1, 0, 1]), aid) } },
         { register: { refund: 6, pool0: 1 } },
       ]);
       slot += Math.floor(rnd() * 4);
@@ -613,7 +650,7 @@ function checkGuardTable(core, spans) {
     const g = core.LEAN_GUARDS[reason];
     if (!g) { problems.push(`guard table: refusal ${reason} has no entry (which Lean guard is it?)`); continue; }
     for (const decl of g.decls) {
-      if (g.hyp) claim(decl, g.hyp, reason, g.text);
+      if (g.hyp) claim(decl, g.hyp, reason, g.textByDecl?.[decl] ?? g.text);
       else if (g.hyps) for (const [h, t] of g.hyps) claim(decl, h, reason, t);
       else claim(decl, null, reason, g.text);
     }
@@ -1060,8 +1097,8 @@ function fabricatedViolations(core) {
     T5_keep_needs_no_intent: () => mk({ pre: live, action: ROT(2, 'keep'), env: rotEnv, ok: false, reason: 'no-quorum' }),
     T5_poison_enabled: () => mk({ pre: live, action: 'poison', env: rows([{ quorum: [1] }]), ok: false, reason: 'no-quorum' }),
     T5_freeze_enabled: () => mk({ pre: pr(L({ pool: 1 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, ok: false, reason: 'poisoned' }),
-    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
-    convict_requires_entitlement: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 4, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) } }),
+    T5_convict_enabled: () => mk({ pre: live, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11, 1) } }, env: dupEnv, ok: false, reason: 'no-duplicity-proof' }),
+    convict_requires_entitlement: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 4, 11, 1) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) } }),
     commitment_survives_topUp: () => mk({ pre: live, post: pr(L({ epoch: 2, pool: 11, toppedUp: true })), action: TOP, flow: { poolIn: 1 } }),
     commitment_survives_freeze: () => mk({ pre: pr(L({ pool: 1 })), post: pr(L({ pool: 1, frozen: true, sn: 2 })), action: { freeze: { "sn'": 2, payee: 2 } }, env: rotEnv, flow: { hunter: pay(2, 0, 5) } }),
     commitment_survives_poison: () => mk({ pre: live, post: pr(L({ poisoned: true, epoch: 2 })), action: 'poison', env: rows([{ quorum: [1] }]) }),
@@ -1074,7 +1111,7 @@ function fabricatedViolations(core) {
     step_from_present_keeps_refund: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T6_refund_fixed_along_trace: () => mk({ pre: live, post: pr(L({ pool: 11, refundTo: 9 })), action: TOP, flow: { poolIn: 1 }, origin: live }),
     T6_refund_is_registration_address: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, TOP]] }),
-    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }]] }),
+    T6_conviction_refunds_registration_address: () => mk({ pre: live, post: { terminationPending: { h: { epoch: 1, sn: 1 } } }, action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11, 1) } }, env: dupEnv, flow: { refund: pay(1, 0, 5, 10), convictor: pay(3, 1000) }, history: [[0, { register: { refund: 6, pool0: 10 } }], [12, { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11, 1) } }]] }),
     T6_frozen_flips_only_by_rotation_or_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
     T6_deposit_requires_new_keys: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T6_relayer_cannot_park_age_or_close: () => mk({ pre: live, post: rotated(), action: ROT(2, 'deposit'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
@@ -1094,7 +1131,7 @@ function fabricatedViolations(core) {
     trace_from_pending: () => mk({ pre: { terminationPending: { h: { epoch: 1, sn: 1 } } }, post: live, action: TOP }),
     T12_convicted_terminal: () => mk({ pre: 'convicted', post: live, action: TOP, flow: { poolIn: 1 } }),
     trace_from_convicted: () => mk({ pre: live, post: pr(L({ pool: 11 })), action: TOP, flow: { poolIn: 1 }, origin: 'convicted' }),
-    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11) } }, env: dupEnv, flow: {} }),
+    T12_convict_exact: () => mk({ pre: live, post: 'convicted', action: { convict: { payee: 3, commitment: core.commitmentFor(L(), 3, 11, 1) } }, env: dupEnv, flow: {} }),
     T14_pool_decreases_only_by_premium: () => mk({ pre: live, post: pr(L({ pool: 9 })), action: TOP, flow: { poolIn: 1 } }),
     T14_pool_increases_only_by_topup: () => mk({ pre: live, post: rotated({ pool: 20 }), action: ROT(2, 'keep'), env: rotEnv, flow: { hunter: pay(2, 0, 0, 2) } }),
     T15_b_leaves_only_by_freeze: () => mk({ pre: live, post: pr(L({ pool: 11, frozen: true })), action: TOP, flow: { poolIn: 1 } }),
@@ -1441,7 +1478,7 @@ async function selftest(work) {
     { name: 'a payment claim whose text is in the flow but does not start at a paying field', expect: /a payment claim's text starts at the flow field that pays it/,
       make: () => withClauses('clauses-payfield.json', j => { const c = j.clauses.find(c => c.story === 3 && /pays `B` to Hal/.test(c.clause)); c.text = 'b := p.B'; }) },
     { name: 'an untouched-except claim naming the wrong field (story 3: the freeze updates frozen, the claim says pool)', expect: /the post-state of Step\.freeze updates frozen, the claim says pool/,
-      make: () => withClauses('clauses-updates.json', j => { const c = j.clauses.find(c => c.story === 3 && /leaves the datum untouched/.test(c.clause)); c.updates = ['pool']; }) },
+      make: () => withClauses('clauses-updates.json', j => { const c = j.clauses.find(c => c.story === 3 && c.decl === 'Step.freeze' && c.kind === 'post-state'); c.updates = ['pool']; }) },
     { name: 'a guard claim moved out of its hypothesis into the flow', expect: /a guard claim names the hypothesis \(hyp\) it lives in/,
       make: () => withClauses('clauses-guard-flow.json', j => { const c = j.clauses.find(c => c.story === 3 && /below `P`/.test(c.clause)); delete c.hyp; c.text = 'hunter := some { addr := payee, b := p.B }'; }) },
     { name: 'a refusal claim whose story never refuses for that reason', expect: /no step of story 3's scenario is refused pool-covers-premium/,
@@ -1484,7 +1521,7 @@ async function selftest(work) {
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-scenario-gate-'));
-for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+for (const dependency of ['attestation.mjs','checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
   cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {

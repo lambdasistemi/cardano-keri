@@ -17,7 +17,9 @@ def evidence : EnvTable := {
 def byIdentifier : EvidenceTable := [(11, evidence)]
 
 def registryEnvironment : Registry.TraceWire.EnvTable := {
-  inception := [11, 12, 13]
+  bookings := CardanoKeri.Attestation.Fixtures.bookingTransactions [⟨100, 0, 711, 19⟩, ⟨101, 0, 712, 14⟩]
+  convictionTransactions := ([11, 12] : List Nat).map (fun aid =>
+    ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.Attestation.Fixtures.convictionSpend ⟨103 + (aid - 11), 0⟩⟩)
   convictions := [CardanoKeri.Registry.Scenarios.convictionFixture 11 2 2, CardanoKeri.Registry.Scenarios.convictionFixture 12 1 1] }
 def context : RegistryContext := ⟨Registry.Scenarios.p, registryEnvironment, Registry.Scenarios.cfg⟩
 /-- The deployment the journeys run in. -/
@@ -123,6 +125,7 @@ def trace (name : String) (commands : List (String × Command)) (d : Deployment 
 /-- Two identifiers in a single fold of the same registry. The certificates point
 to different holdings of that transaction. Both are at epoch and sequence zero. -/
 def authorizationTrace : Except String Json := do
+  let context := {context with environment.bookings := CardanoKeri.Attestation.Fixtures.bookingTransactions [⟨100, 0, 711, 19⟩, ⟨101, 0, 712, 19⟩]}
   let initial := Registry.Sys.init context.configuration
   let first := Registry.Scenarios.registration initial 11 100 5
   let second := Registry.Scenarios.registration initial 12 101 5
@@ -161,7 +164,9 @@ def traces : Except String (List Json) := do
   let otherRival := {row with comparison.rival := Duplicity.signed different [11] []}
   let rivalOrigin ← registrationCommand {context with environment.convictions := [otherRival]}
   let otherOutput := {row with output.index := row.output.index + 1}
-  let outputOrigin ← registrationCommand {context with environment.convictions := [otherOutput]}
+  let outputOrigin ← registrationCommand {context with environment := {context.environment with
+    convictions := [otherOutput]
+    convictionTransactions := [⟨otherOutput.output, Attestation.Fixtures.convictionSpend ⟨103, 0⟩⟩]}}
   let .book subject booker fee history booking := f.booking | throw "termination booking required"
   let otherBooking := Command.book subject booker fee history {booking with pendingReference := otherOutput.output}
   let sharedPrefix := [("rotate", rotatedCommand), ("rotate-again", rotatedAgainCommand),

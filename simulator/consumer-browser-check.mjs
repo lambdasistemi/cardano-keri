@@ -11,16 +11,30 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`http://127.0.0.1:${server.address().port}/simulator/checkpoint-simulator.html?story=11`);await page.waitForFunction(()=>window.CKC);
  assert.equal(await page.locator('#consumer-player').getAttribute('open'),'');
- const replay=await page.evaluate(()=>CKC.checkCorpus(CKC.corpus));assert.equal(replay.queries,51);
- for(let i=0;i<19;i++){
-  const observed=await page.evaluate(()=>CKC.snapshot());assert.equal(observed.cursor,i);assert.deepEqual(observed.result,await page.evaluate(i=>CKC.corpus.journey[i].consumer.result,i));
-  if(i<18)await page.locator('#consumer-next').click();
+ const corpus=JSON.parse(fs.readFileSync(path.join(root,'simulator/consumer-corpus.json'),'utf8'));
+ const replay=await page.evaluate(()=>CKC.checkCorpus(CKC.corpus));
+ const fieldNames=corpus.fields.map(cell=>cell.name);
+ const expectedCount=corpus.journey.length+fieldNames.length;
+ const checkCount=count=>assert.equal(count,expectedCount,'consumer query count differs from the committed corpus');
+ checkCount(replay.queries);
+ for(const [i,frame] of corpus.journey.entries()){
+  const observed=await page.evaluate(()=>CKC.snapshot());
+  assert.equal(observed.cursor,i);assert.deepEqual(observed.query,frame.consumer.query);assert.deepEqual(observed.result,frame.consumer.result);
+  if(i+1<corpus.journey.length)await page.locator('#consumer-next').click();
  }
+ assert(await page.locator('#consumer-next').isDisabled());
  assert.match(await page.locator('#consumer-story').textContent(),/burns the active asset/);
- await page.locator('#consumer-prev').click();assert.equal((await page.evaluate(()=>CKC.snapshot())).cursor,17);
- for(const name of await page.locator('#consumer-case option').evaluateAll(xs=>xs.map(x=>x.value).filter(Boolean))){
-  await page.locator('#consumer-case').selectOption(name);
-  const s=await page.evaluate(()=>CKC.snapshot());assert.equal(s.field,name);assert.deepEqual(s.result,await page.evaluate(n=>CKC.corpus.fields.find(c=>c.name===n).result,name));
+ await page.locator('#consumer-prev').click();assert.equal((await page.evaluate(()=>CKC.snapshot())).cursor,corpus.journey.length-2);
+ const options=await page.locator('#consumer-case option').evaluateAll(xs=>xs.map(x=>x.value).filter(Boolean));
+ assert.deepEqual(options,fieldNames,'consumer picker differs from the committed corpus');
+ for(const cell of corpus.fields){
+  await page.locator('#consumer-case').selectOption(cell.name);
+  const observed=await page.evaluate(()=>CKC.snapshot());
+  assert.equal(observed.field,cell.name);assert.deepEqual(observed.query,cell.query);assert.deepEqual(observed.result,cell.result);
+ }
+ // One missed query and one repeated query must each fail the replay count check.
+ for(const count of [replay.queries-1,replay.queries+1]){
+  assert.throws(()=>checkCount(count),/consumer query count differs from the committed corpus/);
  }
  await page.locator('#consumer-case').selectOption('positive-anchor');
  const context=await page.locator('#consumer-context').textContent();
@@ -41,5 +55,5 @@ try{
   }
  }
  assert.equal(await page.locator('#consumer-properties').evaluate(e=>e.textContent.split('\n').length),26);assert.deepEqual(errors,[]);
- console.log(JSON.stringify({pageReplay:replay,journeyControls:19,candidateControls:32,editedHolding:true,fixedContext:true,themes:2,viewports:2,pageErrors:errors}));
+ console.log(JSON.stringify({pageReplay:replay,journeyControls:corpus.journey.length,candidateControls:options.length,countControls:2,editedHolding:true,fixedContext:true,themes:2,viewports:2,pageErrors:errors}));
 }finally{await browser.close();await new Promise(r=>server.close(r));}

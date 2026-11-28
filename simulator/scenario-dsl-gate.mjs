@@ -557,7 +557,7 @@ function driveCheckpointExport(win) {
 function driveRegistryExport(win) {
   const d = win.document, $ = id => d.getElementById(id), RS = win.RS;
   $('btn-reset').click();
-  const ev = d.querySelector('#next-moves .ev-quick[data-actor="alice"][data-ev="inception"]');
+  const ev = d.querySelector('#next-moves .ev-quick[data-actor="alice"][data-ev="bookings"]');
   if (ev) ev.click();
   const contrib = [...d.querySelectorAll('#next-moves .act[data-actor="alice"][data-kind="bookRegistration"]')].find(x => /registration|register/i.test(x.textContent));
   if (contrib) { contrib.click(); $('act-submit').click(); }

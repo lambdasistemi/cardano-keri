@@ -73,7 +73,7 @@ The owner keeps three separate sums in the checkpoint, and only two of them go t
 Cardano:
 
 - if the pool covers the premium, it lands the rotation and names the payee of `P`;
-- if the pool is short and the checkpoint is neither frozen nor poisoned, it can **freeze** the checkpoint on its old keys with the same evidence. The freeze sets only the frozen bit in the datum and pays `B` to the payee it names. The checkpoint stays frozen until a depositing rotation restores the bond. A rotation with a short pool still lands, unpaid.
+- if the pool is short and the checkpoint is neither frozen nor poisoned, it can **freeze** the checkpoint on its old keys with a later witnessed rotation and a freeze attestation for the spent checkpoint. The freeze sets only the frozen bit in the datum and pays `B` to the payee it names. The checkpoint stays frozen until a depositing rotation restores the bond. A rotation with a short pool still lands, unpaid.
 
 The freeze is therefore not a punishment for lag. It is what makes a
 non-paying owner come back, and it is bounded by two things the owner
@@ -134,9 +134,7 @@ moves forward — the checkpoint cannot roll back (ruling D-022).
 
 ### Freeze — accepted design
 
-The hunter presents the same evidence it would use to advance: a later
-witnessed rotation with its receipts. The freeze runs the advance predicate and
-differs only in effect. It additionally requires that the pool is below `P` and that the checkpoint is neither frozen nor poisoned (one locked by the owner's own declaration, which is already unconsumable); `B` goes to the payee the freeze names.
+The hunter presents a later witnessed rotation with its receipts. The transaction must mint the freeze attestation for the checkpoint input it spends. The pool must be below `P` and the checkpoint must be neither frozen nor poisoned; `B` goes to the payee the freeze names.
 
 ### Poison relay — accepted design
 

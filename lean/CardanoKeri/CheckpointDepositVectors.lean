@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.CheckpointDepositGoals
 import CardanoKeri.CheckpointDatumVectors
 
@@ -195,7 +196,8 @@ def Authorization.evidence (a : Authorization) : Evidence :=
 spent state to the new sequence number, and the concrete reading of the
 deposit authorization. -/
 def Authorization.env (a : Authorization) : Env :=
-  { rotationTo := fun e sn sn' => e == a.base.state.epoch && sn == a.base.state.sn && sn' == a.base.newSn,
+  { convictionReads := ⟨Attestation.Fixtures.policies, fun _ => none⟩,
+    advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun e sn sn' => e == a.base.state.epoch && sn == a.base.state.sn && sn' == a.base.newSn) (fun _ => a.base.observed.spentRef) a.base.observed.checkpointPolicy,
     depositAuthorized := fun e =>
       e == a.base.state.epoch + 1 && a.evidence.authorizes idealVerify params a.base.state a.base.newSn,
     quorum := fun _ => false, convictionContext := fun _ _ => none, convictionRival := fun _ _ => none }

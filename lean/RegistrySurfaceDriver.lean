@@ -10,7 +10,9 @@ run_cmd do
   let env ← getEnv
   let owns := fun name => match env.getModuleIdxFor? name with
     | some index =>
-      (`CardanoKeri.Registry).isPrefixOf env.header.moduleNames[index.toNat]! ||
+      (`CardanoKeri.Attestation).isPrefixOf env.header.moduleNames[index.toNat]! ||
+        (`SingularApplicationHeld.Assets).isPrefixOf env.header.moduleNames[index.toNat]! ||
+        (`CardanoKeri.Registry).isPrefixOf env.header.moduleNames[index.toNat]! ||
         (`Singular).isPrefixOf env.header.moduleNames[index.toNat]!
     | none => false
   let mut todo := [``CardanoKeri.Registry.stepFn]

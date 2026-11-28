@@ -610,7 +610,7 @@ theorem bookRegistration_sound (p : Params) {env : Env} {s s' : Sys}
     registrationShape p b ∧ Singular.book s.toWorld b = .ok s'.toWorld ∧
     s' = { s with registrations := b :: s.registrations } ∧
     f = { deposited := b.request.contents.lovelace } ∧
-    env.inception b.request.key = true := by
+    env.inception s.config.applicationPolicy b = true := by
   unfold bookRegistration at hs
   simp only [bind, Except.bind, pure, Except.pure] at hs
   split at hs

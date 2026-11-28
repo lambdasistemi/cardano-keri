@@ -2,6 +2,7 @@
  * imported transaction judgments are in registry-economic-core.mjs. This is a
  * model simulator, with finite evidence tables, not production authorization.
  * Wire v3 carries whole states/transactions and exact integers. */
+import * as A from './attestation.mjs';
 import { acceptsComparison } from './checkpoint-conviction.mjs';
 import * as E from './registry-economic-core.mjs';
 import { decodeInput, validateState, validateConfig, validateEnv, validateResult } from './registry-wire.mjs';
@@ -27,7 +28,7 @@ function execute(p, env, s, action) {
   if (kind === 'bookRegistration') {
     const b = a.booking;
     require(b.request.carrierAda >= p.Mc + p.D && b.request.declaredTip === p.tip, 'keri-registration-value-mismatch');
-    require(env.inception.includes(b.request.key), 'keri-inception-refused');
+    require(A.bookingAttested(env.bookings, s.config.applicationPolicy, b.request), 'keri-inception-refused');
     const next = E.bookRegistration(world, b);
     after = { ...s, registrations: [b, ...s.registrations] };
     require(E.equal(toWorld(after), next), 'keri-registration-reconstruction-mismatch'); moved = flow({ deposited: b.request.contents.lovelace });
@@ -35,7 +36,7 @@ function execute(p, env, s, action) {
     const c = carrierAt(s, a.aid); require(c !== null, 'keri-carrier-missing');
     if (kind === 'convictCkpt') {
       const observed = env.convictions.find(row => row.comparison.tip.aid === a.aid);
-      require(c.pendingSpend === null && observed && acceptsComparison(observed.comparison), 'keri-conviction-refused');
+      require(c.pendingSpend === null && observed && A.convictionAttested(env.convictionTransactions, observed.output) && acceptsComparison(observed.comparison), 'keri-conviction-refused');
       const {epoch, sn} = observed.comparison.tip;
       const pendingSpend = {reference: observed.output, aid: a.aid, position: {epoch, sn}};
       after = { ...s, carriers: s.carriers.map(old => old.aid === a.aid ? { ...old, pendingSpend } : old) };

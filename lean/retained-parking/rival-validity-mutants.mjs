@@ -27,7 +27,7 @@ def nestedTip := hg.datum.tip KeyEncoding.symbolic 1
 def wrongOutput := {obs with output.index := 1}
 def selective := {setup 11 with
   presentedSpend := fun _ _ => some obs
-  attestationMinted := fun claim => decide (claim = wrongOutput)}
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads wrongOutput.output}
 `;
 const ids = [];
 function decl(file, name) {

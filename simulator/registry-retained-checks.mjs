@@ -48,6 +48,36 @@ assert.deepEqual(success.session.state.carriers[0].pendingSpend, {reference: {tx
 assert.equal(JSON.stringify(session), before, 'immutable source session');
 assert.equal(success.session.state.carriers[0].token, session.state.carriers[0].token, 'retained token');
 assert.deepEqual(success.session.state.trie, session.state.trie, 'retained active key');
+// Keep the accepted ledger example and change only the evidence projection.
+const registration = sc.steps.find(s => s.action.bookRegistration);
+const bookingEnv = registration.env ?? sc.env;
+const request = registration.action.bookRegistration.booking.request;
+const runBooking = env => stepFn(sc.params, env, registration.action, init(sc.config));
+assert(runBooking(bookingEnv).ok);
+for (const change of [
+  row => {row.identity++;},
+  row => {row.assets.mint[0][1] = 2;},
+  row => {row.assets.mint[0][0].name++;},
+  row => {row.assets.mint[0][0].policy++;},
+  row => {row.assets.outputs = [{assets: row.assets.mint}]; row.assets.mint = [];},
+]) {
+  const env = structuredClone(bookingEnv);
+  change(env.bookings.find(r => equal(r.identity, request.reference.tx)));
+  assert.equal(runBooking(env).error, 'keri-inception-refused');
+  controls++;
+}
+for (const change of [
+  row => {row.observation.transaction.mint.shift();},
+  row => {row.observation.transaction.mint.pop();},
+  row => {row.observation.transaction.mint[0][1] = -1;},
+  row => {row.observation.transaction.spent = [];},
+  row => {row.output.tx++;},
+]) {
+  const env = structuredClone(session.env);
+  change(env.convictionTransactions.find(r => equal(r.output, success.session.state.carriers[0].pendingSpend.reference)));
+  assert.equal(attempt(setEvidence(session, env), valid).record.result.error, 'keri-conviction-refused');
+  controls++;
+}
 const withoutEvidence = setEvidence(session, { ...session.env, convictions: [] });
 assert.equal(attempt(withoutEvidence, valid).record.result.error, 'keri-conviction-refused', 'stored key evidence');
 // Independently exercise the signature and the output fields on the paid path.
@@ -56,6 +86,8 @@ badSignature.convictions[0].comparison.rival.signatures = [];
 assert.equal(attempt(setEvidence(session, badSignature), valid).record.result.error, 'keri-conviction-refused');
 const differentOutput = structuredClone(session.env);
 differentOutput.convictions[0].output.index = 3;
+assert.equal(attempt(setEvidence(session, differentOutput), valid).record.result.error, 'keri-conviction-refused');
+differentOutput.convictionTransactions[0].output.index = 3;
 const changedReceipt = attempt(setEvidence(session, differentOutput), valid);
 assert.equal(changedReceipt.session.state.carriers[0].pendingSpend.reference.index, 3);
 const oldBooking = sc.steps.find(step => step.action.bookTermination).action;
@@ -69,7 +101,7 @@ const invalid = [
   ['negative state Nat', x => { x.state.gen = -1; }],
   ['unsafe state Number', x => { x.state.nextToken = 9007199254740992; }],
   ['fractional unused parameter', x => { x.params.tip = 0.5; }],
-  ['negative unused evidence', x => { x.env.inception.push(-1); }],
+  ['negative unused evidence', x => { x.env.bookings.push({identity:-1,assets:{mint:[],invoked:[],spent:[],outputs:[]}}); }],
   ['unsafe evidence Number', x => { x.env.convictions[0].comparison.tip.epoch = 9007199254740992; }],
   ['unknown state field', x => { x.state.stranger = 1; }],
   ['negative held datum', x => { x.state.carriers[0].original.datum = -1; }],

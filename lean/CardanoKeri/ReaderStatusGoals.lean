@@ -2484,7 +2484,7 @@ When the reader answers a status other than unavailable.
 Then it is the status of the identifier's lifecycle state: never registered
 for absent, active for live, pending termination for pending termination,
 terminal for convicted. -/
-theorem status_follows_lifecycle (i : Interpretation) (c : Context) (p : Params) (env : Env)
+theorem status_follows_lifecycle (i : Interpretation) (c : Context) (p : Params) (env : SystemEnv)
     (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (status : Status)
     (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)
     (answer : classify i c ev = status) (available : status ≠ .unavailable) :
@@ -2550,7 +2550,7 @@ that realizes the system at the context's identifier and establishes both the
 holders and the leaf at the asked point.
 When the reader answers.
 Then the answer is the status of the identifier's lifecycle state. -/
-theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Params) (env : Env)
+theorem lifecycle_status_is_answered (i : Interpretation) (c : Context) (p : Params) (env : SystemEnv)
     (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence)
     (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)
     (context : authenticatedContext c ev.environment)
@@ -2603,7 +2603,7 @@ is booked. Before the booking the custody it reads is the convicted
 checkpoint with key state `h`. After it the custody is the termination
 request, and the holder the answer names is the request the booking placed:
 its reference is the one the system's pending association records. -/
-theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Params) (env : Env)
+theorem booked_termination_is_pending (i : Interpretation) (c : Context) (p : Params) (env : SystemEnv)
     (rp : CardanoKeri.Registry.Params) (s : Sys) (ev : Evidence) (h : Hash)
     (reach : SysReach p env s) (realizes : Realizes i c p rp s ev)
     (context : authenticatedContext c ev.environment)

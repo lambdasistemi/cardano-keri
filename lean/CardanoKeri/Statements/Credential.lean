@@ -76,8 +76,10 @@ structure Acdc where
   said : Said
   deriving DecidableEq, Repr
 
-/-- The credential side of the environment: the SAID the hash-proof token
-recomputes over the most-compact form. -/
+/-- At credential admission the presenter supplies the credential body.
+The hash-proof token recomputes its SAID over the most-compact form and
+the verifier checks it against the credential. An independent reader must
+compute and check the same binding. -/
 structure CEnv extends TelEnv where
   saidOf : Body → Said
 
@@ -97,9 +99,10 @@ abbrev Link := Body → Body → Bool
 above it (a QVI credential accredits the QVI that issues below it). -/
 def issuerIsIssuee : Link := fun child parent => child.issuer == parent.issuee
 
-/-- The verifier's policy: the pinned root issuer, the schema per hop from
-the leaf up, the link per edge, the depth bound, and the freshness bound of
-an admission. -/
+/-- The verifier selects the root issuer, schema per hop, link per edge,
+depth bound and freshness bound of an admission. A consuming application
+applies that policy in its admission transaction. For an independent read
+there is no transaction and the relying party chooses and applies the policy. -/
 structure Policy where
   root : AID
   schemas : List Schema

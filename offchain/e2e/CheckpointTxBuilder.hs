@@ -232,6 +232,7 @@ import Cardano.KERI.Deployment.RegistryTransactions (
  )
 import Cardano.KERI.Deployment.RegistryTransactions qualified as Tx
 import Cardano.KERI.Deployment.Script (CheckpointTerms (..))
+import Cardano.KERI.Deployment.SingularFunding (singularFundingRules)
 import Cardano.KERI.Deployment.WalletHolding (requireNoneHeld)
 import Cardano.Ledger.Address (
     AccountAddress (..),
@@ -4979,7 +4980,7 @@ deploymentOf env = Tx.RegistryDeployment Testnet (envTerms env) (envRegistry env
 -- | A party's wallet, as the outputs a library builder spends.
 payerOf :: CheckpointEnv -> Party -> IO Tx.Payer
 payerOf env party =
-    Tx.Payer (partyAddr party)
+    (\funds -> Tx.Payer (partyAddr party) funds singularFundingRules)
         <$> withinSecs
             30
             "query the payer's wallet"

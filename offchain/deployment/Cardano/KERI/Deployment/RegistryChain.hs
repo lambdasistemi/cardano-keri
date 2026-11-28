@@ -56,6 +56,7 @@ module Cardano.KERI.Deployment.RegistryChain (
     -- * Transactions
     transactBudgeted,
     transactPlain,
+    transactBuilt,
 
     -- * Measured budgets
     withMargin,
@@ -83,6 +84,7 @@ import Cardano.KERI.Deployment.RegistryFiles (ReferenceRecord (..), ScriptRefere
 import Cardano.KERI.Deployment.RegistryTransactions (
     Budgets,
     BuiltTransaction,
+    FundingRules,
     Payer (..),
     RegistryDeployment (..),
     RegistryReferences (..),
@@ -163,6 +165,8 @@ data RegistryRuntime = RegistryRuntime
     -- ^ the machine's clock now, in POSIX milliseconds (time left, as a transaction is about to leave)
     , rtValidityEnd :: IO ValidityEnd
     -- ^ the upper slot a transaction built now carries, read once for each build
+    , rtFunding :: !FundingRules
+    -- ^ how the seed, the funding and the collateral are chosen: Singular's, handed in by the caller that depends on it
     }
 
 {- | The validity end of a transaction about to be built.
@@ -629,7 +633,7 @@ transactBudgeted rt payerAddress onAttempt build = runExceptT $ do
     let transactions = rtTransactions rt
     params <- node (trQueryProtocolParams transactions)
     funds <- node (rtUtxosAt rt payerAddress)
-    let built budgets = either (throwE . BuildRefused) pure (build params (Payer payerAddress funds) budgets)
+    let built budgets = either (throwE . BuildRefused) pure (build params (Payer payerAddress funds (rtFunding rt)) budgets)
     (discovery, expected) <- built Map.empty
     signedDiscovery <- node (trSign transactions discovery) >>= either (throwE . SigningRefused . show) pure
     evaluated <- node (trEvaluate transactions signedDiscovery)
@@ -657,7 +661,7 @@ transactPlain ::
 transactPlain rt payerAddress onAttempt build = runExceptT $ do
     params <- node (trQueryProtocolParams (rtTransactions rt))
     funds <- node (rtUtxosAt rt payerAddress)
-    tx <- either (throwE . BuildRefused) pure (build params (Payer payerAddress funds))
+    tx <- either (throwE . BuildRefused) pure (build params (Payer payerAddress funds (rtFunding rt)))
     settle rt onAttempt tx
 
 -- | A measured budget with the margin a transaction declares above it.
@@ -724,3 +728,9 @@ whileConnected status runtime =
         forM_ gone (throwIO . NodeConnectionEnded True . show)
         race (atomically (status >>= maybe retry pure)) call
             >>= either (throwIO . NodeConnectionEnded False . show) pure
+
+{- | Sign, hand over and observe a transaction that was built elsewhere, balanced and evaluated: the
+steps after the build of 'transactBudgeted', with the same attempt reports and the same stops.
+-}
+transactBuilt :: RegistryRuntime -> (Attempt -> IO ()) -> ConwayTx -> IO (Either SubmitError ConwayTx)
+transactBuilt rt onAttempt = runExceptT . settle rt onAttempt

@@ -1,6 +1,7 @@
 /* Stakeholders organize proposed moves; they grant no authority. Evidence and
  * transaction inputs are judged by the same core for every card. The display
  * clock selects proposal intervals and is not a Registry state transition. */
+import { convictionFixture } from './checkpoint-conviction.mjs';
 import * as B from './registry-fixtures.mjs';
 import { decodeInput } from './registry-wire.mjs';
 import { toInternal, toWire, equal } from './registry-economic-core.mjs';
@@ -11,7 +12,7 @@ export const CAST = {
   bob: { name: 'Bob', role: 'identity owner', aid: 12, blurb: 'Holds the keys of AID 12; wants the other identity to leave his custody unchanged.' },
   hal: { name: 'Hal', role: 'folder', blurb: 'Holds a view of the requests and funds a fee; wants to process a valid batch.' },
   sam: { name: 'Sam', role: 'booker', blurb: 'Can book a convicted carrier and receive the exact booking premium; cannot sweep a live carrier.' },
-  cora: { name: 'Cora', role: 'convictor', blurb: 'Brings duplicity evidence against a retained key; wants its termination to reach the consuming fold.' },
+  cora: { name: 'Cora', role: 'convictor', blurb: 'Presents one rival against the spent checkpoint; wants its termination to reach the consuming fold.' },
   mallory: { name: 'Mallory', role: 'challenger', blurb: 'Tries a stale generation, duplicate input or different policy.' },
 };
 export const ACTOR_ORDER = Object.keys(CAST);
@@ -67,7 +68,7 @@ export function offersFor(actorId, tree, nodeId = tree.cursor) {
   }
   if (actorId === 'cora') for (const c of state.carriers) {
     offer(`convict AID ${c.aid}`, { convictCkpt: { aid: c.aid } });
-    keri.push({ label: `duplicity at AID ${c.aid}, key ${c.k}`, row: { duplicity: [c.aid, c.k] } });
+    keri.push({ label: `supply a conviction observation for AID ${c.aid}`, row: { convictions: [convictionFixture(c.aid, 1, 1)] } });
   }
   return { chain, keri };
 }

@@ -8,7 +8,7 @@ namespace DuplicateStory
 
 def evidence : EnvTable := {
   inception := [11]
-  duplicity := [(11, 0), (11, 1), (11, 2)] }
+  convictions := [11].map (fun aid => CardanoKeri.Registry.Scenarios.convictionFixture aid 1 1) }
 
 def trace : Except String (List Json) := do
   let first := registration start.state 11 100

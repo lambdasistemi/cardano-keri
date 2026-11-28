@@ -4,7 +4,7 @@
  * is fetched, and no signature is produced here. */
 import { toInternal, toWire, equal, singularTag, applicationName, readyTag, rootOf, known } from './registry-economic-core.mjs';
 import { decodeInput } from './registry-wire.mjs';
-const emptyEnv = { inception: [], duplicity: [] };
+const emptyEnv = { inception: [], convictions: [] };
 const sum = values => values.reduce((a, b) => a + b, 0n);
 const sub = (a, b) => a > b ? a - b : 0n;
 const nat = value => { const n = toInternal(value); if (typeof n !== 'bigint' || n < 0n) throw Error('invalid-fixture-nat'); return n; };
@@ -43,7 +43,7 @@ export function terminationAction(params, state, aidValue, referenceValue, booke
     declaredTip: p.tip, carrierAda: p.Mr, singularTags: [singularTag(s.config, aid)], refundAddress: null, submittedAt: null,
     contents: { lovelace: p.Mr + p.tip, applicationTags: [], trieReadyTags: [], otherAssets: [] } };
   request.contents.trieReadyTags = [readyTag(s.config, request, 'termination')];
-  return toWire({ bookTermination: { aid, booker, fee, booking: { request, custodyInputs: [carrier.original], trieReadyTagsMinted: request.contents.trieReadyTags } } });
+  return toWire({ bookTermination: { aid, booker, fee, booking: { pendingReference: carrier.pendingSpend?.reference ?? {tx: 105n, index: 0n}, position: carrier.pendingSpend?.position ?? {epoch: 1n, sn: 1n}, request, custodyInputs: [carrier.original], trieReadyTagsMinted: request.contents.trieReadyTags } } });
 }
 export function foldAction(params, state, referenceValues, timeValue = 2, fundingValue = 1, feeValue = 1) {
   const [, s] = prepare(params, state), refs = referenceValues.map(ref => ({ tx: nat(ref.tx), index: nat(ref.index) }));

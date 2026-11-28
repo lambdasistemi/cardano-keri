@@ -23,25 +23,28 @@ open CardanoKeri.ConsumerIdentity.Bytes.Vectors (field str)
 
 def params : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 
-/-- Which evidence a fixture selector names: the concrete duplicity fixture at a key
-state, or the same context with the accepted event as its own rival (no duplicity). -/
+/-- The two fixture selectors encode a valid sibling with different content
+or the identical writer event. The JSON
+selector names are retained for existing vector readers. -/
 inductive Shown where
   | duplicity (epoch sn : Nat)
   | sameEvent (epoch sn : Nat)
   deriving DecidableEq, Repr
 
 def Shown.evidence : Shown → Evidence
-  | .duplicity e sn => CardanoKeri.Duplicity.fixture e sn
-  | .sameEvent e sn => ((CardanoKeri.Duplicity.fixture e sn).1, (CardanoKeri.Duplicity.fixture e sn).1.accepted)
+  | .duplicity e sn => (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn).rival
+  | .sameEvent e sn => (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn true).rival
 
 def Shown.json : Shown → Json
   | .duplicity e sn => Json.mkObj [("duplicity", toJson [e, sn])]
   | .sameEvent e sn => Json.mkObj [("sameEvent", toJson [e, sn])]
 
-/-- The environment shows the duplicity fixture at every key state, or (`sameEvent`)
-a rival equal to the accepted event, which proves nothing. -/
+/-- The spend reads the selected tip and rival. The separate predecessor and
+event lookups serve the KERI reader. -/
 def envFor (rivalIsAccepted : Bool) : Env := {
   rotationTo := fun _ _ _ => false, depositAuthorized := fun _ => false, quorum := fun _ => false,
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn rivalIsAccepted⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1,
   convictionRival := fun e sn => some (if rivalIsAccepted then (CardanoKeri.Duplicity.fixture e sn).1.accepted
     else (CardanoKeri.Duplicity.fixture e sn).2) }
@@ -90,7 +93,7 @@ def cases : List Case := [
       committedKeyState := ⟨2, 2⟩ },
   { honest "refused-other-evidence" "the commitment names the evidence of another key state: refused" 6 with
       shown := .duplicity 2 2 },
-  { honest "refused-no-duplicity" "the evidence shown and committed proves no duplicity: refused" 6 with
+  { honest "refused-no-duplicity" "the committed rival is identical to the writer event: refused" 6 with
       rivalIsAccepted := true, shown := .sameEvent 1 1 }]
 
 def liveJson (l : Live) : Json :=
@@ -135,7 +138,7 @@ open SystemWire SystemFixtures in
 /-- Run named commands from a machine and record each outcome and the open markers after it. -/
 def runCells (start : Machine) (commands : List (String × Command)) : List Json :=
   (commands.foldl (fun (cells, machine) (name, command) =>
-    match execute machine SystemFixtures.p SystemFixtures.evidence.toEnv command with
+    match execute machine SystemFixtures.p (evidenceFor SystemFixtures.byIdentifier) command with
     | .error why => (cells ++ [Json.mkObj [("name", toJson name), ("outcome", toJson why)]], machine)
     | .ok (next, _, _) =>
       let state := next.certified.state
@@ -222,7 +225,7 @@ def table : Except String Json := do
       "commitments beside a checkpoint.")),
     ("model", toJson "lean/CardanoKeri/Checkpoint.lean (Commitment.entitles, Step.convict, Sys.revealOpen, LocalEvent, OpenEvent, RevealEvent, SweepEvent)"),
     ("rules", Json.mkObj [
-      ("conviction", toJson "accepted iff duplicity at the output's key state and the commitment names that key state, the evidence shown there and this payee, and eligibleAfter <= now <= expiresAt; no other fact of the output is read"),
+      ("conviction", toJson "The mint compares one rival at the live epoch and sequence. It must differ from the writer and validate against the carried predecessor under its own signing and receipt rules. The commitment must name that position, the evidence read for its identifier and this payee, with eligibleAfter <= now <= expiresAt"),
       ("system", toJson "a conviction's commitment is open under its marker and names this AID and this deployment; the conviction burns it; a commitment opens with eligibleAfter = openedAt + 1 <= expiresAt; a reveal needs eligibleAfter <= now <= expiresAt; a sweep needs expiresAt < now")]),
     ("params", Json.mkObj [("D", natJson params.D), ("B", natJson params.B), ("P", natJson params.P)]),
     ("deployments", Json.mkObj [("this", natJson SystemFixtures.deployment), ("other", natJson SystemFixtures.otherDeployment)]),

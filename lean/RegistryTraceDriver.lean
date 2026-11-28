@@ -9,7 +9,7 @@ namespace RegistryTrace
 
 def evidence : EnvTable := {
   inception := [11, 12, 13, 14, 15]
-  duplicity := [11, 12, 13].flatMap (fun aid => [0, 1, 2].map (fun key => (aid, key))) }
+  convictions := [11, 12, 13].map (fun aid => CardanoKeri.Registry.Scenarios.convictionFixture aid 1 1) }
 
 structure Run where
   state : Sys := Sys.init cfg
@@ -43,7 +43,7 @@ def localJourney : Driver Unit := do
   let liveBooking ← liftM (termination (← get).state 11 199)
   act "live-termination-booking-refused" (.bookTermination 11 7 1 liveBooking) false
   let live := (← get).state
-  let noDuplicity := { evidence with duplicity := [] }
+  let noDuplicity := { evidence with convictions := [] }
   modify fun r => { r with cells := r.cells ++ [cell "missing-duplicity" p noDuplicity live (.convictCkpt 11)] }
   act "convict" (.convictCkpt 11)
   act "repeat-conviction-refused" (.convictCkpt 11) false

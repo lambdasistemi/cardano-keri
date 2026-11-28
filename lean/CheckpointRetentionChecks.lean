@@ -8,6 +8,8 @@ def env : Env := {
   rotationTo := fun e sn sn' => decide ((e = 0 ∧ sn = 0 ∧ sn' = 1) ∨ (e = 1 ∧ sn = 1 ∧ sn' = 2))
   depositAuthorized := fun _ => false
   quorum := fun _ => true
+  attestationMinted := fun _ => true,
+  presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
 
@@ -29,7 +31,7 @@ def journey : Except String Unit := do
   check "wrong-key-refused" ((stepFn p wrongKey (.rotate 2 .keep 7) 4 rotated).isNone)
   let commitment : Commitment := {
     aid := 11, deployment := 21, keyState := ⟨1, 1⟩,
-    evidence := CardanoKeri.Duplicity.fixture 1 1, payee := 8,
+    evidence := (CardanoKeri.CheckpointConviction.Fixtures.comparison 11 1 1).rival, payee := 8,
     openedAt := 4, eligibleAfter := 5, expiresAt := 20, marker := 1 }
   let (convictFlow, pending) ← execute rotated (.convict 8 commitment) 5
   check "live-conviction-pending-key" (decide

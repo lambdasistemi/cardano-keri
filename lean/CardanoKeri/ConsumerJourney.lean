@@ -74,7 +74,7 @@ def registrationCommand (q : RegistrationInput) : Command :=
     ⟨[.bookRegistration q.booking], q.unspent, q.economicTx⟩ q.booking q.holdingIndex
 
 def advance (machine : Machine) (command : Command) : Except String Machine := do
-  let (next, _, _) ← execute machine cp ce command
+  let (next, _, _) ← execute machine cp (evidenceFor [(context.aid, evidence)]) command
   pure next
 
 def localSteps : List (String × Nat × Action) := [
@@ -98,7 +98,7 @@ structure Journey where
   pending : Machine
   booked : Machine
   terminal : Machine
-  booking : Singular.TerminationBooking
+  booking : CardanoKeri.Registry.TerminationBooking
   completion : FoldCertificate
   frames : List Json
   events : List Json
@@ -125,22 +125,22 @@ def journey : Except String Journey := do
   unless decide (origin.registered = r.after) && origin.token == r.origin.token &&
       origin.carrierRef == r.holding.reference && origin.registrationRef == r.origin.registrationRef do
     throw "registration-origin-disagreement"
-  let start := [snapshot "registered-juvenile" r.holding registered 0 6,
-    snapshot "registered-mature" r.holding registered 0 7]
-  let firstEvent := (SystemWire.cell "register" cp evidence (Machine.init deployment) (registrationCommand q)).1
+  let start := [snapshot "registered-juvenile" r.holding registered 0 5,
+    snapshot "registered-mature" r.holding registered 0 6]
+  let firstEvent := (SystemWire.cell "register" cp [(context.aid, evidence)] (Machine.init deployment) (registrationCommand q)).1
   let (frames, live, serial, events) ← localSteps.foldlM (fun (frames, machine, serial, events) (name, now, action) => do
     let next ← advance machine (.local context.aid now action)
     unless heldRepresentative interpretation context (next.certified.state.states context.aid) ==
         some (representativeAsset interpretation context) do throw "local-asset-not-retained"
     pure (frames ++ [snapshot name r.holding next serial now], next, serial + 1,
-      events ++ [(SystemWire.cell name cp evidence machine (.local context.aid now action)).1]))
+      events ++ [(SystemWire.cell name cp [(context.aid, evidence)] machine (.local context.aid now action)).1]))
       (start, registered, 1, [firstEvent])
   let frames := frames ++ [snapshot "mature" r.holding live serial 35]
   -- The convictor opens a commitment naming the AID, the deployment, the key state
   -- of the mature output and the evidence at
   -- it, then convicts once it is eligible.
   let .present output := live.certified.state.states context.aid | throw "mature-output-missing"
-  let some shown := evidence.toEnv.evidenceAt output.epoch output.sn | throw "conviction-evidence-missing"
+  let some shown := (evidence.toEnv context.aid).evidenceAt context.aid output.epoch output.sn | throw "conviction-evidence-missing"
   let commitment : CardanoKeri.Checkpoint.Commitment := {
     aid := context.aid, deployment, keyState := output.hash, evidence := shown, payee := 7,
     openedAt := 35, eligibleAfter := 36, expiresAt := 50, marker := 1 }
@@ -170,13 +170,13 @@ def journey : Except String Journey := do
     snapshot "termination-booked" r.holding booked (serial + 2) 37,
     snapshot "retired-after-matching-fold" r.holding terminal (serial + 3) 40]
   let events := events ++ [
-    (SystemWire.cell "open-commitment" cp evidence live (.openCommitment commitment)).1,
-    (SystemWire.cell "convict" cp evidence committed (.local context.aid 36 (.convict 7 commitment))).1,
-    (SystemWire.cell "book" cp evidence pending (.book context.aid 7 1 history booking)).1,
-    (SystemWire.cell "pending-rotation-refused" cp evidence booked (.local context.aid 38 (.rotate 11 .keep 7))).1,
-    (SystemWire.cell "complete" cp evidence booked (.complete context.aid completion)).1,
-    (SystemWire.cell "retired-registration-refused" cp evidence terminal (registrationCommand q)).1,
-    (SystemWire.cell "retired-rotation-refused" cp evidence terminal (.local context.aid 42 (.rotate 11 .keep 7))).1]
+    (SystemWire.cell "open-commitment" cp [(context.aid, evidence)] live (.openCommitment commitment)).1,
+    (SystemWire.cell "convict" cp [(context.aid, evidence)] committed (.local context.aid 36 (.convict 7 commitment))).1,
+    (SystemWire.cell "book" cp [(context.aid, evidence)] pending (.book context.aid 7 1 history booking)).1,
+    (SystemWire.cell "pending-rotation-refused" cp [(context.aid, evidence)] booked (.local context.aid 38 (.rotate 11 .keep 7))).1,
+    (SystemWire.cell "complete" cp [(context.aid, evidence)] booked (.complete context.aid completion)).1,
+    (SystemWire.cell "retired-registration-refused" cp [(context.aid, evidence)] terminal (registrationCommand q)).1,
+    (SystemWire.cell "retired-rotation-refused" cp [(context.aid, evidence)] terminal (.local context.aid 42 (.rotate 11 .keep 7))).1]
   pure ⟨q, r, registered, live, pending, booked, terminal, booking, completion, frames, events⟩
 
 end CardanoKeri.ConsumerIdentity.Witness

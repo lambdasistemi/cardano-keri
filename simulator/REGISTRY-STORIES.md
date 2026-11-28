@@ -118,6 +118,10 @@ Retired: there is no parked state, so there is no revival. The number is kept; i
 
 **Then** Conviction preserves pending custody; booking moves the whole entry into the request and pays the defined premium. Only the consuming fold burns the token and permanently retires the key.
 
+At the live carrier, three forks change only the presented comparison. Cora
+can use a different committed key, or receipts from the rival’s new witness.
+A rival that lacks its own signing quorum leaves the carrier live.
+
 [Scenario](registry-simulator-scenarios/12-cora-convicts-bob.json) · [Editable DSL](registry-simulator-scenarios/12-cora-convicts-bob.dsl)
 
 ## 13. Cora convicts the parked output (retired)

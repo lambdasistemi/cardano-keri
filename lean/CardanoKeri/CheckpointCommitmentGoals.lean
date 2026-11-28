@@ -39,7 +39,7 @@ the environment shows at `l`'s key state and `payee`, and the slot lies in its
 window. -/
 theorem convict_requires_entitlement (p : Params) (env : Env) {payee : Addr} {c : Commitment}
     {t : Slot} {s s' : State} {f : Flow} (h : Step p env (.convict payee c) t s f s') :
-    ∃ l, s = .present l ∧ env.duplicityAt l.epoch l.sn = true ∧ c.entitles env l payee t := by
+    ∃ l, s = .present l ∧ env.acceptsRival l.epoch l.sn = true ∧ c.entitles env l payee t := by
   cases h with
   | convict _ _ _ hdup hent => exact ⟨_, rfl, hdup, hent⟩
 
@@ -83,7 +83,7 @@ the output's key state.
 When the conviction is attempted with any payee at any slot.
 Then it is refused. -/
 theorem convict_refused_for_other_evidence (p : Params) (env : Env) {l : Live} {payee : Addr}
-    {c : Commitment} {t : Slot} (hother : env.evidenceAt l.epoch l.sn ≠ some c.evidence) :
+    {c : Commitment} {t : Slot} (hother : env.evidenceAt c.aid l.epoch l.sn ≠ some c.evidence) :
     ∀ f s', ¬ Step p env (.convict payee c) t (.present l) f s' :=
   (convict_refused_without_entitlement p env (fun h => hother h.2.1)).1
 
@@ -128,25 +128,28 @@ theorem convict_refused_in_opening_slot (p : Params) (env : Env) {l : Live} {pay
   convict_refused_before_eligible p env
     (Nat.not_le.mp fun h => Nat.not_lt.mpr hsame ((commitment_eligible_from_next_slot hformed t).mp h))
 
-/-- **The committed evidence is the duplicity proved.**
-Given a conviction of a live output `l` revealing commitment `c`.
-When the commitment's evidence is read.
-Then that evidence, as a context and a rival, proves duplicity at `l`'s key state. -/
-theorem convict_committed_evidence_is_duplicity (p : Params) (env : Env) {payee : Addr}
+/-- Given a local conviction, when the commitment is revealed, then its
+evidence is the very rival whose comparison the conviction mint accepts.
+The tip and the rival both name the commitment's identifier. -/
+theorem conviction_checks_committed_rival (p : Params) (env : Env) {payee : Addr}
     {c : Commitment} {t : Slot} {l : Live} {f : Flow} {s' : State}
     (h : Step p env (.convict payee c) t (.present l) f s') :
-    CardanoKeri.Duplicity.duplicityAt l.epoch l.sn c.evidence.1 c.evidence.2 = true := by
-  obtain ⟨_, hl, hdup, hent⟩ := convict_requires_entitlement p env h
+    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧
+      comparison.tip.aid = c.aid ∧ comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧
+      comparison.rival = c.evidence ∧ CheckpointConviction.accepts comparison.tip c.evidence = true := by
+  obtain ⟨_, hl, accepted, entitled⟩ := convict_requires_entitlement p env h
   cases hl
-  have hev := hent.2.1
-  unfold Env.duplicityAt at hdup
-  unfold Env.evidenceAt at hev
-  revert hdup hev
-  cases env.convictionContext l.epoch l.sn <;> cases env.convictionRival l.epoch l.sn <;>
-    simp
-  intro hdup hev
-  rw [← hev]
-  exact hdup
+  have read := entitled.2.1
+  cases found : env.comparison l.epoch l.sn with
+  | none => simp [Env.acceptsRival, found] at accepted
+  | some comparison =>
+    simp only [Env.acceptsRival, found, Option.map_some, Option.getD_some,
+      CheckpointConviction.Comparison.acceptsAt, Bool.and_eq_true, beq_iff_eq] at accepted
+    by_cases named : comparison.rival.event.aid = c.aid
+    · simp [Env.evidenceAt, found, named] at read
+      obtain ⟨_, _, _, aid, _⟩ := (CheckpointConviction.accepts_iff _ _).1 accepted.2
+      exact ⟨_, rfl, aid.trans named, accepted.1.1, accepted.1.2, read, read ▸ accepted.2⟩
+    · simp [Env.evidenceAt, found, named] at read
 
 /-! ## A commitment follows the key state, not the output -/
 
@@ -355,7 +358,7 @@ Given a reachable system.
 When an open commitment is read under marker `m`.
 Then its marker is `m`, and it is first eligible in the slot after its opening and no later
 than it expires. -/
-theorem ledger_well_formed (p : Params) (env : Env) {s : Sys} (h : SysReach p env s) :
+theorem ledger_well_formed (p : Params) (env : SystemEnv) {s : Sys} (h : SysReach p env s) :
     ∀ m c, s.commitments m = some c → c.marker = m ∧ c.wellFormed := by
   induction h with
   | init d => intro m c found; cases found
@@ -363,7 +366,7 @@ theorem ledger_well_formed (p : Params) (env : Env) {s : Sys} (h : SysReach p en
     intro m c found
     cases hs with
     | register event =>
-      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       exact ih m c found
     | «local» event =>
       obtain ⟨x, a, now, f, st, _, _, _, rfl⟩ := event
@@ -413,15 +416,15 @@ commitment `c`: before the step `c` was open under its marker and named that AID
 and the system's deployment,
 `c` entitles `payee` to convict `l` at that slot, and after the step `c` is no
 longer open (its marker is burnt, so it entitles no second conviction). -/
-theorem sys_conviction_consumes_commitment (p : Params) (env : Env) {s s' : Sys}
+theorem sys_conviction_consumes_commitment (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}
     (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :
     ∃ (payee : Addr) (c : Commitment) (now : Slot),
       s.commitments c.marker = some c ∧ c.aid = aid ∧ c.deployment = s.deployment ∧
-      c.entitles env l payee now ∧ s'.commitments c.marker = none := by
+      c.entitles (env aid) l payee now ∧ s'.commitments c.marker = none := by
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, step, _, _, rfl⟩ := event
     by_cases same : aid = x
     · subst same
       rw [hlive] at step
@@ -434,9 +437,9 @@ theorem sys_conviction_consumes_commitment (p : Params) (env : Env) {s s' : Sys}
       simp [Sys.set] at hpending
       subst hpending
       rw [hlive] at step
-      obtain ⟨l', payee, c, hl, rfl, _, hent, _⟩ := pending_only_by_conviction p env step
+      obtain ⟨l', payee, c, hl, rfl, _, hent, _⟩ := pending_only_by_conviction p _ step
       cases hl
-      obtain ⟨hopen, haid, hdep⟩ := (Sys.revealOpen_iff _ _ _).mp opened c rfl
+      obtain ⟨hopen, haid, hdep⟩ := (Sys.revealOpen_iff _ _ _).mp opened.1 c rfl
       refine ⟨payee, c, now, hopen, haid, hdep, hent, ?_⟩
       simp [Sys.retireRevealed, Action.revealed, Sys.retire]
     · simp [Sys.set, same, hlive] at hpending
@@ -467,11 +470,11 @@ When the commitment that step reveals is read.
 Then the conviction's slot is strictly after the upper end of the commitment's
 opening transaction's validity range, so the opening transaction cannot share the
 conviction's slot. -/
-theorem sys_conviction_after_opening_slot (p : Params) (env : Env) {s s' : Sys}
+theorem sys_conviction_after_opening_slot (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {aid : AID} {l : Live} {k : Hash}
     (hlive : s.states aid = .present l) (hpending : s'.states aid = .terminationPending k) :
     ∃ (payee : Addr) (c : Commitment) (now : Slot),
-      s.commitments c.marker = some c ∧ c.entitles env l payee now ∧ c.openedAt < now := by
+      s.commitments c.marker = some c ∧ c.entitles (env aid) l payee now ∧ c.openedAt < now := by
   obtain ⟨payee, c, now, hopen, _, _, hent, _⟩ :=
     sys_conviction_consumes_commitment p env h hlive hpending
   have formed := (ledger_well_formed p env reach c.marker c hopen).2
@@ -483,14 +486,14 @@ after which nothing is open under `m`.
 When the step is read.
 Then it happened at a slot inside `c`'s window (a reveal, or the conviction that
 revealed `c`) or strictly after it (a sweep); never before `c` was eligible. -/
-theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sys}
+theorem commitment_closes_in_or_after_window (p : Params) (env : SystemEnv) {s s' : Sys}
     (reach : SysReach p env s) (h : SysStep p env s s') {m : Marker} {c : Commitment}
     (hopen : s.commitments m = some c) (hclosed : s'.commitments m = none) :
     ∃ now : Slot, (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now := by
   have named := (ledger_well_formed p env reach m c hopen).1
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
     simp [Sys.installOrigin, Sys.set, hopen] at hclosed
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, step, opened, rfl⟩ := event
@@ -502,10 +505,10 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sy
       · cases a with
         | convict payee r' =>
           cases hr
-          obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened r rfl
+          obtain ⟨ropen, _⟩ := (Sys.revealOpen_iff _ _ _).mp opened.1 r rfl
           rw [← same, hopen] at ropen
           cases ropen
-          obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p env step
+          obtain ⟨_, _, _, hent⟩ := convict_requires_entitlement p _ step
           exact ⟨now, Or.inl ⟨hent.2.2.2.1, hent.2.2.2.2⟩⟩
         | register | rotate | poison | freeze | topUp => cases hr
       · simp [same, hopen] at hclosed
@@ -546,11 +549,11 @@ theorem commitment_closes_in_or_after_window (p : Params) (env : Env) {s s' : Sy
 Given any system step.
 When the deployment is read before and after it.
 Then it is the same. -/
-theorem sys_step_keeps_deployment (p : Params) (env : Env) {s s' : Sys} (h : SysStep p env s s') :
+theorem sys_step_keeps_deployment (p : Params) (env : SystemEnv) {s s' : Sys} (h : SysStep p env s s') :
     s'.deployment = s.deployment := by
   cases h with
   | register event =>
-    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+    obtain ⟨x, now, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
     rfl
   | «local» event =>
     obtain ⟨x, a, now, f, st, _, _, _, rfl⟩ := event
@@ -582,18 +585,18 @@ a commitment `c` is considered.
 Then the step opened and burnt no commitment, the system's premise on `c` holds
 after the step exactly when it held before, and `c` entitles a payee at `l'`
 exactly when it did at `l`. -/
-theorem sys_commitment_survives_key_state_step (p : Params) (env : Env) {s s' : Sys}
+theorem sys_commitment_survives_key_state_step (p : Params) (env : SystemEnv) {s s' : Sys}
     (h : SysStep p env s s') {aid : AID} {l l' : Live}
     (hlive : s.states aid = .present l) (hlive' : s'.states aid = .present l')
     (hspent : l' ≠ l) (hkey : l'.hash = l.hash) (c : Commitment) (payee : Addr) (now : Slot) :
     s'.commitments = s.commitments ∧
       (s'.revealOpen aid (.convict payee c) ↔ s.revealOpen aid (.convict payee c)) ∧
-      (c.entitles env l' payee now ↔ c.entitles env l payee now) := by
+      (c.entitles (env aid) l' payee now ↔ c.entitles (env aid) l payee now) := by
   have hdep := sys_step_keeps_deployment p env h
   have hcomm : s'.commitments = s.commitments := by
     cases h with
     | register event =>
-      obtain ⟨x, t, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, rfl⟩ := event
+      obtain ⟨x, t, refund, pool, f, st, rp, re, cfg, receipt, b, origin, _, _, _, _, _, rfl⟩ := event
       rfl
     | «local» event =>
       obtain ⟨x, a, t, f, st, _, step, _, rfl⟩ := event
@@ -626,7 +629,7 @@ theorem sys_commitment_survives_key_state_step (p : Params) (env : Env) {s s' : 
       obtain ⟨d, t, _, _, rfl⟩ := event
       simp [Sys.retire, hlive] at hlive'
       exact absurd hlive'.symm hspent
-  refine ⟨hcomm, ?_, Commitment.entitles_same_key_state env c hkey payee now⟩
+  refine ⟨hcomm, ?_, Commitment.entitles_same_key_state (env aid) c hkey payee now⟩
   simp [Sys.revealOpen, Sys.revealOpenB, Action.revealed, hcomm, hdep]
 
 /-- **A commitment naming another deployment is refused.**

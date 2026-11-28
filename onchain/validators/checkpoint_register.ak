@@ -7,7 +7,9 @@
 //// mints nothing: the registry's fold delivers the checkpoint with its token,
 //// and every spend keeps that token, once, at this address.
 
+use aiken/builtin
 use aiken/collection/list
+use aiken/crypto.{blake2b_256}
 use aiken/primitive/bytearray
 use cardano/address.{Credential, Script, from_script, from_verification_key}
 use cardano/assets.{
@@ -47,7 +49,7 @@ pub type SpendRedeemer {
   /// `payee_output_index` names the output that receives the premium when
   /// the pool covers it; it is not read otherwise. `bond` is the Lean's
   /// `.rotate sn' op payee` option.
-  Advance { payee_output_index: Int, bond: BondOp }
+  Advance { payee_output_index: Int, bond: BondOp, successor_index: Int }
   Convict { convictor_pkh: ByteArray, convictor_output_index: Int }
   /// Index two was the retired migration spend. Constructor indices are wire
   /// surface and this generation's builders are the deployed generation's, so
@@ -57,7 +59,7 @@ pub type SpendRedeemer {
   /// controller's own later witnessed rotation (#345). Appended after
   /// the retired index: nothing renumbers. `hunter_output_index` names the output
   /// that receives the freeze bond.
-  Freeze { hunter_output_index: Int }
+  Freeze { hunter_output_index: Int, successor_index: Int }
   /// Add `amount`, at least one premium, to the pool of a live checkpoint
   /// whose top-up mark is clear (#522). Appended after `Freeze`: nothing
   /// renumbers. Anyone may do it; the mark stays set until the next rotation.
@@ -105,13 +107,14 @@ validator checkpoint_register(
       name: registry_name,
     }
     when spend_redeemer is {
-      Advance { payee_output_index, bond } -> {
+      Advance { payee_output_index, bond, successor_index } -> {
         expect
           ran_rotation_check(
             advance_hash,
             own_hash(tx, own_ref),
             observe_advance,
             own_ref,
+            successor_index,
             tx,
           )
         validate_advance(
@@ -122,6 +125,7 @@ validator checkpoint_register(
           premium,
           payee_output_index,
           bond,
+          successor_index,
           own_ref,
           tx,
         )
@@ -148,13 +152,14 @@ validator checkpoint_register(
         )
       }
       Retired -> False
-      Freeze { hunter_output_index } -> {
+      Freeze { hunter_output_index, successor_index } -> {
         expect
           ran_rotation_check(
             advance_hash,
             own_hash(tx, own_ref),
             observe_freeze,
             own_ref,
+            successor_index,
             tx,
           )
         validate_freeze(
@@ -163,6 +168,7 @@ validator checkpoint_register(
           freeze_bond,
           premium,
           hunter_output_index,
+          successor_index,
           own_ref,
           tx,
         )
@@ -192,43 +198,31 @@ fn own_hash(tx: Transaction, own_ref: OutputReference) -> PolicyId {
   hash
 }
 
-/// The rotation observer ran for this action over this spent output: an
-/// Advance claims `observe_advance`, a Freeze `observe_freeze`.
+/// The attestation of this action over this spent output is minted in this transaction.
 fn ran_rotation_check(
   advance_hash: PolicyId,
   checkpoint_policy: PolicyId,
   action: Int,
   own_ref: OutputReference,
+  successor_index: Int,
   tx: Transaction,
 ) -> Bool {
-  let credential: Credential = Script(advance_hash)
-  expect
-    list.any(
-      tx.withdrawals,
-      fn(Pair(withdrawal_credential, lovelace)) {
-        withdrawal_credential == credential && lovelace == 0
-      },
-    )
-  expect
-    list.any(
-      tx.redeemers,
-      fn(Pair(purpose, redeemer)) {
-        when purpose is {
-          Withdraw(redeemer_credential) ->
-            if redeemer_credential == credential {
-              expect envelope: ObserverEnvelope = redeemer
-              let claim = envelope.claim
-              claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(
-                own_ref,
-              )
-            } else {
-              False
-            }
-          _ -> False
-        }
-      },
-    )
-  True
+  let claim: Data = Claimed {
+    tag: "cardano-keri/advance/v1",
+    action,
+    checkpoint_policy,
+    spent: own_ref,
+    successor_index,
+  }
+  quantity_of(tx.mint, advance_hash, blake2b_256(builtin.serialise_data(claim))) == 1
+}
+
+type Claimed {
+  tag: ByteArray,
+  action: Int,
+  checkpoint_policy: PolicyId,
+  spent: OutputReference,
+  successor_index: Int,
 }
 
 fn ran_convict_check(
@@ -323,6 +317,7 @@ fn validate_advance(
   premium: Int,
   payee_output_index: Int,
   bond: BondOp,
+  successor_index: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -335,10 +330,8 @@ fn validate_advance(
   expect Live { aid, frozen, born_at, refund_to, .. } = old
   let aid_name = active_token_name(registry, aid)
   expect quantity_of(own_input.output.value, registry.policy, aid_name) == 1
-  expect [state_output] = list.filter(
-    outputs,
-    fn(output) { output.address == from_script(own_hash) },
-  )
+  expect Some(state_output) = list.at(outputs, successor_index)
+  expect state_output.address == from_script(own_hash)
   expect InlineDatum(new_data) = state_output.datum
   let new = datum.read(new_data)
   expect  
@@ -428,6 +421,7 @@ fn validate_freeze(
   freeze_bond: Int,
   premium: Int,
   hunter_output_index: Int,
+  successor_index: Int,
   own_ref: OutputReference,
   tx: Transaction,
 ) -> Bool {
@@ -472,10 +466,8 @@ fn validate_freeze(
     topped_up,
     keys,
   }
-  expect [state_output] = list.filter(
-    outputs,
-    fn(output) { output.address == from_script(own_hash) },
-  )
+  expect Some(state_output) = list.at(outputs, successor_index)
+  expect state_output.address == from_script(own_hash)
   expect state_output.datum == InlineDatum(datum.write(frozen))
   expect
     state_output.value == (

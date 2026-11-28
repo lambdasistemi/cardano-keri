@@ -388,7 +388,7 @@ bookDirectly world export = do
     scripts <-
         either fail pure $
             deriveRegistryScripts stateTemplate testTerms (riSeed identity) (worldBlueprint world)
-    let deployment = Tx.RegistryDeployment Testnet testTerms scripts
+    let deployment = Tx.RegistryDeployment Testnet testTerms scripts Nothing
     chain <- readIORef (worldChain world)
     tip <- readIORef (worldTip world)
     let outputAt ref = fromJust (Map.lookup (txInOfReference ref) (chainOutputs chain))

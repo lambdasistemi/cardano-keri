@@ -34,11 +34,11 @@ const onchain = join(root, 'onchain');
 const REGISTER = 'validators/checkpoint_register.ak';
 const OBSERVER = 'lib/cardano_keri/checkpoint/observer.ak';
 const MESSAGE = 'lib/cardano_keri/checkpoint/message.ak';
+const ATTEST = 'lib/cardano_keri/checkpoint/attest.ak';
+const SPLIT = 'lib/cardano_keri/checkpoint/split.ak';
 
 // The Lean's premises first, then the facts the validator also checks.
 const mutants = [
-  { name: 'rotation-evidence', premise: 'rotationTo: the rotation is witnessed', file: OBSERVER, from: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid\n}', to: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid || True\n}' },
-  { name: 'later-sequence-number', premise: "l.sn < sn'", file: MESSAGE, from: 'new.native_sn > spent.native_sn', to: 'new.native_sn >= spent.native_sn' },
   { name: 'short-pool', premise: 'l.pool < P', file: REGISTER, from: '  expect pool < premium\n', to: '  expect pool >= 0\n' },
   { name: 'unfrozen', premise: 'l.frozen = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old', to: '        poisoned: False,\n        frozen: _,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old' },
   { name: 'unpoisoned', premise: 'l.poisoned = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old', to: '        poisoned: _,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old' },
@@ -46,17 +46,28 @@ const mutants = [
   { name: 'successor-value', premise: 'the successor holds Mc + D + pool', file: REGISTER, from: 'held_value(checkpoint_min_ada, d_reg, freeze_bond, frozen, pool)', to: 'held_value(checkpoint_min_ada, d_reg, freeze_bond, old, pool)' },
   { name: 'hunter-bond', premise: 'the hunter receives B', file: REGISTER, from: '  ) >= freeze_bond\n}\n\n/// Convict', to: '  ) >= 0\n}\n\n/// Convict' },
   { name: 'hunter-is-not-the-successor', premise: 'the hunter output holds no token', file: REGISTER, from: 'quantity_of(hunter.value, registry.policy, aid_name) == 0 && lovelace_of(', to: 'True && lovelace_of(' },
-  { name: 'binding-action-tag', premise: 'the observation is tagged as a freeze', file: REGISTER, from: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {', to: 'claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {' },
-  { name: 'binding-policy', premise: 'the observation names this checkpoint policy', file: REGISTER, from: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {', to: 'claim.action == action && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {' },
-  { name: 'binding-spent-output', premise: 'the observation names the spent output', file: REGISTER, from: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy && claim.own_ref == Some(\n                own_ref,\n              )\n            } else {', to: 'claim.action == action && claim.checkpoint_policy == checkpoint_policy\n            } else {' },
-  { name: 'binding-zero-withdrawal', premise: 'the observer ran as a zero-lovelace withdrawal', file: REGISTER, from: 'let credential: Credential = Script(advance_hash)\n  expect\n    list.any(\n      tx.withdrawals,\n      fn(Pair(withdrawal_credential, lovelace)) {\n        withdrawal_credential == credential && lovelace == 0', to: 'let credential: Credential = Script(advance_hash)\n  expect\n    list.any(\n      tx.withdrawals,\n      fn(Pair(withdrawal_credential, lovelace)) {\n        withdrawal_credential == credential' },
   { name: 'mints-nothing', premise: 'a freeze mints and burns nothing', file: REGISTER, from: '  expect quantity_of(mint, registry.policy, aid_name) == 0\n  let frozen = Live {', to: '  let frozen = Live {' },
+  { name: 'binding-action-tag', premise: 'the attestation names the action of this spend', file: REGISTER, from: '    tag: "cardano-keri/advance/v1",\n    action,\n', to: '    tag: "cardano-keri/advance/v1",\n    action: 1,\n' },
+  { name: 'binding-policy', premise: 'the attestation names this checkpoint policy', file: REGISTER, from: '    checkpoint_policy,\n    spent: own_ref,\n', to: '    checkpoint_policy: #"",\n    spent: own_ref,\n' },
+  { name: 'binding-spent-output', premise: 'the attestation names the spent output', file: REGISTER, from: '    spent: own_ref,\n    successor_index,\n  }\n  quantity_of', to: '    spent: OutputReference { transaction_id: #"", output_index: 0 },\n    successor_index,\n  }\n  quantity_of' },
+  { name: 'binding-successor-index', premise: 'the attestation names the successor index of this spend', file: REGISTER, from: '    successor_index,\n  }\n  quantity_of', to: '    successor_index: 0,\n  }\n  quantity_of' },
+  { name: 'binding-asset-present', premise: 'the change attestation is in the mint field', file: REGISTER, from: 'blake2b_256(builtin.serialise_data(claim))) == 1\n}\n\ntype Claimed', to: 'blake2b_256(builtin.serialise_data(claim))) >= 0\n}\n\ntype Claimed' },
+  { name: 'binding-exactly-one', premise: 'the change attestation is at exactly +1', file: REGISTER, from: 'blake2b_256(builtin.serialise_data(claim))) == 1\n}\n\ntype Claimed', to: 'blake2b_256(builtin.serialise_data(claim))) >= 1\n}\n\ntype Claimed' },
+  { name: 'successor-address', premise: 'the successor is at the checkpoint address', file: REGISTER, from: '  expect state_output.address == from_script(own_hash)\n  expect state_output.datum == InlineDatum(datum.write(frozen))', to: '  expect state_output.datum == InlineDatum(datum.write(frozen))' },
+  { name: 'successor-by-claimed-index', premise: 'the successor is the output at the claimed index', file: REGISTER, from: '  expect Some(state_output) = list.at(outputs, successor_index)\n  expect state_output.address == from_script(own_hash)\n  expect state_output.datum == InlineDatum(datum.write(frozen))', to: '  expect Some(state_output) = list.at(outputs, 0)\n  expect state_output.address == from_script(own_hash)\n  expect state_output.datum == InlineDatum(datum.write(frozen))' },
+  { name: 'change-freeze-successor-frozen', premise: 'the change policy requires the frozen copy at the claimed index', file: ATTEST, from: '        frozen: True,', to: '        frozen: False,' },
+  { name: 'change-freeze-successor-index', premise: 'the change policy reads the output at the claimed index', file: ATTEST, from: '  expect Some(state_output) = list.at(tx.outputs, successor_index)\n  expect state_output.address == from_script(claim.checkpoint_policy)\n  expect\n    state_output.datum == InlineDatum(', to: '  expect Some(state_output) = list.at(tx.outputs, 0)\n  expect state_output.address == from_script(claim.checkpoint_policy)\n  expect\n    state_output.datum == InlineDatum(' },
+  { name: 'change-freeze-successor-address', premise: 'the change policy requires the checkpoint address', file: ATTEST, from: '  expect state_output.address == from_script(claim.checkpoint_policy)\n  expect\n    state_output.datum == InlineDatum(', to: '  expect\n    state_output.datum == InlineDatum(' },
+  { name: 'fact-rotation-signatures', premise: 'the rotation is signed at the current threshold', file: SPLIT, from: '    evaluate(\n      f.cur_threshold,\n      list.length(f.cur_keys),\n      positions_in(f.cur_keys, controlled),\n    ),', to: '    True,' },
+  { name: 'fact-rotation-receipts', premise: 'the rotation is receipted by the witnesses', file: SPLIT, from: '      list.length(verified_indices(f.witnesses, f.event_bytes, f.wit_receipts)) >= f.toad', to: '      list.length(verified_indices(f.witnesses, f.event_bytes, f.wit_receipts)) >= 0' },
+  { name: 'fact-reveal', premise: 'the rotation reveals the committed next keys', file: SPLIT, from: '    evaluate(\n      f.spent_next_threshold,', to: '    True || evaluate(\n      f.spent_next_threshold,' },
+  { name: 'change-later-sequence-number', premise: "l.sn < sn'", file: SPLIT, from: 'new.native_sn > spent.native_sn', to: 'new.native_sn >= spent.native_sn' },
 ];
 
 // Controls on the harness itself.
 const survivorControl = { name: 'comment-only-edit', file: REGISTER, from: 'fn validate_freeze(', to: '// an edit that changes no behaviour\nfn validate_freeze(' };
 
-const modules = ['checkpoint_register_freeze_tests', 'checkpoint_register_freeze_corpus_tests'];
+const modules = ['checkpoint_register_freeze_tests', 'checkpoint_register_freeze_corpus_tests', 'advance_split_tests'];
 
 // Each compiler run over the freeze modules takes minutes (the corpus alone is
 // 150 transactions with signature checks), so the runs go in parallel, each in

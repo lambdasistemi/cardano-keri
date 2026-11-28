@@ -4974,7 +4974,7 @@ hexOf = B8.unpack . convertToBase Base16
 
 -- | The registry a transaction is built against: this run's devnet, terms and scripts.
 deploymentOf :: CheckpointEnv -> Tx.RegistryDeployment
-deploymentOf env = Tx.RegistryDeployment Testnet (envTerms env) (envRegistry env)
+deploymentOf env = Tx.RegistryDeployment Testnet (envTerms env) (envRegistry env) Nothing
 
 -- | A party's wallet, as the outputs a library builder spends.
 payerOf :: CheckpointEnv -> Party -> IO Tx.Payer

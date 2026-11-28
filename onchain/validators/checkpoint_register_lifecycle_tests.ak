@@ -29,6 +29,7 @@ use cardano_keri/bounty_commitment.{
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as advance_vec
+use cardano_keri/checkpoint/attest_support.{change_mint}
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, KeyStateView, Live, TerminationPending,
 }
@@ -135,7 +136,8 @@ fn spend_data(index: Int, fields: List<Data>) -> Data {
 /// `Advance { payee_output_index, bond: Keep }`.
 fn advance_redeemer(payee_output_index: Int) -> Data {
   let index: Data = payee_output_index
-  spend_data(0, [index, spend_data(0, [])])
+  let successor: Data = 0
+  spend_data(0, [index, spend_data(0, []), successor])
 }
 
 /// `Convict { convictor_pkh, convictor_output_index }`.
@@ -381,12 +383,9 @@ fn advance_tx(
     interval.everything,
     0,
   )
-  let credential = Script(advance_hash)
-  let redeemer: Data = advance_envelope()
   Transaction {
     ..base,
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
+    mint: change_mint(advance_hash, advance_envelope().claim, 0),
   }
 }
 
@@ -665,7 +664,7 @@ test advance_refuses_a_termination_pending_input() fail {
   )
 }
 
-test advance_refuses_a_missing_advance_observer() fail {
+test advance_refuses_a_missing_change_attestation() fail {
   let tx = advance_tx(
     v2_data(adv_old(False, False)),
     v2_data(adv_new(False)),
@@ -673,11 +672,7 @@ test advance_refuses_a_missing_advance_observer() fail {
     floor_unfrozen + 1_000_000,
     [paid(hunter_pkh, premium)],
   )
-  run_spend(
-    advance_redeemer(1),
-    adv_ref(),
-    Transaction { ..tx, withdrawals: [], redeemers: [] },
-  )
+  run_spend(advance_redeemer(1), adv_ref(), Transaction { ..tx, mint: zero })
 }
 
 // ---------------------------------------------------------------------
@@ -1619,7 +1614,7 @@ fn decoy_input(
 // checkpoint, and the advance envelope names that input. The evidence is a
 // valid rotation of what the decoy declares, so only the comparison between
 // the envelope and the spent input can refuse it.
-test advance_refuses_an_observation_of_another_input() fail {
+fn decoy_context() -> (Transaction, ObserverEnvelope) {
   let decoy_ref = out_ref(seed_tx_id, 77)
   let decoy = decoy_input(
     decoy_ref,
@@ -1634,26 +1629,33 @@ test advance_refuses_an_observation_of_another_input() fail {
     floor_unfrozen + 1_000_000,
     [paid(hunter_pkh, premium)],
   )
-  let envelope = ObserverEnvelope {
-    claim: ObserverClaim {
-      action: observe_advance,
-      checkpoint_policy: policy,
-      own_ref: Some(decoy_ref),
+  (
+    Transaction { ..base, inputs: [decoy, ..base.inputs] },
+    ObserverEnvelope {
+      claim: ObserverClaim {
+        action: observe_advance,
+        checkpoint_policy: policy,
+        own_ref: Some(decoy_ref),
+      },
+      payload: adv_evidence,
     },
-    payload: adv_evidence,
-  }
-  let redeemer: Data = envelope
-  let credential = Script(advance_hash)
-  let tx = Transaction {
-    ..base,
-    inputs: [decoy, ..base.inputs],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
-  }
-  run_spend(advance_redeemer(1), adv_ref(), tx) && checkpoint_observer.observer_advance.withdraw(
-    0,
-    envelope,
-    0,
-    tx,
+  )
+}
+
+// twin: with the decoy input present and the change asset of the claim about the spent input, the spend accepts
+test advance_accepts_with_a_decoy_input_and_its_own_attestation() {
+  let (tx, _) = decoy_context()
+  run_spend(advance_redeemer(1), adv_ref(), tx)
+}
+
+test advance_refuses_an_attestation_of_another_input() fail {
+  // the mint field holds the change asset of the claim about the decoy: the spend derives the name from the input it
+  // is spending, so the asset does not match
+  let (tx, envelope) = decoy_context()
+  run_spend(
+    advance_redeemer(1),
+    adv_ref(),
+    Transaction { ..tx, mint: change_mint(advance_hash, envelope.claim, 0) },
   )
 }
 

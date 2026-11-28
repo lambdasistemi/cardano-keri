@@ -23,6 +23,7 @@ module Cardano.KERI.Deployment.RegistryTransactionsSpec (
     deployment,
     deposit,
     walletOf,
+    walletAddress,
     afterTx,
     outputAt,
     outputsOf,
@@ -210,7 +211,7 @@ deployment = do
     blueprint <- loadBlueprint path >>= either fail pure
     scripts <-
         either fail pure (deriveRegistryScripts stateTemplate terms seed blueprint)
-    pure (RegistryDeployment Mainnet terms scripts)
+    pure (RegistryDeployment Mainnet terms scripts Nothing)
 
 -- | The deposit the request commits: the registry's floor and a pool beyond it.
 deposit :: Integer

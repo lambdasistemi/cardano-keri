@@ -1,8 +1,10 @@
 module Main (main) where
 
+import Cardano.KERI.Deployment.AdvanceAttestationBoundarySpec qualified as AdvanceAttestationBoundarySpec
 import Cardano.KERI.Deployment.AdvancePackageSpec qualified as AdvancePackageSpec
 import Cardano.KERI.Deployment.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.Deployment.AttestationBoundarySpec qualified as AttestationBoundarySpec
+import Cardano.KERI.Deployment.AttestedRegistrySpec qualified as AttestedRegistrySpec
 import Cardano.KERI.Deployment.BountyEntitlementSpec qualified as BountyEntitlementSpec
 import Cardano.KERI.Deployment.ChainIndexSpec qualified as ChainIndexSpec
 import Cardano.KERI.Deployment.EndpointBoardSpec qualified as EndpointBoardSpec
@@ -15,6 +17,7 @@ import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementS
 import Cardano.KERI.Deployment.KoiosSubmissionSpec qualified as KoiosSubmissionSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
+import Cardano.KERI.Deployment.RegistryAdvanceEvaluationSpec qualified as RegistryAdvanceEvaluationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
 import Cardano.KERI.Deployment.RegistryBookingCommandSpec qualified as RegistryBookingCommandSpec
 import Cardano.KERI.Deployment.RegistryBookingEvaluationSpec qualified as RegistryBookingEvaluationSpec
@@ -99,6 +102,9 @@ suite = hspec $ do
     RegistrationSpec.spec
     RegistryScriptsSpec.spec
     AttestationBoundarySpec.spec
+    AdvanceAttestationBoundarySpec.spec
+    AttestedRegistrySpec.spec
+    RegistryAdvanceEvaluationSpec.spec
     RegistryFilesSpec.spec
     RegistryProviderSpec.spec
     RegistryKoiosCommandSpec.spec

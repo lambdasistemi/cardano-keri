@@ -24,7 +24,7 @@
     "lean/CardanoKeri/CheckpointSystemFixtures.lean": "c2bd7b89695138052d86ca724096da21ffd4548fd1c111c8354e9583eefd9a14",
     "lean/CardanoKeri/CheckpointSystemWire.lean": "7af494f2c5b4ffb7b255c1fcedcbc8888775fe7032b075ea1bb476a8a135c4c1",
     "lean/CardanoKeri/CheckpointTraceWire.lean": "1c8ddfea2de0e3c7c0db6d82dd630863fae4abe502627b5bce4bf80a1e1904d8",
-    "lean/CardanoKeri/CheckpointValue.lean": "cd552eca0212b31142d4ed2d29ca6dd8897febddeeb7ac3dbb1154bfb22efbed",
+    "lean/CardanoKeri/CheckpointValue.lean": "8add3b57d8996e6363bf5c2b174927d4be9f2949c21c151c6a32742e9121dc29",
     "lean/CardanoKeri/CheckpointValueGoals.lean": "b4efed7258a8fe45d5a0744e802dad9a666fa6c7ff37633e98b0502cf7857705",
     "lean/CardanoKeri/CheckpointValueVectors.lean": "221ff951f435eb21c1f35ed6df6078c2e0b691a02c743069cff23cf15e282aed",
     "lean/CardanoKeri/ConcreteConvictionGoals.lean": "0ada46e2279f5609fc259022e044cf3055ed67fd03ea4450ce3b07c8d24b54f0",
@@ -4863,6 +4863,20 @@
         "then": "s.datumFacts.withValue p rp v = some s ↔ v = s.heldValue p rp"
       },
       "storySha256": "95f604374fbe5627450e730585f97d593a85c027df00865db8ee68a01dee02a6"
+    },
+    {
+      "declaration": "CardanoKeri.Checkpoint.paid_rotation_premium_output_is_legal",
+      "path": "lean/CardanoKeri/CheckpointValue.lean",
+      "line": 220,
+      "statement": "theorem paid_rotation_premium_output_is_legal (p : Params) (env : Env) {Mp : Value}\n    (hdep : p.premiumFundsOutput Mp) {sn' : Seq} {op : BondOp} {payee : Addr} {t : Slot}\n    {l : Live} {f : Flow} {s' : State}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f s') (hpay : p.P ≤ l.pool) :\n    f.hunter = some { addr := payee, pool := p.P } ∧ 0 < Payment?.pool f.hunter ∧\n    Mp ≤ Payment?.pool f.hunter ∧ f.poolIn = 0 ∧ ∃ l', s' = .present l' ∧ l'.pool + p.P = l.pool",
+      "statementSha256": "c1222a0f707a66cc1b9edd1ec4a9d30db276dc10b9cf09783c0e8c58cf994404",
+      "sourceStory": "Given a deployment whose premium is above zero and at least the ledger's minimum `Mp` for the premium\noutput, and a rotation, keeping or restoring the deposit, of a live checkpoint whose pool covers the premium.\nWhen the rotation succeeds.\nThen the payee is paid exactly the premium, which is above zero and at least `Mp`, so the payment output is\nlegal from the premium alone; nothing is paid into the pool by the step; and the checkpoint's pool is debited\nexactly the premium.",
+      "story": {
+        "given": "(p : Params) (env : Env) {Mp : Value}\n    (hdep : p.premiumFundsOutput Mp) {sn' : Seq} {op : BondOp} {payee : Addr} {t : Slot}\n    {l : Live} {f : Flow} {s' : State}\n    (h : Step p env (.rotate sn' op payee) t (.present l) f s') (hpay : p.P ≤ l.pool)",
+        "when": "Observe the local Checkpoint or associated system relation named by this theorem.",
+        "then": "f.hunter = some { addr := payee, pool := p.P } ∧ 0 < Payment?.pool f.hunter ∧\n    Mp ≤ Payment?.pool f.hunter ∧ f.poolIn = 0 ∧ ∃ l', s' = .present l' ∧ l'.pool + p.P = l.pool"
+      },
+      "storySha256": "1932211daa8b12c324c0724b5db297ddd1bebff0b9e0f791d347403e27a4a8ef"
     },
     {
       "declaration": "CardanoKeri.ConsumerIdentity.valueFloor_datumFacts",

@@ -304,6 +304,8 @@ renderStep = \case
     PublishApplication -> "publish-application"
     PublishState -> "publish-state-script"
     PublishHashProof -> "publish-hash-proof"
+    PublishFactPolicy -> "publish-fact-policy"
+    PublishChangePolicy -> "publish-change-policy"
     PublishCheckpoint -> "publish-checkpoint-validator"
     CreateRegistry -> "create-registry"
 
@@ -378,6 +380,8 @@ renderRefusal = \case
     NetworkDiscriminatorNotZeroOrOne -> "network-discriminator-not-zero-or-one"
     MinimumAdaNotTheCheckpoints -> "minimum-ada-not-the-checkpoints"
     TerminationCarrierExceedsMinimumAda -> "termination-carrier-exceeds-minimum-ada"
+    PremiumBelowOutputMinimum supplied required ->
+        "premium-below-output-minimum (premium " <> show supplied <> " lovelace, the output that pays it needs at least " <> show required <> ")"
 
 renderFilesError :: FilesError -> String
 renderFilesError = \case

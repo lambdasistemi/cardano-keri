@@ -25,6 +25,7 @@ use cardano_keri/application/action.{
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
+use cardano_keri/checkpoint/attest_support.{change_mint}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV2, Live}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance, observe_register,
@@ -373,8 +374,7 @@ fn advance_of(output: Output) -> Bool {
     datum: NoDatum,
     reference_script: None,
   }
-  let credential = Script(advance_hash)
-  let envelope: Data = ObserverEnvelope {
+  let observed = ObserverEnvelope {
     claim: ObserverClaim {
       action: observe_advance,
       checkpoint_policy: checkpoint_hash(),
@@ -386,8 +386,7 @@ fn advance_of(output: Output) -> Bool {
     ..placeholder,
     inputs: [delivered_input(output)],
     outputs: [successor, payee],
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), envelope)],
+    mint: change_mint(advance_hash, observed.claim, 0),
   }
   run_checkpoint_spend(advance_redeemer(1), delivered_ref(), tx)
 }

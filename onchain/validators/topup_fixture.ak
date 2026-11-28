@@ -26,6 +26,7 @@ use cardano/assets.{PolicyId, Value, from_asset, from_lovelace, merge, zero}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, Transaction, Withdraw,
 }
+use cardano_keri/checkpoint/attest_support.{change_mint}
 use cardano_keri/checkpoint/datum.{KeyMaterial}
 use cardano_keri/checkpoint/message.{deriveAidAssetName, qb64_aid}
 use cardano_keri/checkpoint/observer.{
@@ -663,15 +664,12 @@ pub fn rotation_case(
     interval.everything,
     0,
   )
-  let credential = Script(advance_hash)
-  let envelope_data: Data = observed
   Rotation {
     redeemer,
     observed,
     tx: Transaction {
       ..context,
-      withdrawals: [Pair(credential, 0)],
-      redeemers: [Pair(Withdraw(credential), envelope_data)],
+      mint: change_mint(advance_hash, observed.claim, 0),
     },
   }
 }

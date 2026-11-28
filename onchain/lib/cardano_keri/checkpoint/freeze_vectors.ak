@@ -12,6 +12,8 @@ use cardano_keri/checkpoint/threshold.{Unweighted}
 
 pub const hunter_output_index: Int = 5
 
+pub const successor_index: Int = 2
+
 pub const policy: ByteArray =
   #"c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0"
 
@@ -67,7 +69,7 @@ pub const evidence: FreezeEvidence =
     },
   }
 
-pub const spend_redeemer_cbor: ByteArray = #"d87c9f05ff"
+pub const spend_redeemer_cbor: ByteArray = #"d87c9f0502ff"
 
 pub const evidence_cbor: ByteArray =
   #"d8799fd8799f9f58200101010101010101010101010101010101010101010101010101010101010101ffd8799f01ff9f58200202020202020202020202020202020202020202020202020202020202020202ffd8799f01ff9f58200303030303030303030303030303030303030303030303030303030303030303ff01ff06d8799f43726f740102039f04ff059f06ff079f08ff9f09ff0a9f43637574ff9f43616464ff9f9f005840c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1ffff9f9f015840d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1ffffffff"

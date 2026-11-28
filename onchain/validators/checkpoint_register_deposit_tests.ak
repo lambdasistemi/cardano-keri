@@ -5,27 +5,32 @@
 //// the bond and the pool that is left, and the new keys of the rotation signed
 //// an intent naming this rotation, this output and this amount.
 ////
-//// These tests run the spend arm and the rotation observer over one
+//// These tests run the spend arm, and the fact and change policies where the evidence is judged, over one
 //// transaction, with the rotation of the Advance vector `adv_wit_2key`. Each
 //// refusal is the accepted deposit changed in the one thing it is about; the
 //// accepted deposits at the head of each group are its controls, and a refusal
 //// that shared a fault with them would prove nothing about that group.
 
+use advance_attestation
+use aiken/builtin
 use aiken/primitive/bytearray
 use cage_context.{out_ref}
 use cardano/address.{from_verification_key}
 use cardano/assets.{zero}
-use cardano/transaction.{NoDatum, Output}
+use cardano/transaction.{NoDatum, Output, Transaction}
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
+use cardano_keri/checkpoint/attest_support.{
+  advance_fact, event_policy, with_fact,
+}
 use cardano_keri/checkpoint/datum.{CheckpointDatumV2}
 use cardano_keri/checkpoint/observer.{ObserverClaim, ObserverEnvelope}
-use checkpoint_observer
 use checkpoint_register
 use deposit_fixture.{
   Case, advance_envelope, advance_redeemer, bond_deposit, bond_keep,
   connected_case, connected_tx, honest, new_datum, old_datum, payees, signed,
   spent_value, successor_value,
 }
+use event_attestation
 use freeze_fixture.{
   Parts, advance_hash, d_reg, enforcement_hash, entitlement_hash, floor_frozen,
   floor_unfrozen, forged, freeze_bond, from_parts, hunter_pkh, other_hunter_pkh,
@@ -57,14 +62,58 @@ fn run_spend(c: Case) -> Bool {
   )
 }
 
-/// The spending arm and the observer, both run over the one transaction.
-fn run(c: Case) -> Bool {
-  run_spend(c) && checkpoint_observer.observer_advance.withdraw(
+/// The change policy alone over a built transaction, the claim's envelope presented as raw data.
+fn change_purpose(envelope_data: Data, tx: Transaction) -> Bool {
+  advance_attestation.advance_attestation.mint(
     0,
-    c.observed,
-    0,
-    c.tx,
+    event_policy,
+    builtin.constr_data(
+      0,
+      [
+        builtin.list_data(
+          [builtin.constr_data(0, [envelope_data, builtin.i_data(0)])],
+        ),
+      ],
+    ),
+    advance_hash,
+    tx,
   )
+}
+
+/// The spend arm and the two policies over one transaction: (spend, fact policy, change policy). The fact asset of the
+/// evidence is added to the mint field beside the change asset the fixture already minted; each purpose is judged alone.
+fn three(c: Case) -> (Bool, Bool, Bool) {
+  let fact = advance_fact(c.observed, c.tx, 0)
+  let tx = with_fact(c.tx, fact)
+  let fact_data: Data = fact
+  let envelope_data: Data = c.observed
+  (
+    run_spend(Case { ..c, tx }),
+    event_attestation.event_attestation.mint(
+      0,
+      builtin.constr_data(0, [builtin.list_data([fact_data])]),
+      event_policy,
+      tx,
+    ),
+    change_purpose(envelope_data, tx),
+  )
+}
+
+/// The spending arm alone: what the spend guards judge (the policies have their own tests).
+fn run(c: Case) -> Bool {
+  run_spend(c)
+}
+
+/// The spending arm and both policies, all three accepting.
+fn run_all(c: Case) -> Bool {
+  let (spent, fact, change) = three(c)
+  spent && fact && change
+}
+
+/// The spend and the change policy accept and the fact policy alone refuses.
+fn fact_alone_refuses(c: Case) -> Bool {
+  let (spent, fact, change) = three(c)
+  spent && change && !fact
 }
 
 /// A pool below the premium (nothing is paid) and one that covers it.
@@ -260,30 +309,53 @@ test deposit_with_a_damaged_signature_is_refused() fail {
 // The rotation: witnessed and later, the unchanged advance predicate
 // ---------------------------------------------------------------------
 
-test deposit_with_a_rotation_signed_by_too_few_keys_is_refused() fail {
-  run(frozen_deposit_observing(under_signed()))
+// The evidence is the fact policy's: the spend and the change policy accept the same transaction, the fact policy alone
+// refuses (a plain test, so a refusal anywhere else cannot satisfy it).
+
+test deposit_all_three_purposes_accept_the_honest_deposit() {
+  run_all(honest(False, True, short_pool, @"frozen"))
 }
 
-test deposit_with_a_rotation_receipted_by_too_few_witnesses_is_refused() fail {
-  run(frozen_deposit_observing(under_receipted()))
+test deposit_with_a_rotation_signed_by_too_few_keys_is_refused_at_the_fact_policy() {
+  fact_alone_refuses(frozen_deposit_observing(under_signed()))
 }
 
-test deposit_with_an_unevidenced_rotation_is_refused() fail {
-  run(frozen_deposit_observing(unevidenced()))
+test deposit_with_a_rotation_receipted_by_too_few_witnesses_is_refused_at_the_fact_policy() {
+  fact_alone_refuses(frozen_deposit_observing(under_receipted()))
 }
 
-test deposit_with_a_forged_controller_signature_is_refused() fail {
-  run(frozen_deposit_observing(forged()))
+test deposit_with_an_unevidenced_rotation_is_refused_at_the_fact_policy() {
+  fact_alone_refuses(frozen_deposit_observing(unevidenced()))
 }
 
-/// The spend arm alone binds the observation to the spent output: the observer
-/// would refuse a claim for another output as well (it cannot find the input),
-/// so only a run without the observer tells the two apart.
+test deposit_with_a_forged_controller_signature_is_refused_at_the_fact_policy() {
+  fact_alone_refuses(frozen_deposit_observing(forged()))
+}
+
+/// The spend arm alone binds the claim to the spent output (the twin of the refusals below).
 test deposit_spend_arm_alone_accepts_the_honest_claim() {
   run_spend(honest(False, True, short_pool, @"frozen"))
 }
 
-test deposit_claiming_another_output_for_the_observer_is_refused() fail {
+/// The change policy alone, over the transaction of the honest deposit with its fact asset.
+test deposit_change_policy_accepts_the_honest_claim() {
+  let c = honest(False, True, short_pool, @"frozen")
+  let tx = with_fact(c.tx, advance_fact(c.observed, c.tx, 0))
+  let envelope_data: Data = c.observed
+  change_purpose(envelope_data, tx)
+}
+
+test deposit_change_policy_refuses_a_claim_naming_an_input_not_spent() fail {
+  let c = honest(False, True, short_pool, @"frozen")
+  let other = out_ref(spent.txid, spent.index + 1)
+  let claim = ObserverClaim { ..c.observed.claim, own_ref: Some(other) }
+  let observed = ObserverEnvelope { ..c.observed, claim }
+  let tx = with_fact(c.tx, advance_fact(c.observed, c.tx, 0))
+  let envelope_data: Data = observed
+  change_purpose(envelope_data, tx)
+}
+
+test deposit_claiming_another_output_for_the_spend_arm_is_refused() fail {
   let c = honest(False, True, short_pool, @"frozen")
   let other = out_ref(spent.txid, spent.index + 1)
   let claim = ObserverClaim { ..c.observed.claim, own_ref: Some(other) }
@@ -409,11 +481,24 @@ test deposit_that_changes_the_birth_slot_is_refused() fail {
   run(frozen_deposit_into(moved, successor_value(short_pool), short_pool))
 }
 
-test deposit_that_changes_the_identifier_is_refused() fail {
+/// The identifier of the successor is the change policy's to keep (`validate_advance_change`: the successor names the
+/// same identifier); the spend arm reads the token of the spent output, not the successor's datum identifier.
+fn identifier_changed() -> Case {
   let moved = from_parts(
     Parts { ..parts(new_datum(False)), aid: bytearray.push(#"", 69) },
   )
-  run(frozen_deposit_into(moved, successor_value(short_pool), short_pool))
+  frozen_deposit_into(moved, successor_value(short_pool), short_pool)
+}
+
+test deposit_spend_arm_alone_leaves_the_identifier_to_the_change_policy() {
+  run_spend(identifier_changed())
+}
+
+test deposit_that_changes_the_identifier_is_refused_at_the_change_policy() fail {
+  let c = identifier_changed()
+  let tx = with_fact(c.tx, advance_fact(c.observed, c.tx, 0))
+  let envelope_data: Data = c.observed
+  change_purpose(envelope_data, tx)
 }
 
 test deposit_that_mints_under_the_checkpoint_policy_is_refused() fail {

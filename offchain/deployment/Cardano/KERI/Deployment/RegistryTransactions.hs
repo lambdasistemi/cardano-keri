@@ -54,6 +54,11 @@ module Cardano.KERI.Deployment.RegistryTransactions (
     FoldPlan (..),
     foldRegistration,
     returnRequests,
+    AttestedReferences (..),
+    CheckpointMove (..),
+    advanceAttested,
+    freezeAttested,
+    premiumOutputMinimum,
 
     -- * The names a deployment fixes
     applicationPolicyId,
@@ -109,32 +114,47 @@ import Cardano.KERI.AID.Application (
     unstakedAddress,
  )
 import Cardano.KERI.AID.Blake3.Checkpoint (blake3Hash)
+import Cardano.KERI.AID.Checkpoint.AdvanceAttestation (
+    advanceAttestationName,
+    advanceEnvelopeData,
+    changeIssueData,
+    datumFrozen,
+    factIssueData,
+    signedFactForAdvance,
+    signedFactForFreeze,
+    signedFactName,
+ )
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV2 (..),
     KeyStateView (..),
     liveOfKeyState,
  )
+import Cardano.KERI.AID.Checkpoint.Deposit (BondOption (..))
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
  )
 import Cardano.KERI.AID.Checkpoint.Wire (
+    advanceAttestedSpendRedeemerData,
     asPlcData,
     bookingAttestationBurnData,
     bookingAttestationIssueData,
     bookingAttestationName,
+    freezeAttestedSpendRedeemerData,
  )
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Trie
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
  )
 import Cardano.KERI.Deployment.Script (
+    CheckpointTerms (..),
     Observers (..),
     ScriptArtifact (..),
     computeScriptHash,
@@ -175,7 +195,7 @@ import Cardano.Ledger.Api.Tx.Out (
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL, scriptTxWitsL)
 import Cardano.Ledger.BaseTypes (
     Inject (..),
-    Network,
+    Network (Testnet),
     StrictMaybe (SJust, SNothing),
     TxIx (..),
  )
@@ -238,6 +258,8 @@ data RegistryDeployment = RegistryDeployment
     { deploymentNetwork :: !Network
     , deploymentTerms :: !RegistryTerms
     , deploymentScripts :: !RegistryScripts
+    , deploymentPolicies :: !(Maybe AdvanceAttestation)
+    -- ^ the two policies of the attested generation, whose checkpoint requires their change attestation; absent in the deployed generation
     }
 
 -- | The outputs a registry's transactions read by reference, once its genesis has settled.
@@ -302,6 +324,10 @@ data RegistryTransactionError
       ProofOutputReused !TxIn
     | -- | a burn of no attestation
       NothingToBurn
+    | -- | the deployment is of the deployed generation: it has no policies to mint the attestation of a checkpoint move
+      NotAnAttestedDeployment
+    | -- | the move cannot be built from what it was given: the spent output holds no live checkpoint datum, the successor is none, or the evidence does not carry the fact
+      CheckpointMoveRefused !String
     deriving stock (Eq, Show)
 
 {- | One request a booking transaction books: the record it commits, the inception it is booked for and the output of the
@@ -1045,6 +1071,179 @@ returnRequestsBurning parameters deployment references payer booking validity re
                     & witsTxL . rdmrsTxWitsL .~ redeemers
                 )
         pure (built, purposeSet purposes)
+
+-- ---------------------------------------------------------------------
+-- The checkpoint's moves of the attested generation
+-- ---------------------------------------------------------------------
+
+-- | The published scripts a move of the attested generation reads by reference.
+data AttestedReferences = AttestedReferences
+    { attestedCheckpointScript :: !(TxIn, TxOut ConwayEra)
+    -- ^ the checkpoint validator, published
+    , attestedFactScript :: !(TxIn, TxOut ConwayEra)
+    -- ^ the fact policy, published
+    , attestedChangeScript :: !(TxIn, TxOut ConwayEra)
+    -- ^ the change policy, published
+    }
+
+-- | What a move of a checkpoint is given besides the payer: the output it spends, its successor and its evidence.
+data CheckpointMove = CheckpointMove
+    { moveSpent :: !(TxIn, TxOut ConwayEra)
+    -- ^ the checkpoint output spent, its datum inline
+    , moveSuccessor :: !PLC.Data
+    -- ^ the datum the successor carries: the rotated state of an advance, the spent datum frozen for a freeze
+    , movePayload :: !PLC.Data
+    -- ^ the evidence: an @AdvanceEvidence@ for an advance, a @FreezeEvidence@ for a freeze
+    , movePayee :: !Addr
+    -- ^ who receives what leaves the checkpoint: the premium of an advance, the bond of a freeze
+    }
+
+{- | An advance of a checkpoint of the attested generation, a rotation or a depositing rotation: the
+checkpoint spent with the successor at the first output and the premium, when the pool covers it, at the
+second; the change attestation of the claim and the fact attestation of the signed fact minted, each under its
+own policy by reference, with no withdrawal and no certificate.
+-}
+advanceAttested ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    AttestedReferences ->
+    Payer ->
+    CheckpointMove ->
+    BondOption ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+advanceAttested parameters deployment references payer move bond =
+    checkpointMove parameters deployment references payer move (Left bond)
+
+{- | A freeze of a checkpoint of the attested generation: the same, with the bond to the hunter at the second
+output and the frozen successor at the first.
+-}
+freezeAttested ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    AttestedReferences ->
+    Payer ->
+    CheckpointMove ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+freezeAttested parameters deployment references payer move =
+    checkpointMove parameters deployment references payer move (Right ())
+
+checkpointMove ::
+    PParams ConwayEra ->
+    RegistryDeployment ->
+    AttestedReferences ->
+    Payer ->
+    CheckpointMove ->
+    Either BondOption () ->
+    Budgets ->
+    Either RegistryTransactionError BuiltTransaction
+checkpointMove parameters deployment references payer move kind budgets = do
+    policies <- maybe (Left NotAnAttestedDeployment) Right (deploymentPolicies deployment)
+    spentDatum <- maybe (Left (CheckpointMoveRefused "the spent output holds no inline datum")) Right (rawInlineData spentOut)
+    frozenBefore <- maybe (Left (CheckpointMoveRefused "the spent output holds no live checkpoint datum")) Right (datumFrozen spentDatum)
+    frozenAfter <- maybe (Left (CheckpointMoveRefused "the successor is no live checkpoint datum")) Right (datumFrozen (moveSuccessor move))
+    fact <-
+        maybe
+            (Left (CheckpointMoveRefused "the evidence does not carry the signed fact of the move"))
+            Right
+            ( case kind of
+                Left _ -> signedFactForAdvance spentDatum (moveSuccessor move) (movePayload move)
+                Right () -> signedFactForFreeze spentDatum (movePayload move)
+            )
+    factName <- maybe (Left (CheckpointMoveRefused "the signed fact does not have the shape of the fact policy's record")) Right (signedFactName fact)
+    let floorOf frozen = registryMinimumAda terms + termsDeposit checkpointTerms + (if frozen then 0 else termsFreezeBond checkpointTerms)
+        pool = coinOf spentOut - floorOf frozenBefore
+        premium = termsPremium checkpointTerms
+        (payeeAmount, successorLovelace) = case kind of
+            Left _
+                | pool >= premium -> (Just premium, floorOf frozenAfter + pool - premium)
+                | otherwise -> (Nothing, floorOf frozenAfter + pool)
+            Right () -> (Just (termsFreezeBond checkpointTerms), floorOf frozenAfter + pool)
+        action = either (const 1) (const 2) kind
+        checkpointPolicy = scriptHashBytes (artifactScriptHash (scriptsCheckpoint (deploymentScripts deployment)))
+        change = advanceAttestationName action checkpointPolicy spentReference 0
+        envelope = advanceEnvelopeData action checkpointPolicy spentReference (movePayload move)
+        changePolicy = PolicyID (artifactScriptHash (attestationChange policies))
+        factPolicy = PolicyID (artifactScriptHash (attestationFact policies))
+        minted = tokenValue changePolicy change 1 <> tokenValue factPolicy factName 1
+        successorOut =
+            mkBasicTxOut (checkpointAddress deployment) (MaryValue (Coin successorLovelace) (assetsOf spentOut))
+                & datumTxOutL .~ mkInlineDatum (moveSuccessor move)
+        -- the recipient is paid exactly what the checkpoint is debited, the premium or the freeze bond: nothing of it
+        -- comes from the payer
+        payeeOuts = [mkBasicTxOut (movePayee move) (inject (Coin amount)) | Just amount <- [payeeAmount]]
+        resolved = [attestedCheckpointScript references, attestedFactScript references, attestedChangeScript references]
+        spendRedeemer = case kind of
+            Left bond -> advanceAttestedSpendRedeemerData 1 bond 0
+            Right () -> freezeAttestedSpendRedeemerData 1 0
+    unless (successorLovelace >= 0 && pool >= 0) $
+        Left (CheckpointMoveRefused "the spent output holds less than the checkpoint's floor")
+    -- a payment the ledger would refuse is no payment: it is never made up from the payer's funds
+    forM_ payeeAmount $ \amount ->
+        let least = outputMinimum parameters (movePayee move)
+         in when (amount < least) $
+                Left
+                    ( CheckpointMoveRefused
+                        ( "the payment of "
+                            <> show amount
+                            <> " lovelace is below the "
+                            <> show least
+                            <> " lovelace the ledger asks of the output that pays it"
+                        )
+                    )
+    firstFunded budgets (fundings [spentIn] (payerFunds payer)) $ \chosen funding -> do
+        let spent = moveSpent move : fundingInputs funding
+            inputs = Set.fromList (map fst spent)
+            mintIx policy = fromIntegral (mintingIndex policy minted)
+            purposes =
+                [ (ConwaySpending (AsIx (spendingIndex spentIn inputs)), spendRedeemer, scriptExUnits)
+                , (ConwayMinting (AsIx (mintIx changePolicy)), changeIssueData [(envelope, 0)], scriptExUnits)
+                , (ConwayMinting (AsIx (mintIx factPolicy)), factIssueData [fact], scriptExUnits)
+                ]
+            redeemers = redeemerMap chosen purposes
+        built <-
+            balanced
+                parameters
+                resolved
+                spent
+                (successorOut : payeeOuts)
+                (payerAddress payer)
+                funding
+                ( mkBasicTx
+                    ( mkBasicTxBody
+                        & mintTxBodyL .~ minted
+                        & referenceInputsTxBodyL .~ Set.fromList (map fst resolved)
+                        & scriptIntegrityHashTxBodyL
+                            .~ computeScriptIntegrity (Set.singleton PlutusV3) parameters redeemers (TxDats mempty)
+                    )
+                    & witsTxL . rdmrsTxWitsL .~ redeemers
+                )
+        pure (built, purposeSet purposes)
+  where
+    (spentIn, spentOut) = moveSpent move
+    terms = deploymentTerms deployment
+    checkpointTerms = registryCheckpointTerms terms
+    spentReference = let OutputReference txid index = outputReferenceOf spentIn in (txid, index)
+
+{- | The least lovelace a premium of the registry can be: the ledger's minimum for the output that pays it, as large
+as an address of a payee can make it (a base address of two script credentials, holding lovelace alone), and never
+less than one lovelace, since a premium of nothing pays nothing also where the ledger asks nothing of an output. A
+deployment whose premium is below it cannot pay a premium output from the premium alone, and is refused.
+-}
+premiumOutputMinimum :: PParams ConwayEra -> Integer
+premiumOutputMinimum parameters = max 1 (outputMinimum parameters largestPayee)
+  where
+    largestPayee = Addr Testnet (ScriptHashObj payeeScript) (StakeRefBase (ScriptHashObj payeeScript))
+    payeeScript = ScriptHash (fromMaybe (error "28 bytes form a script hash") (hashFromBytes (BS.replicate 28 0)))
+
+{- | The lovelace the ledger asks of an output at an address that holds lovelace alone, found again for the size the
+minimum itself makes the output.
+-}
+outputMinimum :: PParams ConwayEra -> Addr -> Integer
+outputMinimum parameters address = settle (settle (settle 0))
+  where
+    settle coin = max coin (unCoin (getMinCoinTxOut parameters (mkBasicTxOut address (inject (Coin coin)) :: TxOut ConwayEra)))
 
 -- | The attestations the outputs hold, by name: what a burn of them burns.
 attestationsHeld :: RegistryDeployment -> [(TxIn, TxOut ConwayEra)] -> Map.Map AssetName Integer

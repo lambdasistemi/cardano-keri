@@ -105,6 +105,11 @@ spec =
                 -- (8_482 -> 8_957); the advance observer is unchanged and the
                 -- ceiling is too.
                 programLength "observer-advance" artifacts `shouldBe` 15_710
+                -- #576: derived from the blueprint of the deployed generation
+                -- (KERI_CHECKPOINT_BLUEPRINT, the committed build of the sources
+                -- before the two-policy advance), never from the current source
+                -- build, whose attested checkpoint is a different program (its
+                -- length is pinned in AdvanceAttestationBoundarySpec).
                 programLength "checkpoint-register" artifacts `shouldBe` 8_957
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board

@@ -9,14 +9,21 @@
 //// The accepted freeze at the head of each group is the control: a refusal
 //// that shared a fault with it would prove nothing about that group.
 
+use advance_attestation
+use aiken/builtin
 use aiken/cbor
 use aiken/primitive/bytearray
 use cage_context.{out_ref}
-use cardano/address.{Credential, Script, from_script}
-use cardano/assets.{from_asset, from_lovelace, merge}
-use cardano/transaction.{Output, OutputReference, Transaction, Withdraw}
+use cardano/address.{Credential, Script, from_script, from_verification_key}
+use cardano/assets.{PolicyId, add, from_asset, from_lovelace, merge, zero}
+use cardano/transaction.{
+  NoDatum, Output, OutputReference, Transaction, Withdraw,
+}
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as advance_vec
+use cardano_keri/checkpoint/attest_support.{
+  change_name, event_policy, freeze_fact, with_fact,
+}
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, TerminationPending,
 }
@@ -27,6 +34,7 @@ use cardano_keri/checkpoint/observer.{
 }
 use checkpoint_observer
 use checkpoint_register
+use event_attestation
 use freeze_fixture.{
   Freeze, Parts, advance_hash, advance_redeemer, advance_tag, d_reg,
   enforcement_hash, entitlement_hash, envelope, envelope_with, floor_frozen,
@@ -66,13 +74,63 @@ fn run_spend(redeemer: Data, tx: Transaction) -> Bool {
 }
 
 /// The spending arm and the observer, both run over the one transaction.
-fn run(f: Freeze) -> Bool {
-  run_spend(freeze_redeemer(f.hunter_output_index), f.tx) && checkpoint_observer.observer_advance.withdraw(
-    0,
-    f.observed,
-    0,
-    f.tx,
+/// The spend arm and the two new policies over one transaction: (spend, fact policy, change policy). The fact asset of the
+/// evidence is added to the mint field beside the change asset the fixture already minted; each purpose is judged alone.
+fn three(f: Freeze) -> (Bool, Bool, Bool) {
+  let fact = freeze_fact(f.observed, f.tx)
+  let tx = with_fact(f.tx, fact)
+  let fact_data: Data = fact
+  let envelope_data: Data = f.observed
+  (
+    run_spend(freeze_redeemer(f.hunter_output_index), tx),
+    event_attestation.event_attestation.mint(
+      0,
+      builtin.constr_data(0, [builtin.list_data([fact_data])]),
+      event_policy,
+      tx,
+    ),
+    change_purpose(envelope_data, tx),
   )
+}
+
+/// The change policy alone over a fully built transaction, the claim's envelope presented as raw data: a test varies
+/// only the envelope handed to the production handler, never the transaction or its mint.
+fn change_purpose(envelope_data: Data, tx: Transaction) -> Bool {
+  advance_attestation.advance_attestation.mint(
+    0,
+    event_policy,
+    builtin.constr_data(
+      0,
+      [
+        builtin.list_data(
+          [builtin.constr_data(0, [envelope_data, builtin.i_data(0)])],
+        ),
+      ],
+    ),
+    advance_hash,
+    tx,
+  )
+}
+
+/// The honest freeze's transaction with the fact asset of its own evidence added to the mint field: the one
+/// transaction both the positive and the malformed-payload refusal of the change policy are judged over.
+fn honest_complete_tx() -> (ObserverEnvelope, Transaction) {
+  let honest = honest_case(1_000_000)
+  (
+    honest.observed,
+    with_fact(honest.tx, freeze_fact(honest.observed, honest.tx)),
+  )
+}
+
+/// The spending arm alone: what the spend guards judge (the policies have their own tests).
+fn run(f: Freeze) -> Bool {
+  run_spend(freeze_redeemer(f.hunter_output_index), f.tx)
+}
+
+/// The spending arm and both policies, all three accepting.
+fn run_all(f: Freeze) -> Bool {
+  let (spent, fact, change) = three(f)
+  spent && fact && change
 }
 
 fn run_freeze(
@@ -96,7 +154,7 @@ fn freeze_paying(hunter_output_index: Int, others: List<Output>) -> Bool {
 }
 
 fn freeze_observing(evidence: AdvanceEvidence) -> Bool {
-  run(observing_case(evidence))
+  run_all(observing_case(evidence))
 }
 
 fn freeze_spending(
@@ -105,7 +163,7 @@ fn freeze_spending(
   successor: CheckpointDatumV2,
   successor_lovelace: Int,
 ) -> Bool {
-  run(spending_case(old, input_lovelace, successor, successor_lovelace))
+  run_all(spending_case(old, input_lovelace, successor, successor_lovelace))
 }
 
 // ---------------------------------------------------------------------
@@ -151,6 +209,7 @@ test freeze_accepts_the_observer_alone() {
 test freeze_spend_redeemer_is_the_haskell_encoding() {
   let redeemer: Data = checkpoint_register.Freeze {
     hunter_output_index: vec.hunter_output_index,
+    successor_index: vec.successor_index,
   }
   cbor.serialise(redeemer) == vec.spend_redeemer_cbor
 }
@@ -192,31 +251,21 @@ test freeze_is_spend_constructor_three() {
 
 fn spend_arm_given(
   observed: ObserverEnvelope,
-  withdrawals: List<Pair<Credential, Int>>,
-  redeemer_credential: Credential,
+  minted_policy: PolicyId,
+  quantity: Int,
 ) -> Bool {
   let tx = honest_tx(1_000_000)
-  let redeemer: Data = observed
   run_spend(
     freeze_redeemer(1),
     Transaction {
       ..tx,
-      withdrawals,
-      redeemers: [Pair(Withdraw(redeemer_credential), redeemer)],
+      mint: add(zero, minted_policy, change_name(observed.claim, 0), quantity),
     },
   )
 }
 
-fn observer_credential() -> Credential {
-  Script(advance_hash)
-}
-
 fn spend_arm_observing(observed: ObserverEnvelope) -> Bool {
-  spend_arm_given(
-    observed,
-    [Pair(observer_credential(), 0)],
-    observer_credential(),
-  )
+  spend_arm_given(observed, advance_hash, 1)
 }
 
 fn claim_of(
@@ -257,28 +306,16 @@ test freeze_spend_arm_refuses_a_claim_of_another_policy() fail {
   spend_arm_observing(claim_of(freeze_tag, migration_hash, Some(spent_ref())))
 }
 
-test freeze_spend_arm_refuses_a_withdrawal_of_lovelace() fail {
-  spend_arm_given(
-    honest_envelope(),
-    [Pair(observer_credential(), 1)],
-    observer_credential(),
-  )
+test freeze_spend_arm_refuses_the_change_asset_at_two() fail {
+  spend_arm_given(honest_envelope(), advance_hash, 2)
 }
 
-test freeze_spend_arm_refuses_a_withdrawal_of_another_credential() fail {
-  spend_arm_given(
-    honest_envelope(),
-    [Pair(Script(migration_hash), 0)],
-    observer_credential(),
-  )
+test freeze_spend_arm_refuses_the_change_asset_of_another_policy() fail {
+  spend_arm_given(honest_envelope(), migration_hash, 1)
 }
 
-test freeze_spend_arm_refuses_a_redeemer_of_another_credential() fail {
-  spend_arm_given(
-    honest_envelope(),
-    [Pair(observer_credential(), 0)],
-    Script(migration_hash),
-  )
+test freeze_spend_arm_refuses_an_absent_change_asset() fail {
+  spend_arm_given(honest_envelope(), advance_hash, 0)
 }
 
 // ---------------------------------------------------------------------
@@ -340,6 +377,43 @@ test freeze_refuses_a_poisoned_frozen_checkpoint() fail {
   )
 }
 
+// The spend alone, without the fact and change policies, so the spend's own
+// premises are judged here and not masked by the change policy's copy of them.
+// The twin is `freeze_pays_the_bond_and_writes_the_frozen_datum`.
+
+test freeze_spend_refuses_a_frozen_checkpoint_alone() fail {
+  run(
+    spending_case(
+      live(False, True),
+      floor_frozen + 1_000_000,
+      live(False, True),
+      floor_frozen + 1_000_000,
+    ),
+  )
+}
+
+test freeze_spend_refuses_a_poisoned_checkpoint_alone() fail {
+  run(
+    spending_case(
+      live(True, False),
+      floor_unfrozen + 1_000_000,
+      live(False, True),
+      floor_frozen + 1_000_000,
+    ),
+  )
+}
+
+test freeze_spend_refuses_a_poisoned_frozen_checkpoint_alone() fail {
+  run(
+    spending_case(
+      live(True, True),
+      floor_frozen + 1_000_000,
+      live(False, True),
+      floor_frozen + 1_000_000,
+    ),
+  )
+}
+
 test freeze_refuses_a_termination_pending_input() fail {
   freeze_observing_pending()
 }
@@ -378,6 +452,27 @@ test freeze_refuses_a_version_1_input() fail {
 // freeze-requires-witnessed-later-rotation
 // ---------------------------------------------------------------------
 
+fn fact_alone_refuses(f: Freeze) -> Bool {
+  let (spent, fact, change) = three(f)
+  spent && change && !fact
+}
+
+test freeze_refuses_a_rotation_without_signatures_or_receipts_at_the_fact_policy() {
+  fact_alone_refuses(observing_case(unevidenced()))
+}
+
+test freeze_refuses_a_forged_signature_at_the_fact_policy() {
+  fact_alone_refuses(observing_case(forged()))
+}
+
+test freeze_refuses_an_under_signed_rotation_at_the_fact_policy() {
+  fact_alone_refuses(observing_case(under_signed()))
+}
+
+test freeze_refuses_an_under_receipted_rotation_at_the_fact_policy() {
+  fact_alone_refuses(observing_case(under_receipted()))
+}
+
 test freeze_refuses_a_rotation_without_signatures_or_receipts() fail {
   freeze_observing(unevidenced())
 }
@@ -394,12 +489,9 @@ test freeze_refuses_an_under_receipted_rotation() fail {
   freeze_observing(under_receipted())
 }
 
-test freeze_refuses_a_missing_observer() fail {
+test freeze_refuses_a_missing_change_attestation() fail {
   let tx = honest_tx(1_000_000)
-  run_spend(
-    freeze_redeemer(1),
-    Transaction { ..tx, withdrawals: [], redeemers: [] },
-  )
+  run_spend(freeze_redeemer(1), Transaction { ..tx, mint: zero })
 }
 
 test freeze_refuses_the_advance_action_tag() fail {
@@ -439,21 +531,20 @@ test freeze_refuses_an_observation_of_another_output() fail {
   )
 }
 
+// The honest positive and the malformed payload share the one complete transaction (its mint holds the change asset and
+// the fact asset of the honest evidence); only the envelope handed to the production change handler differs, so the
+// refusal is the handler's own decode of the payload, not a fixture's.
+test freeze_change_accepts_the_honest_payload_of_the_shared_transaction() {
+  let (observed, tx) = honest_complete_tx()
+  let envelope_data: Data = observed
+  change_purpose(envelope_data, tx)
+}
+
 test freeze_refuses_a_payload_that_is_not_freeze_evidence() fail {
-  let honest_observed = honest_envelope()
-  let observed = ObserverEnvelope { ..honest_observed, payload: rotation }
-  run_freeze(
-    1,
-    observed,
-    freeze_tx(
-      v2_data(live(False, False)),
-      v2_data(live(False, True)),
-      floor_unfrozen + 1_000_000,
-      floor_frozen + 1_000_000,
-      [paid(hunter_pkh, freeze_bond)],
-      observed,
-    ),
-  )
+  let (observed, tx) = honest_complete_tx()
+  let malformed = ObserverEnvelope { ..observed, payload: rotation }
+  let envelope_data: Data = malformed
+  change_purpose(envelope_data, tx)
 }
 
 test freeze_refuses_an_observer_alone_given_unevidenced_rotation() fail {
@@ -640,13 +731,22 @@ test freeze_refuses_a_successor_at_another_script() fail {
   )
 }
 
-test freeze_refuses_two_successors() fail {
+// The successor is the output at the claimed index: a further output at the checkpoint address that holds no token does
+// not change which one is judged. Replaces the singleton-by-address refusal.
+test freeze_judges_the_output_at_the_claimed_index() {
   let tx = honest_tx(1_000_000)
   expect [successor, hunter] = tx.outputs
   run_freeze(
     2,
     honest_envelope(),
-    Transaction { ..tx, outputs: [successor, successor, hunter] },
+    Transaction {
+      ..tx,
+      outputs: [
+        successor,
+        Output { ..successor, value: from_lovelace(mc), datum: NoDatum },
+        hunter,
+      ],
+    },
   )
 }
 
@@ -766,7 +866,10 @@ test freeze_refuses_a_mint_under_the_policy() fail {
   run_freeze(
     1,
     honest_envelope(),
-    Transaction { ..tx, mint: representative(spent.cesr_aid, 1) },
+    Transaction {
+      ..tx,
+      mint: merge(tx.mint, representative(spent.cesr_aid, 1)),
+    },
   )
 }
 
@@ -775,7 +878,10 @@ test freeze_refuses_a_burn_under_the_policy() fail {
   run_freeze(
     1,
     honest_envelope(),
-    Transaction { ..tx, mint: representative(spent.cesr_aid, -1) },
+    Transaction {
+      ..tx,
+      mint: merge(tx.mint, representative(spent.cesr_aid, -1)),
+    },
   )
 }
 
@@ -784,7 +890,10 @@ test freeze_accepts_a_mint_under_another_policy() {
   run_freeze(
     1,
     honest_envelope(),
-    Transaction { ..tx, mint: from_asset(advance_hash, #"01", 1) },
+    Transaction {
+      ..tx,
+      mint: merge(tx.mint, from_asset(migration_hash, #"01", 1)),
+    },
   )
 }
 
@@ -907,4 +1016,29 @@ test freeze_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fa
 
 test freeze_refuses_a_successor_at_a_staked_address() fail {
   freeze_over(with_successor_address(freeze_base(), staked(policy)))
+}
+
+test freeze_all_three_purposes_accept_the_honest_freeze() {
+  run_all(honest_case(1_000_000))
+}
+
+test freeze_refuses_a_successor_at_another_address_alone() fail {
+  let tx = honest_tx(1_000_000)
+  expect [successor, hunter] = tx.outputs
+  run_freeze(
+    1,
+    honest_envelope(),
+    Transaction {
+      ..tx,
+      outputs: [
+        Output {
+          ..successor,
+          address: from_verification_key(
+            #"cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00cc00",
+          ),
+        },
+        hunter,
+      ],
+    },
+  )
 }

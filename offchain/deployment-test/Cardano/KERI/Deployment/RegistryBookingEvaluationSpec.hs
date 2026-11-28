@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- |
 Module      : Cardano.KERI.Deployment.RegistryBookingEvaluationSpec
@@ -29,6 +28,22 @@ import Cardano.KERI.AID.Application (Action (..), actionData)
 import Cardano.KERI.AID.Checkpoint.Wire (bookingAttestationIssueData)
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum)
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
+import Cardano.KERI.Deployment.LedgerEvaluation (
+    Judgement (..),
+    Purpose (..),
+    acceptedAt,
+    accepts,
+    evaluated,
+    judge,
+    mintOf,
+    negative,
+    onPolicy,
+    parameters,
+    purposeOf,
+    refusedAt,
+    setUpFailureAt,
+    withMint,
+ )
 import Cardano.KERI.Deployment.RefusalAt (Verdict (..), evaluationRefusedAt, renderEvaluationFailure, requireRefusedAt, verdictAt)
 import Cardano.KERI.Deployment.Registry (RegistryScripts (..), registryInitialFloor, registryMinimumDeposit)
 import Cardano.KERI.Deployment.RegistryBookingShapeSpec (
@@ -52,66 +67,28 @@ import Cardano.KERI.Deployment.RegistryTransactionsSpec (
     terms,
  )
 import Cardano.KERI.Deployment.Script (Observers (..), ScriptArtifact (..))
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData)
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
-import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, mintTxBodyL, outputsTxBodyL, referenceInputsTxBodyL, treasuryDonationTxBodyL)
+import Cardano.Ledger.Api.Tx.Body (inputsTxBodyL, outputsTxBodyL, referenceInputsTxBodyL, treasuryDonationTxBodyL)
 import Cardano.Ledger.Api.Tx.Out (TxOut, coinTxOutL, datumTxOutL)
 import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
-import Cardano.Ledger.BaseTypes (natVersion)
-import Cardano.Ledger.Binary (decodeFull')
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
-import Cardano.Ledger.Core (PParams)
-import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
-import Cardano.Ledger.State (UTxO (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Node.Client.Ledger (ConwayTx)
-import Cardano.Slotting.EpochInfo (fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..))
-import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Control.Monad (void)
-import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
-import Data.Either (isRight)
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set qualified as Set
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word32)
 import Lens.Micro ((%~), (&), (.~), (^.))
-import Paths_cardano_keri (getDataFileName)
 import PlutusCore.Data qualified as PLC
 import Test.Hspec (Spec, anyIOException, describe, it, shouldBe, shouldNotBe, shouldSatisfy, shouldThrow)
-
--- | The preprod protocol parameters of the node the protocol major 11 runs on.
-parameters :: IO (PParams ConwayEra)
-parameters = do
-    path <- getDataFileName "deployment-test/fixtures/koios/preprod-protocol-parameters.cbor"
-    bytes <- BS.readFile path
-    either (fail . show) pure (decodeFull' (natVersion @11) bytes)
-
-{- | Slot 1,000 is the instant the specs' interval starts at, and a slot is a
-second.
--}
-systemStart :: SystemStart
-systemStart = SystemStart (posixSecondsToUTCTime (fromIntegral ((1_700_000_000 :: Integer) - 1_000)))
-
--- | Every purpose of the transaction as the ledger answers it: the typed failure it gives, not its text.
-evaluated ::
-    PParams ConwayEra ->
-    Map TxIn (TxOut ConwayEra) ->
-    ConwayTx ->
-    Answers
-evaluated params utxo tx =
-    Map.map
-        void
-        (evalTxExUnits params tx (UTxO utxo) (fixedEpochInfo (EpochSize 432_000) (mkSlotLength 1)) systemStart)
 
 -- | What the ledger resolves the transaction's inputs and references against.
 chainOf :: Scenario -> Map TxIn (TxOut ConwayEra)
@@ -128,93 +105,6 @@ chainOf s =
   where
     references = scReferences s
 
--- | The ledger's answer for each purpose of a transaction: its typed script failure, or acceptance.
-type Answers = Map (ConwayPlutusPurpose AsIx ConwayEra) (Either (TransactionScriptFailure ConwayEra) ())
-
-accepts :: Answers -> Bool
-accepts answers = not (Map.null answers) && all isRight (Map.elems answers)
-
--- | A purpose an edit is meant to be refused at, or must leave accepted.
-data Purpose = Minting PolicyID | SpendingOf TxIn
-
-purposeOf :: ConwayTx -> Purpose -> ConwayPlutusPurpose AsIx ConwayEra
-purposeOf tx = \case
-    Minting policy -> ConwayMinting (AsIx (mintingIndex policy (tx ^. bodyTxL . mintTxBodyL)))
-    SpendingOf ref -> ConwaySpending (AsIx (fromIntegral (Set.findIndex ref (tx ^. bodyTxL . inputsTxBodyL))))
-
-{- | Whether the script of the purpose ran and failed: the ledger's typed validation failure at that
-purpose. A failure of the set-up, of the translation of the transaction, of balancing or of another
-purpose is not one.
--}
-refusedAt :: ConwayTx -> Answers -> Purpose -> Bool
-refusedAt tx answers purpose = verdictAt answers (purposeOf tx purpose) == ExecutedFailure
-
--- | Whether the ledger failed the purpose without running its script: a failure of the set-up or of the translation.
-setUpFailureAt :: ConwayTx -> Answers -> Purpose -> Bool
-setUpFailureAt tx answers purpose = verdictAt answers (purposeOf tx purpose) == NotExecuted
-
-acceptedAt :: ConwayTx -> Answers -> Purpose -> Bool
-acceptedAt tx answers purpose = Map.lookup (purposeOf tx purpose) answers == Just (Right ())
-
-{- | What a negative control found: the untouched transaction accepted; the edit applied; each purpose
-it is meant to be refused at refused by an executed script; each purpose it must leave accepted accepted.
--}
-data Judgement = Judgement
-    { positiveAccepted :: Bool
-    , editApplied :: Bool
-    , refusedAsMeant :: Bool
-    , keptAsMeant :: Bool
-    }
-    deriving stock (Eq, Show)
-
-judge ::
-    (Eq a) =>
-    PParams ConwayEra ->
-    Map TxIn (TxOut ConwayEra) ->
-    ConwayTx ->
-    -- | the edit
-    (ConwayTx -> ConwayTx) ->
-    -- | what the edit is meant to change, read from the transaction
-    (ConwayTx -> a) ->
-    -- | the purposes it is meant to be refused at
-    [Purpose] ->
-    -- | the purposes that stay accepted
-    [Purpose] ->
-    Judgement
-judge params utxo original edit changed refusedPurposes keptPurposes =
-    Judgement
-        { positiveAccepted = accepts (evaluated params utxo original)
-        , editApplied = changed tampered /= changed original
-        , refusedAsMeant = all (refusedAt original answers) refusedPurposes
-        , keptAsMeant = all (acceptedAt original answers) keptPurposes
-        }
-  where
-    tampered = edit original
-    answers = evaluated params utxo tampered
-
--- | A negative control that cannot pass for the wrong reason: every part of the judgement holds.
-negative ::
-    (Eq a) =>
-    PParams ConwayEra ->
-    Map TxIn (TxOut ConwayEra) ->
-    ConwayTx ->
-    (ConwayTx -> ConwayTx) ->
-    (ConwayTx -> a) ->
-    [Purpose] ->
-    [Purpose] ->
-    IO ()
-negative params utxo original edit changed refusedPurposes keptPurposes =
-    judge params utxo original edit changed refusedPurposes keptPurposes
-        `shouldBe` Judgement{positiveAccepted = True, editApplied = True, refusedAsMeant = True, keptAsMeant = True}
-
--- | The mint of a transaction, edited.
-withMint :: (Map PolicyID (Map AssetName Integer) -> Map PolicyID (Map AssetName Integer)) -> ConwayTx -> ConwayTx
-withMint edit tx = tx & bodyTxL . mintTxBodyL %~ (\(MultiAsset assets) -> MultiAsset (edit assets))
-
--- | One policy's tokens in a mint, edited.
-onPolicy :: PolicyID -> (Map AssetName Integer -> Map AssetName Integer) -> Map PolicyID (Map AssetName Integer) -> Map PolicyID (Map AssetName Integer)
-onPolicy policy edit = Map.adjust edit policy
-
 -- | The refund address of a request datum, made an address no checkpoint can record: a pointer stake part.
 pointerRefund :: PLC.Data -> PLC.Data
 pointerRefund = \case
@@ -222,9 +112,6 @@ pointerRefund = \case
         | (before, PLC.Constr 0 [payment, _] : after) <- splitAt 3 fields ->
             PLC.Constr 1 [PLC.Constr 0 (before <> [PLC.Constr 0 [payment, PLC.Constr 0 [PLC.Constr 1 [PLC.I 1, PLC.I 2, PLC.I 3]]]] <> after)]
     other -> other
-
-mintOf :: ConwayTx -> MultiAsset
-mintOf tx = tx ^. bodyTxL . mintTxBodyL
 
 spec :: Spec
 spec = describe "#559 the booking transaction, evaluated by the ledger" $ do

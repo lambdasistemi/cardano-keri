@@ -18,6 +18,7 @@ test advance_with_keep_is_the_haskell_encoding() {
   let redeemer: Data = Advance {
     payee_output_index: vec.payee_output_index,
     bond: Keep,
+    successor_index: vec.successor_index,
   }
   cbor.serialise(redeemer) == vec.keep_redeemer_cbor
 }
@@ -26,6 +27,7 @@ test advance_with_deposit_is_the_haskell_encoding() {
   let redeemer: Data = Advance {
     payee_output_index: vec.payee_output_index,
     bond: Deposit { signatures: vec.signatures },
+    successor_index: vec.successor_index,
   }
   cbor.serialise(redeemer) == vec.deposit_redeemer_cbor
 }

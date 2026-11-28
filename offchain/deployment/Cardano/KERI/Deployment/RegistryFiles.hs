@@ -98,6 +98,10 @@ data ReferenceRecord = ReferenceRecord
     -- ^ the booking attestation policy the application is applied to, distinct from the historical registration observer
     , recordHashProof :: !ScriptReference
     , recordCheckpoint :: !ScriptReference
+    , recordFactPolicy :: !(Maybe ScriptReference)
+    -- ^ the fact policy of the attested generation; absent in a record of the deployed generation
+    , recordChangePolicy :: !(Maybe ScriptReference)
+    -- ^ the change policy of the attested generation; absent exactly when the fact policy is
     , recordConfiguration :: !OutputReference
     -- ^ the registry's configuration record
     , recordRegistryState :: !OutputReference
@@ -165,20 +169,21 @@ legacySchemaVersion = 1
 -- | The document of a record.
 encodeReferenceRecord :: ReferenceRecord -> ByteString
 encodeReferenceRecord record =
-    BL.toStrict . Aeson.encode $
-        object
-            [ "schema_version" .= recordSchemaVersion
-            , "network" .= recordNetwork record
-            , "template" .= outputValue (recordTemplate record)
-            , "application" .= scriptValue (recordApplication record)
-            , "state" .= scriptValue (recordState record)
-            , "booking_attestation" .= scriptValue (recordAttestation record)
-            , "hash_proof" .= scriptValue (recordHashProof record)
-            , "checkpoint_validator" .= scriptValue (recordCheckpoint record)
-            , "configuration" .= outputValue (recordConfiguration record)
-            , "registry_state" .= outputValue (recordRegistryState record)
-            , "genesis" .= hex (recordGenesis record)
-            ]
+    BL.toStrict . Aeson.encode . object $
+        [ "schema_version" .= recordSchemaVersion
+        , "network" .= recordNetwork record
+        , "template" .= outputValue (recordTemplate record)
+        , "application" .= scriptValue (recordApplication record)
+        , "state" .= scriptValue (recordState record)
+        , "booking_attestation" .= scriptValue (recordAttestation record)
+        , "hash_proof" .= scriptValue (recordHashProof record)
+        , "checkpoint_validator" .= scriptValue (recordCheckpoint record)
+        , "configuration" .= outputValue (recordConfiguration record)
+        , "registry_state" .= outputValue (recordRegistryState record)
+        , "genesis" .= hex (recordGenesis record)
+        ]
+            <> ["fact_policy" .= scriptValue reference | Just reference <- [recordFactPolicy record]]
+            <> ["change_policy" .= scriptValue reference | Just reference <- [recordChangePolicy record]]
   where
     outputValue (OutputReference transaction index) =
         object ["transaction_id" .= hex transaction, "index" .= index]
@@ -219,9 +224,12 @@ decodeStoredRecord bytes = do
                     <*> scriptAt root "booking_attestation"
                     <*> scriptAt root "hash_proof"
                     <*> scriptAt root "checkpoint_validator"
+                    <*> optionalScriptAt root "fact_policy"
+                    <*> optionalScriptAt root "change_policy"
                     <*> outputAt [] root "configuration"
                     <*> outputAt [] root "registry_state"
                     <*> hashAt [] root "genesis" 32
+                    >>= bothPoliciesOrNeither
         else
             fmap LegacyRecord $
                 LegacyReferenceRecord network
@@ -235,6 +243,19 @@ decodeStoredRecord bytes = do
                     <*> outputAt [] root "registry_state"
                     <*> optionalHashAt [] root "credential_registration" 32
                     <*> hashAt [] root "genesis" 32
+
+-- | A published script that may be absent: the policies of the attested generation.
+optionalScriptAt :: Fields -> Text -> Either ReferenceRecordError (Maybe ScriptReference)
+optionalScriptAt fields name = case KeyMap.lookup (Key.fromText name) fields of
+    Nothing -> Right Nothing
+    Just _ -> Just <$> scriptAt fields name
+
+-- | The two policies of the attested generation are named together or not at all.
+bothPoliciesOrNeither :: ReferenceRecord -> Either ReferenceRecordError ReferenceRecord
+bothPoliciesOrNeither record = case (recordFactPolicy record, recordChangePolicy record) of
+    (Just _, Nothing) -> Left (RecordMissingField "change_policy")
+    (Nothing, Just _) -> Left (RecordMissingField "fact_policy")
+    _ -> Right record
 
 scriptAt :: Fields -> Text -> Either ReferenceRecordError ScriptReference
 scriptAt fields name = do

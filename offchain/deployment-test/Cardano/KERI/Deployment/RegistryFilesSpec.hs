@@ -52,6 +52,8 @@ recordOf n =
         , recordAttestation = script 0x40 3
         , recordHashProof = script 0x50 4
         , recordCheckpoint = script 0x60 5
+        , recordFactPolicy = Nothing
+        , recordChangePolicy = Nothing
         , recordConfiguration = out 0x70 1
         , recordRegistryState = out 0x70 0
         , recordGenesis = BS.replicate 32 (n + 0x90)
@@ -60,6 +62,14 @@ recordOf n =
     out base = OutputReference (BS.replicate 32 (n + base))
     script base index =
         ScriptReference (out base index) (BS.replicate 28 (n + base + 1))
+
+-- | A record of the attested generation: the same, and the two policies it publishes.
+attestedRecordOf :: Word8 -> ReferenceRecord
+attestedRecordOf n =
+    (recordOf n)
+        { recordFactPolicy = Just (ScriptReference (OutputReference (BS.replicate 32 (n + 0xa0)) 6) (BS.replicate 28 (n + 0xa1)))
+        , recordChangePolicy = Just (ScriptReference (OutputReference (BS.replicate 32 (n + 0xb0)) 7) (BS.replicate 28 (n + 0xb1)))
+        }
 
 -- | The identity a record agrees with.
 identityOf :: ReferenceRecord -> ReleaseIdentity
@@ -154,6 +164,23 @@ valueAt _ _ = Nothing
 spec :: Spec
 spec = describe "#351 the reference-output record and the deployment's two files" $ do
     describe "the record" $ do
+        it "names the two policies of the attested generation, written and read back, and names none for the deployed generation" $ do
+            mapM_
+                ( \n ->
+                    decodeReferenceRecord (encodeReferenceRecord (attestedRecordOf n))
+                        `shouldBe` Right (attestedRecordOf n)
+                )
+                [0, 1, 2, 3]
+            let attested = documentOf (attestedRecordOf 1)
+            valueAt ["fact_policy", "script_hash"] attested `shouldSatisfy` isJust
+            valueAt ["change_policy", "script_hash"] attested `shouldSatisfy` isJust
+            -- the deployed generation's document is as it was: neither key
+            valueAt ["fact_policy"] (documentOf (recordOf 1)) `shouldBe` Nothing
+            valueAt ["change_policy"] (documentOf (recordOf 1)) `shouldBe` Nothing
+        it "names the two policies together: a document with one is refused, naming the other" $ do
+            let without key = reencode (alter [key] (const Nothing) (documentOf (attestedRecordOf 2)))
+            decodeReferenceRecord (without "change_policy") `shouldBe` Left (RecordMissingField "change_policy")
+            decodeReferenceRecord (without "fact_policy") `shouldBe` Left (RecordMissingField "fact_policy")
         it "is read back as written, for records that share no byte" $
             mapM_
                 ( \n ->

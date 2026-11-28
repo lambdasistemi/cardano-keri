@@ -196,4 +196,38 @@ theorem withValue_iff (p : Params) (rp : CardanoKeri.Registry.Params) (s : State
       · simp at h
   · rintro rfl; exact withValue_heldValue p rp s output
 
+/-! ## The premium output
+
+A paid rotation pays the premium to the payee. The ledger refuses an output below its own minimum for
+the payee's address, a number that depends on that address and the protocol parameters, neither of
+which the model carries. It is therefore a named number `Mp` the deployment supplies, not a field of
+`Params`. The premium of a registry must fund the payment output on its own: it is at least the ledger's
+minimum for that output and above zero, also where the ledger's minimum is zero (#576). -/
+
+/-- The deployment precondition: the premium is above zero and at least `Mp`, the ledger's minimum for the
+output that pays it. -/
+def Params.premiumFundsOutput (p : Params) (Mp : Value) : Prop := 0 < p.P ∧ Mp ≤ p.P
+
+instance (p : Params) (Mp : Value) : Decidable (p.premiumFundsOutput Mp) :=
+  inferInstanceAs (Decidable (0 < p.P ∧ Mp ≤ p.P))
+
+/-- Given a deployment whose premium is above zero and at least the ledger's minimum `Mp` for the premium
+output, and a rotation, keeping or restoring the deposit, of a live checkpoint whose pool covers the premium.
+When the rotation succeeds.
+Then the payee is paid exactly the premium, which is above zero and at least `Mp`, so the payment output is
+legal from the premium alone; nothing is paid into the pool by the step; and the checkpoint's pool is debited
+exactly the premium. -/
+theorem paid_rotation_premium_output_is_legal (p : Params) (env : Env) {Mp : Value}
+    (hdep : p.premiumFundsOutput Mp) {sn' : Seq} {op : BondOp} {payee : Addr} {t : Slot}
+    {l : Live} {f : Flow} {s' : State}
+    (h : Step p env (.rotate sn' op payee) t (.present l) f s') (hpay : p.P ≤ l.pool) :
+    f.hunter = some { addr := payee, pool := p.P } ∧ 0 < Payment?.pool f.hunter ∧
+    Mp ≤ Payment?.pool f.hunter ∧ f.poolIn = 0 ∧ ∃ l', s' = .present l' ∧ l'.pool + p.P = l.pool := by
+  obtain ⟨hzero, hmin⟩ := hdep
+  cases h with
+  | rotateKeepPaid => simp [Payment?.pool]; omega'
+  | rotateKeepUnpaid _ _ _ _ _ hnopay => omega'
+  | rotateDepositPaid => simp [Payment?.pool]; omega'
+  | rotateDepositUnpaid _ _ _ _ _ _ hnopay => omega'
+
 end CardanoKeri.Checkpoint

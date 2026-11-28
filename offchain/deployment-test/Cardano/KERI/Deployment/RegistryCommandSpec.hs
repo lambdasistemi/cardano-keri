@@ -23,7 +23,9 @@ import Cardano.KERI.Deployment.RegistryDeploySpec (
     Chain (..),
     Faults (..),
     chainRuntime,
+    chainRuntimeUnder,
     expectedSeedIn,
+    freeOutputs,
     lifecycleAccount,
     loadTestBlueprint,
     newChain,
@@ -304,6 +306,33 @@ spec = describe "#351 ckeri registry deploy" $ do
                 chain <- readIORef chainRef
                 chainSubmissions chain `shouldBe` 0
                 listDirectory directory `shouldBe'` []
+
+        it "refuses a premium that cannot fund its own output, naming the premium and the minimum, before anything is submitted" $ do
+            blueprintPath <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+            withSystemTempDirectory "registry-command" $ \directory -> do
+                chainRef <- newIORef (newChain walletOutputs)
+                let settings = (settingsIn blueprintPath directory){rdPremium = 0}
+                    opener _ use = use (chainRuntime noFaults chainRef, walletAddress)
+                ((outcome, _), err) <-
+                    capturing stderr (capturing stdout (try (runRegistryDeployWith opener settings)))
+                outcome `shouldBe` (Left (ExitFailure 1) :: Either ExitCode ())
+                err `shouldSatisfy` ("terms-refused: premium-below-output-minimum (premium 0 lovelace, the output that pays it needs at least " `isInfixOf`)
+                chain <- readIORef chainRef
+                chainSubmissions chain `shouldBe` 0
+                listDirectory directory `shouldBe'` []
+
+        it "refuses a zero premium although the node's ledger asks nothing of an output, naming the premium and the least premium" $ do
+            blueprintPath <- getEnv "KERI_CHECKPOINT_BLUEPRINT"
+            withSystemTempDirectory "registry-command" $ \directory -> do
+                chainRef <- newIORef (newChain walletOutputs)
+                let settings = (settingsIn blueprintPath directory){rdPremium = 0}
+                    opener _ use = use (chainRuntimeUnder freeOutputs noFaults chainRef, walletAddress)
+                ((outcome, _), err) <-
+                    capturing stderr (capturing stdout (try (runRegistryDeployWith opener settings)))
+                outcome `shouldBe` (Left (ExitFailure 1) :: Either ExitCode ())
+                err `shouldSatisfy` ("terms-refused: premium-below-output-minimum (premium 0 lovelace, the output that pays it needs at least 1)" `isInfixOf`)
+                chain <- readIORef chainRef
+                chainSubmissions chain `shouldBe` 0
 
     describe "a deployment that stops" $ do
         it "tells what landed and what did not, writes no file and exits with a failure" $ do

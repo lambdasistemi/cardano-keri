@@ -26,9 +26,14 @@
 ////   absent, convicted       no checkpoint output to spend: 12 cells, not realizable
 ////                           as a transaction
 
-use checkpoint_observer
+use advance_attestation
+use aiken/builtin
+use cardano_keri/checkpoint/attest_support.{
+  advance_fact, event_policy, with_fact,
+}
 use checkpoint_register
 use deposit_fixture.{Case, corpus_deposit, corpus_deposit_pending}
+use event_attestation
 use freeze_fixture.{
   advance_hash, d_reg, enforcement_hash, entitlement_hash, freeze_bond, premium,
 }
@@ -53,43 +58,62 @@ fn run_spend(c: Case) -> Bool {
   )
 }
 
+/// The spend arm and the two policies over one transaction (the evidence's fact asset added to the mint field beside the
+/// change asset the fixture minted): a cell is accepted when all three accept.
 fn run(c: Case) -> Bool {
-  run_spend(c) && checkpoint_observer.observer_advance.withdraw(
+  let fact = advance_fact(c.observed, c.tx, 0)
+  let tx = with_fact(c.tx, fact)
+  let fact_data: Data = fact
+  let envelope_data: Data = c.observed
+  run_spend(Case { ..c, tx }) && event_attestation.event_attestation.mint(
     0,
-    c.observed,
+    builtin.constr_data(0, [builtin.list_data([fact_data])]),
+    event_policy,
+    tx,
+  ) && advance_attestation.advance_attestation.mint(
     0,
-    c.tx,
+    event_policy,
+    builtin.constr_data(
+      0,
+      [
+        builtin.list_data(
+          [builtin.constr_data(0, [envelope_data, builtin.i_data(0)])],
+        ),
+      ],
+    ),
+    advance_hash,
+    tx,
   )
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.
 test cell_pending_s1_sn0_e0() fail {
-  run(corpus_deposit_pending(True, True))
+  run_spend(corpus_deposit_pending(True, True))
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 0) x no rotation evidenced, no deposit authorized: refused.
 test cell_pending_s1_sn0_e1() fail {
-  run(corpus_deposit_pending(False, False))
+  run_spend(corpus_deposit_pending(False, False))
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 1) x the rotation evidenced, the deposit authorized: refused.
 test cell_pending_s1_sn1_e0() fail {
-  run(corpus_deposit_pending(True, True))
+  run_spend(corpus_deposit_pending(True, True))
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 1) x no rotation evidenced, no deposit authorized: refused.
 test cell_pending_s1_sn1_e1() fail {
-  run(corpus_deposit_pending(False, False))
+  run_spend(corpus_deposit_pending(False, False))
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 2) x the rotation evidenced, the deposit authorized: refused.
 test cell_pending_s1_sn2_e0() fail {
-  run(corpus_deposit_pending(True, True))
+  run_spend(corpus_deposit_pending(True, True))
 }
 
-/// Lean grid state 1 (termination pending) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
+/// Lean grid state 1 (termination pending, judged by the checkpoint spend alone: its live-state guard refuses the input, and no fact can be built from a datum that holds no keys) x deposit rotation(sn' = 2) x no rotation evidenced, no deposit authorized: refused.
 test cell_pending_s1_sn2_e1() fail {
-  run(corpus_deposit_pending(False, False))
+  run_spend(corpus_deposit_pending(False, False))
 }
 
 /// Lean grid state 3 (live, poisoned False, frozen False, topped up False, pool 1) x deposit rotation(sn' = 0) x the rotation evidenced, the deposit authorized: refused.

@@ -24,6 +24,7 @@ use cardano/transaction.{
 }
 use cardano_keri/checkpoint/advance.{AdvanceEvidence}
 use cardano_keri/checkpoint/advance_vectors as advance_vec
+use cardano_keri/checkpoint/attest_support.{change_mint}
 use cardano_keri/checkpoint/datum.{
   CheckpointDatumV2, KeyMaterial, KeyStateView, Live, TerminationPending,
 }
@@ -101,7 +102,7 @@ pub const advance_tag: Int = 1
 /// output index.
 pub fn freeze_redeemer(hunter_output_index: Int) -> Data {
   let index: Data = hunter_output_index
-  builtin.constr_data(3, [index])
+  builtin.constr_data(3, [index, builtin.i_data(0)])
 }
 
 // ---------------------------------------------------------------------
@@ -372,12 +373,9 @@ pub fn freeze_tx(
     interval.everything,
     0,
   )
-  let credential = Script(advance_hash)
-  let redeemer: Data = observed
   Transaction {
     ..base,
-    withdrawals: [Pair(credential, 0)],
-    redeemers: [Pair(Withdraw(credential), redeemer)],
+    mint: merge(base.mint, change_mint(advance_hash, observed.claim, 0)),
   }
 }
 
@@ -415,7 +413,7 @@ pub fn honest_case(pool: Int) -> Freeze {
 /// keep option (constructor zero) after the payee output index.
 pub fn advance_redeemer(payee_output_index: Int) -> Data {
   let index: Data = payee_output_index
-  builtin.constr_data(0, [index, builtin.constr_data(0, [])])
+  builtin.constr_data(0, [index, builtin.constr_data(0, []), builtin.i_data(0)])
 }
 
 /// The honest freeze with the successor datum and its value replaced.

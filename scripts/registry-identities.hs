@@ -19,9 +19,12 @@ import Cardano.KERI.AID.Application (
  )
 import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.E2E.DevnetTerms (devnetTerms)
+import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.Registry (
+    AttestedRegistry (..),
     RegistryScripts (..),
     RegistryTerms (..),
+    deriveAttestedRegistryScripts,
     deriveRegistryScripts,
  )
 import Cardano.KERI.Deployment.Script (
@@ -46,11 +49,17 @@ row label value = putStrLn (label <> "|" <> value)
 
 main :: IO ()
 main = do
-    [blueprintPath] <- getArgs
+    [blueprintPath, attestedPath] <- getArgs
     blueprint <- loadBlueprint blueprintPath >>= either fail pure
+    attestedBlueprint <- loadBlueprint attestedPath >>= either fail pure
     let derive seed =
             either fail pure (deriveRegistryScripts stateTemplate devnetTerms seed blueprint)
     scripts <- derive (OutputReference (BS.replicate 32 0) 0)
+    attested <-
+        either
+            fail
+            pure
+            (deriveAttestedRegistryScripts stateTemplate devnetTerms (OutputReference (BS.replicate 32 0) 0) attestedBlueprint)
     other <- derive (OutputReference (BS.replicate 32 1) 1)
     let application = scriptsApplication scripts
         attestation = scriptsAttestation scripts
@@ -85,3 +94,22 @@ main = do
     row "Checkpoint validator script hash" (hexOf checkpointHash)
     row "Checkpoint validator program bytes" (show (SBS.length (artifactProgram checkpoint)))
     row "Reference registry name" (hexOf (registryName (scriptsRegistry scripts)))
+    -- the attested generation over the same terms and seed: what differs is the checkpoint validator and the two policies
+    let attestedScripts' = attestedScripts attested
+        policies = attestedPolicies attested
+        attestedCheckpoint = scriptsCheckpoint attestedScripts'
+    unless
+        ( scriptHashBytes (artifactScriptHash (scriptsApplication attestedScripts')) == applicationHash
+            && scriptsStateHash attestedScripts' == scriptsStateHash scripts
+            && scriptsRegistry attestedScripts' == scriptsRegistry scripts
+        )
+        $ fail "the attested registry's application, state script or registry name differ from the deployed generation's"
+    unless (scriptHashBytes (artifactScriptHash attestedCheckpoint) /= checkpointHash) $
+        fail "the attested checkpoint validator is the deployed generation's"
+    row "Attested registry application, state script and name" "the same"
+    row "Attested fact policy hash" (hexOf (scriptHashBytes (artifactScriptHash (attestationFact policies))))
+    row "Attested fact policy program bytes" (show (SBS.length (artifactProgram (attestationFact policies))))
+    row "Attested change policy hash" (hexOf (scriptHashBytes (artifactScriptHash (attestationChange policies))))
+    row "Attested change policy program bytes" (show (SBS.length (artifactProgram (attestationChange policies))))
+    row "Attested checkpoint validator script hash" (hexOf (scriptHashBytes (artifactScriptHash attestedCheckpoint)))
+    row "Attested checkpoint validator program bytes" (show (SBS.length (artifactProgram attestedCheckpoint)))

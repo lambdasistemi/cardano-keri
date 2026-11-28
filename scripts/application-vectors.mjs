@@ -29,8 +29,7 @@
 //   request datum (Lean: a hash)      -> the initial checkpoint datum itself; the approval
 //                                        commits its BLAKE2b-256
 //   controller 0                      -> 28 zero bytes (no row reads it)
-//   booking attestation policy         -> a stand-in script hash (the Lean has no such input;
-//                                        a parameter of the validator)
+//   booking attestation policy         -> the model fixture policy, with each signed mint quantity and name
 //   minimum deposit                   -> minimum ADA plus deposit of the Lean scenario
 //                                        (read from the booking-short-deposit note)
 // Every Lean row is also checked field by field against the scenario this script
@@ -217,13 +216,6 @@ const generate = () => {
   const F = 'Fold { ..requests.fold(), ';
   const spec = [];
   const add = (id, kind, call, shape) => {
-    // A booking row names its inception evidence in the Lean: the call is derived from the flag, never typed here.
-    if (kind === 'booking' || kind === 'booking-floor') {
-      const without = row(id).inceptionEvidence === false;
-      const typed = call.includes('attested: False');
-      if (without && !typed) call = call === 'requests.booking()' ? 'Booking { ..requests.booking(), attested: False }' : call.replace(/ \}$/, ', attested: False }');
-      if (!without && typed) throw new Error(`row ${id}: the call drops the observation of a row that has inception evidence`);
-    }
     spec.push({ id, kind, call, shape });
   };
   const bookShape = (lov, extra = {}) => ({ validity: [9, 10], referenced: 1, donation: 0, inputs: [], outputs: [[lov, 'app']], ...extra });
@@ -323,15 +315,26 @@ const generate = () => {
   // A fold and a return read no evidence: the row without it is the row with it, verdict and shape.
   for (const [withEvidence, without] of [['fold-at-deadline', 'fold-without-inception-evidence'], ['return-at-deadline', 'return-without-inception-evidence']]) {
     const a = row(withEvidence), b = row(without);
-    if (a.inceptionEvidence !== true || b.inceptionEvidence !== false) throw new Error(`rows ${withEvidence} and ${without}: the evidence flags changed`);
-    const strip = ({ id, note, inceptionEvidence, ...rest }) => rest;
-    if (JSON.stringify(strip(a)) !== JSON.stringify(strip(b))) throw new Error(`rows ${withEvidence} and ${without} differ in more than the evidence flag`);
+    const strip = ({ id, note, ...transaction }) => transaction;
+    if (a.verdict !== 'accepted' || JSON.stringify(strip(a)) !== JSON.stringify(strip(b))) {
+      throw new Error(`rows ${withEvidence} and ${without}: the accepted transactions differ`);
+    }
   }
   // The client fold: the public registry judges the same transaction the application judges, with the donation of the row.
   const cf = data.clientFold;
   const clientRow = row('fold-built-by-singular-client');
   if (!cf.withTheDonation.registryAccepts || !cf.withTheDonation.balances || cf.withTheDonation.donation !== clientRow.donation) throw new Error('the client fold judgement of the public registry changed');
-  if (clientRow.inceptionEvidence !== true) throw new Error('the client fold row names no inception evidence');
+  const netMint = items => {
+    const quantities = new Map();
+    for (const { policy, name, quantity } of items) {
+      const key = policy + '/' + name;
+      quantities.set(key, (quantities.get(key) ?? 0) + quantity);
+    }
+    return JSON.stringify([...quantities].filter(([, q]) => q !== 0).sort());
+  };
+  if (netMint(clientRow.mint) !== netMint(row('fold-at-deadline').mint)) {
+    throw new Error('the Singular client fold mints different assets or quantities from the regular fold');
+  }
 
   for (const s of spec) {
     const r = row(s.id);
@@ -392,9 +395,8 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/checkpoint/datum.{KeyMaterial, Live, TerminationPending}
 use singular_state/preimage.{RegistryIdentity}
 
-/// The policy standing for the booking attestation (a parameter of the
-/// validator; the Lean model has no such input).
-pub const attestation_hash: ByteArray = #"${hex(scriptHash(11))}"
+/// The booking attestation policy of Application.Vectors.env.
+pub const attestation_hash: ByteArray = #"${hex(scriptHash(20))}"
 
 /// What a fold's holding must hold: the registry's minimum ADA, the checkpoint
 /// deposit, the freeze bond and one premium (Lean Mc + D + B + P). The pool is
@@ -611,20 +613,32 @@ pub const lean_registry_name: ByteArray = #"${a0.registryName}"
 
   // --- the row tests -------------------------------------------------------------
   const runner = {
-    booking: (call) => `accepts(requests.booking_tx(${call}))`,
-    'booking-floor': (call) => `accepts_at(rows.initial_floor - 2, requests.booking_tx(${call}))`,
-    fold: (call) => `accepts(requests.fold_tx(${call}))`,
-    return: (call) => `accepts(requests.return_tx(${call}))`,
     termination: (call) => `accepts(requests.termination_tx(${call}))`,
     'termination-booking': (call) => `accepts(requests.termination_booking_tx(${call}))`,
     minted: (call) => `accepts(${call})`,
     checkpoint: (call) => `accepts(${call})`,
   };
-  const tests = spec.map((s) => `/// Lean row \`${s.id}\`: ${row(s.id).note}.
+  const tests = spec.map(s => {
+    const r = row(s.id);
+    let body;
+    if (['booking', 'booking-floor', 'fold', 'return'].includes(s.kind)) {
+      const txKind = s.kind === 'booking-floor' ? 'booking' : s.kind;
+      const items = r.mint.map(m => `(#"${m.policy}", #"${m.name}", ${m.quantity})`);
+      const setup = `let fixture = ${s.call}
+  let tx = requests.${txKind}_tx(fixture)
+  let mint = row_mint(fixture.data, [${items.join(', ')}])`;
+      const floor = s.kind === 'booking-floor' ? 'rows.initial_floor - 2' : 'rows.initial_floor';
+      body = `${setup}
+  accepts_at(${floor}, Transaction { ..tx, mint }) == ${flag(r.verdict === 'accepted')}`;
+    } else {
+      body = `${runner[s.kind](s.call)} == ${flag(r.verdict === 'accepted')}`;
+    }
+    return `/// Lean row \`${s.id}\`: ${r.note}.
 test row_${s.id.replace(/-/g, '_')}() {
-  ${runner[s.kind](s.call)} == ${flag(row(s.id).verdict === 'accepted')}
+  ${body}
 }
-`);
+`;
+  });
   // The client fold keeps the Lean's order and count: the registry's typed successor is output 0 (its state input is
   // input 0), the holding output 1, the spender's change output 2. A direct check on each generated transaction.
   const orderTests = spec.filter((x) => x.id.startsWith('fold-built-by-singular-client')).map((x) => `/// The transaction of the Lean row ${x.id} has the Lean's outputs in the Lean's order: the registry's successor at index 0, the holding at 1, the change at 2.
@@ -776,6 +790,7 @@ test release_${r.id.replace(/-/g, '_').replace(/^release_/, '')}() {
 
 use aiken/collection/list
 use cardano/address.{Script}
+use cardano/assets.{Value}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction}
 use cardano_keri/application/action.{
   Action, BookRegistration, BookTermination, FoldRegistration,
@@ -793,6 +808,27 @@ use keri_application_requests.{
 use singular_state/preimage.{
   RegistryIdentity, approval_name, initial_datum_hash, registration_preimage,
   termination_preimage,
+}
+
+/// Translate the abstract registry policy in registry-derived asset names.
+/// Attestation claims have identical bytes in both fixtures.
+fn row_mint(data: RegistrationData, items: List<(ByteArray, ByteArray, Int)>) -> Value {
+  let policy = if data.registry == requests.foreign_registry() {
+    #"${hex(scriptHash(9))}"
+  } else {
+    rows.lean_state_policy
+  }
+  let registry = RegistryIdentity { ..data.registry, policy }
+  let lean_data = RegistrationData { ..data, registry }
+  requests.mint_of(list.map(items, fn((p, name, q)) {
+    if p == requests.application() && name == requests.approval_of(lean_data) {
+      (p, requests.approval_of(data), q)
+    } else if p == policy && name == requests.active_of(lean_data) {
+      (data.registry.policy, requests.active_of(data), q)
+    } else {
+      (p, name, q)
+    }
+  }))
 }
 
 fn accepts(tx: Transaction) -> Bool {

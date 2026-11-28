@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.DuplicityExamples
 import CardanoKeri.RegistryGoals
 /-! Connected economic registration, conviction and termination witnesses.
@@ -14,9 +15,12 @@ def cfg : Singular.Config := {
   processTime := 5, retractTime := 5, applicationPolicy := 7, activePolicy := 8,
   registryId := 9, registrationCost := 2, bookingWidth := 1 }
 def env : Env := {
-  inception := fun _ => true,
+  bookingPolicy := Attestation.Fixtures.bookingPolicy,
+  bookingTx := fun tx => if tx == 100 then
+    some ⟨[⟨91, 0⟩], [], [(⟨7, 4⟩, 1), (Attestation.Fixtures.bookingPolicy.asset (.book 7 0 777 14), 1)], [7, 51]⟩
+    else none,
   presentedConviction := fun aid => some ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison aid 1 1⟩,
-  attestationMinted := fun _ => true }
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105, 0⟩ }
 def liveCarrier : Carrier := {
   aid := 11, token := 0,
   original := ⟨11, .active, 111, some 777⟩, pendingSpend := none, minAda := 4 }
@@ -116,7 +120,9 @@ bookRegistration p env (Sys.init cfg) registration =
 theorem registration_booked :
     bookRegistration p env (Sys.init cfg) registration =
       .ok ({ deposited := 17 }, registrationBooked) := by
-  simp [bookRegistration, registrationShape, Singular.book,
+  unfold bookRegistration
+  rw [show env.inception (Sys.init cfg).config.applicationPolicy registration = true by decide]
+  simp [registrationShape, Singular.book,
     Singular.registrationBookingRefusal, Singular.registrationContentsShape,
     Singular.registrationApplicationTagValid, Singular.registrationDeclaredLovelace,
     registration, registrationRequest, registrationTag, cfg, p, env, Sys.init, Sys.toWorld,

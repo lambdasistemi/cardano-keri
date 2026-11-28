@@ -134,9 +134,11 @@ Evidence is bound to the exact KERI tip, so a later round needs fresh evidence.
 
 ## The same plane under the accepted design — designed
 
-The enforcement observer goes. `observer_advance` verifies one thing — a later
-witnessed rotation with its receipts — and the register validator dispatches
-the effect, which is where advance and freeze part company:
+The hunter presents a later witnessed rotation. The transaction mints the
+attestation for the spent checkpoint and the requested action. A rotation
+lands the new keys. If the pool covers the premium, it pays the premium to
+the address the submitter names. Otherwise the rotation is unpaid. A freeze
+keeps the old keys and pays the bond to the address named for the freeze.
 
 ```mermaid
 flowchart LR
@@ -146,8 +148,8 @@ flowchart LR
     FRZ["freeze: set only the frozen bit to true,<br/>B to named payee"]
 
     EV --> P
-    P -->|"rotation, any pool"| ADV
-    P -->|"pool < P, clean and unfrozen"| FRZ
+    P -->|"advance attestation, any pool"| ADV
+    P -->|"freeze attestation, pool < P, clean and unfrozen"| FRZ
 ```
 
 Two of the six checkpoint actions cross the boundary of the present state.

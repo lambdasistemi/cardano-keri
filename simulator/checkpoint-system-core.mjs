@@ -289,7 +289,7 @@ export function newSystem(params,env,deployment) {
     nat(aid, 'evidence-aid');
     const {writers, ...local} = evidence;
     if (writers !== undefined) validateWriterTable(writers);
-    fields(local, ['rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
+    fields(local, ['mintTransactions','rotationTo','depositAuthorized','quorum','duplicityAt'], 'env');
     if (C.validateEnv(local)) throw Error('invalid-system-wire:checkpoint-context');
   }
   localNat(deployment,'deployment');

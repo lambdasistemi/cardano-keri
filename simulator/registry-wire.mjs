@@ -76,7 +76,16 @@ const signature = record({signer: nat, event: content, verified: flag});
 const tip = record({...fields('aid epoch sn'), keys: keyMaterial, previous: option(predecessor), writer: content});
 const rival = record({event: content, structureVerified: flag, signatures: list(signature), receipts: list(signature)});
 const conviction = record({output: ref, comparison: record({tip, rival})});
-const env = record({ inception: list(nat), convictions: list(conviction) });
+const assetView = record({spent: list(ref), outputs: list(record({assets: list(pair(token, nat))})),
+  mint: list(pair(token, integer)), invoked: list(nat)});
+const observedSpend = record({input: ref, transaction: assetView});
+const production = record({output: ref, observation: observedSpend});
+const env = record({bookings: list(record({identity: nat, assets: assetView})),
+  convictionTransactions: list(production), convictions: list(conviction)});
+const advance = record({kind: enumeration(['advance','freeze','convict']), ...fields('epoch sn next'),
+  observation: observedSpend});
+const mints = record({advances: list(advance), convictions: list(production)});
+export const validateMints = value => toWire(mints(toInternal(value), 'mintTransactions'));
 const action = variant({
   bookRegistration: record({ booking: regBooking }), convictCkpt: record(fields('aid')),
   bookTermination: record({ ...fields('aid booker fee'), booking: localBooking }),

@@ -4,7 +4,7 @@
  * is fetched, and no signature is produced here. */
 import { toInternal, toWire, equal, singularTag, applicationName, readyTag, rootOf, known } from './registry-economic-core.mjs';
 import { decodeInput } from './registry-wire.mjs';
-const emptyEnv = { inception: [], convictions: [] };
+const emptyEnv = { bookings: [], convictionTransactions: [], convictions: [] };
 const sum = values => values.reduce((a, b) => a + b, 0n);
 const sub = (a, b) => a > b ? a - b : 0n;
 const nat = value => { const n = toInternal(value); if (typeof n !== 'bigint' || n < 0n) throw Error('invalid-fixture-nat'); return n; };

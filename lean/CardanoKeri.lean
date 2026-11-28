@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationGoals
 import CardanoKeri.Checkpoint
 import CardanoKeri.CheckpointGoals
 import CardanoKeri.CheckpointCommitmentGoals

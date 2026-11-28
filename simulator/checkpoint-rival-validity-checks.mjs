@@ -11,7 +11,7 @@ const fresh = execFileSync(process.env.LAKE_BIN || 'lake', ['env', 'lean', '--ru
 assert.deepEqual(rows, JSON.parse(fresh), 'fresh Lean comparison corpus');
 assert.equal(rows.length, 16);
 for (const {name, input, rotationValid: valid, convictionAccepted} of rows) {
-  validateEnv({inception: [], convictions: [{output: {tx: 105, index: 0}, comparison: input}]});
+  validateEnv({bookings: [], convictionTransactions: [], convictions: [{output: {tx: 105, index: 0}, comparison: input}]});
   assert.equal(input.tip.previous && rotationValid(input.tip.previous, input.rival), valid, name);
   assert.equal(acceptsComparison(input), convictionAccepted, name);
 }

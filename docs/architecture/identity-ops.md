@@ -208,7 +208,7 @@ Freeze survives, with a different job. It is not a punishment for lag — the
 party who can prove a later witnessed rotation can simply **land** it, which leaves the checkpoint fresh and costs the owner at most the premium from the pool, so paying for the
 freeze instead would pay for the harmful move.
 
-Instead a hunter freezes only when the owner's **pool is short** and the checkpoint is neither frozen nor poisoned: it presents exactly the advance evidence, and `B` goes to the payee the freeze names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores `B`. There is no deadline, no claim, no thaw window: the owner comes back by
+Instead a hunter freezes only when the owner's **pool is short** and the checkpoint is neither frozen nor poisoned: the hunter presents a later witnessed rotation with a freeze attestation for the spent checkpoint, and `B` goes to the payee the freeze names. The datum changes only its frozen bit to true, so the old keys stay. A depositing rotation clears the bit and restores `B`. There is no deadline, no claim, no thaw window: the owner comes back by
 a rotation with `deposit`, which restores `B`.
 
 There is no ARMED, no FROZEN role address, no recorded hunter in the datum, and
@@ -249,7 +249,7 @@ exposes no command for it.
 
 ### Under the accepted design
 
-A different comparison and a different effect. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state, together with a rival rotation valid against the same previous commitments; the commitment's payee takes `D_reg` in full, and the freeze bond still held (none when frozen) and the pool go to the refund address. The checkpoint becomes a pending termination: the output and the token stay, consumers refuse it, and there is **no local transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031). A termination booking then moves the pending output into the termination request, and only the fold that consumes that request burns the token and retires the key.
+The transaction producing the conviction output must mint both the enforcement and entitlement attestations for the spent checkpoint. The conviction reveals a commitment opened beforehand, within its window and naming this identifier, deployment and key state, together with a rival rotation valid against the same previous commitments; the commitment's payee takes `D_reg` in full, and the freeze bond still held (none when frozen) and the pool go to the refund address. The checkpoint becomes a pending termination: the output and the token stay, consumers refuse it, and there is **no local transition out** — no rotate, no poison, no freeze, no top-up (D-030, D-031). A termination booking then moves the pending output into the termination request, and only the fold that consumes that request burns the token and retires the key.
 
 Terminality is not severity. KERI has no event that un-duplicates an
 identifier: superseding recovery is a rotation over an interaction, by rule and

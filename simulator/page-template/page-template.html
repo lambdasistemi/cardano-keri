@@ -569,7 +569,7 @@ function findScenario(storyId) {
 }
 function buildStoryTree(sc) {
   const r = checkScenario(sc, 'story ' + storyIdOf(sc), LEAN_CORPUS);
-  let tree = originTree(newSession(sc.params, { corpus: LEAN_CORPUS }),
+  let tree = originTree(newSession(sc.params, { aid: 0, corpus: LEAN_CORPUS }),
     'Nothing on chain for this AID. Step through the story with › ; ⋔ chips switch branch.',
     { story: storyIdOf(sc), actor: 'alice' });
   const entry = (t, extra) => ({ session: t.session, record: t.record, who: WHO[t.step.who] || t.step.who,
@@ -651,7 +651,7 @@ function offersFor(actorId, tree, nodeId) {
       // Cora's commitment, naming the current key state and the evidence at it, opened
       // by a transaction whose validity range ended in the slot before this one, so it is eligible now
       act('convict', 'convict on my commitment, D to Cora', { convict: { payee: 3,
-        commitment: commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 0, pool: 0, toppedUp: false }, 3, Math.max(sess.now, 1) - 1) } });
+        commitment: commitmentFor(l || { sn: 0, epoch: 0, poisoned: false, frozen: false, bornAt: 0, refundTo: 0, pool: 0, toppedUp: false }, 3, Math.max(sess.now, 1) - 1, sess.aid) } });
       break;
     case 'mallory':
       ev('steal the current keys (sign as quorum, epoch ' + ke + ')', { quorum: [ke] }, 'with the current keys she signs at threshold');

@@ -49,7 +49,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T5_poison_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (_hq : env.quorum l.epoch = true) (_hclean : l.poisoned = false), ∃ l', Step p env .poison t (.present l) {} (.present l'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T5_freeze_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (_hev : env.rotationTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn') (_hpool : l.pool < p.P) (_hb : l.frozen = false) (_hclean : l.poisoned = false), ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l'))
+#check (@CardanoKeri.Checkpoint.T5_freeze_enabled : ∀ (p : Params) (env : Env) (t : Slot) (l : Live) (sn' : Seq) (payee : Addr) (_hev : env.freezeTo l.epoch l.sn sn' = true) (_hsn : l.sn < sn') (_hpool : l.pool < p.P) (_hb : l.frozen = false) (_hclean : l.poisoned = false), ∃ (f : Flow) (l' : Live), Step p env (.freeze sn' payee) t (.present l) f (.present l'))
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T6_dreg_never_moves_between_present_states : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')), f.dregIn = 0 ∧ Payment?.dreg f.refund = 0 ∧ Payment?.dreg f.hunter = 0 ∧ Payment?.dreg f.convictor = 0)
@@ -79,7 +79,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T14_pool_increases_only_by_topup : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hlt : l.pool < l'.pool), ∃ x, a = .topUp x ∧ l.toppedUp = false ∧ p.P ≤ x ∧ f = { poolIn := x } ∧ l' = { l with pool := l.pool + x, toppedUp := true })
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.T15_b_leaves_only_by_freeze : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hheld : l.frozen = false) (_hgone : l'.frozen = true), ∃ sn' payee, a = .freeze sn' payee ∧ env.rotationTo l.epoch l.sn sn' = true ∧ l.pool < p.P ∧ l' = { l with frozen := true } ∧ f = { hunter := some { addr := payee, b := p.B } })
+#check (@CardanoKeri.Checkpoint.T15_b_leaves_only_by_freeze : ∀ (p : Params) (env : Env) {a : Action} {t : Slot} {l l' : Live} {f : Flow} (_h : Step p env a t (.present l) f (.present l')) (_hheld : l.frozen = false) (_hgone : l'.frozen = true), ∃ sn' payee, a = .freeze sn' payee ∧ env.freezeTo l.epoch l.sn sn' = true ∧ l.pool < p.P ∧ l' = { l with frozen := true } ∧ f = { hunter := some { addr := payee, b := p.B } })
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.T15_freeze_makes_inert : ∀ (p : Params) (env : Env) {t t' : Slot} {l l' : Live} {f : Flow} {sn' : Seq} {payee : Addr} (_h : Step p env (.freeze sn' payee) t (.present l) f (.present l')), ¬ consumableState p t' (.present l'))
@@ -94,7 +94,7 @@ namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Step.poison_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot), Step p env .poison now (.present l) {} (.present { l with poisoned := true }) ↔ env.quorum l.epoch = true ∧ l.poisoned = false)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
-#check (@CardanoKeri.Checkpoint.Step.freeze_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq) (payee : Addr), Step p env (.freeze sn' payee) now (.present l) { hunter := some { addr := payee, b := p.B } } (.present { l with frozen := true }) ↔ env.rotationTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧ l.frozen = false ∧ l.poisoned = false)
+#check (@CardanoKeri.Checkpoint.Step.freeze_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (sn' : Seq) (payee : Addr), Step p env (.freeze sn' payee) now (.present l) { hunter := some { addr := payee, b := p.B } } (.present { l with frozen := true }) ↔ env.freezeTo l.epoch l.sn sn' = true ∧ l.sn < sn' ∧ l.pool < p.P ∧ l.frozen = false ∧ l.poisoned = false)
 end CardanoKeri.Checkpoint
 namespace CardanoKeri.Checkpoint
 #check (@CardanoKeri.Checkpoint.Step.topUp_iff : ∀ {p : Params} {env : Env} (l : Live) (now : Slot) (x : Value), Step p env (.topUp x) now (.present l) { poolIn := x } (.present { l with pool := l.pool + x, toppedUp := true }) ↔ l.toppedUp = false ∧ p.P ≤ x)

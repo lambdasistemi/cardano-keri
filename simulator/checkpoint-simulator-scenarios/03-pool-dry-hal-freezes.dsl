@@ -9,7 +9,7 @@ params:
   B: 5
   P: 2
   W: 10
-atoms: ["3.exactly-the-advance-predicate-on", "3.that-the-pool-is-below", "3.that-the-checkpoint-is-not", "3.already-unconsumable", "3.nothing-to-freeze", "3.then-it-pays-b-to", "3.and-leaves-the-datum-untouched"]
+atoms: ["3.exactly-the-advance-predicate-on", "3.that-the-pool-is-below", "3.that-the-checkpoint-is-not", "3.already-unconsumable", "3.nothing-to-freeze", "3.then-it-pays-b-to", "3.and-sets-only-the-frozen-bit"]
 step:
   slot: 0
   who: alice
@@ -138,7 +138,7 @@ step:
 step:
   slot: 20
   who: hal
-  say: "Hal submits the same evidence he would use to advance, but as a freeze. The chain pays B to Hal and leaves the datum as it is: the old keys stay."
+  say: "Hal submits the same evidence he would use to advance, but as a freeze. The chain pays B to Hal and sets only the frozen bit in the datum. The old keys stay."
   action:
     freeze:
       sn': 2

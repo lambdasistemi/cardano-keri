@@ -177,11 +177,11 @@ Each item below is a theorem of the Lean machine defined in `lean/CardanoKeri/Ch
 | The keys move only by a rotation; the poison (the owner's own lock on the checkpoint) never moves them | a poison touches the poison bit and nothing else |
 | The poison is epoch-local | any witnessed rotation clears it, and only a poison sets it |
 | Poisoned checkpoints cannot authorize a consumer | the consumer rejects poison; a rotation clears it |
-| A present state whose top-up mark is clear has a step | a top-up of at least `P` is enabled while the mark is clear; a rotation needs accepted rotation evidence, and a deposit also needs the new keys' signature on its intent |
+| A present state whose top-up mark is clear has a step | a top-up of at least `P` is enabled while the mark is clear; a later rotation needs an advance attestation for the spent checkpoint, and a deposit also needs the new keys' signature on its intent |
 | One incarnation per AID in the chosen registry | registration requires an unknown key; a retired key cannot register again |
 | Only conviction is terminal | there is no owner exit: no close, no parking, no revival |
 | `D_reg` is never a fee source | it leaves only at a conviction |
-| The pool never gates a rotation | an unpaid rotation is still a valid rotation; a pool below `P` is what allows a freeze, together with accepted evidence of a later rotation and a checkpoint that is neither frozen nor poisoned; a rotation pays `P` to the payee the submitter names only when the pool covers it; a top-up must add at least `P` whatever the pool holds; and the application's initial state needs a pool of at least `P` while the registry's own floor is `Mc + D` |
+| The pool never gates a rotation | an unpaid rotation is still a valid rotation; a pool below `P` is what allows a freeze, together with a later witnessed rotation and a freeze attestation for the spent checkpoint and a checkpoint that is neither frozen nor poisoned; a rotation pays `P` to the payee the submitter names only when the pool covers it; a top-up must add at least `P` whatever the pool holds; and the application's initial state needs a pool of at least `P` while the registry's own floor is `Mc + D` |
 | A deposit needs the successor keys' authorization | the successor keys authorize the deposit by signing its bound intent; the submitter, who may be anyone, selects keep or the authorized deposit when the rotation premises hold. The successor threshold must accept the verified signer positions, and a positive signature count follows only when that threshold refuses the empty signer set |
 | A live checkpoint preserves the refund address named at registration | After any sequence of accepted steps from registration to a live checkpoint, conviction sends the freeze bond still held and the entire remaining pool to that address. |
 | A conviction pays only the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | see [Who a conviction pays](#who-a-conviction-pays) |
@@ -363,10 +363,19 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-The convictor presents one signed rival in the checkpoint spend. The mint
-must attest this comparison at the indexed output. Transaction 105 in the
-connected Lean example supplies the abstract attestation and has an empty
-observed mint field. Ledger correspondence remains open under #576.
+At registration the controller's booking transaction mints an inception
+attestation for its request. A rotation or freeze requires one fresh token
+named for its own purpose, checkpoint script and input. A depositing
+rotation uses the same advance token as a plain rotation. The spending
+script separately checks the successor keys’ deposit signatures. Burning
+an earlier token in change supplies no evidence for a new spend.
+
+The convictor presents one signed rival in the checkpoint spend. In the
+connected Lean example, transaction 105 consumes checkpoint 103#0. Its mint
+field contains one enforcement token and one entitlement token, each named
+for the spent checkpoint and its script. Output 105#0 is the new pending
+checkpoint. The model treats policy verification of the rival and the
+commitment as premises of that spend.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|

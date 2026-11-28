@@ -348,6 +348,8 @@ import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import Control.Exception (SomeException, finally, throwIO, try)
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
+import System.IO.Unsafe (unsafePerformIO)
 import Control.Monad (forM, forM_, unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
@@ -714,11 +716,24 @@ delayedSubmitter inner =
     inner
         { submitTx = \tx -> do
             delay <- injectedSubmitDelayMs
-            when (delay > 0) $ do
-                dbg ("injected pre-submit delay: " <> show delay <> " ms")
+            every <- injectedSubmitDelayEvery
+            count <- atomicModifyIORef' submissionCounter (\n -> (n + 1, n + 1))
+            when (delay > 0 && count `mod` every == 0) $ do
+                dbg ("injected pre-submit delay: " <> show delay <> " ms before submission " <> show count)
                 threadDelay (delay * 1000)
             submitTx inner tx
         }
+
+-- | The submissions made so far, for the injection that delays only every K-th one.
+{-# NOINLINE submissionCounter #-}
+submissionCounter :: IORef Int
+submissionCounter = unsafePerformIO (newIORef 0)
+
+{- | @KERI_E2E_PRE_SUBMIT_DELAY_EVERY@: delay every K-th submission only (default 1, every one), so that a
+transient stall can be told from a standing one.
+-}
+injectedSubmitDelayEvery :: IO Int
+injectedSubmitDelayEvery = maybe 1 (max 1 . fromMaybe 1 . readMaybe) <$> lookupEnv "KERI_E2E_PRE_SUBMIT_DELAY_EVERY"
 
 injectedSubmitDelayMs :: IO Int
 injectedSubmitDelayMs = maybe 0 (fromMaybe 0 . readMaybe) <$> lookupEnv "KERI_E2E_PRE_SUBMIT_DELAY_MS"

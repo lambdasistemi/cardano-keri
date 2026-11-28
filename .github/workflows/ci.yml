@@ -54,6 +54,16 @@ jobs:
           nix shell nixpkgs#docker-client \
             --command docker image rm "$WITNESS_IMAGE" >/dev/null 2>&1 || true
 
+  version-remnant-sweep:
+    name: Version-remnant census
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Run census self-test and live sweep
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#just --command just check-version-remnant-sweep
+
   build-gate:
     name: Build Gate
     runs-on: nixos

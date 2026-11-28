@@ -17,9 +17,9 @@ module Cardano.KERI.Deployment.RegistryReadbackCommandSpec (spec) where
 import Cardano.KERI.AID.Application (OutputReference (..))
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
-import Cardano.KERI.CLI (Instructions, runInstructionsWith)
+import Cardano.KERI.CLI (Instructions (..), runInstructionsWith)
 import Cardano.KERI.ChainQuery.ReleaseIdentity (encodeReleaseIdentity)
-import Cardano.KERI.Deployment.RegistryBookingCommand (KoiosReadOpener)
+import Cardano.KERI.Deployment.RegistryBookingCommand (KoiosReadOpener, RegistryReadMode (..), registryReadMode)
 import Cardano.KERI.Deployment.RegistryBookingShapeSpec (Scenario (..))
 import Cardano.KERI.Deployment.RegistryCommandSpec (capturing)
 import Cardano.KERI.Deployment.RegistryDeploy (releaseIdentityOf)
@@ -67,6 +67,19 @@ spec = describe "ckeri checkpoint and ckeri status over the rebuilt registry" $ 
                 err `shouldSatisfy` ("AID must be one 44-character KERI E-code identifier" `isInfixOf`)
             )
             ["BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw", "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"]
+    describe "the packaged environment does not choose the registry" $
+        it "reads the first deployment when only CKERI_BLUEPRINT is set, as the packaged ckeri exports it" $ do
+            parsed <-
+                runParserOn
+                    allCapabilities
+                    Nothing
+                    (Opt.settingsParser :: Opt.Parser Instructions)
+                    (parseArgs ["checkpoint", "--aid", "BKCapfR6Z1mAL_lV-NwtKhSlyZ0jvpf4ZBJ_-Tg0VaTw", "--endpoint", "http://127.0.0.1:9"])
+                    (EnvMap.parse [("CKERI_BLUEPRINT", "/packaged/plutus.json")])
+                    Nothing
+            case parsed of
+                Right (Checkpoint _ flags) -> registryReadMode flags `shouldBe` Right ReadFirstDeployment
+                other -> expectationFailure ("a checkpoint command was expected: " <> either show (const "another command") other)
     describe "the rebuilt registry, chosen by the release identity, the reference record and the blueprint" $
         mapM_
             ( \(name, aid, keys, said) ->

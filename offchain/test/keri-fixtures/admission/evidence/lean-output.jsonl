@@ -1,0 +1,13 @@
+{"case":"I01","notComparable":"no persisted predecessor","role":"subject"}
+{"case":"I02","notComparable":"no persisted predecessor","role":"subject"}
+{"case":"I03a","notComparable":"no persisted predecessor","role":"subject"}
+{"case":"R01","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"R07","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"R08a","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"R10c","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"R17","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"R18","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"W01","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"W09","receiptsValid":true,"role":"subject","rotationValid":true,"signingValid":true}
+{"case":"X01","notComparable":"the model's admission surface is the rotation (rotationValid); interactions and inceptions have none","role":"subject"}
+{"case":"X07","notComparable":"the model's admission surface is the rotation (rotationValid); interactions and inceptions have none","role":"subject"}

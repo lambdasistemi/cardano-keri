@@ -66,12 +66,13 @@ function moveSlot(tree, value, nodeId = tree.cursor) {
 }
 function editEvidence(tree, row, add = true, nodeId = tree.cursor) {
   const keys = Object.keys(row);
-  if (keys.length !== 1 || !['inception', 'convictions'].includes(keys[0])) throw Error('invalid-evidence-row');
+  if (keys.length !== 1 || !['bookings', 'convictionTransactions', 'convictions'].includes(keys[0])) throw Error('invalid-evidence-row');
   const kind = keys[0], args = row[kind];
   if (!Array.isArray(args) || args.length !== 1) throw Error('invalid-evidence-row');
   const value = args[0];
   const env = tree.nodes[nodeId].session.env;
-  const rest = env[kind].filter(x => kind === 'inception' ? !equal(x, value) : !equal(x.comparison.tip.aid, value.comparison.tip.aid));
+  const key = x => kind === 'bookings' ? x.identity : kind === 'convictionTransactions' ? x.output : x.comparison.tip.aid;
+  const rest = env[kind].filter(x => !equal(key(x), key(value)));
   return replaceEvidence(tree, { ...env, [kind]: add ? [...rest, value] : rest }, nodeId);
 }
 function selectPath(tree, forkId, toEnd = false) {

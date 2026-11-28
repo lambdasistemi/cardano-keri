@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 const hash=s=>createHash('sha256').update(s).digest('hex');
 const read=f=>readFileSync(new URL(f,import.meta.url),'utf8');
 const names={
-  './checkpoint-simulator-core.mjs':'C','./registry-economic-core.mjs':'E',
+  './attestation.mjs':'A', './checkpoint-simulator-core.mjs':'C','./registry-economic-core.mjs':'E',
   './checkpoint-conviction.mjs':'Judgment','./registry-wire.mjs':'W','./registry-simulator-core.mjs':'R',
   './checkpoint-system-core.mjs':'S','./checkpoint-system-properties.mjs':'P','./consumer-core.mjs':'U','./consumer-properties.mjs':'V',
 };
@@ -22,11 +22,11 @@ function moduleScript(file, sources) {
 
 export function evidenceBundle() {
   const sources = {};
-  const body = ['registry-economic-core.mjs','checkpoint-conviction.mjs','registry-wire.mjs']
+  const body = ['registry-economic-core.mjs','attestation.mjs','checkpoint-conviction.mjs','registry-wire.mjs']
     .map(file => moduleScript(file, sources)).join('');
   return `/* Evidence source bindings: ${JSON.stringify(sources)} */
-const [checkpointEconomics, checkpointEvidence, checkpointWire] = (() => {
-${body}return [E, Judgment, W];
+const [checkpointEconomics, checkpointAttestation, checkpointEvidence, checkpointWire] = (() => {
+${body}return [E, A, Judgment, W];
 })();
 `;
 }
@@ -36,7 +36,7 @@ export function systemBundle() {
   const core=read('checkpoint-simulator-core.mjs');sources['checkpoint-simulator-core.mjs']=hash(core);
   const exports=core.match(/export \{([\s\S]*?)\};/)[1];
   script+=`const C={${exports}};\n`;
-  script += 'const E=checkpointEconomics, Judgment=checkpointEvidence, W=checkpointWire;\n';
+  script += 'const E=checkpointEconomics, A=checkpointAttestation, Judgment=checkpointEvidence, W=checkpointWire;\n';
   for(const file of ['registry-simulator-core.mjs','checkpoint-system-core.mjs','checkpoint-system-properties.mjs','consumer-core.mjs','consumer-properties.mjs']) {
     script += moduleScript(file, sources);
   }

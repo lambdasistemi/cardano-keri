@@ -7,7 +7,9 @@ open Lean CardanoKeri.Registry CardanoKeri.Registry.Scenarios CardanoKeri.Regist
 namespace RegistryBoundary
 
 def evidence : EnvTable := {
-  inception := [11, 12, 13, 9007199254740993]
+  bookings := CardanoKeri.Attestation.Fixtures.bookingTransactions [⟨100, 0, 711, 14⟩, ⟨101, 0, 712, 14⟩, ⟨102, 0, 713, 14⟩, ⟨9007199254740995, 0, 9007199254741693, 14⟩]
+  convictionTransactions := ([11, 12] : List Nat).map (fun aid =>
+    ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.Attestation.Fixtures.convictionSpend ⟨103 + (aid - 11), 0⟩⟩)
   convictions := [11, 12].map (fun aid => CardanoKeri.Registry.Scenarios.convictionFixture aid 1 1) }
 
 def appendCell (s : Sys) (name : String) (action : Action) : Json := cell name p evidence s action

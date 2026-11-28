@@ -1,0 +1,389 @@
+{
+ "tally": {
+  "no like surface": 5,
+  "same verdict": 31,
+  "DISAGREEMENT": 2
+ },
+ "rows": [
+  {
+   "case": "I01",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "icp sn 0 EFdfRKDdnvl3",
+   "what": "1-of-1 inception, basic prefix",
+   "keripy": "accepted",
+   "layer_result": "no like surface",
+   "relation": "no like surface",
+   "tracker": "#590"
+  },
+  {
+   "case": "I02",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "icp sn 0 EEnwnQUz696t",
+   "what": "2-of-3 integer threshold, all three sign",
+   "keripy": "accepted",
+   "layer_result": "no like surface",
+   "relation": "no like surface",
+   "tracker": ""
+  },
+  {
+   "case": "I03a",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "icp sn 0 EDw1yGgeehgT",
+   "what": "weighted 1/2,1/2,1/2: keys 0 and 1 sign",
+   "keripy": "accepted",
+   "layer_result": "no like surface",
+   "relation": "no like surface",
+   "tracker": ""
+  },
+  {
+   "case": "R01",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EF5AUuGgtyd-",
+   "what": "2-of-2 rotation signed by both revealed keys",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R07",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EM2lQN5UE_nN",
+   "what": "prior next threshold 1 of 2: one revealed key rotates",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R08a",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EH0di3_DTWOY",
+   "what": "prior next threshold [1/2,1/2]: both revealed keys sign",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R10c",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EJosvcOfHYVu",
+   "what": "rotation weighted threshold, both keys sign, weights [1/2,1/2]",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R17",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EOe_K4efRw5T",
+   "what": "rotation to an empty next commitment (abandonment), next threshold 0",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": "#591"
+  },
+  {
+   "case": "R18",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EAVxsiYnZhrC",
+   "what": "prior next threshold 1 of 2; revealed keys are one committed key and one new key, both sign",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "W01",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 ELPHoeGkbh6N",
+   "what": "cut one, add one, toad 2, receipts from both of the derived witnesses",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "W09",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "rot sn 1 EDPjLKjb8ZbF",
+   "what": "no witness change, toad kept, receipts from both",
+   "keripy": "accepted",
+   "layer_result": "valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "X01",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "ixn sn 1 EGOZ_22jNE-a",
+   "what": "interaction signed by the current keys",
+   "keripy": "accepted",
+   "layer_result": "no like surface",
+   "relation": "no like surface",
+   "tracker": ""
+  },
+  {
+   "case": "X07",
+   "layer": "model (Lean, decoded inputs)",
+   "input": "ixn sn 2 EDb8BSkgmOib",
+   "what": "interaction after a rotation, signed by the rotated keys",
+   "keripy": "accepted",
+   "layer_result": "no like surface",
+   "relation": "no like surface",
+   "tracker": ""
+  },
+  {
+   "case": "I01",
+   "layer": "Aiken registration_predicate",
+   "input": "",
+   "what": "1-of-1 inception, basic prefix",
+   "keripy": "accepted",
+   "layer_result": "E2AidMismatch",
+   "relation": "DISAGREEMENT",
+   "tracker": "#590"
+  },
+  {
+   "case": "I02",
+   "layer": "Aiken registration_predicate",
+   "input": "",
+   "what": "2-of-3 integer threshold, all three sign",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "I03a",
+   "layer": "Aiken registration_predicate",
+   "input": "",
+   "what": "weighted 1/2,1/2,1/2: keys 0 and 1 sign",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R01",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "2-of-2 rotation signed by both revealed keys",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R07",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "prior next threshold 1 of 2: one revealed key rotates",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R08a",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "prior next threshold [1/2,1/2]: both revealed keys sign",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R10c",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "rotation weighted threshold, both keys sign, weights [1/2,1/2]",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "R17",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "rotation to an empty next commitment (abandonment), next threshold 0",
+   "keripy": "accepted",
+   "layer_result": "Eq8CreatedIllFormed",
+   "relation": "DISAGREEMENT",
+   "tracker": "#591"
+  },
+  {
+   "case": "R18",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "prior next threshold 1 of 2; revealed keys are one committed key and one new key, both sign",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "W01",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "cut one, add one, toad 2, receipts from both of the derived witnesses",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "W09",
+   "layer": "Aiken advance_predicate",
+   "input": "",
+   "what": "no witness change, toad kept, receipts from both",
+   "keripy": "accepted",
+   "layer_result": "Valid",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T01",
+   "layer": "threshold (model and codec)",
+   "input": "\"1\" over 1 keys",
+   "what": "",
+   "keripy": "admits (count)",
+   "layer_result": "model: evaluates; all 2 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T02",
+   "layer": "threshold (model and codec)",
+   "input": "\"2\" over 3 keys",
+   "what": "",
+   "keripy": "admits (count)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T03",
+   "layer": "threshold (model and codec)",
+   "input": "\"3\" over 3 keys",
+   "what": "",
+   "keripy": "admits (count)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T06",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/2\", \"1/2\"] over 2 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 4 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T07",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/2\", \"1/2\", \"1/2\"] over 3 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T08",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/3\", \"1/3\", \"1/3\"] over 3 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T09",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/3\", \"1/3\", \"1/3\", \"1/3\"] over 4 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 16 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T10",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/2\", \"1/4\", \"1/4\"] over 3 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T14",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1\"] over 1 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 2 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T18",
+   "layer": "threshold (model and codec)",
+   "input": "[[\"1/2\", \"1/2\"], [\"1/3\", \"1/3\", \"1/3\"]] over 5 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 32 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T19",
+   "layer": "threshold (model and codec)",
+   "input": "[[\"1/2\", \"1/2\"], [\"1\"]] over 3 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 8 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T26",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/4294967296\", \"4294967295/4294967296\"] over 2 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 4 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T28",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/2\", \"1/2\", \"1/4\", \"1/4\", \"1/4\", \"1/4\"] over 6 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 64 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  },
+  {
+   "case": "T30",
+   "layer": "threshold (model and codec)",
+   "input": "[\"1/1\", \"1/1\"] over 2 keys",
+   "what": "",
+   "keripy": "admits (weighted)",
+   "layer_result": "model: evaluates; all 4 subsets as keripy; codec: well formed; evaluate as keripy on all subsets",
+   "relation": "same verdict",
+   "tracker": ""
+  }
+ ]
+}

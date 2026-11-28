@@ -1,0 +1,9 @@
+keripy 1.3.5 available (SODIUM_LIB set)
+R01 | accepted  | Valid | agree
+R07 | accepted  | Valid | agree
+R08a | accepted  | Valid | agree
+R10c | accepted  | Valid | agree
+R17 | accepted  | Eq8CreatedIllFormed | WE-REFUSE
+R18 | accepted  | Valid | agree
+W01 | accepted  | Valid | agree
+W09 | accepted  | Valid | agree

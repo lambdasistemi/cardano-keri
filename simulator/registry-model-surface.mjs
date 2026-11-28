@@ -15,7 +15,7 @@ export function freshSurface(root=ROOT) {
   const sources=[],definitions=[],decisions=[];
   const names=new Set(graph.declarations.map(d=>d.declaration));
   for(const module of modules){
-    const path=(module.startsWith('Singular.')?'lean/.lake/packages/singular/lean/':'lean/')+module.replaceAll('.','/')+'.lean';
+    const path=(module.startsWith('Singular.')?'lean/.lake/packages/singular/lean/':module.startsWith('SingularApplicationHeld.')?'lean/.lake/packages/singular/models/singular-application-held/lean/':'lean/')+module.replaceAll('.','/')+'.lean';
     const text=readFileSync(join(root,path),'utf8'),lines=text.split('\n');
     sources.push({module,path,sha256:sha256(text)});
     const stack=[];

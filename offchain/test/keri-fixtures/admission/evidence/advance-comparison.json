@@ -1,0 +1,66 @@
+[
+ {
+  "case": "R01",
+  "title": "2-of-2 rotation signed by both revealed keys",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "R07",
+  "title": "prior next threshold 1 of 2: one revealed key rotates",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "R08a",
+  "title": "prior next threshold [1/2,1/2]: both revealed keys sign",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "R10c",
+  "title": "rotation weighted threshold, both keys sign, weights [1/2,1/2]",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "R17",
+  "title": "rotation to an empty next commitment (abandonment), next threshold 0",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Eq8CreatedIllFormed",
+  "direction": "WE-REFUSE"
+ },
+ {
+  "case": "R18",
+  "title": "prior next threshold 1 of 2; revealed keys are one committed key and one new key, both sign",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "W01",
+  "title": "cut one, add one, toad 2, receipts from both of the derived witnesses",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ },
+ {
+  "case": "W09",
+  "title": "no witness change, toad kept, receipts from both",
+  "keripy": "accepted",
+  "keripyClass": "",
+  "chain": "Valid",
+  "direction": "agree"
+ }
+]

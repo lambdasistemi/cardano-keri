@@ -16,7 +16,7 @@ import Cardano.KERI.AID.E2E.FoldGuard (
     bookingRefusal,
     foldRefusal,
  )
-import Cardano.KERI.AID.E2E.Rejection (consumedInputAlone)
+import Cardano.KERI.AID.E2E.Rejection (ExpiredInterval (..), consumedInputAlone, expiredInterval, renderExpiry)
 import Data.ByteString (ByteString)
 import Data.List (intercalate)
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -37,6 +37,7 @@ spec = do
     specTerminal
     specBooking
     specRejection
+    specExpiry
 
 specFold :: Spec
 specFold = describe "a second registration of a registered AID cannot be folded" $ do
@@ -141,3 +142,35 @@ specRejection = describe "a rejection is read as a whole set" $ do
             `shouldBe` False
     it "refuses a rejection that does not name a consumed input" $
         consumedInputAlone "state" 2 imbalance `shouldBe` False
+
+-- | A ledger rejection as the node reports it, for the one failure given.
+ledgerRejection :: String -> String
+ledgerRejection failure =
+    "HardForkApplyTxErrFromEra S (S (S (S (S (S (Z (WrapApplyTxErr {unwrapApplyTxErr = ConwayApplyTxError (" <> failure <> " :| [])}))))))"
+
+outsideInterval :: Integer -> Integer -> Integer -> String
+outsideInterval lower upper checked =
+    "ConwayUtxowFailure (UtxoFailure (OutsideValidityIntervalUTxO (ValidityInterval {invalidBefore = SJust (SlotNo "
+        <> show lower
+        <> "), invalidHereafter = SJust (SlotNo "
+        <> show upper
+        <> ")}) (SlotNo "
+        <> show checked
+        <> ")))"
+
+specExpiry :: Spec
+specExpiry = describe "an expired validity interval is told from a domain rejection (#382)" $ do
+    it "reads the hosted rejections of #604, #607 and #609 as expiries of the slots they report" $ do
+        expiredInterval (ledgerRejection (outsideInterval 588 613 635)) `shouldBe` Just (ExpiredInterval 588 613 635)
+        expiredInterval (ledgerRejection (outsideInterval 589 614 614)) `shouldBe` Just (ExpiredInterval 589 614 614)
+        expiredInterval (ledgerRejection (outsideInterval 634 659 660)) `shouldBe` Just (ExpiredInterval 634 659 660)
+    it "says in the output that it is the ledger's expiry and how late it was" $
+        renderExpiry (ExpiredInterval 588 613 635)
+            `shouldBe` "LEDGER EXPIRY OF THE VALIDITY INTERVAL, not a domain rejection: interval [588,613) checked at slot 635, 22 slots after its end, 47 slots after it opened"
+    it "does not take a transaction checked before its interval, inside it, as an expiry" $ do
+        expiredInterval (ledgerRejection (outsideInterval 600 625 590)) `shouldBe` Nothing
+        expiredInterval (ledgerRejection (outsideInterval 600 625 610)) `shouldBe` Nothing
+    it "does not take a domain rejection, or an expiry beside another failure, as an expiry" $ do
+        expiredInterval (ledgerRejection imbalance) `shouldBe` Nothing
+        expiredInterval (ledgerRejection "ConwayUtxowFailure (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValid True) (FailedUnexpectedly))))") `shouldBe` Nothing
+        expiredInterval (ledgerRejection (outsideInterval 588 613 635 <> " :| [" <> imbalance <> "]")) `shouldBe` Nothing

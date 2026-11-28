@@ -190,7 +190,7 @@ import Cardano.KERI.AID.E2E.FoldGuard (
  )
 import Cardano.KERI.AID.E2E.MpfProof (prove)
 import Cardano.KERI.AID.E2E.MpfTrie qualified as Registry
-import Cardano.KERI.AID.E2E.Rejection (consumedInputAlone)
+import Cardano.KERI.AID.E2E.Rejection (ExpiredInterval, consumedInputAlone, expiredAmong, renderExpiry)
 import Cardano.KERI.AID.E2E.Script (
     ScriptArtifact (..),
     applyCommitmentParams,
@@ -347,9 +347,7 @@ import Codec.Binary.Bech32 qualified as Bech32
 import Control.Applicative ((<|>))
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (async, cancel)
-import Control.Exception (SomeException, finally, throwIO, try)
-import Data.IORef (IORef, atomicModifyIORef', newIORef)
-import System.IO.Unsafe (unsafePerformIO)
+import Control.Exception (Exception (..), SomeException, catch, finally, throwIO, try)
 import Control.Monad (forM, forM_, unless, when)
 import Data.Aeson (Value (..), eitherDecodeFileStrict, object, (.=))
 import Data.Aeson.Key qualified as Key
@@ -364,6 +362,7 @@ import Data.Char (isDigit)
 import Data.Either (fromRight)
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
+import Data.IORef (IORef, atomicModifyIORef', newIORef)
 import Data.List (elemIndex, find, isInfixOf, isPrefixOf, sort, sortOn, stripPrefix)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isJust, listToMaybe)
@@ -393,6 +392,7 @@ import System.IO (
     stderr,
     stdout,
  )
+import System.IO.Unsafe (unsafePerformIO)
 import System.Process qualified as Proc
 import System.Timeout (timeout)
 import Text.Read (readMaybe)
@@ -718,11 +718,25 @@ delayedSubmitter inner =
             delay <- injectedSubmitDelayMs
             every <- injectedSubmitDelayEvery
             count <- atomicModifyIORef' submissionCounter (\n -> (n + 1, n + 1))
-            when (delay > 0 && count `mod` every == 0) $ do
+            relief <- atomicModifyIORef' injectionRelief (\r -> (max 0 (r - 1), r))
+            when (delay > 0 && count `mod` every == 0 && relief <= 0) $ do
                 dbg ("injected pre-submit delay: " <> show delay <> " ms before submission " <> show count)
                 threadDelay (delay * 1000)
-            submitTx inner tx
+            result <- submitTx inner tx
+            -- the injected stall is a transient one: after the ledger reports an expiry, the next submissions are not delayed
+            case result of
+                Rejected reason | isJust (expiredAmong (B8.unpack reason)) -> atomicModifyIORef' injectionRelief (const (injectionReliefSubmissions, ()))
+                _ -> pure ()
+            pure result
         }
+
+-- | The submissions left before the injection delays again, after an expiry.
+{-# NOINLINE injectionRelief #-}
+injectionRelief :: IORef Int
+injectionRelief = unsafePerformIO (newIORef 0)
+
+injectionReliefSubmissions :: Int
+injectionReliefSubmissions = 6
 
 -- | The submissions made so far, for the injection that delays only every K-th one.
 {-# NOINLINE submissionCounter #-}
@@ -737,6 +751,52 @@ injectedSubmitDelayEvery = maybe 1 (max 1 . fromMaybe 1 . readMaybe) <$> lookupE
 
 injectedSubmitDelayMs :: IO Int
 injectedSubmitDelayMs = maybe 0 (fromMaybe 0 . readMaybe) <$> lookupEnv "KERI_E2E_PRE_SUBMIT_DELAY_MS"
+
+{- | The ledger rejected a transaction because its validity interval had ended (#382). It is not a
+rejection about the domain: the transaction was correct when it was built, and the clock moved on.
+-}
+data ExpiredValidityInterval = ExpiredValidityInterval String ExpiredInterval
+
+instance Show ExpiredValidityInterval where
+    show (ExpiredValidityInterval label expiry) = label <> ": " <> renderExpiry expiry
+
+instance Exception ExpiredValidityInterval
+
+{- | A rejection of a submitted transaction: the ledger's expiry of its validity interval is told from any
+other rejection, which fails as before.
+-}
+ledgerRejection :: String -> B8.ByteString -> IO a
+ledgerRejection label reason = case expiredAmong (B8.unpack reason) of
+    Just expiry -> throwIO (ExpiredValidityInterval label expiry)
+    Nothing -> fail (label <> " rejected: " <> B8.unpack reason)
+
+{- | A negative control is refused for its domain reason: an expired interval is never that refusal, and it
+says so in the output.
+-}
+refuseExpiry :: String -> B8.ByteString -> IO ()
+refuseExpiry label reason = case expiredAmong (B8.unpack reason) of
+    Just expiry -> throwIO (ExpiredValidityInterval label expiry)
+    Nothing -> pure ()
+
+{- | Run a step that plans its validity interval, builds, submits and settles. When the ledger rejects it
+for an expired interval, and for that reason alone, run the whole step again: it plans a fresh interval
+from the node's current tip and rebuilds from fresh state. Any other failure passes through at once, and the
+third expiry of one step fails: that is no longer jitter.
+-}
+retryExpired :: String -> IO a -> IO a
+retryExpired label action = attempt (1 :: Int)
+  where
+    attempt n =
+        action `catch` \failure@(ExpiredValidityInterval _ expiry) ->
+            if n >= expiryAttempts
+                then throwIO failure
+                else do
+                    dbg (label <> ": attempt " <> show n <> " of " <> show expiryAttempts <> ": " <> renderExpiry expiry <> "; planning a fresh interval and rebuilding")
+                    attempt (n + 1)
+
+-- | The attempts of a step whose interval expires: the first and two more, each with a fresh interval.
+expiryAttempts :: Int
+expiryAttempts = 3
 
 requireArtifact :: Text -> [ScriptArtifact] -> IO ScriptArtifact
 requireArtifact name artifacts =
@@ -2788,7 +2848,20 @@ submitTwoPassConvict ::
     ByteString ->
     EntitledEnforcementPlan ->
     IO TxId
-submitTwoPassConvict env label checkpointRef enforcementRef input convictor plan = do
+submitTwoPassConvict env label checkpointRef enforcementRef input convictor plan =
+    retryExpired label (submitTwoPassConvictOnce env label checkpointRef enforcementRef input convictor plan)
+
+-- | One attempt of the conviction: it reads the reservation, plans its interval, builds and submits.
+submitTwoPassConvictOnce ::
+    CheckpointEnv ->
+    String ->
+    (TxIn, TxOut ConwayEra) ->
+    (TxIn, TxOut ConwayEra) ->
+    CheckpointInput ->
+    ByteString ->
+    EntitledEnforcementPlan ->
+    IO TxId
+submitTwoPassConvictOnce env label checkpointRef enforcementRef input convictor plan = do
     (reservation, resolved) <- liveReservation env label plan
     validity <- entitledSettlementValidity env label resolved
     payeeKey <- beneficiarySignKey label (eepBountyPayee plan)
@@ -2871,7 +2944,7 @@ submitTwoPassConvict env label checkpointRef enforcementRef input convictor plan
             submitTx (envSubmitter env) signedFinal
     case result of
         Submitted txId -> pure txId
-        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+        Rejected reason -> ledgerRejection label reason
 
 rejectRotateEvidence ::
     CheckpointEnv ->
@@ -3061,7 +3134,7 @@ submitTwoPassReported party env label build = do
                     , submissionTx = signedFinal
                     , submissionCbor = finalBytes
                     }
-        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+        Rejected reason -> ledgerRejection label reason
 
 deterministicMargin :: ExUnits -> ExUnits
 deterministicMargin (ExUnits memory steps) =
@@ -3467,7 +3540,7 @@ submitWith submitter key label tx = do
             submitTx submitter (addKeyWitness key tx)
     case result of
         Submitted txId -> pure txId
-        Rejected reason -> fail (label <> " rejected: " <> B8.unpack reason)
+        Rejected reason -> ledgerRejection label reason
 
 awaitWalletCount :: Provider IO -> Addr -> Int -> IO [(TxIn, TxOut ConwayEra)]
 awaitWalletCount provider address count = go pollAttempts
@@ -3933,7 +4006,18 @@ openLiveReservation ::
     ByteString ->
     ByteString ->
     IO ResolvedCommitment
-openLiveReservation env label checkpointInput evidence payee nonce = do
+openLiveReservation env label checkpointInput evidence payee nonce =
+    retryExpired (label <> ": commitment opening") (openLiveReservationOnce env label checkpointInput evidence payee nonce)
+
+openLiveReservationOnce ::
+    CheckpointEnv ->
+    String ->
+    CheckpointInput ->
+    EnforcementEvidence ->
+    ByteString ->
+    ByteString ->
+    IO ResolvedCommitment
+openLiveReservationOnce env label checkpointInput evidence payee nonce = do
     commitmentRef <-
         requireJust
             "bounty_commitment reference was not deployed during setup"
@@ -5078,14 +5162,15 @@ bookRegistration :: CheckpointEnv -> InceptionExport -> IO Booking
 bookRegistration env fixture = do
     let label = "registration booking"
     proof <- mintHashProof env (ownerParty env) fixture
-    validity <- tipValidity env label
-    let record = registrationRecord env fixture validity
-        approval = Tx.approval record
-    txId <- submitTwoPassBy (ownerParty env) env label (bookingTx env fixture proof record validity 0)
-    booked <-
-        pollOutput (envProvider env) txId [0] (hasAsset (applicationPolicy env) approval)
-            >>= requireJust (label <> ": the request did not settle")
-    pure Booking{bookingOutput = booked, bookingRecord = record, bookingValidity = validity}
+    retryExpired label $ do
+        validity <- tipValidity env label
+        let record = registrationRecord env fixture validity
+            approval = Tx.approval record
+        txId <- submitTwoPassBy (ownerParty env) env label (bookingTx env fixture proof record validity 0)
+        booked <-
+            pollOutput (envProvider env) txId [0] (hasAsset (applicationPolicy env) approval)
+                >>= requireJust (label <> ": the request did not settle")
+        pure Booking{bookingOutput = booked, bookingRecord = record, bookingValidity = validity}
 
 {- | The booking transaction of a request over a validity interval, spending the proof
 the inception's premint left. The request holds the lovelace the registry requires,
@@ -5209,9 +5294,10 @@ evidence the fold burns.
 -}
 mintHashProof :: CheckpointEnv -> Party -> InceptionExport -> IO (TxIn, TxOut ConwayEra)
 mintHashProof env party fixture = do
-    proofTx <-
-        withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env party fixture)
-    proofTxId <- submitSettlingBy env party "hash-proof mint" proofTx
+    proofTxId <- retryExpired "hash-proof mint" $ do
+        proofTx <-
+            withinSecs 90 "build hash-proof mint" (buildHashProofMintTx env party fixture)
+        submitSettlingBy env party "hash-proof mint" proofTx
     pollOutput
         (envProvider env)
         proofTxId
@@ -5225,7 +5311,7 @@ foldRegistration ::
     Party ->
     Booking ->
     IO (TxId, ValidityPlan)
-foldRegistration env party booking = do
+foldRegistration env party booking = retryExpired "registration fold" $ do
     validity <- tipValidity env "registration fold"
     let plan =
             FoldRequest
@@ -5387,12 +5473,16 @@ registryJourney env = do
     -- the controller returns its own request after the deadline and, in the same transaction, burns the
     -- attestation its booking left in its change: the return composed with the burn
     attestationHeld <- heldAttestation env (ownerParty env) second
-    returnTxId <-
+    returnTxId <- retryExpired "registration return composed with the burn of its attestation" $ do
+        -- the interval is planned here, after the controls above, as late as the build allows
+        burnValidity <- tipValidity env "registration return, with the burn"
+        unless (lowerPosixMs burnValidity >= deadline) $
+            fail "the return interval does not start at the deadline"
         submitTwoPassBy
             (ownerParty env)
             env
             "registration return composed with the burn of its attestation"
-            (buildReturnBurningTx env (ownerParty env) second returnValidity (envOwner env) [attestationHeld])
+            (buildReturnBurningTx env (ownerParty env) second burnValidity (envOwner env) [attestationHeld])
     refunded <-
         pollOutput
             (envProvider env)
@@ -5457,13 +5547,15 @@ duplicateRegistrationJourney env (heldIn, heldOut) heldKey fixture = do
     beforeUnits <-
         requireExactAllRight "second fold, built before the first lands" beforePurposes beforeObserved
     -- the first fold, for a new key, lands
-    firstValidity <- tipValidity env "first fold"
-    firstTxId <-
-        submitTwoPassBy
-            folderParty
-            env
-            "first fold"
-            (buildFoldTx env (planFor firstBooking folderParty [heldKey] Nothing firstValidity))
+    (firstTxId, firstValidity) <- retryExpired "first fold" $ do
+        validity <- tipValidity env "first fold"
+        txId <-
+            submitTwoPassBy
+                folderParty
+                env
+                "first fold"
+                (buildFoldTx env (planFor firstBooking folderParty [heldKey] Nothing validity))
+        pure (txId, validity)
     (deliveredIn, deliveredOut) <-
         pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (inceptionDatum fixture))
             >>= requireJust "the delivered checkpoint of the first fold did not settle"
@@ -5490,23 +5582,25 @@ duplicateRegistrationJourney env (heldIn, heldOut) heldKey fixture = do
     unless (rawInlineData stateAfter == Just rootAfter) $
         fail "the registry's root is not the root of its two keys"
     -- the second fold, built against the state the first consumed, is refused by the ledger
-    retry <- tipValidity env "second fold, submitted after the first landed"
-    (retryTx, _) <-
-        secondFold [heldKey] (Just preFold) retry (Map.map deterministicMargin beforeUnits)
-    refused <-
-        withinSecs 60 "submit the second fold" $
-            submitTx (envSubmitter env) (addKeyWitness (partyKey secondParty) retryTx)
-    case refused of
-        Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
-        Rejected reason -> do
-            dbg ("second fold refused: " <> oneLine (B8.unpack reason))
-            unless
-                ( consumedInputAlone
-                    (show (fst preFold))
-                    (fromIntegral (spendingIndex (fst preFold) (retryTx ^. bodyTxL . inputsTxBodyL)))
-                    (B8.unpack reason)
-                )
-                $ fail "the second fold was refused, but not for the consumed registry state alone"
+    retryExpired "second fold against a consumed state" $ do
+        retry <- tipValidity env "second fold, submitted after the first landed"
+        (retryTx, _) <-
+            secondFold [heldKey] (Just preFold) retry (Map.map deterministicMargin beforeUnits)
+        refused <-
+            withinSecs 60 "submit the second fold" $
+                submitTx (envSubmitter env) (addKeyWitness (partyKey secondParty) retryTx)
+        case refused of
+            Submitted _ -> fail "the ledger accepted a second fold against a consumed registry state"
+            Rejected reason -> do
+                refuseExpiry "the second fold" reason
+                dbg ("second fold refused: " <> oneLine (B8.unpack reason))
+                unless
+                    ( consumedInputAlone
+                        (show (fst preFold))
+                        (fromIntegral (spendingIndex (fst preFold) (retryTx ^. bodyTxL . inputsTxBodyL)))
+                        (B8.unpack reason)
+                    )
+                    $ fail "the second fold was refused, but not for the consumed registry state alone"
     unchangedAfter "the ledger's refusal of the second fold"
     -- the second fold built honestly now is refused by the builder
     now <- tipValidity env "second fold, built after the first landed"
@@ -6003,6 +6097,7 @@ refusedExactlyAt env label party expected tx = do
     case submitted of
         Submitted _ -> fail (label <> ": the ledger accepted a transaction that must be refused")
         Rejected reason -> do
+            refuseExpiry label reason
             dbg (label <> ": rejected by the ledger: " <> oneLine (B8.unpack reason))
             when (any (`isInfixOf` B8.unpack reason) ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"]) $
                 fail (label <> ": the ledger refused it for a reason other than the scripts")
@@ -6186,6 +6281,7 @@ terminationJourney env observe = do
     case raceResult of
         Submitted _ -> fail "the ledger accepted a second booking of a consumed pending output"
         Rejected reason -> do
+            refuseExpiry "the second booking" reason
             dbg ("second booking refused: " <> oneLine (B8.unpack reason))
             unless
                 ( consumedInputAlone
@@ -6349,8 +6445,8 @@ terminalKeyJourney env references fixture key = do
         fail "the chain changed after the builder's refusal of a termination booking"
     let deadline = requestProcessDeadline (bookingRecord again)
     awaitChainTime env "terminal key request deadline" deadline
-    returnValidity <- tipValidity env "return of a terminal key's registration"
-    returnTxId <-
+    returnTxId <- retryExpired "return of a terminal key's registration" $ do
+        returnValidity <- tipValidity env "return of a terminal key's registration"
         submitTwoPassBy
             folderParty
             env
@@ -7195,10 +7291,12 @@ bookingSettlementsJourney env = do
         fail "settlement: the application's purpose index of a booking is not its position among the booking's policies"
     -- one booking, its request at output 0 and the attestation in the change at output 1
     oneProof <- mintHashProof env (ownerParty env) single
-    oneValidity <- tipValidity env "settlement: one booking"
-    let oneRecord = registrationRecord env single oneValidity
-    oneSubmission <-
-        submitTwoPassReported (ownerParty env) env "settlement: one booking" (bookingTx env single oneProof oneRecord oneValidity 0)
+    (oneRecord, oneSubmission) <- retryExpired "settlement: one booking" $ do
+        validity <- tipValidity env "settlement: one booking"
+        let record = registrationRecord env single validity
+        submission <-
+            submitTwoPassReported (ownerParty env) env "settlement: one booking" (bookingTx env single oneProof record validity 0)
+        pure (record, submission)
     requestOne <-
         pollOutput (envProvider env) (submissionId oneSubmission) [0] (hasAsset (applicationPolicy env) (Tx.approval oneRecord))
             >>= requireJust "settlement: the single request did not settle"
@@ -7216,17 +7314,19 @@ bookingSettlementsJourney env = do
     -- two bookings in one transaction: requests at outputs 0 and 1, both attestations in the change at output 2
     firstProof <- mintHashProof env (ownerParty env) rotated
     secondProof <- mintHashProof env (ownerParty env) multi
-    twoValidity <- tipValidity env "settlement: two bookings"
-    let firstRecord = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env) rotated twoValidity
-        secondRecord = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env + 1_000_000) multi twoValidity
-    unless (requestDeposit firstRecord /= requestDeposit secondRecord && requestKey firstRecord /= requestKey secondRecord) $
-        fail "settlement: the two requests do not differ in deposit and identity"
-    twoSubmission <-
-        submitTwoPassReported
-            (ownerParty env)
-            env
-            "settlement: two bookings"
-            (bookingsTx env [(rotated, firstProof, firstRecord), (multi, secondProof, secondRecord)] twoValidity 0)
+    (firstRecord, secondRecord, twoSubmission) <- retryExpired "settlement: two bookings" $ do
+        twoValidity <- tipValidity env "settlement: two bookings"
+        let first = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env) rotated twoValidity
+            second = Tx.registrationRecord (deploymentOf env) (envOwner env) (requestDeposit' env + 1_000_000) multi twoValidity
+        unless (requestDeposit first /= requestDeposit second && requestKey first /= requestKey second) $
+            fail "settlement: the two requests do not differ in deposit and identity"
+        submission <-
+            submitTwoPassReported
+                (ownerParty env)
+                env
+                "settlement: two bookings"
+                (bookingsTx env [(rotated, firstProof, first), (multi, secondProof, second)] twoValidity 0)
+        pure (first, second, submission)
     requestFirst <-
         pollOutput (envProvider env) (submissionId twoSubmission) [0] (hasAsset (applicationPolicy env) (Tx.approval firstRecord))
             >>= requireJust "settlement: the first of two requests did not settle"
@@ -7328,104 +7428,106 @@ bookingRefusedWithoutAttestationJourney :: CheckpointEnv -> IO ()
 bookingRefusedWithoutAttestationJourney env = do
     (fixture, _) <- loadLifecycleFixture
     proof <- mintHashProof env (ownerParty env) fixture
-    refusedValidity <- tipValidity env "refusal: booking without its attestation"
-    let refusedRecord = registrationRecord env fixture refusedValidity
-        signed = addKeyWitness (partyKey (ownerParty env))
-        hashProofPolicy = PolicyID (envHashProofHash env)
-    evidence <- evidenceDirectory
-    -- the control: the booking with its attestation is accepted by every script, so the refusal below is not a setup failure
-    (honest, _) <- bookingTx env fixture proof refusedRecord refusedValidity 0 Map.empty
-    honestObserved <-
-        withinSecs 120 "refusal control: evaluate the honest booking" $ evaluateTx (envProvider env) (signed honest)
-    unless (not (Map.null honestObserved) && all (either (const False) (const True)) (Map.elems honestObserved)) $
-        fail "refusal control: the booking with its attestation is not accepted by every script"
-    unless (attestationsIn env honest == (1, 1)) $
-        fail "refusal control: the booking with its attestation does not mint it and pay it to the controller"
-    -- nothing is approved at the application's address before the booking
-    approvedBefore <- approvedRequestsAt env "refusal: before the refused booking"
-    -- the booking without the attestation
-    refusedTx <- bookingWithoutAttestationTx env fixture proof refusedRecord refusedValidity
-    unless (attestationsIn env refusedTx == (0, 0)) $
-        fail "refusal: the booking still mints or pays an attestation"
-    let refusedMint = refusedTx ^. bodyTxL . mintTxBodyL
-        MultiAsset refusedPolicies = refusedMint
-        mintedOf policy name = fromMaybe 0 (Map.lookup policy refusedPolicies >>= Map.lookup (AssetName (SBS.toShort name)))
-    unless (mintedOf (applicationPolicy env) (Tx.approval refusedRecord) == 1 && mintedOf hashProofPolicy (Tx.inceptionProofName fixture) == -1) $
-        fail "refusal: the booking does not mint its approval and burn its proof"
-    let applicationPurpose = ConwayMinting (AsIx (mintingIndex (applicationPolicy env) refusedMint))
-        hashProofPurpose = ConwayMinting (AsIx (mintingIndex hashProofPolicy refusedMint))
-        absentPurpose = ConwayMinting (AsIx (fromIntegral (Map.size refusedPolicies)))
-    -- (1) the node's evaluation, per purpose
-    observed <-
-        withinSecs 120 "refusal: evaluate" $ evaluateTx (envProvider env) (signed refusedTx)
-    requireRefusedAt "refusal: the application mint" observed applicationPurpose
-    unless (verdictAt observed hashProofPurpose == Accepted) $
-        fail "refusal: the hash-proof mint did not run to success beside the application's refusal"
-    unless (Set.fromList [purpose | (purpose, Left _) <- Map.toList observed] == Set.singleton applicationPurpose) $
-        fail ("refusal: the scripts that failed are not the application mint alone: " <> show (Map.keys (Map.filter (either (const True) (const False)) observed)))
-    -- the controls of the assertion: another purpose, an absent purpose and an accepted one are not the application's refusal
-    forM_ [("the hash-proof mint", hashProofPurpose), ("a purpose the transaction does not have", absentPurpose)] $ \(what, purpose) -> do
-        refusal <- try (requireRefusedAt ("refusal control: " <> what) observed purpose)
-        case refusal of
-            Left (_ :: SomeException) -> pure ()
-            Right () -> fail ("refusal control: the assertion counts " <> what <> " as the application's refusal")
-    -- (2) the node's answer to the signed transaction
-    let signedRefused = signed refusedTx
-    answer <- withinSecs 60 "refusal: submit" $ submitTx (envSubmitter env) signedRefused
-    reason <- case answer of
-        Submitted _ -> fail "refusal: the node accepted a booking without its attestation"
-        Rejected text -> pure (B8.unpack text)
-    dbg ("refusal: the node rejected the submission: " <> oneLine reason)
-    forM_ ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"] $ \other ->
-        when (other `isInfixOf` reason) $ fail ("refusal: the node refused for a reason other than the scripts: " <> other)
-    -- the node's own answer names the script that failed: the application's mint, and not the hash-proof's;
-    -- the answer is a shown string, so its quotes arrive escaped
-    let scriptHex policy = let PolicyID hash = policy in hexOf (scriptHashBytes hash)
-        namesScript policy =
-            ("ScriptInfo: MintingScript " <> scriptHex policy) `isInfixOf` reason
-                && ("The script hash is:ScriptHash \\\"" <> scriptHex policy) `isInfixOf` reason
-    forM_ ["ValidationTagMismatch", "PlutusFailure"] $ \needle ->
-        unless (needle `isInfixOf` reason) $ fail ("refusal: the node's answer does not say " <> needle)
-    unless (namesScript (applicationPolicy env)) $
-        fail "refusal: the node's answer does not name the application's mint as the script that failed"
-    when (namesScript hashProofPolicy) $
-        fail "refusal: the node's answer names the hash-proof mint as a script that failed"
-    forM_ evidence $ \directory -> do
-        Dir.createDirectoryIfMissing True directory
-        BSL.writeFile (directory </> "refused-booking.tx.cbor") (serialize (eraProtVerLow @ConwayEra) signedRefused)
-        writeFile (directory </> "refused-booking.evaluation.txt") $
-            unlines [purposeName purpose <> ": " <> either (take 400 . oneLine . show) (const "accepted") verdict | (purpose, verdict) <- Map.toList observed]
-        writeFile (directory </> "refused-booking.submit.txt") (reason <> "\n")
-    -- (3) the chain afterwards: the address answered, nothing is approved, the proof is unspent, the transaction left nothing
-    approvedAfter <- approvedRequestsAt env "refusal: after the refused booking"
-    unless (Set.fromList (map fst approvedAfter) == Set.fromList (map fst approvedBefore)) $
-        fail "refusal: the application's address changed although the booking was refused"
-    when (any (hasAsset (applicationPolicy env) (Tx.approval refusedRecord) . snd) approvedAfter) $
-        fail "refusal: the refused booking left an approved request"
-    proofLeft <-
-        withinSecs 30 "refusal: read the proof output" $ queryUTxOByTxIn (envProvider env) (Set.singleton (fst proof))
-    unless (Map.member (fst proof) proofLeft) $
-        fail "refusal: the proof output of the refused booking is spent"
-    left <-
-        withinSecs 30 "refusal: read the outputs of the refused transaction" $
-            queryUTxOByTxIn (envProvider env) (Set.fromList [TxIn (txIdTx signedRefused) (TxIx position) | position <- [0 .. 3]])
-    unless (Map.null left) $ fail "refusal: the refused transaction left outputs on the chain"
-    -- the valid counterpart, the same booking with its attestation: it settles, and its approved request reads back
-    validValidity <- tipValidity env "refusal: the booking with its attestation"
-    let validRecord = registrationRecord env fixture validValidity
-        validName = Tx.approval validRecord
-    validId <-
-        submitTwoPassBy (ownerParty env) env "refusal: the valid booking" (bookingTx env fixture proof validRecord validValidity 0)
-    request <-
-        pollOutput (envProvider env) validId [0] (hasAsset (applicationPolicy env) validName)
-            >>= requireJust "refusal: the valid booking did not settle"
-    approvedLater <- approvedRequestsAt env "refusal: after the valid booking"
-    unless (Set.fromList (map fst approvedLater) == Set.insert (fst request) (Set.fromList (map fst approvedBefore)) && length approvedLater == length approvedBefore + 1) $
-        fail
-            ( "refusal: the application's address does not hold exactly the one approved request the valid booking booked: "
-                <> show (map fst approvedBefore, map fst approvedLater, fst request)
-            )
-    dbg ("refusal: refused " <> show (txIdTx signedRefused) <> ", then the valid booking " <> show validId <> " approved " <> show (fst request))
+    -- the interval is planned inside the retried step: the controls below take as long as the node lets them
+    retryExpired "refusal journey" $ do
+        refusedValidity <- tipValidity env "refusal: booking without its attestation"
+        let refusedRecord = registrationRecord env fixture refusedValidity
+            signed = addKeyWitness (partyKey (ownerParty env))
+            hashProofPolicy = PolicyID (envHashProofHash env)
+        evidence <- evidenceDirectory
+        -- the control: the booking with its attestation is accepted by every script, so the refusal below is not a setup failure
+        (honest, _) <- bookingTx env fixture proof refusedRecord refusedValidity 0 Map.empty
+        honestObserved <-
+            withinSecs 120 "refusal control: evaluate the honest booking" $ evaluateTx (envProvider env) (signed honest)
+        unless (not (Map.null honestObserved) && all (either (const False) (const True)) (Map.elems honestObserved)) $
+            fail "refusal control: the booking with its attestation is not accepted by every script"
+        unless (attestationsIn env honest == (1, 1)) $
+            fail "refusal control: the booking with its attestation does not mint it and pay it to the controller"
+        -- nothing is approved at the application's address before the booking
+        approvedBefore <- approvedRequestsAt env "refusal: before the refused booking"
+        -- the booking without the attestation
+        refusedTx <- bookingWithoutAttestationTx env fixture proof refusedRecord refusedValidity
+        unless (attestationsIn env refusedTx == (0, 0)) $
+            fail "refusal: the booking still mints or pays an attestation"
+        let refusedMint = refusedTx ^. bodyTxL . mintTxBodyL
+            MultiAsset refusedPolicies = refusedMint
+            mintedOf policy name = fromMaybe 0 (Map.lookup policy refusedPolicies >>= Map.lookup (AssetName (SBS.toShort name)))
+        unless (mintedOf (applicationPolicy env) (Tx.approval refusedRecord) == 1 && mintedOf hashProofPolicy (Tx.inceptionProofName fixture) == -1) $
+            fail "refusal: the booking does not mint its approval and burn its proof"
+        let applicationPurpose = ConwayMinting (AsIx (mintingIndex (applicationPolicy env) refusedMint))
+            hashProofPurpose = ConwayMinting (AsIx (mintingIndex hashProofPolicy refusedMint))
+            absentPurpose = ConwayMinting (AsIx (fromIntegral (Map.size refusedPolicies)))
+        -- (1) the node's evaluation, per purpose
+        observed <-
+            withinSecs 120 "refusal: evaluate" $ evaluateTx (envProvider env) (signed refusedTx)
+        requireRefusedAt "refusal: the application mint" observed applicationPurpose
+        unless (verdictAt observed hashProofPurpose == Accepted) $
+            fail "refusal: the hash-proof mint did not run to success beside the application's refusal"
+        unless (Set.fromList [purpose | (purpose, Left _) <- Map.toList observed] == Set.singleton applicationPurpose) $
+            fail ("refusal: the scripts that failed are not the application mint alone: " <> show (Map.keys (Map.filter (either (const True) (const False)) observed)))
+        -- the controls of the assertion: another purpose, an absent purpose and an accepted one are not the application's refusal
+        forM_ [("the hash-proof mint", hashProofPurpose), ("a purpose the transaction does not have", absentPurpose)] $ \(what, purpose) -> do
+            refusal <- try (requireRefusedAt ("refusal control: " <> what) observed purpose)
+            case refusal of
+                Left (_ :: SomeException) -> pure ()
+                Right () -> fail ("refusal control: the assertion counts " <> what <> " as the application's refusal")
+        -- (2) the node's answer to the signed transaction
+        let signedRefused = signed refusedTx
+        answer <- withinSecs 60 "refusal: submit" $ submitTx (envSubmitter env) signedRefused
+        reason <- case answer of
+            Submitted _ -> fail "refusal: the node accepted a booking without its attestation"
+            Rejected text -> refuseExpiry "refusal" text >> pure (B8.unpack text)
+        dbg ("refusal: the node rejected the submission: " <> oneLine reason)
+        forM_ ["BadInputsUTxO", "ExUnitsTooBigUTxO", "ValueNotConservedUTxO", "FeeTooSmallUTxO"] $ \other ->
+            when (other `isInfixOf` reason) $ fail ("refusal: the node refused for a reason other than the scripts: " <> other)
+        -- the node's own answer names the script that failed: the application's mint, and not the hash-proof's;
+        -- the answer is a shown string, so its quotes arrive escaped
+        let scriptHex policy = let PolicyID hash = policy in hexOf (scriptHashBytes hash)
+            namesScript policy =
+                ("ScriptInfo: MintingScript " <> scriptHex policy) `isInfixOf` reason
+                    && ("The script hash is:ScriptHash \\\"" <> scriptHex policy) `isInfixOf` reason
+        forM_ ["ValidationTagMismatch", "PlutusFailure"] $ \needle ->
+            unless (needle `isInfixOf` reason) $ fail ("refusal: the node's answer does not say " <> needle)
+        unless (namesScript (applicationPolicy env)) $
+            fail "refusal: the node's answer does not name the application's mint as the script that failed"
+        when (namesScript hashProofPolicy) $
+            fail "refusal: the node's answer names the hash-proof mint as a script that failed"
+        forM_ evidence $ \directory -> do
+            Dir.createDirectoryIfMissing True directory
+            BSL.writeFile (directory </> "refused-booking.tx.cbor") (serialize (eraProtVerLow @ConwayEra) signedRefused)
+            writeFile (directory </> "refused-booking.evaluation.txt") $
+                unlines [purposeName purpose <> ": " <> either (take 400 . oneLine . show) (const "accepted") verdict | (purpose, verdict) <- Map.toList observed]
+            writeFile (directory </> "refused-booking.submit.txt") (reason <> "\n")
+        -- (3) the chain afterwards: the address answered, nothing is approved, the proof is unspent, the transaction left nothing
+        approvedAfter <- approvedRequestsAt env "refusal: after the refused booking"
+        unless (Set.fromList (map fst approvedAfter) == Set.fromList (map fst approvedBefore)) $
+            fail "refusal: the application's address changed although the booking was refused"
+        when (any (hasAsset (applicationPolicy env) (Tx.approval refusedRecord) . snd) approvedAfter) $
+            fail "refusal: the refused booking left an approved request"
+        proofLeft <-
+            withinSecs 30 "refusal: read the proof output" $ queryUTxOByTxIn (envProvider env) (Set.singleton (fst proof))
+        unless (Map.member (fst proof) proofLeft) $
+            fail "refusal: the proof output of the refused booking is spent"
+        left <-
+            withinSecs 30 "refusal: read the outputs of the refused transaction" $
+                queryUTxOByTxIn (envProvider env) (Set.fromList [TxIn (txIdTx signedRefused) (TxIx position) | position <- [0 .. 3]])
+        unless (Map.null left) $ fail "refusal: the refused transaction left outputs on the chain"
+        -- the valid counterpart, the same booking with its attestation: it settles, and its approved request reads back
+        validValidity <- tipValidity env "refusal: the booking with its attestation"
+        let validRecord = registrationRecord env fixture validValidity
+            validName = Tx.approval validRecord
+        validId <-
+            submitTwoPassBy (ownerParty env) env "refusal: the valid booking" (bookingTx env fixture proof validRecord validValidity 0)
+        request <-
+            pollOutput (envProvider env) validId [0] (hasAsset (applicationPolicy env) validName)
+                >>= requireJust "refusal: the valid booking did not settle"
+        approvedLater <- approvedRequestsAt env "refusal: after the valid booking"
+        unless (Set.fromList (map fst approvedLater) == Set.insert (fst request) (Set.fromList (map fst approvedBefore)) && length approvedLater == length approvedBefore + 1) $
+            fail
+                ( "refusal: the application's address does not hold exactly the one approved request the valid booking booked: "
+                    <> show (map fst approvedBefore, map fst approvedLater, fst request)
+                )
+        dbg ("refusal: refused " <> show (txIdTx signedRefused) <> ", then the valid booking " <> show validId <> " approved " <> show (fst request))
 
 {- | Where a run keeps the public artifacts of its settlements, when it is asked to: a directory
 named by @KERI_EVIDENCE_DIR@. Nothing secret is written: the signed transactions, what the node

@@ -36,9 +36,16 @@ import Cardano.KERI.AID.Checkpoint.Wire (advanceAttestedSpendRedeemerData, freez
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum, rawInlineData)
 import Cardano.KERI.Deployment.AdvanceAttestationScripts (AdvanceAttestation (..))
 import Cardano.KERI.Deployment.AdvanceVectors (
+    JanuaryExpectation (..),
+    NestedSeal (..),
     Seeds (..),
     Vector (..),
+    loadJanuaryExpectation,
+    loadJanuaryVector,
+    loadNestedSeal,
+    loadScalarPair,
     loadSeeds,
+    loadTrailingPair,
     loadVectorNamed,
     signedBy,
  )
@@ -46,6 +53,7 @@ import Cardano.KERI.Deployment.LedgerEvaluation (
     Purpose (..),
     accepts,
     evaluated,
+    measuredBudgets,
     mintOf,
     negative,
     parameters,
@@ -69,6 +77,7 @@ import Cardano.KERI.Deployment.Script (
     scriptHashBytes,
  )
 import Cardano.Ledger.Address (Addr, Withdrawals (..))
+import Cardano.Ledger.Alonzo.PParams (ppMaxTxExUnitsL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data qualified as Ledger
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
@@ -78,11 +87,13 @@ import Cardano.Ledger.Api.Tx.Wits (rdmrsTxWitsL)
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core (PParams)
+import Cardano.Ledger.Core (PParams, ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Monad (forM_)
+import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
@@ -116,7 +127,11 @@ world = worldFor terms
 
 -- | The world of a registry derived from other terms (the same programs but for what the terms apply).
 worldFor :: RegistryTerms -> IO World
-worldFor registryTerms = do
+worldFor registryTerms = loadVectorNamed "two_key" >>= \vector -> worldWith vector registryTerms
+
+-- | The world of a registry derived from other terms, for a vector.
+worldWith :: Vector -> RegistryTerms -> IO World
+worldWith vector registryTerms = do
     blueprint <- getEnv "KERI_ATTESTED_BLUEPRINT" >>= loadBlueprint >>= either fail pure
     blueprintIsAttested blueprint `shouldBe` True
     registry <-
@@ -129,7 +144,6 @@ worldFor registryTerms = do
             , mkBasicTxOut (payerAddress owner) (MaryValue (Coin 20_000_000) mempty)
                 & referenceScriptTxOutL .~ SJust (mkCageScript program)
             )
-    vector <- loadVectorNamed "two_key"
     seeds <- loadSeeds
     params <- parameters
     pure
@@ -173,6 +187,53 @@ checkpointOutput w ref frozen pool datum =
   where
     deployment = worldDeployment w
     name = activeTokenName (scriptsRegistry (deploymentScripts deployment)) (vectorAid (worldVector w))
+
+-- | The next commitment a live checkpoint datum carries: the committed keys and the integer threshold.
+nextCommitment :: PLC.Data -> Maybe ([BS.ByteString], Integer)
+nextCommitment = \case
+    PLC.Constr 1 [PLC.Constr 0 fields]
+        | PLC.Constr 0 [_, _, PLC.List keys, PLC.Constr 0 [PLC.I threshold], _, _] <- last fields ->
+            (,) <$> traverse bytesOf keys <*> pure threshold
+    _ -> Nothing
+  where
+    bytesOf = \case
+        PLC.B b -> Just b
+        _ -> Nothing
+
+-- | A constructor with one field rewritten.
+atField :: Int -> (PLC.Data -> PLC.Data) -> PLC.Data -> PLC.Data
+atField i f = \case
+    PLC.Constr c fields -> PLC.Constr c [if j == i then f x else x | (j, x) <- zip [0 ..] fields]
+    other -> other
+
+-- | A constructor with a field replaced by another field of the same constructor.
+atFieldFrom :: Int -> Int -> PLC.Data -> PLC.Data
+atFieldFrom from to = \case
+    PLC.Constr c fields | Just source <- lookup from (zip [0 ..] fields) -> atField to (const source) (PLC.Constr c fields)
+    other -> other
+
+-- | The datum with its next commitment replaced: the keys and the integer threshold.
+withNextCommitment :: (([BS.ByteString], Integer) -> ([BS.ByteString], Integer)) -> PLC.Data -> PLC.Data
+withNextCommitment edit = \case
+    PLC.Constr 1 [PLC.Constr 0 fields] ->
+        PLC.Constr 1 [PLC.Constr 0 (init fields <> [rewrite (last fields)])]
+    other -> other
+  where
+    rewrite = \case
+        PLC.Constr 0 [cur, curT, PLC.List keys, PLC.Constr 0 [PLC.I threshold], wit, toad]
+            | Just bytes <- traverse (\case PLC.B b -> Just b; _ -> Nothing) keys ->
+                let (keys', threshold') = edit (bytes, threshold)
+                 in PLC.Constr 0 [cur, curT, PLC.List (map PLC.B keys'), PLC.Constr 0 [PLC.I threshold'], wit, toad]
+        other -> other
+
+withNextKeys :: ([BS.ByteString] -> [BS.ByteString]) -> PLC.Data -> PLC.Data
+withNextKeys edit = withNextCommitment (first edit)
+
+-- | A digest that opens nothing: the first byte changed.
+flipFirstByte :: BS.ByteString -> BS.ByteString
+flipFirstByte bytes = case BS.uncons bytes of
+    Just (b, rest) -> BS.cons (b + 1) rest
+    Nothing -> bytes
 
 -- | The recipient of what leaves the checkpoint: not the payer.
 payeeAddress :: Addr
@@ -410,6 +471,149 @@ spec = describe "#576 the checkpoint's moves of the attested generation, evaluat
                 message `shouldSatisfy` isInfixOf (show supplied)
                 message `shouldSatisfy` isInfixOf (show required)
             other -> expectationFailure ("a premium of " <> show supplied <> " was built: " <> either show (const "a transaction") other)
+    describe "the January advance journeys of #591: a rotation with its own predecessor inception" $ do
+        forM_ [("R01", "r01"), ("R17", "r17")] $ \(title, name) ->
+            it (title <> ": the signed rotation, with its indexed signatures and no receipts, is accepted at every purpose, and the successor carries the next commitments and threshold the signed event declares") $ do
+                v <- loadJanuaryVector name
+                expected <- loadJanuaryExpectation name
+                w <- worldWith v terms
+                let move = rotationMove w
+                tx <- buildAdvance w move Keep
+                accepts (answers w move tx) `shouldBe` True
+                case toList (tx ^. bodyTxL . outputsTxBodyL) of
+                    successor : _ -> do
+                        rawInlineData successor `shouldBe` Just (vectorNew v)
+                        nextCommitment (vectorNew v) `shouldBe` Just (expectedNextKeys expected, expectedNextThreshold expected)
+                    [] -> fail "the transaction has no output"
+                -- the predecessor's commitments are what the signed inception declared
+                fmap fst (nextCommitment (vectorOld v)) `shouldBe` Just (expectedSpentNextKeys expected)
+        it "R01: a body that repeats its declaration after its last member is refused at the change policy, a body with a seal inside its last member accepted there" $ do
+            v <- loadJanuaryVector "r01"
+            seal <- loadNestedSeal
+            repeated <- loadTrailingPair
+            w <- worldWith v terms
+            let honest = rotationMove w
+                withBody body = atField 0 (const (PLC.B body))
+                framed = honest{movePayload = withBody (sealBody seal) (movePayload honest)}
+                unframed = honest{movePayload = withBody repeated (movePayload honest)}
+            framedTx <- buildAdvance w framed Keep
+            Evaluation.acceptedAt framedTx (answers w framed framedTx) (Minting (changePolicy w)) `shouldBe` True
+            tx <- buildAdvance w unframed Keep
+            Evaluation.refusedAt tx (answers w unframed tx) (Minting (changePolicy w)) `shouldBe` True
+        it "R01: a final value whose number is malformed is refused at the change policy, the one whose numbers are valid accepted there (the other purposes are not what this pair isolates)" $ do
+            v <- loadJanuaryVector "r01"
+            (valid, malformed) <- loadScalarPair
+            w <- worldWith v terms
+            let honest = rotationMove w
+                withBody body = honest{movePayload = atField 0 (const (PLC.B body)) (movePayload honest)}
+                accepted = withBody valid
+                refused = withBody malformed
+            validTx <- buildAdvance w accepted Keep
+            Evaluation.acceptedAt validTx (answers w accepted validTx) (Minting (changePolicy w)) `shouldBe` True
+            tx <- buildAdvance w refused Keep
+            Evaluation.refusedAt tx (answers w refused tx) (Minting (changePolicy w)) `shouldBe` True
+        it "records what each purpose of the R01 and R17 rotations costs, and that the whole fits the limits of the recorded parameters" $
+            forM_ [("R01", "r01"), ("R17", "r17")] $ \(title, name) -> do
+                v <- loadJanuaryVector name
+                w <- worldWith v terms
+                let move = rotationMove w
+                tx <- buildAdvance w move Keep
+                let measured = measuredBudgets (worldParameters w) (chainOf w move) tx
+                    units = [(purpose, u) | (purpose, Right u) <- Map.toList measured]
+                    limits = worldParameters w ^. ppMaxTxExUnitsL
+                    totalMem = sum [m | (_, ExUnits m _) <- units]
+                    totalSteps = sum [c | (_, ExUnits _ c) <- units]
+                forM_ units $ \(purpose, ExUnits m c) ->
+                    putStrLn ("budget " <> title <> " " <> show purpose <> ": memory " <> show m <> ", steps " <> show c)
+                putStrLn
+                    ( "budget "
+                        <> title
+                        <> " total: memory "
+                        <> show totalMem
+                        <> " of "
+                        <> show (exUnitsMem' limits)
+                        <> ", steps "
+                        <> show totalSteps
+                        <> " of "
+                        <> show (exUnitsSteps' limits)
+                        <> "; transaction "
+                        <> show (tx ^. sizeTxF)
+                        <> " bytes (unsigned) of "
+                        <> show (worldParameters w ^. ppMaxTxSizeL)
+                        <> "; fee "
+                        <> show (let Coin f = tx ^. bodyTxL . feeTxBodyL in f)
+                    )
+                length units `shouldBe` Map.size measured
+                toInteger totalMem `shouldSatisfy` (<= exUnitsMem' limits)
+                toInteger totalSteps `shouldSatisfy` (<= exUnitsSteps' limits)
+        it "R01: the same rotation judged against a spent state whose commitments are empty is refused at the fact policy, the intact one accepted" $ do
+            v <- loadJanuaryVector "r01"
+            w <- worldWith v terms
+            let honest = rotationMove w
+                emptied = honest{moveSpent = checkpointOutput w (txIn 0xa1) False 3_000_000 (withNextCommitment (const ([], 0)) (vectorOld v))}
+            honestTx <- buildAdvance w honest Keep
+            accepts (answers w honest honestTx) `shouldBe` True
+            tx <- buildAdvance w emptied Keep
+            let verdict = answers w emptied tx
+            Evaluation.refusedAt tx verdict (Minting (factPolicy w)) `shouldBe` True
+            Evaluation.acceptedAt tx verdict (Minting (changePolicy w)) `shouldBe` True
+        it "R01: an abandonment claimed over a signed event that declares commitments is refused at the change policy, the honest rotation accepted" $ do
+            v <- loadJanuaryVector "r01"
+            w <- worldWith v terms
+            let honest = rotationMove w
+                -- the successor claims no next keys and threshold zero, and the offset of the threshold is moved to the
+                -- value of `bt`, which spells 0 as well: the body declares two commitments and threshold 2
+                steered =
+                    honest
+                        { moveSuccessor = withNextCommitment (const ([], 0)) (vectorNew v)
+                        , movePayload = atField 6 (const (PLC.List [])) (atFieldFrom 10 7 (movePayload honest))
+                        }
+            honestTx <- buildAdvance w honest Keep
+            accepts (answers w honest honestTx) `shouldBe` True
+            tx <- buildAdvance w steered Keep
+            let verdict = answers w steered tx
+            Evaluation.refusedAt tx verdict (Minting (changePolicy w)) `shouldBe` True
+            Evaluation.acceptedAt tx verdict (Minting (factPolicy w)) `shouldBe` True
+        it "R01: an abandonment spelled by a seal of the body is refused at the change policy, the commitments the body declares accepted there" $ do
+            v <- loadJanuaryVector "r01"
+            seal <- loadNestedSeal
+            w <- worldWith v terms
+            let honest = rotationMove w
+                -- the signed bytes are replaced by a body whose top level declares R01's two commitments and whose seal
+                -- spells `"nt":"0","n":[],"bt":"0"`; the signatures no longer hold, which is the fact policy's concern
+                withBody = atField 0 (const (PLC.B (sealBody seal)))
+                declared = honest{movePayload = withBody (movePayload honest)}
+                spelled =
+                    honest
+                        { moveSuccessor = withNextCommitment (const ([], 0)) (vectorNew v)
+                        , movePayload =
+                            atField 10 (const (PLC.I (sealOffBt seal))) $
+                                atField 7 (const (PLC.I (sealOffNt seal))) $
+                                    atField 6 (const (PLC.List [])) $
+                                        withBody (movePayload honest)
+                        }
+            declaredTx <- buildAdvance w declared Keep
+            Evaluation.acceptedAt declaredTx (answers w declared declaredTx) (Minting (changePolicy w)) `shouldBe` True
+            tx <- buildAdvance w spelled Keep
+            Evaluation.refusedAt tx (answers w spelled tx) (Minting (changePolicy w)) `shouldBe` True
+        it "R17: the abandonment rotation is refused at the fact policy with one of its two signatures, and when the revealed keys open no commitment, the intact one accepted" $ do
+            v <- loadJanuaryVector "r17"
+            w <- worldWith v terms
+            let honest = rotationMove w
+                signatureIndex = 13
+                oneSignature = case movePayload honest of
+                    PLC.Constr c fs -> PLC.Constr c [if i == signatureIndex then dropSignature x else x | (i, x) <- zip [0 :: Int ..] fs]
+                    other -> other
+                dropSignature = \case
+                    PLC.List (sig : _) -> PLC.List [sig]
+                    other -> other
+                unopened = honest{moveSpent = checkpointOutput w (txIn 0xa1) False 3_000_000 (withNextKeys (map flipFirstByte) (vectorOld v))}
+            honestTx <- buildAdvance w honest Keep
+            accepts (answers w honest honestTx) `shouldBe` True
+            partial <- buildAdvance w honest{movePayload = oneSignature} Keep
+            Evaluation.refusedAt partial (answers w honest{movePayload = oneSignature} partial) (Minting (factPolicy w)) `shouldBe` True
+            tx <- buildAdvance w unopened Keep
+            Evaluation.refusedAt tx (answers w unopened tx) (Minting (factPolicy w)) `shouldBe` True
     it "refuses the freeze whose successor is not frozen, built from the move that gives it" $ do
         w <- world
         let honest = freezeMove w
@@ -501,3 +705,8 @@ shape w move expectedSpend expectedPayment tx = do
         _ -> fail "the transaction has fewer than two outputs"
   where
     assetsOfOutput out = let MaryValue _ assets = out ^. valueTxOutL in assets
+
+-- | The memory and the steps of an execution-unit limit, as numbers.
+exUnitsMem', exUnitsSteps' :: ExUnits -> Integer
+exUnitsMem' (ExUnits m _) = fromIntegral m
+exUnitsSteps' (ExUnits _ c) = fromIntegral c

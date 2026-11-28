@@ -11,7 +11,7 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEventValid, AdvanceEvidence, event_binding, verified_indices,
 }
 use cardano_keri/checkpoint/datum.{
-  DatumInvalid, KeyStateView, key_state_well_formed,
+  DatumInvalid, KeyStateView, key_state_after_rotation_well_formed,
 }
 use cardano_keri/checkpoint/message.{
   SpentCheckpoint, deriveAidAssetName, next_key_digest,
@@ -107,6 +107,8 @@ pub fn signed_ok(f: SignedFact) -> Bool {
       list.length(f.cur_keys),
       positions_in(f.cur_keys, controlled),
     ),
+    // a state that published no next keys has nothing to reveal: no rotation follows it
+    !list.is_empty(f.spent_next_keys),
     evaluate(
       f.spent_next_threshold,
       list.length(f.spent_next_keys),
@@ -152,7 +154,7 @@ pub fn transition_ok(
     list.all(e.wit_add, fn(w) { !list.has(e.wit_cut, w) }),
     list.all(e.wit_add, fn(w) { !list.has(survivors, w) }),
     new.witnesses == new_set,
-    when key_state_well_formed(new) is {
+    when key_state_after_rotation_well_formed(new) is {
       DatumInvalid(_) -> False
       _ -> True
     },

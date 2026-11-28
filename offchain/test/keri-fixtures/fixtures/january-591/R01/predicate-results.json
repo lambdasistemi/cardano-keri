@@ -1,0 +1,12 @@
+{
+ "fixture": "R01",
+ "what": "positive control: ordinary rotation",
+ "keripy_1_3_5": "predecessor and rotation both persisted (readback: SAID at sn, stored bytes equal)",
+ "model_Lean_rotationValid": {
+  "rotationValid": true,
+  "signingValid": true,
+  "receiptsValid": true,
+  "provenance": "decoded model inputs (model-input.json); verification flags from fixture metadata and positional key identity"
+ },
+ "aiken_advance_predicate": "Valid"
+}

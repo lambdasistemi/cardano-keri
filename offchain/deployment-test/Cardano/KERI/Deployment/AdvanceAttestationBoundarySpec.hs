@@ -595,7 +595,9 @@ spec = describe "the two-policy advance, as the ledger evaluates it" $ do
             deployed <- getEnv "KERI_CHECKPOINT_BLUEPRINT" >>= validatorCodes
             attested <- getEnv "KERI_ATTESTED_BLUEPRINT" >>= validatorCodes
             [title | (title, code) <- attested, Just code' <- [lookup title deployed], code /= code']
-                `shouldSatisfy` (\differing -> not (null differing) && all (T.isPrefixOf "checkpoint_register.") differing)
+                -- the checkpoint, and the advance observer the attested generation no longer deploys (it shares the
+                -- advance predicate the abandonment rotation changed)
+                `shouldSatisfy` (\differing -> not (null differing) && all (\t -> any (`T.isPrefixOf` t) ["checkpoint_register.", "checkpoint_observer.observer_advance."]) differing)
             sort [title | (title, _) <- attested, isNothing (lookup title deployed)]
                 `shouldBe` [ "advance_attestation.advance_attestation.else"
                            , "advance_attestation.advance_attestation.mint"
@@ -606,7 +608,7 @@ spec = describe "the two-policy advance, as the ledger evaluates it" $ do
         it "applies to programs of the measured sizes" $ do
             w <- world
             let size = SBS.length . artifactProgram
-            (size (worldFact w), size (worldChange w), size (worldCheckpoint w)) `shouldBe` (10_629, 8_355, 8_911)
+            (size (worldFact w), size (worldChange w), size (worldCheckpoint w)) `shouldBe` (10_661, 12_404, 8_911)
     describe "the names and the redeemers" $ do
         it "name a signed fact of exactly the nine-field record and no other shape" $ do
             v <- loadVector

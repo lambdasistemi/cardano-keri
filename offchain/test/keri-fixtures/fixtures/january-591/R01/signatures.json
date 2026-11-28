@@ -1,0 +1,34 @@
+{
+ "predecessor_icp_controller_signatures": [
+  {
+   "index": 0,
+   "signer_verkey_qb64": "DPCfjrxV3tQzu-ppeJMb0P6k0aAUFdxevYXMtHh2YNgT",
+   "signature_qb64": "AACwx90qHnlSlmkNq6bu9e6FKWXq4I8j2nxuKIHXjgi26VtJY7AP_8JVuQlVq9obn_E8vSM0Lpm6Cn_vsr2ufWIH",
+   "signature_hex": "b0c7dd2a1e795296690daba6eef5ee852965eae08f23da7c6e2881d78e08b6e95b4963b00fffc255b90955abda1b9ff13cbd23342e99ba0a7fefb2bdae7d6207",
+   "signed_over": "the exact event bytes in this directory"
+  },
+  {
+   "index": 1,
+   "signer_verkey_qb64": "DEU5uWOqCwfCWuqSyOVziUd5eiA-EiQBOB2nX8-NpSOW",
+   "signature_qb64": "ABCsh2wodUmFFXsvTfJY-ug-rvSp9XUy9WTNAKI6bpU2tkTFa6lzOZHor7bbBwSqTy75mv_GCdyJjqnA3UVKAqYI",
+   "signature_hex": "ac876c28754985157b2f4df258fae83eaef4a9f57532f564cd00a23a6e9536b644c56ba9733991e8afb6db0704aa4f2ef99affc609dc898ea9c0dd454a02a608",
+   "signed_over": "the exact event bytes in this directory"
+  }
+ ],
+ "rotation_controller_signatures": [
+  {
+   "index": 0,
+   "signer_verkey_qb64": "DFFHXu2CT5oTnI9fWZawJMn9LARYWIXgu9Sh6zjhRAja",
+   "signature_qb64": "AAAr5PhVYHvH2wIbLXZk4o1ZCaYWYN0rKx8NtSGV978RKFoj-EpZb31y6h5iKuLbhpfKPLBWpJHoUBuJOur--H4G",
+   "signature_hex": "2be4f855607bc7db021b2d7664e28d5909a61660dd2b2b1f0db52195f7bf11285a23f84a596f7d72ea1e622ae2db8697ca3cb056a491e8501b893aeafef87e06",
+   "signed_over": "the exact event bytes in this directory"
+  },
+  {
+   "index": 1,
+   "signer_verkey_qb64": "DOZ2WEr04e0NSZwHliYEdOrICkZ8V2mr_FfbYR3Mdjf9",
+   "signature_qb64": "ABAmWEuaPhA1NgdWFl5zqrOCqPB6_TVr2ytVygRWuo9rC-uf0Kn7W_OoOae4JqMTbgbRFXje46NmmK8DWIrowWYL",
+   "signature_hex": "26584b9a3e1035360756165e73aab382a8f07afd356bdb2b55ca0456ba8f6b0beb9fd0a9fb5bf3a839a7b826a3136e06d11578dee3a36698af03588ae8c1660b",
+   "signed_over": "the exact event bytes in this directory"
+  }
+ ]
+}

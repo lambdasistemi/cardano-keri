@@ -1,0 +1,5 @@
+{
+ "witnesses_of_the_predecessor": [],
+ "witness_receipts_for_the_rotation": [],
+ "note": "an unwitnessed identifier (b = [], bt = 0): both sets are empty by construction, not omitted"
+}

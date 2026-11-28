@@ -91,11 +91,11 @@ blueprint of the other generation is refused when they are read back.
 | Checkpoint validator program bytes | `8957` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 | Attested registry application, state script and name | `the same` |
-| Attested fact policy hash | `d245219785d72bc3620eae79334e42b75fb40b16b6cc3ce00a67a466` |
-| Attested fact policy program bytes | `10629` |
-| Attested change policy hash | `eb52cb2ed997047c3a633fbe982551dbd58effc3dea020176d34c5df` |
-| Attested change policy program bytes | `8355` |
-| Attested checkpoint validator script hash | `80fba48f91cdcd81e1d7bdc3b37c4104c61d5006009d81431688acab` |
+| Attested fact policy hash | `8820ee6877973be5ee1be2de32af53bdea3fb4afd253965678ecdf29` |
+| Attested fact policy program bytes | `10661` |
+| Attested change policy hash | `ef4ba7197ec361366be4c93c900d89adc40875020449d2c39ebcd7e6` |
+| Attested change policy program bytes | `12404` |
+| Attested checkpoint validator script hash | `b1482d132e56d43376ebe0569a593b94d7251ec5160fde637d79606f` |
 | Attested checkpoint validator program bytes | `8911` |
 <!-- identities:end -->
 

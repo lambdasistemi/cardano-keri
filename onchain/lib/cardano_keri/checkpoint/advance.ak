@@ -16,8 +16,11 @@
 //// is taken over the rot bytes (ratified QC): `d` and `p` spans are
 //// deliberately unchecked.
 
+use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
+use aiken/option
+use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/message.{
   AdvanceError, AdvanceInvalid, AdvanceValid, RevealedSuccessorSigners,
@@ -26,6 +29,7 @@ use cardano_keri/checkpoint/message.{
 use cardano_keri/checkpoint/registration.{
   qb64_witness_verkey, respell_hex, respell_threshold, slice_matches,
 }
+use cardano_keri/checkpoint/threshold.{Unweighted, Weighted}
 
 // ---------------------------------------------------------
 // Advance evidence
@@ -112,6 +116,8 @@ pub fn event_binding(
   new: KeyStateView,
   e: AdvanceEvidence,
 ) -> AdvanceEventVerdict {
+  // the structural read of the signed bytes: the same for the advance predicate and for the fact and change path
+  let body = read_rotation_body(e.event_bytes)
   if !slice_matches(e.event_bytes, e.off_t, "rot") {
     AdvanceEventInvalid(AE1EventTypeMismatch)
   } else if !slice_matches(e.event_bytes, e.off_i, qb64_aid(new.cesr_aid)) {
@@ -130,17 +136,17 @@ pub fn event_binding(
     respell_threshold(new.cur_threshold),
   ) {
     AdvanceEventInvalid(AE5CurThresholdMismatch)
-  } else if !slices_match(
+  } else if !(slices_match(
     e.event_bytes,
     e.off_n,
     list.map(new.next_keys, qb64_aid),
-  ) {
+  ) && declares_next_keys(body, new, e.off_n)) {
     AdvanceEventInvalid(AE6NextKeysMismatch)
-  } else if !slice_matches(
+  } else if !(slice_matches(
     e.event_bytes,
     e.off_nt,
     respell_threshold(new.next_threshold),
-  ) {
+  ) && declares_next_threshold(body, new, e.off_nt)) {
     AdvanceEventInvalid(AE7NextThresholdMismatch)
   } else if !slices_match(
     e.event_bytes,
@@ -158,6 +164,452 @@ pub fn event_binding(
     AdvanceEventInvalid(AE10ToadMismatch)
   } else {
     AdvanceEventValid
+  }
+}
+
+/// The top-level `nt` and `n` of a signed rotation body, read from its structure: where each starts in the body
+/// (the offsets the evidence is held to) and what it spells.
+pub type RotationBody {
+  nt_start: Int,
+  nt_value: ByteArray,
+  n_starts: List<Int>,
+  n_values: List<ByteArray>,
+}
+
+/// The one read of the exact signed bytes of a rotation that the advance trusts for its next commitment, shared by
+/// the advance predicate and the fact and change path (both bind through `event_binding`).
+///
+/// Supported profile: the compact JSON keripy emits for a `rot`, whose fields come in the fixed order
+/// `v t d i s p kt k nt n bt br ba a`, each key written once; every field before `a` is a string or an array of
+/// strings (a threshold may also be an array of arrays), written without escapes; `a` is the last field: its value
+/// is any compact JSON value, framed but not interpreted (its content belongs to the anchor semantics of a later
+/// increment). Fields come one after the other from the opening brace, the value of `a` is consumed whole and the closing
+/// brace of the object is the last byte of the body, so a successful read consumes exactly one rotation: `nt` and `n`
+/// found here are the top-level ones whatever `a` holds, and no key can be written twice, before `a` or after it. A body outside the profile (a space, another order, a
+/// repeated key, an escape, an object where a string belongs) has no read: `None`.
+pub fn read_rotation_body(raw: ByteArray) -> Option<RotationBody> {
+  let len = bytearray.length(raw)
+  let head = Some(0)
+    |> option.and_then(fn(p) { quoted(raw, p, "{\"v\":\"") })
+    |> option.and_then(fn(p) { quoted(raw, p, ",\"t\":\"") })
+    |> option.and_then(fn(p) { quoted(raw, p, ",\"d\":\"") })
+    |> option.and_then(fn(p) { quoted(raw, p, ",\"i\":\"") })
+    |> option.and_then(fn(p) { quoted(raw, p, ",\"s\":\"") })
+    |> option.and_then(fn(p) { quoted(raw, p, ",\"p\":\"") })
+    |> option.and_then(fn(p) { threshold(raw, p, ",\"kt\":") })
+    |> option.map(fn(t) { t.1st })
+    |> option.and_then(fn(p) { strings(raw, p, ",\"k\":") })
+    |> option.map(fn(t) { t.1st })
+  when head is {
+    None -> None
+    Some(p) ->
+      when threshold(raw, p, ",\"nt\":") is {
+        None -> None
+        Some((p, nt_start, nt_value)) ->
+          when strings(raw, p, ",\"n\":") is {
+            None -> None
+            Some((p, n_starts, n_values)) -> {
+              let tail = Some(p)
+                |> option.and_then(fn(p) { quoted(raw, p, ",\"bt\":\"") })
+                |> option.and_then(fn(p) { strings(raw, p, ",\"br\":") })
+                |> option.map(fn(t) { t.1st })
+                |> option.and_then(fn(p) { strings(raw, p, ",\"ba\":") })
+                |> option.map(fn(t) { t.1st })
+                |> option.and_then(fn(p) { literal(raw, p, ",\"a\":") })
+              when tail is {
+                Some(p) ->
+                  // the last member value is consumed whole, and the object closes with the last byte of the body
+                  when json_end(raw, p) is {
+                    Some(end) ->
+                      if end == len - 1 && builtin.index_bytearray(raw, end) == 125 {
+                        Some(
+                          RotationBody {
+                            nt_start,
+                            nt_value,
+                            n_starts,
+                            n_values,
+                          },
+                        )
+                      } else {
+                        None
+                      }
+                    None -> None
+                  }
+                None -> None
+              }
+            }
+          }
+      }
+  }
+}
+
+// `length` bytes of `raw` from `start`: one builtin slice, without copying what follows.
+fn part(raw: ByteArray, start: Int, length: Int) -> ByteArray {
+  builtin.slice_bytearray(start, length, raw)
+}
+
+// Does `raw` have `text` at `pos`? Bounds-checked.
+fn has_at(raw: ByteArray, pos: Int, text: ByteArray) -> Bool {
+  let n = bytearray.length(text)
+  pos >= 0 && pos + n <= bytearray.length(raw) && part(raw, pos, n) == text
+}
+
+// The position after the compact JSON value at `pos`: a string (with its escapes), a number, `true`, `false`, `null`,
+// an array or an object, whose members are read in turn. Nothing but the value is consumed; whitespace is outside
+// the profile.
+fn json_end(raw: ByteArray, pos: Int) -> Option<Int> {
+  if pos >= bytearray.length(raw) {
+    None
+  } else {
+    let byte = builtin.index_bytearray(raw, pos)
+    if byte == 34 {
+      json_string_end(raw, pos + 1)
+    } else if byte == 91 {
+      if has_at(raw, pos, "[]") {
+        Some(pos + 2)
+      } else {
+        json_elements(raw, pos + 1)
+      }
+    } else if byte == 123 {
+      if has_at(raw, pos, "{}") {
+        Some(pos + 2)
+      } else {
+        json_members(raw, pos + 1)
+      }
+    } else if has_at(raw, pos, "true") {
+      Some(pos + 4)
+    } else if has_at(raw, pos, "false") {
+      Some(pos + 5)
+    } else if has_at(raw, pos, "null") {
+      Some(pos + 4)
+    } else if byte == 45 || byte >= 48 && byte <= 57 {
+      json_number_end(raw, pos)
+    } else {
+      None
+    }
+  }
+}
+
+// The byte of `raw` at `pos`, or -1 beyond its end.
+fn byte_or_none(raw: ByteArray, pos: Int) -> Int {
+  if pos >= 0 && pos < bytearray.length(raw) {
+    builtin.index_bytearray(raw, pos)
+  } else {
+    -1
+  }
+}
+
+// The position after the string whose content starts at `pos`: a control character, an escape that is not one of
+// `" \ / b f n r t` or `u` and four hexadecimal digits, and an unterminated string are outside the profile.
+fn json_string_end(raw: ByteArray, pos: Int) -> Option<Int> {
+  let byte = byte_or_none(raw, pos)
+  if byte == 34 {
+    Some(pos + 1)
+  } else if byte == 92 {
+    let escape = byte_or_none(raw, pos + 1)
+    if escape == 117 {
+      if hex_digits(raw, pos + 2, 4) {
+        json_string_end(raw, pos + 6)
+      } else {
+        None
+      }
+    } else if escape == 34 || escape == 92 || escape == 47 || escape == 98 || escape == 102 || escape == 110 || escape == 114 || escape == 116 {
+      json_string_end(raw, pos + 2)
+    } else {
+      None
+    }
+  } else if byte < 32 {
+    None
+  } else {
+    json_string_end(raw, pos + 1)
+  }
+}
+
+// Are the `count` bytes of `raw` from `pos` hexadecimal digits?
+fn hex_digits(raw: ByteArray, pos: Int, count: Int) -> Bool {
+  if count == 0 {
+    True
+  } else {
+    let byte = byte_or_none(raw, pos)
+    (
+      byte >= 48 && byte <= 57 || byte >= 65 && byte <= 70 || byte >= 97 && byte <= 102
+    ) && hex_digits(raw, pos + 1, count - 1)
+  }
+}
+
+// The position after the run of decimal digits that starts at `pos` (`pos` itself when there is none).
+fn digits_end(raw: ByteArray, pos: Int) -> Int {
+  let byte = byte_or_none(raw, pos)
+  if byte >= 48 && byte <= 57 {
+    digits_end(raw, pos + 1)
+  } else {
+    pos
+  }
+}
+
+// The position after the number at `pos`, by the JSON grammar: an optional minus, `0` or a nonzero digit and
+// digits, an optional fraction with at least one digit, an optional exponent with an optional sign and at least one
+// digit.
+fn json_number_end(raw: ByteArray, pos: Int) -> Option<Int> {
+  let start = if byte_or_none(raw, pos) == 45 {
+    pos + 1
+  } else {
+    pos
+  }
+  let lead = byte_or_none(raw, start)
+  let integer_end = if lead == 48 {
+    Some(start + 1)
+  } else if lead >= 49 && lead <= 57 {
+    Some(digits_end(raw, start + 1))
+  } else {
+    None
+  }
+  when integer_end is {
+    None -> None
+    Some(after_integer) -> {
+      let after_fraction = if byte_or_none(raw, after_integer) == 46 {
+        let end = digits_end(raw, after_integer + 1)
+        if end == after_integer + 1 {
+          None
+        } else {
+          Some(end)
+        }
+      } else {
+        Some(after_integer)
+      }
+      when after_fraction is {
+        None -> None
+        Some(p) -> {
+          let marker = byte_or_none(raw, p)
+          if marker == 101 || marker == 69 {
+            let sign = byte_or_none(raw, p + 1)
+            let digits_from = if sign == 43 || sign == 45 {
+              p + 2
+            } else {
+              p + 1
+            }
+            let end = digits_end(raw, digits_from)
+            if end == digits_from {
+              None
+            } else {
+              Some(end)
+            }
+          } else {
+            Some(p)
+          }
+        }
+      }
+    }
+  }
+}
+
+// The elements of an array from the first one, to the position after its closing bracket.
+fn json_elements(raw: ByteArray, pos: Int) -> Option<Int> {
+  when json_end(raw, pos) is {
+    None -> None
+    Some(end) ->
+      if has_at(raw, end, ",") {
+        json_elements(raw, end + 1)
+      } else if has_at(raw, end, "]") {
+        Some(end + 1)
+      } else {
+        None
+      }
+  }
+}
+
+// The members of an object from the first key, to the position after its closing brace.
+fn json_members(raw: ByteArray, pos: Int) -> Option<Int> {
+  if has_at(raw, pos, "\"") {
+    when json_string_end(raw, pos + 1) is {
+      None -> None
+      Some(after_key) ->
+        if has_at(raw, after_key, ":") {
+          when json_end(raw, after_key + 1) is {
+            None -> None
+            Some(end) ->
+              if has_at(raw, end, ",") {
+                json_members(raw, end + 1)
+              } else if has_at(raw, end, "}") {
+                Some(end + 1)
+              } else {
+                None
+              }
+          }
+        } else {
+          None
+        }
+    }
+  } else {
+    None
+  }
+}
+
+// The position after `text`, when `raw` has it at `pos`.
+fn literal(raw: ByteArray, pos: Int, text: ByteArray) -> Option<Int> {
+  if has_at(raw, pos, text) {
+    Some(pos + bytearray.length(text))
+  } else {
+    None
+  }
+}
+
+// The position of the closing quote of the string whose content starts at `pos`; a backslash or a control
+// character is outside the profile.
+fn string_close(raw: ByteArray, pos: Int) -> Option<Int> {
+  if pos >= bytearray.length(raw) {
+    None
+  } else {
+    let byte = builtin.index_bytearray(raw, pos)
+    if byte == 34 {
+      Some(pos)
+    } else if byte == 92 || byte < 32 {
+      None
+    } else {
+      string_close(raw, pos + 1)
+    }
+  }
+}
+
+// The position after `text` followed by a string and its closing quote.
+fn quoted(raw: ByteArray, pos: Int, text: ByteArray) -> Option<Int> {
+  literal(raw, pos, text)
+    |> option.and_then(fn(start) { string_close(raw, start) })
+    |> option.map(fn(close) { close + 1 })
+}
+
+// `text`, then a JSON array of strings: where it ends, where each string starts and what each spells.
+fn strings(
+  raw: ByteArray,
+  pos: Int,
+  text: ByteArray,
+) -> Option<(Int, List<Int>, List<ByteArray>)> {
+  when literal(raw, pos, text) is {
+    None -> None
+    Some(open) ->
+      if has_at(raw, open, "[]") {
+        Some((open + 2, [], []))
+      } else if has_at(raw, open, "[\"") {
+        string_items(raw, open + 2)
+      } else {
+        None
+      }
+  }
+}
+
+// The strings of an array from the content of one string on, to the closing bracket.
+fn string_items(
+  raw: ByteArray,
+  start: Int,
+) -> Option<(Int, List<Int>, List<ByteArray>)> {
+  when string_close(raw, start) is {
+    None -> None
+    Some(close) -> {
+      let value = part(raw, start, close - start)
+      if has_at(raw, close + 1, ",\"") {
+        when string_items(raw, close + 3) is {
+          Some((end, starts, values)) ->
+            Some((end, [start, ..starts], [value, ..values]))
+          None -> None
+        }
+      } else if has_at(raw, close + 1, "]") {
+        Some((close + 2, [start], [value]))
+      } else {
+        None
+      }
+    }
+  }
+}
+
+// `text`, then a threshold: a string or an array of strings or of arrays (an object is outside the profile). Where
+// it ends, where its value starts (after the quote of a string, at the bracket of an array) and what it spells.
+fn threshold(
+  raw: ByteArray,
+  pos: Int,
+  text: ByteArray,
+) -> Option<(Int, Int, ByteArray)> {
+  when literal(raw, pos, text) is {
+    None -> None
+    Some(start) ->
+      if has_at(raw, start, "\"") {
+        when string_close(raw, start + 1) is {
+          None -> None
+          Some(close) ->
+            Some(
+              (
+                close + 1,
+                start + 1,
+                bytearray.take(
+                  bytearray.drop(raw, start + 1),
+                  close - start - 1,
+                ),
+              ),
+            )
+        }
+      } else {
+        when array_end(raw, start) is {
+          None -> None
+          Some(end) -> Some((end, start, part(raw, start, end - start)))
+        }
+      }
+  }
+}
+
+// The position after the array at `pos`, whose items are strings or arrays.
+fn array_end(raw: ByteArray, pos: Int) -> Option<Int> {
+  if has_at(raw, pos, "[]") {
+    Some(pos + 2)
+  } else if has_at(raw, pos, "[") {
+    items_end(raw, pos + 1)
+  } else {
+    None
+  }
+}
+
+fn items_end(raw: ByteArray, pos: Int) -> Option<Int> {
+  let after = if has_at(raw, pos, "\"") {
+    string_close(raw, pos + 1) |> option.map(fn(close) { close + 1 })
+  } else {
+    array_end(raw, pos)
+  }
+  when after is {
+    None -> None
+    Some(end) ->
+      if has_at(raw, end, ",") {
+        items_end(raw, end + 1)
+      } else if has_at(raw, end, "]") {
+        Some(end + 1)
+      } else {
+        None
+      }
+  }
+}
+
+// The successor's next keys are the ones the body declares in its top-level `n`, at the offsets the evidence names.
+// A body with no read declares nothing.
+fn declares_next_keys(
+  body: Option<RotationBody>,
+  new: KeyStateView,
+  off_n: List<Int>,
+) -> Bool {
+  when body is {
+    Some(b) ->
+      b.n_values == list.map(new.next_keys, qb64_aid) && b.n_starts == off_n
+    None -> False
+  }
+}
+
+// The successor's next threshold is the one the body declares in its top-level `nt`, at the offset the evidence
+// names.
+fn declares_next_threshold(
+  body: Option<RotationBody>,
+  new: KeyStateView,
+  off_nt: Int,
+) -> Bool {
+  when body is {
+    Some(b) ->
+      b.nt_value == respell_threshold(new.next_threshold) && b.nt_start == off_nt
+    None -> False
   }
 }
 

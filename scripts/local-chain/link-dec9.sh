@@ -96,6 +96,8 @@ for entry in $ENTRIES; do
     FOLDTX=$(sed -n 's/^fold-transaction: //p' "$WORK/fold-$name.out")
     log "ok: folded $name: fold $FOLDTX consuming $REQ"
     txsize "$FOLDTX" "fold-$name"
+    # what the chain holds of the delivered checkpoint, kept as the facade serves it (inline datum included)
+    curl -s -X POST "$URL/tx_info" -H 'content-type: application/json' -d "{\"_tx_hashes\":[\"$FOLDTX\"],\"_inputs\":true,\"_assets\":true,\"_scripts\":true}" >"$WORK/fold-$name.tx_info.json"
 done
 
 STAGE=readback

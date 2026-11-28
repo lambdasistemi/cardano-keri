@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.Checkpoint
 import CardanoKeri.DuplicityExamples
 
@@ -5,10 +6,10 @@ open CardanoKeri.Checkpoint
 
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def env : Env := {
-  rotationTo := fun e sn sn' => decide ((e = 0 ∧ sn = 0 ∧ sn' = 1) ∨ (e = 1 ∧ sn = 1 ∧ sn' = 2))
+  advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun e sn sn' => decide ((e = 0 ∧ sn = 0 ∧ sn' = 1) ∨ (e = 1 ∧ sn = 1 ∧ sn' = 2)))
   depositAuthorized := fun _ => false
   quorum := fun _ => true
-  attestationMinted := fun _ => true,
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105, 0⟩,
   presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
@@ -27,7 +28,7 @@ def journey : Except String Unit := do
   let (rotateFlow, rotated) ← execute live (.rotate 1 .keep 7) 3
   check "rotation-premium" (decide (rotateFlow = { hunter := some { addr := 7, pool := 1 } }))
   check "rotation-exact-key" (decide (rotated = .present ⟨1, 1, false, false, 2, 42, 4, false⟩))
-  let wrongKey := { env with rotationTo := fun e sn sn' => decide (e = 2 ∧ sn = 1 ∧ sn' = 2) }
+  let wrongKey := { env with advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun e sn sn' => decide (e = 2 ∧ sn = 1 ∧ sn' = 2)) }
   check "wrong-key-refused" ((stepFn p wrongKey (.rotate 2 .keep 7) 4 rotated).isNone)
   let commitment : Commitment := {
     aid := 11, deployment := 21, keyState := ⟨1, 1⟩,

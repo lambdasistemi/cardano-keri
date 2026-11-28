@@ -11,18 +11,17 @@ def refused {α : Type} : Except String α → Bool
 
 def retention : Except String Unit := do
   let b := registration start.state 11 100
-  check "missing-inception" (refused (bookRegistration p { env with inception := fun _ => false }
+  check "missing-inception" (refused (bookRegistration p { env with bookingTx := fun _ => none }
     start.state b))
-  -- Every pending request has its evidence: under an environment where the refund address has
-  -- evidence and the key has none, whatever the booking step leaves pending is of a key with evidence.
-  let other : Env := { env with inception := fun k => k == b.request.refundAddress }
+  -- Every pending request has its evidence: under a mint for the other output index, whatever the booking step leaves pending is of a key with evidence.
+  let other : Env := { env with bookingTx := CardanoKeri.Attestation.Fixtures.readBooking [⟨100, 1, 711, 14⟩] }
   let pending := match stepFn p other (.bookRegistration b) start.state with
     | .ok (_, after) => after.registrations
     | .error _ => start.state.registrations
-  check "pending-requests-have-evidence" (pending.all fun r => other.inception r.request.key)
+  check "pending-requests-have-evidence" (pending.all fun r => other.inception cfg.applicationPolicy r)
   let (_, booked) ← execute start (.bookRegistration b)
   let (u, tx) ← foldTransaction booked.state [b.request.reference] 2 1 1
-  check "fold-reads-no-inception" (!refused (stepFn p { env with inception := fun _ => false }
+  check "fold-reads-no-inception" (!refused (stepFn p { env with bookingTx := fun _ => none }
     (.fold 0 cfg.applicationPolicy u tx) booked.state))
   let (_, live) ← execute booked (.fold 0 cfg.applicationPolicy u tx)
   let some original := carrierAt live.state 11 | throw "live-carrier-missing"

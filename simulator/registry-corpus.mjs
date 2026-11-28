@@ -22,6 +22,6 @@ export function sourceBindings() {
   const sources = ['lean/CardanoKeri/Registry.lean', 'lean/CardanoKeri/RegistryTraceWire.lean',
     'lean/CardanoKeri/RegistryScenarioFixtures.lean', 'lean/RegistryTraceDriver.lean',
     'lean/RegistryBoundaryDriver.lean', 'lean/RegistryStoryDriver.lean',
-    'lean/CardanoKeri/Duplicity.lean', 'lean/CardanoKeri/DuplicityExamples.lean', 'lean/CardanoKeri/CheckpointConviction.lean', 'simulator/checkpoint-conviction.mjs', 'simulator/registry-economic-core.mjs', 'simulator/registry-wire.mjs', 'simulator/registry-simulator-core.mjs'];
+    'lean/CardanoKeri/Duplicity.lean', 'lean/CardanoKeri/DuplicityExamples.lean', 'lean/CardanoKeri/CheckpointConviction.lean', 'simulator/attestation.mjs','simulator/checkpoint-conviction.mjs', 'simulator/registry-economic-core.mjs', 'simulator/registry-wire.mjs', 'simulator/registry-simulator-core.mjs'];
   return Object.fromEntries(sources.map(path => [path, sha256(readFileSync(resolve(ROOT, path)))]));
 }

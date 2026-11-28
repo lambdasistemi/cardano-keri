@@ -37,9 +37,6 @@
     "42": "Alice, request refund address"
   },
   "env": {
-    "inception": [
-      11
-    ],
     "convictions": [
       {
         "comparison": {
@@ -178,6 +175,89 @@
         "output": {
           "index": 0,
           "tx": 105
+        }
+      }
+    ],
+    "bookings": [
+      {
+        "identity": 100,
+        "assets": {
+          "spent": [],
+          "outputs": [],
+          "mint": [
+            [
+              {
+                "policy": 51,
+                "name": 11929519872
+              },
+              1
+            ]
+          ],
+          "invoked": [
+            51
+          ]
+        }
+      },
+      {
+        "identity": 300,
+        "assets": {
+          "spent": [],
+          "outputs": [],
+          "mint": [
+            [
+              {
+                "policy": 51,
+                "name": 11929519872
+              },
+              1
+            ]
+          ],
+          "invoked": [
+            51
+          ]
+        }
+      }
+    ],
+    "convictionTransactions": [
+      {
+        "output": {
+          "index": 0,
+          "tx": 105
+        },
+        "observation": {
+          "input": {
+            "tx": 103,
+            "index": 0
+          },
+          "transaction": {
+            "spent": [
+              {
+                "tx": 103,
+                "index": 0
+              }
+            ],
+            "outputs": [],
+            "invoked": [
+              52,
+              53
+            ],
+            "mint": [
+              [
+                {
+                  "policy": 52,
+                  "name": 54002556
+                },
+                1
+              ],
+              [
+                {
+                  "policy": 53,
+                  "name": 54002556
+                },
+                1
+              ]
+            ]
+          }
         }
       }
     ]

@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.ApplicationCustodyExample
 
 /-! Reachable inputs and executed edges for the #573 checks. The richer
@@ -5,6 +6,7 @@ registration commits two next keys and establishes witness 10. Its first
 rotation uses one key; sibling rotations can expose the other or change the
 witness set. The second advance lets checks distinguish consecutive priors. -/
 namespace CardanoKeri.Checkpoint.RivalControls
+set_option maxRecDepth 8192
 open Duplicity CheckpointConviction Examples
 
 def inceptionEvent : SignedEvent :=
@@ -115,7 +117,7 @@ theorem nestedReach : SysReach p nestedEnv nestedState := by
 def claim (r : SignedEvent) : Registry.Conviction := {obs with comparison.rival := r}
 def spendEnv (r : SignedEvent) (aid : Nat) : Env := {setup aid with
   presentedSpend := fun _ _ => some (claim r)
-  attestationMinted := fun seen => decide (seen = claim r)}
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads (claim r).output}
 def pledge (r : SignedEvent) := {commitment with evidence := r}
 def opened (r : SignedEvent) : Sys :=
   let c := pledge r
@@ -133,7 +135,7 @@ theorem openedReach (r : SignedEvent) : SysReach p (spendEnv r) (opened r) := by
   have rotated : SysReach p (spendEnv r) atFirst := by
     apply SysReach.step reg (.local ?_)
     refine ⟨11, .rotate 1 .keep 6, 3, {hunter := some {addr := 6, pool := 1}},
-      .present rotatedLive, ?_, Step.rotateKeepPaid 3 1 6 rfl (by decide) (by decide),
+      .present rotatedLive, ?_, Step.rotateKeepPaid (env := spendEnv r 11) (l := live) 3 1 6 (show (env 11).rotationTo live.epoch live.sn 1 = true from by decide) (by decide) (by decide),
       ⟨rfl, rfl⟩, rfl⟩
     intro _ _ h
     cases h
@@ -160,7 +162,7 @@ def incClaim : Registry.Conviction :=
   ⟨⟨105, 0⟩, ⟨bookingOrigin.inception.datum.tip KeyEncoding.symbolic 0, incRival⟩⟩
 def incEnv (aid : Nat) : Env := {setup aid with
   presentedSpend := fun _ _ => some incClaim
-  attestationMinted := fun seen => decide (seen = incClaim)}
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads incClaim.output ⟨102, 1⟩}
 def incPledge := {pledge incRival with keyState := live.hash}
 def incOpened : Sys :=
   {atRegistration with commitments := fun k => if k = incPledge.marker then some incPledge else atRegistration.commitments k}

@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.CheckpointSystemHistory
 import CardanoKeri.RegistryLifecycleExamples
 import CardanoKeri.DuplicityExamples
@@ -12,8 +13,8 @@ set_option maxHeartbeats 2000000
 
 def p : Params := { D := 3, B := 2, P := 1, W := 5, hD := by decide, hB := by decide }
 def env (aid : AID) : Env := {
-  rotationTo := fun epoch sn next => aid == 11 && ((epoch == 0 && sn == 0 && next == 1) ||
-    (epoch == 1 && sn == 1 && next == 2)),
+  advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun epoch sn next => aid == 11 && ((epoch == 0 && sn == 0 && next == 1) ||
+    (epoch == 1 && sn == 1 && next == 2))),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
   inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
@@ -21,7 +22,7 @@ def env (aid : AID) : Env := {
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := KeyReads.symbolic
-  attestationMinted := fun _ => true,
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105 + (aid - 11), 0⟩,
   presentedSpend := fun e sn => some ⟨⟨105 + (aid - 11), 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison aid e sn⟩,
   convictionContext := fun epoch sn => some (Duplicity.fixture epoch sn).1,
   convictionRival := fun epoch sn => some (Duplicity.fixture epoch sn).2 }
@@ -460,20 +461,20 @@ theorem rotated_spend_uses_one_rival :
       some ({ refund := some { addr := 42, b := 2, pool := 4 }, convictor := some { addr := 7, dreg := 3 } },
         .terminationPending rotatedLive.hash) := by decide
 
--- Keep the original commitment and two-event reader while removing the
--- enforcement observer's successful signature read.
-/-- The minted claim must match the exact pending output and rival of the
-spend. A claim for the same identifier and position at the other index fails. -/
+-- Keep the original commitment and two-event reader while changing the
+-- output selected in the conviction transaction.
+/-- The pending output selects its producing spend. A production recorded only
+at 105#1 fails the read for 105#0 with the same spent-tip comparison. -/
 theorem conviction_mint_bound_to_output :
     let exactClaim : Registry.Conviction :=
       ⟨⟨105, 0⟩, CheckpointConviction.Fixtures.comparison 11 1 1⟩
     let other := {exactClaim with output.index := 1}
     let atUse := fun (claim : Registry.Conviction) =>
-      ({env 11 with attestationMinted := fun observed => decide (observed = claim)} : Env)
+      ({env 11 with convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads claim.output} : Env)
     (atUse exactClaim).acceptsRival 1 1 = true ∧
       (atUse other).acceptsRival 1 1 = false := by decide
 
-example : stepFn p { env 11 with attestationMinted := fun _ => false } (.convict 7 commitment) 5
+example : stepFn p { env 11 with convictionReads := { (env 11).convictionReads with producingSpend := fun _ => none } } (.convict 7 commitment) 5
     (.present rotatedLive) = none := by decide
 
 namespace NestedWriter

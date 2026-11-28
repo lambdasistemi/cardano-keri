@@ -23,7 +23,7 @@
       "pause": 500
     },
     {
-      "text": "The accepted design assumes the identity owner rotates her keys with kli. On Cardano the controller books the registration (constitution, principle XII) and the registry's folder processes the booked request; beyond that the owner puts money in and authorizes what her keys alone can authorize. A hunter can present a later witnessed rotation to advance the checkpoint; when the pool covers the premium, the premium goes to the payee the hunter names, and otherwise the rotation lands unpaid. When the freeze conditions hold, a hunter can freeze the checkpoint, and the freeze bond goes to the payee the freeze names. Anyone may top the pool up with at least one premium while the checkpoint carries no top-up mark.",
+      "text": "The accepted design assumes the identity owner rotates her keys with kli. On Cardano the controller books the registration with the signed inception and its witness receipts (constitution, principle XII) and the registry's folder processes the booked request; beyond that the owner puts money in and authorizes what her keys alone can authorize. A hunter can present a later witnessed rotation to advance the checkpoint; when the pool covers the premium, the premium goes to the payee the hunter names, and otherwise the rotation lands unpaid. When the freeze conditions hold, a hunter can freeze the checkpoint, and the freeze bond goes to the payee the freeze names. Anyone may top the pool up with at least one premium while the checkpoint carries no top-up mark.",
       "pause": 400
     },
     {
@@ -249,6 +249,6 @@
   ],
   "_source": {
     "file": "user-experience.md",
-    "sha256": "21e64c2d2caf68a76714a44042119e0b872f2ce4f328c5c3545e50298b127d1c"
+    "sha256": "3edda5bc52459cebadcc0bbf6fdbfee8ad4bae917256454d9ec42804babeb291"
   }
 }

@@ -25,8 +25,8 @@
   },
   {
     "id": "registration-no-inception",
-    "before": "  if !env.inception b.request.key then throw \"keri-inception-refused\"",
-    "after": "  if !env.inception b.request.key && false then throw \"keri-inception-refused\"",
+    "before": "  if !env.inception s.config.applicationPolicy b then throw \"keri-inception-refused\"",
+    "after": "  if !env.inception s.config.applicationPolicy b && false then throw \"keri-inception-refused\"",
     "failure": "missing-inception",
     "owner": "CardanoKeri.Registry.booking_refuses_missing_inception",
     "test": "RegistryRetentionChecks"
@@ -157,15 +157,15 @@
   {
     "id": "fold-reads-inception",
     "before": "  | .fold gen plugin u tx => fold p s gen plugin u tx",
-    "after": "  | .fold gen plugin u tx => if (Singular.foldMembers s.toWorld tx).all (fun m => match m with | .registration b => env.inception b.request.key | .termination _ => true) then fold p s gen plugin u tx else .error \"keri-inception-refused\"",
+    "after": "  | .fold gen plugin u tx => if (Singular.foldMembers s.toWorld tx).all (fun m => match m with | .registration b => env.inception s.config.applicationPolicy b | .termination _ => true) then fold p s gen plugin u tx else .error \"keri-inception-refused\"",
     "failure": "fold-reads-no-inception",
     "owner": "CardanoKeri.Registry.only_booking_reads_inception",
     "test": "RegistryRetentionChecks"
   },
   {
     "id": "booking-evidence-of-another-field",
-    "before": "  if !env.inception b.request.key then throw \"keri-inception-refused\"",
-    "after": "  if !env.inception b.request.refundAddress then throw \"keri-inception-refused\"",
+    "before": "  if !env.inception s.config.applicationPolicy b then throw \"keri-inception-refused\"",
+    "after": "  if !env.inception s.config.applicationPolicy { b with request.reference.index := b.request.reference.index + 1 } then throw \"keri-inception-refused\"",
     "failure": "pending-requests-have-evidence",
     "owner": "CardanoKeri.Registry.booked_request_has_inception",
     "test": "RegistryRetentionChecks"

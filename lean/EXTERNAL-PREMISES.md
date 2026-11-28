@@ -52,6 +52,15 @@ opening distinguishes the two byte strings. Verified signatures and receipts
 must refer to the actual signed body of the event being graded. Lean checks decoded transitions under these premises. Production authentication
 of the complete writer opening at registration and advance remains open.
 
+For an ordinary rotation the relayer or convictor presents the signed next
+threshold. Its width must fit the number of next digests, every weighted clause
+must total at least one, and each nested member list must independently total
+at least one. A numeric next threshold of zero permits abandonment. Cuts must
+belong to the previous witness list and additions must be new to it. The
+result requires a positive receipt threshold exactly when witnesses remain.
+Both the writer and the rival use this rotation judgment. [keripy rotation construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L857-L907)
+and [weighted threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L4026-L4062).
+
 Ordinary inception has no signed prior link, cuts or adds. The controller's
 booking decoder must detect even an empty forbidden field before projecting it
 to the empty decoded value. For registration, advance and rival grading,
@@ -254,6 +263,20 @@ keys, thresholds and witnesses and runs the signature and witness quorum checks.
 For a basic prefix it checks the sole qualified key and the numeric threshold
 one. A non-transferable basic prefix also requires empty next commitments,
 witnesses and seals. A transferable basic prefix permits empty next commitments.
+The numeric signing threshold must be positive. The next threshold's width
+must fit the signed list of next digests. A weighted declaration must have at
+least one clause. Each clause and each nested group of members must reach
+one. For example, two `1/3` weights in a single clause fail, and two signed
+`2/4` weights satisfy it. A numeric zero is permitted for the next declaration. [keripy 1.3.5 threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L694-L716)
+
+System registration reads the booking evidence indexed by the identifier and
+initial datum through `Env.inceptionBytes`. Its issuer and system readers both
+apply `OpeningReads.accepts` to the same decoded fields. `admitted_initial_history`
+states the correspondence when both readers open the same indexed bytes with
+the same public decoders. The simulator interprets prefix codes and
+digests from finite public read tables. Its historical traces use synthetic
+transferable basic identifiers.
+
 After the fold, the reader decodes the kind from the AID of the delivered datum.
 [keripy 1.3.5 prefix classes](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L610-L683)
 and [inception checks](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L1564-L1610).

@@ -55,10 +55,24 @@ structure RotationRow where
   signed : CardanoKeri.Duplicity.SignedEvent
   deriving Lean.ToJson, Lean.FromJson
 
+/-- Finite interpretations of the public prefix decoder and the qualified
+digest primitive on signed content, supplied independently of a writer row. -/
+structure PrefixTable where
+  codes : List (Nat × String)
+  digests : List (CardanoKeri.Duplicity.Content × Nat)
+  deriving Lean.ToJson, Lean.FromJson
+
 structure WriterTable where
   inceptions : List InceptionRow := []
   rotations : List RotationRow := []
-  deriving Lean.ToJson, Lean.FromJson
+  prefixes : Option PrefixTable := none
+  deriving Lean.FromJson
+
+instance : ToJson WriterTable where
+  toJson t := Json.mkObj ([("inceptions", toJson t.inceptions), ("rotations", toJson t.rotations)] ++
+    t.prefixes.toList.map fun p => ("prefixes", toJson p))
+
+private def InceptionRow.bytes (r : InceptionRow) := (toJson r).compress.toUTF8.data.toList
 
 /-- A synthetic event table for connected lifecycle fixtures. Every encoded
 row contains the signed event checked by the interpreter. -/
@@ -112,9 +126,21 @@ def EnvTable.read (t : EnvTable) (mints : MintTable) (aid : Nat := 0) : Env wher
       row.epoch == e && row.sn == sn && row.next == next)).map (·.observation)⟩
   depositAuthorized := fun e => t.depositAuthorized.contains e
   quorum := fun e => t.quorum.contains e
-  inceptionWriter := fun aid datum => do
-    let row ← t.writers.inceptions.find? fun row => row.aid == aid && row.datum == datum
-    return (row.signed, row.witnesses)
+  -- Historical traces use synthetic transferable basic identifiers.
+  inceptionBytes := fun subject datum => do
+    let row ← t.writers.inceptions.find? fun row => row.aid == subject && row.datum == datum
+    return row.bytes
+  inceptionOpening := {
+    prefixCode := fun subject => match t.writers.prefixes with
+      | none => if t.writers.inceptions.any (·.aid == subject) then some "D" else none
+      | some prefixes => (prefixes.codes.lookup subject)
+    deriveIdentifier := fun bytes => do
+      let table ← t.writers.prefixes
+      let row ← t.writers.inceptions.find? (·.bytes == bytes)
+      table.digests.lookup row.signed.event
+    decodeEvidence := fun bytes => do
+      let row ← t.writers.inceptions.find? (·.bytes == bytes)
+      return ⟨row.signed, row.witnesses⟩ }
   rotationWriter := fun aid epoch sn target => do
     let row ← t.writers.rotations.find? fun row =>
       row.aid == aid && row.epoch == epoch && row.sn == sn && row.signed.event.sn == target

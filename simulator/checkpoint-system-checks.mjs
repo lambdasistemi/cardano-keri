@@ -102,16 +102,17 @@ const writerChanges = {
   'current keys': event => event.keys.push(19),
   'current threshold': event => { event.threshold = {weighted: {clauses: [[{key: {weight: {numerator:1,denominator:1}}}]]}}; },
   'next keys': event => { event.nextKeys = [19]; },
-  'next threshold': event => { event.nextThreshold = {count: {required: 2}}; },
-  witnesses: event => { event.adds = [19]; },
-  'witness threshold': event => { event.adds = [19]; event.witnessThreshold = 1; }
+  'next threshold': event => { event.nextThreshold = {count: {required: 0}}; },
+  witnesses: event => { event.adds = [19, 20]; event.witnessThreshold = 1; },
+  'witness threshold': event => { event.adds = [19, 20]; event.witnessThreshold = 2; }
 };
 for (const [field, change] of Object.entries(writerChanges)) {
   const evidence = structuredClone(first.env);
   const signed = evidence[0][1].writers.rotations.at(-1).signed;
   change(signed.event);
   for (const signature of signed.signatures) signature.event = signed.event;
-  if (signed.event.witnessThreshold > 0) signed.receipts = [{signer:19,event:signed.event,verified:true}];
+  if (signed.event.witnessThreshold > 0)
+    signed.receipts = signed.event.adds.map(signer => ({signer, event: signed.event, verified: true}));
   const replay = replaySystem(first.params, evidence, journey.deployment, comparedPrefix.map(cell => cell.command));
   assert(replay.records.slice(0, -1).every(record => record.result.ok), field + ': changed writer must be reachable');
   assert.equal(replay.records.at(-1).result.error, 'checkpoint-rotation-writer-mismatch', field);

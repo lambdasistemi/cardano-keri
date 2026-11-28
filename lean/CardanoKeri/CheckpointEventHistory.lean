@@ -44,7 +44,8 @@ The wire reader must check field absence in the signed body. -/
 def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : Bool :=
   let e := event.event
   let receipts := verifiedSigners e event.receipts
-  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty
+  let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty &&
+    e.nextThreshold.fitsNextKeys e.nextKeys.length
   e.aid == aid && e.sn == 0 && e.kind == .inception &&
     (event.structureVerified && inceptionFields && e.weightsAtMostOne && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&
@@ -93,6 +94,36 @@ theorem rotation_weights_at_most_one {prior : Predecessor} {signed : SignedEvent
     signed.event.nextThreshold.weightsAtMostOne = true := by
   simp only [rotationValid, Content.weightsAtMostOne, Bool.and_eq_true] at accepted
   exact ⟨accepted.1.1.1.1.2.1.1.2, accepted.1.1.1.1.2.1.2⟩
+
+/-- Given an admitted rotation, when the next rule is read from its signed
+body, its width fits its declared digests and its weighted clauses and groups
+meet the minimum for a declaration. -/
+theorem rotation_next_rule_fits {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    signed.event.nextThreshold.fitsNextKeys signed.event.nextKeys.length = true := by
+  simp only [rotationValid, Bool.and_eq_true] at accepted
+  grind
+
+/-- Given an admitted rotation, its cuts are prior witnesses, its additions
+are new, and any nonempty resulting set has a positive receipt threshold. -/
+theorem rotation_witness_changes_valid {prior : Predecessor} {signed : SignedEvent}
+    (accepted : rotationValid prior signed = true) :
+    (∀ w ∈ signed.event.cuts, w ∈ prior.witnesses) ∧
+    (∀ w ∈ signed.event.adds, w ∉ prior.witnesses) ∧
+    (derivedWitnesses prior signed.event ≠ [] → 0 < signed.event.witnessThreshold) := by
+  simp [rotationValid, receiptsValid] at accepted
+  grind
+
+/-- Given any keys and signer subset, checking numeric signing threshold zero
+returns false, including when every key signed. -/
+theorem zero_signing_threshold_unsatisfied (keys signers : List Nat) :
+    (Threshold.count 0).satisfied keys signers = false := by rfl
+
+/-- Given a decoded rotation with numeric signing threshold zero, neither
+the signatures it carries nor the predecessor can make it a valid rotation. -/
+theorem rotation_zero_signing_threshold_refused (prior : Predecessor) (signed : SignedEvent)
+    (zero : signed.event.threshold = .count 0) : rotationValid prior signed = false := by
+  simp [rotationValid, signingValid, zero, zero_signing_threshold_unsatisfied]
 
 /-- Given authenticated openings for the installed writer and the presented
 rival, when the KERI digest has no collision on these two signed byte bodies,

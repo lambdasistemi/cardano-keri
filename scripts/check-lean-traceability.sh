@@ -11,6 +11,10 @@ base_sha="${2:-9b2e6b88937707cc2c571ae1e9e5f112dc248a30}"
 ruling_url=https://github.com/lambdasistemi/cardano-keri/issues/366#issuecomment-5543757547
 lean_root="$repo_root/lean"
 
+# Validate the reviewed validator-source table against this checkout and the
+# published January reference on every pull request and push to main.
+node "$repo_root/scripts/validator-conformance.mjs" --check --published
+
 retired_modules=(Lifecycle Goals Invariants)
 for module in "${retired_modules[@]}"; do
   test ! -e "$lean_root/CardanoKeri/$module.lean" || {
@@ -119,6 +123,12 @@ for pair in ReviewedContracts:151 PreservedContracts:49; do
   lake_run env lean "retained-parking/$source_name.lean" >"$tmp_root/$source_name.log" 2>&1 || { cat "$tmp_root/$source_name.log"; exit 1; }
   cat "$tmp_root/$source_name.log"
 done
+
+lake_run env lean --run InceptionPrefixReference.lean >"$tmp_root/inception-prefix.json"
+nix develop --quiet --no-write-lock-file "$repo_root/offchain/test/keri-fixtures" --command \
+  python "$lean_root/check-inception-prefix.py" "$tmp_root/inception-prefix.json"
+lake_run env lean CheckpointRivalValidityControls.lean
+lake_run env lean RotationAdmissionChecks.lean
 
 git -C "$repo_root" diff HEAD --check
 node "$lean_root/retained-parking/story-bindings.mjs"

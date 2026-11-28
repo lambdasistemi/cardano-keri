@@ -31,7 +31,7 @@ def bookingOrigin := {origin with inception := EventHistory.inception inceptionE
 private def acceptsNext (threshold : Threshold) (atInception : Bool) : Bool :=
   if atInception then opensInception { inceptionEvent.event with nextThreshold := threshold }
   else rotationValid bookingOrigin.inception.predecessor
-    (signed { first.event with nextThreshold := threshold } [1] [10])
+    (signed { first.event with nextKeys := [4,5], nextThreshold := threshold } [1] [10])
 
 private def nextDenominatorCases (atInception : Bool) : Bool :=
   acceptsNext (.weighted [[.key ⟨2, 4⟩, .key ⟨1, 2⟩]]) atInception &&
@@ -62,7 +62,10 @@ private def admittedWeight (rule : Threshold) (expected : Bool) : Bool :=
   nextThreshold := .weighted [[.key ⟨2,1⟩, .key ⟨0,1⟩]] } first
 
 def setup : SystemEnv := fun aid => {env aid with
-  inceptionWriter := fun _ _ => some (inceptionEvent, [10])
+  inceptionOpening := {
+    prefixCode := fun subject => if subject == 11 then some "E" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some ⟨inceptionEvent, [10]⟩ else none
+    deriveIdentifier := fun bytes => if bytes == [1] then some 11 else none }
   rotationWriter := fun _ _ _ sn => some (if sn = 1 then first else second)}
 def atRegistration := (Sys.init deployment).installOrigin 11 (.present live) bookingOrigin
 def h1 := EventHistory.rotation bookingOrigin.inception first

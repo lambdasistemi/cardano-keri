@@ -6,46 +6,12 @@ initial checkpoint at the exact output named by each booking action. -/
 namespace CardanoKeri.Application.InceptionPrefix
 open Checkpoint Duplicity SingularApplicationHeld
 
-inductive Kind where
-  | basic (transferable : Bool)
-  | selfAddressing
-  deriving Repr, DecidableEq, BEq
-
-/-- Classify a decoded CESR derivation code in the ordinary basic-key and
-self-addressing inception domain (keripy 1.3.5, coring.py, PreNonDigDex,
-NonTransDex and DigDex). The serialized material must already parse. -/
-def classify : String → Option Kind
-  | "B" | "1AAA" | "1AAC" | "1AAI" => some (.basic false)
-  | "D" | "1AAB" | "1AAD" | "1AAJ" => some (.basic true)
-  | "E" | "F" | "G" | "H" | "I" | "0D" | "0E" | "0F" | "0G" => some .selfAddressing
-  | _ => none
-
-/-- Decoded from one signed inception body and its attachments. -/
-structure Evidence where
-  signed : SignedEvent
-  witnesses : List Nat
-  seals : List Nat
-
-/-- Primitive reads of the booking transaction. Qualified identifiers and keys
-share one identity domain, including their derivation codes. The digest read
-uses the code of i and the prescribed serialization of this same signed body.
-The tip opens the writer commitment of the specified public datum. -/
-structure Reads where
+structure Reads extends OpeningReads where
   bytesAt : Observation → Nat → Option (List UInt8)
-  decodeEvidence : List UInt8 → Option Evidence
-  prefixCode : AID → Option String
-  deriveIdentifier : List UInt8 → Option AID
   openTip : Nat → List UInt8 → Option CheckpointConviction.Tip
   keys : KeyReads
 
-def kindOf (prefixCode : AID → Option String) (aid : AID) : Option Kind :=
-  (prefixCode aid).bind classify
-
-def binding (reads : Reads) (bytes : List UInt8) (aid : AID) (e : Evidence) : Kind → Bool
-  | .basic transferable =>
-    e.signed.event.keys == [aid] && decide (e.signed.event.threshold = .count 1) &&
-      (transferable || (e.signed.event.nextKeys.isEmpty && e.witnesses.isEmpty && e.seals.isEmpty))
-  | .selfAddressing => reads.deriveIdentifier bytes == some aid
+abbrev binding (reads : Reads) := reads.toOpeningReads.binding
 
 /-- Given a basic non-transferable prefix, when booking checks its signed
 fields, then it requires the matching sole key, threshold one and empty
@@ -54,7 +20,7 @@ theorem nontransferable_iff (reads bytes aid e) :
     binding reads bytes aid e (.basic false) = true ↔
       e.signed.event.keys = [aid] ∧ e.signed.event.threshold = .count 1 ∧
       e.signed.event.nextKeys = [] ∧ e.witnesses = [] ∧ e.seals = [] := by
-  simp [binding, and_assoc]
+  simp [binding, OpeningReads.binding, and_assoc]
 
 /-- A later chain reader gets the kind from the qualified AID in the public
 checkpoint datum. Booking uses exactly this decoder. -/
@@ -77,9 +43,8 @@ def verify (i : Interpretation) (reads : Reads) (o : Observation) (index raw : N
     let bytes ← reads.bytesAt o index
     let e ← reads.decodeEvidence bytes
     let tip ← reads.openTip raw bytes
-    return inceptionWrites d.aid e.signed e.witnesses &&
-      reads.keys.matchesDatum d.aid 0 (.inception e.signed.event e.witnesses) tip &&
-      binding reads bytes d.aid e kind).getD false
+    return reads.toOpeningReads.accepts bytes d.aid e kind &&
+      reads.keys.matchesDatum d.aid 0 (.inception e.signed.event e.witnesses) tip).getD false
 
 def claimAt (i : Interpretation) (release : PublishedRelease) (o : Observation) :
     Application.Action → Option Attestation.Claim
@@ -160,7 +125,97 @@ theorem admitted_basic_sole_key {i env rp cp release reads emptyName o index out
   rename_i bytes
   cases he : reads.decodeEvidence bytes <;> simp [he] at verified
   rename_i e
-  cases ht : reads.openTip data.initialDatum bytes <;> simp [ht, binding] at verified
-  exact ⟨bytes, e, rfl, he, verified.1.1, verified.2.1.1, verified.2.1.2⟩
+  cases ht : reads.openTip data.initialDatum bytes <;> simp [ht, OpeningReads.accepts, OpeningReads.binding] at verified
+  exact ⟨bytes, e, rfl, he, verified.1.1, verified.1.2.1.1, verified.1.2.1.2⟩
+
+/-- Given the public datum and the decoded evidence at an admitted booking,
+the identifier binds that same body, its next threshold fits its commitments,
+and the controller signature threshold is satisfied. -/
+theorem admitted_opening_fields {i env rp cp release reads emptyName o index output data d bytes e k}
+    (ok : admitted i env rp cp release reads emptyName o = true)
+    (booked : Application.Action.bookRegistration index ∈ o.actions)
+    (found : o.outputs[index]? = some output)
+    (registered : decoded i.decode output = some (.registration data))
+    (opened : i.decodeCheckpoint data.initialDatum = some d)
+    (kind : kindOf reads.prefixCode d.aid = some k)
+    (source : reads.bytesAt o index = some bytes) (decodedBody : reads.decodeEvidence bytes = some e) :
+    binding reads bytes d.aid e k = true ∧ e.signed.event.nextThreshold.width ≤ e.signed.event.nextKeys.length ∧
+      e.signed.event.threshold.satisfied e.signed.event.keys (verifiedSigners e.signed.event e.signed.signatures) = true := by
+  have verified := (admitted_evidence ok booked found registered).2
+  cases ht : reads.openTip data.initialDatum bytes <;>
+    simp [verify, opened, kind, source, decodedBody, ht, OpeningReads.accepts] at verified
+  obtain ⟨⟨written, bound⟩, _⟩ := verified
+  simp [inceptionWrites, Threshold.fitsNextKeys] at written
+  exact ⟨bound, by grind, by grind⟩
+
+/-- Given an admitted booking, when the registration reader opens the same
+indexed evidence and uses the same public decoders, it installs that booking's
+signed writer and witnesses as the initial history. -/
+theorem admitted_initial_history {i env rp cp release reads emptyName o index output data d}
+    (ok : admitted i env rp cp release reads emptyName o = true)
+    (booked : Application.Action.bookRegistration index ∈ o.actions)
+    (found : o.outputs[index]? = some output)
+    (registered : decoded i.decode output = some (.registration data))
+    (opened : i.decodeCheckpoint data.initialDatum = some d) (system : Checkpoint.Env)
+    (decoders : system.inceptionOpening = reads.toOpeningReads)
+    (indexed : system.inceptionBytes d.aid data.initialDatum = reads.bytesAt o index) :
+    ∃ bytes e, reads.bytesAt o index = some bytes ∧ reads.decodeEvidence bytes = some e ∧
+      system.initialHistory d.aid (some data.initialDatum) = some (.inception e.signed e.witnesses) := by
+  have verified := (admitted_evidence ok booked found registered).2
+  cases hk : kindOf reads.prefixCode d.aid <;> simp [verify, opened, hk] at verified
+  rename_i k
+  cases hb : reads.bytesAt o index <;> simp [hb] at verified
+  rename_i bytes
+  cases hd : reads.decodeEvidence bytes <;> simp [hd] at verified
+  rename_i e
+  cases ht : reads.openTip data.initialDatum bytes <;> simp [ht] at verified
+  exact ⟨bytes, e, rfl, hd, by simp [Checkpoint.Env.initialHistory, decoders, indexed, hb, hd, hk, verified.1]⟩
+
+/-- Given an admitted self-addressing booking, when its indexed evidence is
+read, deriving the qualified digest from those very bytes returns the AID. -/
+theorem admitted_self_addressing_digest {i env rp cp release reads emptyName o index output data d}
+    (ok : admitted i env rp cp release reads emptyName o = true)
+    (booked : Application.Action.bookRegistration index ∈ o.actions)
+    (found : o.outputs[index]? = some output)
+    (registered : decoded i.decode output = some (.registration data))
+    (opened : i.decodeCheckpoint data.initialDatum = some d)
+    (kind : kindOf reads.prefixCode d.aid = some .selfAddressing) :
+    ∃ bytes, reads.bytesAt o index = some bytes ∧ reads.deriveIdentifier bytes = some d.aid := by
+  have verified := (admitted_evidence ok booked found registered).2
+  cases hb : reads.bytesAt o index <;> simp [verify, opened, kind, hb] at verified
+  rename_i bytes
+  cases he : reads.decodeEvidence bytes <;> simp [he] at verified
+  rename_i e
+  have fields := admitted_opening_fields ok booked found registered opened kind hb he
+  exact ⟨bytes, rfl, by simpa [binding, OpeningReads.binding] using fields.1⟩
+
+/-- Given the signed body and the public identifier at the indexed request,
+booking refuses an oversized next threshold, zero numeric signing threshold,
+incorrect basic key list or threshold, non-transferable commitments, witnesses
+or signed anchors, and a self-addressing digest mismatch. -/
+theorem inconsistent_booking_refused {i env rp cp release reads emptyName o index output data d bytes e k}
+    (booked : Application.Action.bookRegistration index ∈ o.actions)
+    (found : o.outputs[index]? = some output)
+    (registered : decoded i.decode output = some (.registration data))
+    (opened : i.decodeCheckpoint data.initialDatum = some d)
+    (kind : kindOf reads.prefixCode d.aid = some k)
+    (source : reads.bytesAt o index = some bytes) (decodedBody : reads.decodeEvidence bytes = some e)
+    (invalid : e.signed.event.nextKeys.length < e.signed.event.nextThreshold.width ∨
+      e.signed.event.threshold = .count 0 ∨
+      (match k with
+      | .basic transferable => e.signed.event.keys ≠ [d.aid] ∨ e.signed.event.threshold ≠ .count 1 ∨
+        (transferable = false ∧ (e.signed.event.nextKeys ≠ [] ∨ e.witnesses ≠ [] ∨ e.signed.event.extension ≠ []))
+      | .selfAddressing => reads.deriveIdentifier bytes ≠ some d.aid)) :
+    admitted i env rp cp release reads emptyName o = false := by
+  cases ok : admitted i env rp cp release reads emptyName o with
+  | false => rfl
+  | true =>
+    obtain ⟨bound, fits, signed⟩ := admitted_opening_fields ok booked found registered opened kind source decodedBody
+    rcases invalid with wide | zero | mismatch
+    · omega
+    · simp [zero, Threshold.satisfied] at signed
+    · cases k with
+      | selfAddressing => simp_all [binding, OpeningReads.binding]
+      | basic t => cases t <;> simp_all [binding, OpeningReads.binding, Evidence.seals]
 
 end CardanoKeri.Application.InceptionPrefix

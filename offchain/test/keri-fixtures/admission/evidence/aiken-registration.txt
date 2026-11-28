@@ -1,0 +1,14 @@
+   Collecting all tests scenarios within module(s): *admission_registration_tests*
+      Testing ...
+
+    ┍━ cardano_keri/checkpoint/admission_registration_tests
+    │ FAIL [mem: 213.56 K, cpu:  79.94 M] reg_I01
+    │ · with traces
+    │ | E2AidMismatch
+    │ FAIL [mem:   1.64 M, cpu: 786.75 M] reg_I02
+    │ · with traces
+    │ | Valid
+    │ FAIL [mem:   2.00 M, cpu: 836.92 M] reg_I03a
+    │ · with traces
+    │ | Valid
+    ┕━━━━━━━━━━━━━━━━━━━━━━━━ 3 tests | 0 passed | 3 failed

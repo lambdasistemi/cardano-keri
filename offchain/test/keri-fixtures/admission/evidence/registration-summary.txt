@@ -1,0 +1,4 @@
+keripy 1.3.5 available (SODIUM_LIB set)
+I01 | accepted  | E2AidMismatch | WE-REFUSE
+I02 | accepted  | Valid | agree
+I03a | accepted  | Valid | agree

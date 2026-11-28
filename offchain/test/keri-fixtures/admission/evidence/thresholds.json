@@ -1,0 +1,699 @@
+{
+ "keripy": "1.3.5",
+ "cases": [
+  {
+   "id": "T01",
+   "sith": "1",
+   "n": 1,
+   "threshold": {
+    "count": 1
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": false,
+    "size": 1,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": true
+    }
+   }
+  },
+  {
+   "id": "T02",
+   "sith": "2",
+   "n": 3,
+   "threshold": {
+    "count": 2
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": false,
+    "size": 2,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": true,
+     "02": true,
+     "12": true,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T03",
+   "sith": "3",
+   "n": 3,
+   "threshold": {
+    "count": 3
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": false,
+    "size": 3,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": false,
+     "02": false,
+     "12": false,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T06",
+   "sith": [
+    "1/2",
+    "1/2"
+   ],
+   "n": 2,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 2,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "01": true
+    }
+   }
+  },
+  {
+   "id": "T07",
+   "sith": [
+    "1/2",
+    "1/2",
+    "1/2"
+   ],
+   "n": 3,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 3,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": true,
+     "02": true,
+     "12": true,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T08",
+   "sith": [
+    "1/3",
+    "1/3",
+    "1/3"
+   ],
+   "n": 3,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 3,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": false,
+     "02": false,
+     "12": false,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T09",
+   "sith": [
+    "1/3",
+    "1/3",
+    "1/3",
+    "1/3"
+   ],
+   "n": 4,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 4,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "3": false,
+     "01": false,
+     "02": false,
+     "03": false,
+     "12": false,
+     "13": false,
+     "23": false,
+     "012": true,
+     "013": true,
+     "023": true,
+     "123": true,
+     "0123": true
+    }
+   }
+  },
+  {
+   "id": "T10",
+   "sith": [
+    "1/2",
+    "1/4",
+    "1/4"
+   ],
+   "n": 3,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 3,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": false,
+     "02": false,
+     "12": false,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T14",
+   "sith": [
+    "1"
+   ],
+   "n": 1,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        1
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 1,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": true
+    }
+   }
+  },
+  {
+   "id": "T18",
+   "sith": [
+    [
+     "1/2",
+     "1/2"
+    ],
+    [
+     "1/3",
+     "1/3",
+     "1/3"
+    ]
+   ],
+   "n": 5,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      }
+     ],
+     [
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      },
+      {
+       "key": [
+        1,
+        3
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 5,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "3": false,
+     "4": false,
+     "01": false,
+     "02": false,
+     "03": false,
+     "04": false,
+     "12": false,
+     "13": false,
+     "14": false,
+     "23": false,
+     "24": false,
+     "34": false,
+     "012": false,
+     "013": false,
+     "014": false,
+     "023": false,
+     "024": false,
+     "034": false,
+     "123": false,
+     "124": false,
+     "134": false,
+     "234": false,
+     "0123": false,
+     "0124": false,
+     "0134": false,
+     "0234": false,
+     "1234": false,
+     "01234": true
+    }
+   }
+  },
+  {
+   "id": "T19",
+   "sith": [
+    [
+     "1/2",
+     "1/2"
+    ],
+    [
+     "1"
+    ]
+   ],
+   "n": 3,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      }
+     ],
+     [
+      {
+       "key": [
+        1,
+        1
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 3,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "01": false,
+     "02": false,
+     "12": false,
+     "012": true
+    }
+   }
+  },
+  {
+   "id": "T26",
+   "sith": [
+    "1/4294967296",
+    "4294967295/4294967296"
+   ],
+   "n": 2,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        4294967296
+       ]
+      },
+      {
+       "key": [
+        4294967295,
+        4294967296
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 2,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "01": true
+    }
+   }
+  },
+  {
+   "id": "T28",
+   "sith": [
+    "1/2",
+    "1/2",
+    "1/4",
+    "1/4",
+    "1/4",
+    "1/4"
+   ],
+   "n": 6,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        2
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      },
+      {
+       "key": [
+        1,
+        4
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 6,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": false,
+     "1": false,
+     "2": false,
+     "3": false,
+     "4": false,
+     "5": false,
+     "01": true,
+     "02": false,
+     "03": false,
+     "04": false,
+     "05": false,
+     "12": false,
+     "13": false,
+     "14": false,
+     "15": false,
+     "23": false,
+     "24": false,
+     "25": false,
+     "34": false,
+     "35": false,
+     "45": false,
+     "012": true,
+     "013": true,
+     "014": true,
+     "015": true,
+     "023": true,
+     "024": true,
+     "025": true,
+     "034": true,
+     "035": true,
+     "045": true,
+     "123": true,
+     "124": true,
+     "125": true,
+     "134": true,
+     "135": true,
+     "145": true,
+     "234": false,
+     "235": false,
+     "245": false,
+     "345": false,
+     "0123": true,
+     "0124": true,
+     "0125": true,
+     "0134": true,
+     "0135": true,
+     "0145": true,
+     "0234": true,
+     "0235": true,
+     "0245": true,
+     "0345": true,
+     "1234": true,
+     "1235": true,
+     "1245": true,
+     "1345": true,
+     "2345": true,
+     "01234": true,
+     "01235": true,
+     "01245": true,
+     "01345": true,
+     "02345": true,
+     "12345": true,
+     "012345": true
+    }
+   }
+  },
+  {
+   "id": "T30",
+   "sith": [
+    "1/1",
+    "1/1"
+   ],
+   "n": 2,
+   "threshold": {
+    "weighted": [
+     [
+      {
+       "key": [
+        1,
+        1
+       ]
+      },
+      {
+       "key": [
+        1,
+        1
+       ]
+      }
+     ]
+    ]
+   },
+   "keripy": {
+    "constructed": true,
+    "weighted": true,
+    "size": 2,
+    "appliesToKeyCount": true,
+    "satisfied": {
+     "": false,
+     "0": true,
+     "1": true,
+     "01": true
+    }
+   }
+  }
+ ]
+}

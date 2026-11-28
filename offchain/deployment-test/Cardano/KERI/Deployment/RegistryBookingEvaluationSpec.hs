@@ -23,7 +23,7 @@ by one thing, each applied to the transaction the builder wrote:
 * two requests that have changed places;
 * the evidence of one key given for the other.
 -}
-module Cardano.KERI.Deployment.RegistryBookingEvaluationSpec (spec) where
+module Cardano.KERI.Deployment.RegistryBookingEvaluationSpec (spec, parameters, chainOf, evaluatedUnits) where
 
 import Cardano.KERI.AID.Application (Action (..), actionData)
 import Cardano.KERI.AID.Checkpoint.Wire (bookingAttestationIssueData)
@@ -53,7 +53,7 @@ import Cardano.KERI.Deployment.RegistryTransactionsSpec (
  )
 import Cardano.KERI.Deployment.Script (Observers (..), ScriptArtifact (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (TransactionScriptFailure (..), evalTxExUnits)
-import Cardano.Ledger.Alonzo.Scripts (AsIx (..))
+import Cardano.Ledger.Alonzo.Scripts (AsIx (..), ExUnits)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Api.Scripts.Data (Data (..), Datum (..), binaryDataToData)
 import Cardano.Ledger.Api.Tx (bodyTxL, witsTxL)
@@ -108,10 +108,16 @@ evaluated ::
     Map TxIn (TxOut ConwayEra) ->
     ConwayTx ->
     Answers
-evaluated params utxo tx =
-    Map.map
-        void
-        (evalTxExUnits params tx (UTxO utxo) (fixedEpochInfo (EpochSize 432_000) (mkSlotLength 1)) systemStart)
+evaluated params utxo tx = Map.map void (evaluatedUnits params utxo tx)
+
+-- | The units the ledger counts for each purpose of the transaction, or the failure it gives.
+evaluatedUnits ::
+    PParams ConwayEra ->
+    Map TxIn (TxOut ConwayEra) ->
+    ConwayTx ->
+    Map (ConwayPlutusPurpose AsIx ConwayEra) (Either (TransactionScriptFailure ConwayEra) ExUnits)
+evaluatedUnits params utxo tx =
+    evalTxExUnits params tx (UTxO utxo) (fixedEpochInfo (EpochSize 432_000) (mkSlotLength 1)) systemStart
 
 -- | What the ledger resolves the transaction's inputs and references against.
 chainOf :: Scenario -> Map TxIn (TxOut ConwayEra)

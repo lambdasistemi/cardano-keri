@@ -22,7 +22,19 @@ one thing:
 * a booking of the application whose attestation is held by an input of the
   transaction and not minted by it (the application's mint, over the same request).
 -}
-module Cardano.KERI.Deployment.AttestationBoundarySpec (spec) where
+module Cardano.KERI.Deployment.AttestationBoundarySpec (
+    spec,
+    Inception (..),
+    Booking (..),
+    accepted,
+    acceptedWithBudget,
+    booking,
+    issueOf,
+    applicationBooking,
+    derived,
+    mintingContext,
+    terms,
+) where
 
 import Cardano.KERI.AID.Application (
     Action (..),
@@ -38,12 +50,13 @@ import Cardano.KERI.AID.Application (
     unstakedAddress,
  )
 import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
-import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Aid)
+import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     KeyStateView (..),
+    QualifiedIdentity (..),
     checkpointDatumToData,
-    liveOfKeyState,
+    liveOfInception,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
@@ -108,13 +121,17 @@ evaluationContext =
 
 -- | Whether the ledger accepts the applied program over the script context.
 accepted :: ScriptArtifact -> Data -> Bool
-accepted artifact context =
+accepted artifact context = either (const False) (const True) (acceptedWithBudget artifact context)
+
+-- | The budget the ledger counts for the accepted evaluation, or the refusal.
+acceptedWithBudget :: ScriptArtifact -> Data -> Either String ExBudget
+acceptedWithBudget artifact context =
     case deserialiseScript (MajorProtocolVersion 10) (artifactProgram artifact) of
         Left err -> error (show err)
         Right script ->
             case snd (evaluateScriptCounting (MajorProtocolVersion 10) Quiet evaluationContext script context) of
-                Left _ -> False
-                Right (_ :: ExBudget) -> True
+                Left err -> Left (show err)
+                Right budget -> Right budget
 
 -- ---------------------------------------------------------------------------
 -- The version 3 script context, as Plutus Data
@@ -221,6 +238,10 @@ mintingContextWith policy references validity inputs outputs minted redeemer =
 data Inception = Inception
     { inceptionView :: KeyStateView
     , inceptionEvidence :: RegistrationEvidence
+    , inceptionIdentifier :: ByteString
+    -- ^ the qualified text of the identifier, as the datum and the request keep it
+    , inceptionKeys :: [ByteString]
+    -- ^ the qualified texts of the current keys
     }
 
 field :: Text -> Value -> Either String Value
@@ -281,6 +302,8 @@ inceptionOf top = do
     raw <- field "raw_hex" ev >>= text >>= hexBytes
     ked <- field "ked" ev
     aid <- field "i" ked >>= text >>= digest
+    identifierText <- field "i" ked >>= text
+    keyTexts <- field "k" ked >>= list >>= traverse text
     keys <- field "k" ked >>= list >>= traverse (text >=> verkey)
     nexts <- field "n" ked >>= list >>= traverse (text >=> digest)
     kt <- field "kt" ked >>= text >>= hexInt
@@ -306,6 +329,8 @@ inceptionOf top = do
                     , reCtrlSigs = sigs
                     , reWitReceipts = []
                     }
+            , inceptionIdentifier = TE.encodeUtf8 identifierText
+            , inceptionKeys = map TE.encodeUtf8 keyTexts
             }
   where
     sigOf s = do
@@ -361,10 +386,10 @@ deposit = 1_009_000_000
 
 -- | The request of the inception: the datum it commits is its key's initial state.
 requestOf :: RegistryScripts -> Inception -> (RegistrationData, Data)
-requestOf scripts Inception{inceptionView = view} =
+requestOf scripts Inception{inceptionView = view, inceptionIdentifier = identifier, inceptionKeys = keys} =
     ( RegistrationData
         { requestRegistry = scriptsRegistry scripts
-        , requestKey = qb64Aid (cdCesrAid view)
+        , requestKey = identifier
         , requestController = BS.replicate 28 0x01
         , requestRefundAddress = unstakedAddress (KeyCredential (BS.replicate 28 0x02))
         , requestHoldingAddress = unstakedAddress (ScriptCredential (BS.replicate 28 0x03))
@@ -379,7 +404,7 @@ requestOf scripts Inception{inceptionView = view} =
   where
     initial =
         checkpointDatumToData
-            (V2 (liveOfKeyState (BS.cons 0x60 (BS.replicate 28 0x02)) 10 view))
+            (V2 (liveOfInception (BS.cons 0x60 (BS.replicate 28 0x02)) 10 view (QualifiedIdentity identifier keys)))
 
 data Booking = Booking
     { bookingContext :: Data

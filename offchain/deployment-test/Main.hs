@@ -5,6 +5,8 @@ import Cardano.KERI.Deployment.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.Deployment.AttestationBoundarySpec qualified as AttestationBoundarySpec
 import Cardano.KERI.Deployment.BountyEntitlementSpec qualified as BountyEntitlementSpec
 import Cardano.KERI.Deployment.ChainIndexSpec qualified as ChainIndexSpec
+import Cardano.KERI.Deployment.CompiledEntryPointsSpec qualified as CompiledEntryPointsSpec
+import Cardano.KERI.Deployment.ComposedBookingsSpec qualified as ComposedBookingsSpec
 import Cardano.KERI.Deployment.EndpointBoardSpec qualified as EndpointBoardSpec
 import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as EndpointBoardTransactionSpec
 import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
@@ -113,6 +115,8 @@ suite = hspec $ do
     RegistrationSpec.spec
     RegistryScriptsSpec.spec
     AttestationBoundarySpec.spec
+    CompiledEntryPointsSpec.spec
+    ComposedBookingsSpec.spec
     RegistryFilesSpec.spec
     RegistryProviderSpec.spec
     RegistryKoiosCommandSpec.spec

@@ -25,6 +25,8 @@ build-type:    Simple
 -- wildcard.
 data-files:
   deployment-test/fixtures/*.cesr
+  deployment-test/fixtures/compiled/*.cesr
+  deployment-test/fixtures/compiled/SHA256SUMS
   deployment-test/fixtures/koios/*.cbor
   deployment-test/fixtures/koios/*.json
   deployment-test/fixtures/koios-recorded/*.json
@@ -540,6 +542,8 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.AttestationBoundarySpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.CompiledEntryPointsSpec
+    Cardano.KERI.Deployment.ComposedBookingsSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.FreezePackageSpec

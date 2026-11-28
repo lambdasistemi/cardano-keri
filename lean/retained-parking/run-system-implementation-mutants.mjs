@@ -17,12 +17,14 @@ const cases=[
   {id:'booked-birth',before:'booking.submittedAt === BigInt(a.now)',after:'true'},
   {id:'booked-refund',before:'booking.refundAddress === BigInt(a.refund)',after:'true'},
   {id:'booked-pool',before:'booking.carrierAda === registry.Mc + registry.D + BigInt(a.pool)',after:'true'},
-  ...[['subject-rotation','rotationTo'],['subject-quorum','quorum'],['subject-deposit','depositAuthorized']].map(([id,field])=>({
+  {id:'subject-rotation', before:'const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid);',
+    after:'const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid); env.mintTransactions = {...env.mintTransactions, advances: table.flatMap(([, row]) => row.mintTransactions.advances)};'},
+  ...[['subject-quorum','quorum'],['subject-deposit','depositAuthorized']].map(([id,field])=>({
     id, before:'const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid);',
     after:`const {writers = {inceptions: [], rotations: []}, ...env} = evidenceFor(table, a.aid); env.${field} = table.flatMap(([, row]) => row.${field});`,
   })),
 ];
-const files=['checkpoint-system-core.mjs','checkpoint-system-mutation-subject.mjs','checkpoint-system-corpus.json','checkpoint-simulator-core.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','checkpoint-conviction.mjs'];
+const files=['checkpoint-system-core.mjs','checkpoint-system-mutation-subject.mjs','checkpoint-system-corpus.json','checkpoint-simulator-core.mjs','registry-simulator-core.mjs','registry-economic-core.mjs','registry-wire.mjs','attestation.mjs','checkpoint-conviction.mjs'];
 const results=[];
 for(const test of cases)for(const baseline of [true,false]) {
   const id=(baseline?'baseline-':'')+test.id,dir=join(campaign,id);mkdirSync(dir);

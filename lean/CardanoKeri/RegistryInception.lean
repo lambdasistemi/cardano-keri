@@ -17,7 +17,7 @@ When it is booked.
 Then the booking is refused: the request never enters the registry, so there
 is nothing to fold or to return. -/
 theorem booking_refuses_missing_inception (p : Params) (env : Env) (s : Sys)
-    (b : Singular.RegistrationBooking) (missing : env.inception b.request.key = false) :
+    (b : Singular.RegistrationBooking) (missing : env.inception s.config.applicationPolicy b = false) :
     (bookRegistration p env s b).toOption = none := by
   cases success : bookRegistration p env s b with
   | error message => rfl
@@ -71,11 +71,11 @@ theorem installMembers_carriers (p : Params) (before acc after : Sys)
 belongs to a key with inception evidence. -/
 theorem inception_invariant (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys}
     (hr : Reach p env cfg s) :
-    (∀ b ∈ s.registrations, env.inception b.request.key = true) ∧
-    (∀ c ∈ s.carriers, env.inception c.aid = true) := by
+    (∀ b ∈ s.registrations, env.inception cfg.applicationPolicy b = true) ∧
+    (∀ c ∈ s.carriers, ∃ b : Singular.RegistrationBooking, b.request.key = c.aid ∧ env.inception cfg.applicationPolicy b = true) := by
   induction hr with
   | init => simp [Sys.init]
-  | @next s s' action flow _ step ih =>
+  | @next s s' action flow past step ih =>
     obtain ⟨requests, carriers⟩ := ih
     cases action with
     | bookRegistration b =>
@@ -83,7 +83,8 @@ theorem inception_invariant (p : Params) (env : Env) (cfg : Singular.Config) {s 
       refine ⟨?_, carriers⟩
       intro b' mem
       rcases List.mem_cons.mp mem with rfl | old
-      · exact evidence
+      · have fixed := congrArg Singular.Config.applicationPolicy (reachable_config p env cfg past)
+        simpa only [show s.config.applicationPolicy = cfg.applicationPolicy from fixed] using evidence
       · exact requests b' old
     | convictCkpt aid =>
       obtain ⟨_, _, _, _, _, rfl⟩ := (convictCkpt_iff env s s' aid flow).mp step
@@ -109,7 +110,7 @@ theorem inception_invariant (p : Params) (env : Env) (cfg : Singular.Config) {s 
         rw [same] at mem
         rcases installMembers_carriers p s s acc _ installed c mem with old | ⟨b, booked, key⟩
         · exact carriers c old
-        · rw [key]; exact requests b booked
+        · exact ⟨b, key.symm, requests b booked⟩
     | returnRequests u tx =>
       have step : returnRequests s u tx = .ok (flow, s') := step
       have kept := return_registrations s s' step
@@ -130,7 +131,7 @@ Then the key has its inception evidence: it was shown when the request was
 booked, and nothing books a request without it. -/
 theorem booked_request_has_inception (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys}
     (hr : Reach p env cfg s) {b : Singular.RegistrationBooking} (booked : b ∈ s.registrations) :
-    env.inception b.request.key = true :=
+    env.inception cfg.applicationPolicy b = true :=
   (inception_invariant p env cfg hr).1 b booked
 
 /-- **Every checkpoint of a reachable registry belongs to a key with inception
@@ -142,7 +143,7 @@ Then it has its inception evidence, although the fold that delivered the
 checkpoint read none. -/
 theorem registered_key_has_inception (p : Params) (env : Env) (cfg : Singular.Config) {s : Sys}
     (hr : Reach p env cfg s) {aid : Nat} {c : Carrier} (registered : carrierAt s aid = some c) :
-    env.inception aid = true := by
+    ∃ b : Singular.RegistrationBooking, b.request.key = aid ∧ env.inception cfg.applicationPolicy b = true := by
   have mem := List.mem_of_find?_eq_some registered
   have key : c.aid = aid := by simpa using List.find?_some registered
   rw [← key]
@@ -159,7 +160,7 @@ theorem folded_registration_has_inception (p : Params) (env : Env) (cfg : Singul
     {tx : Singular.EconomicTransaction} {f : Flow}
     (_folded : fold p s gen plugin u tx = .ok (f, s')) {b : Singular.RegistrationBooking}
     (selected : Singular.FoldMember.registration b ∈ Singular.foldMembers s.toWorld tx) :
-    env.inception b.request.key = true :=
+    env.inception cfg.applicationPolicy b = true :=
   booked_request_has_inception p env cfg hr
     (actual_members_available p (reachable_wellFormed p env cfg hr) tx _ selected)
 

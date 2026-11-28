@@ -1,4 +1,5 @@
 import SingularApplicationHeld.Client
+import CardanoKeri.Attestation
 import CardanoKeri.Registry
 import CardanoKeri.ConsumerIdentity
 
@@ -106,13 +107,15 @@ structure Interpretation where
   decodeCheckpoint : Nat → Option CardanoKeri.ConsumerIdentity.DecodedDatum
   refundTo : Nat → Option CardanoKeri.Checkpoint.Addr
 
-/-- The opaque KERI premise the economic model already uses: the key has its
-inception evidence. A booking mints an approval only for such a key; no other
-action reads it. In the controller's registration booking the application mint
-checks the controller signatures and witness receipts on the inception event
-against the initial datum. The folder obtains the approved request on chain. -/
+/-- The booking application is configured with the inception policy and the
+claim digest. Signature and receipt verification belong to that policy in the
+controller's booking transaction. -/
 structure Env where
-  inception : Key → Bool
+  bookingPolicy : Attestation.Policy
+
+def Env.bookingAsset (env : Env) (release : PublishedRelease) (index : Nat)
+    (data : RegistrationData) : TokenId :=
+  env.bookingPolicy.asset (.book release.applicationPolicy index data.initialDatum data.deposit)
 
 /-- One KERI registry deployment: the published release of `A_keri` and the
 seed its registry state was created from. -/
@@ -283,7 +286,7 @@ def bookRegistration (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry
       rp.Mc + rp.D ≤ data.deposit &&
       output.lovelace == requestLovelace c.parameters data &&
       bookingClock c.parameters data o.interval &&
-      env.inception data.key &&
+      SingularApplicationHeld.Assets.mintQty o.assets (env.bookingAsset release output.reference.index data) == 1 &&
       initialStateDatum i rp cp data data.initialDatum &&
       SingularApplicationHeld.Assets.mintQty o.assets (registrationAsset i.hash i.code release data) == 1
     | none => false
@@ -443,7 +446,7 @@ def action (i : Interpretation) (env : Env) (rp : CardanoKeri.Registry.Params)
     | some output => createConfiguration i release registry seed output o
     | none => false
   | .bookRegistration index => match o.outputs[index]? with
-    | some output => bookRegistration i env rp cp release o output
+    | some output => output.reference.index == index && bookRegistration i env rp cp release o output
     | none => false
   | .foldTermination ref registry key => match namedInput o ref with
     | some input => spendTermination i release o input registry key

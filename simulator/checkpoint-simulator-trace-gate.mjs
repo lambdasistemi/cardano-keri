@@ -177,6 +177,19 @@ async function selftest(work) {
   const baseline=await runGate({freshRaw});
   if(!baseline.ok)throw Error('positive baseline: '+baseline.reasons.join('; '));
   const controls = [
+    { name: 'recorded keep issue removed from the happy trace',
+      expect: /^trace happy-path step \d+: Lean applied, the core refused \(no-witnessed-rotation\)/m,
+      pageExpect: /^page replay RED: .*trace happy-path step \d+: Lean applied, the core refused \(no-witnessed-rotation\)/m,
+      make: () => {
+        const changed = JSON.parse(freshRaw);
+        const trace = changed.traces.find(t => t.name === 'happy-path');
+        const step = trace.steps.find(st => st.action?.rotate?.op === 'keep' && st.result);
+        const {epoch, sn} = step.input.present.l;
+        const row = trace.env.mintTransactions.advances.find(r => r.kind === 'advance' &&
+          r.epoch === epoch && r.sn === sn && r.next === step.action.rotate["sn'"]);
+        row.observation.transaction.mint = [];
+        return {freshRaw: JSON.stringify(changed)};
+      } },
     { name: 'post-state mutated in the embedded corpus', expect: /structural difference|stated sha|grid: fresh and embedded differ|story cells: fresh and embedded differ/,
       make: () => ({ html: writeTmp('m1.html', doc.replace(emb.fixtureText, emb.fixtureText.replace('"pool":8', '"pool":9'))), freshRaw }) },
     { name: 'embedded corpus emptied', expect: /empty|not found|stated sha/,
@@ -195,7 +208,7 @@ async function selftest(work) {
     const r = await runGate(c.make());
     if (r.ok) { console.error(`SELFTEST RED: control «${c.name}» ACCEPTED by the gate`); return 1; }
     const text = r.reasons.join('\n');
-    if (!c.expect.test(text)) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 600)}`); return 1; }
+    if (!c.expect.test(text) || (c.pageExpect && !c.pageExpect.test(text))) { console.error(`SELFTEST RED: «${c.name}» failed for the wrong reason:\n${text.slice(0, 600)}`); return 1; }
     console.log(`negative control «${c.name}»: RED as expected — ${text.split('\n').find(line=>c.expect.test(line)).slice(0,140)}`);
   }
   // the cold control: a scratch copy of lean/ without .lake — with the build step
@@ -216,12 +229,12 @@ async function selftest(work) {
   console.log(`cold control GREEN: lake build ${driverImports(cold).join(' ')} then the driver, from a copy with no .lake — output sha ${sha256(coldRaw).slice(0, 12)}… identical to the warm run`);
   const green = await runGate({ freshRaw });
   if (!green.ok) { console.error('SELFTEST RED: production does not return GREEN:\n' + green.reasons.join('\n')); return 1; }
-  report(green, 'selftest GREEN: 4 negative controls RED for the expected reason, the cold control RED without the build and GREEN with it; ');
+  report(green, `selftest GREEN: ${controls.length} negative controls RED for the expected reason, the cold control RED without the build and GREEN with it; `);
   return 0;
 }
 
 const work = mkdtempSync(join(tmpdir(), 'ck-trace-gate-'));
-for (const dependency of ['checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
+for (const dependency of ['attestation.mjs','checkpoint-conviction.mjs', 'registry-economic-core.mjs', 'registry-wire.mjs'])
   cpSync(join(HERE, dependency), join(work, dependency));
 let code = 1;
 try {

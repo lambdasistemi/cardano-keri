@@ -22,11 +22,12 @@
 //                               genuine witnessed rotation, the other two
 //                               re-label the spent checkpoint so that rotation
 //                               is not later than it
-//   env.rotationTo (epoch, sn, sn')  the rotation is evidenced; when absent the
-//                               evidence carries no signature and no receipt
+//   mintTransactions.advances      the freeze claim for the spent checkpoint
+//                               has net quantity +1 under the evidence policy
 //   terminationPending          a termination-pending datum
 //   absent, convicted           no checkpoint output exists to spend: not
 //                               realizable as a transaction, counted and skipped
+import { spendAttested } from '../simulator/attestation.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,7 +85,9 @@ for (const cell of grid.cells) {
   const isPending = typeof state === 'object' && 'terminationPending' in state;
   const live = isPending ? null : state.present.l;
   const hash = isPending ? state.terminationPending.h : { epoch: live.epoch, sn: live.sn };
-  const evidenced = env.rotationTo.some(([e, s, n]) => e === hash.epoch && s === hash.sn && n === snPrime);
+  const evidence = env.mintTransactions.advances.find(row => row.kind === 'freeze' &&
+    row.epoch === hash.epoch && row.sn === hash.sn && row.next === snPrime);
+  const evidenced = spendAttested(evidence?.observation, 'freeze');
   const verdict = cell.result !== null;
   // The model's guards, recomputed from the cell alone: the corpus must say
   // what the Lean's `freeze` clause says.

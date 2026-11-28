@@ -36,6 +36,7 @@ use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_advance,
 }
+use cardano_keri/checkpoint/spelling_fixture.{qualified_keys}
 use cardano_keri/checkpoint/threshold.{Threshold, Unweighted}
 use freeze_fixture.{
   Parts, advance_hash, floor_frozen, floor_unfrozen, from_parts, hunter_pkh,
@@ -98,7 +99,7 @@ fn vector_asset(f: vec.Facts) -> ByteArray {
 
 fn vector_spent_keys() -> KeyMaterial {
   KeyMaterial {
-    cur_keys: vec.old_keys,
+    cur_keys: qualified_keys(vec.old_keys),
     cur_threshold: Unweighted(2),
     next_keys: vec.new_keys,
     next_threshold: Unweighted(2),
@@ -109,7 +110,7 @@ fn vector_spent_keys() -> KeyMaterial {
 
 fn vector_new_keys(threshold: Threshold) -> KeyMaterial {
   KeyMaterial {
-    cur_keys: vec.new_keys,
+    cur_keys: qualified_keys(vec.new_keys),
     cur_threshold: threshold,
     next_keys: vec.new_keys,
     next_threshold: Unweighted(2),

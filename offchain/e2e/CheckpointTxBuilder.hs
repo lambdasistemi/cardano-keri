@@ -117,6 +117,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     keyMaterialOf,
     liveOfKeyState,
     rotatedLive,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.Deposit (
     BondOption (..),
@@ -393,6 +394,7 @@ import System.IO (
  )
 import System.Process qualified as Proc
 import System.Timeout (timeout)
+import Test.Hspec (pendingWith)
 
 data CheckpointEnv = CheckpointEnv
     { envCheckpointScript :: !(Script ConwayEra)
@@ -406,6 +408,8 @@ data CheckpointEnv = CheckpointEnv
     , envAdvanceBytes :: !SBS.ShortByteString
     , envAdvanceHash :: !ScriptHash
     , envAdvanceReference :: !(Maybe (TxIn, TxOut ConwayEra))
+    , envAdvanceRefusal :: !(Maybe String)
+    -- ^ why the advance and freeze observer was not published, when its program is above the reference script budget
     , envEnforcementScript :: !(Script ConwayEra)
     , envEnforcementBytes :: !SBS.ShortByteString
     , envEnforcementHash :: !ScriptHash
@@ -549,14 +553,17 @@ setupCheckpointEnv blueprintPath lsq ltxs action = do
             queryUTxOs provider (seedAddress genesisAddr)
     seed <- requireJust "the registry seed output is absent" (listToMaybe seedUtxos)
     env <- mkCheckpointEnv blueprintPath lsq ltxs (fst seed)
-    verifyRegisterScriptSizes env
+    advanceRefusal <- verifyRegisterScriptSizes env
     _ <- registerLifecycleStakeCredential env
+    -- #601: the advance and freeze observer is above the reference script budget and is published only when it fits;
+    -- the operations that need it report the refusal where they need it, and every other operation settles
     advanceRef <-
-        deployReferenceScript
-            env
-            "observer_advance reference deployment"
-            (envAdvanceScript env)
-    _ <- registerAdvanceStakeCredential env advanceRef
+        case advanceRefusal of
+            Just _ -> pure Nothing
+            Nothing -> do
+                ref <- deployReferenceScript env "observer_advance reference deployment" (envAdvanceScript env)
+                _ <- registerAdvanceStakeCredential env ref
+                pure (Just ref)
     enforcementRef <-
         deployReferenceScript
             env
@@ -578,7 +585,8 @@ setupCheckpointEnv blueprintPath lsq ltxs action = do
             (envCommitmentScript env)
     genesisRegistry
         env
-            { envAdvanceReference = Just advanceRef
+            { envAdvanceReference = advanceRef
+            , envAdvanceRefusal = advanceRefusal
             , envEnforcementReference = Just enforcementRef
             , envEntitlementReference = Just entitlementRef
             , envCommitmentReference = Just commitmentRef
@@ -668,6 +676,7 @@ mkCheckpointEnvWith registryTerms blueprintPath lsq ltxs seed = do
             , envAdvanceBytes = appliedAdvance
             , envAdvanceHash = advanceHash
             , envAdvanceReference = Nothing
+            , envAdvanceRefusal = Nothing
             , envEnforcementScript = enforcementScript
             , envEnforcementBytes = appliedEnforcement
             , envEnforcementHash = enforcementHash
@@ -713,7 +722,7 @@ requireArtifact name artifacts =
 {- | Prove the Register programs and the Advance observer fit both the applied
 program budget and signed reference-script creation transactions.
 -}
-verifyRegisterScriptSizes :: CheckpointEnv -> IO ()
+verifyRegisterScriptSizes :: CheckpointEnv -> IO (Maybe String)
 verifyRegisterScriptSizes env = do
     params <-
         withinSecs 30 "query Register script-size parameters" $
@@ -749,22 +758,42 @@ verifyRegisterScriptSizes env = do
                 fail (label <> " exceeds stock maxTxSize: " <> show txBytes)
     measure "checkpoint_register reference script" (envCheckpointScript env) (SBS.length (envCheckpointBytes env))
     measure "observer_lifecycle reference script" (envLifecycleScript env) (SBS.length (envLifecycleBytes env))
-    measure "observer_advance reference script" (envAdvanceScript env) (SBS.length (envAdvanceBytes env))
     measure "observer_enforcement reference script" (envEnforcementScript env) (SBS.length (envEnforcementBytes env))
     measure "observer_entitlement reference script" (envEntitlementScript env) (SBS.length (envEntitlementBytes env))
     measure "hash_proof reference script" (envHashProofScript env) (SBS.length (envHashProofBytes env))
     measure "bounty_commitment reference script" (envCommitmentScript env) (SBS.length (envCommitmentBytes env))
-    -- #339: re-derived from the applied advance program once it reads the
-    -- version 2 datum (14_695 before), not reused from the previous pin. The
-    -- 16_133 ceiling is unchanged. Re-derived again after the version 1
-    -- datum constructor left the shared datum type (15_778 before). Re-derived
-    -- once more when the observer also hosts the freeze verdict (15_625 before),
-    -- and when the live datum gained its ninth field (15_665 before).
-    unless (SBS.length (envAdvanceBytes env) == 15_710) $
-        fail
-            ( "observer_advance applied program changed from 15,710 bytes: "
-                <> show (SBS.length (envAdvanceBytes env))
-            )
+    -- #601: the advance and freeze observer is above the budget. Its size is pinned exactly, so that neither growth nor
+    -- shrinkage goes unnoticed; when it fits the budget it is measured like every other program.
+    let advanceBytes = SBS.length (envAdvanceBytes env)
+    if advanceBytes <= productionMaxReferenceProgramBytes
+        then measure "observer_advance reference script" (envAdvanceScript env) advanceBytes >> pure Nothing
+        else do
+            unless (advanceBytes == advanceObserverKnownBytes) $
+                fail
+                    ( "observer_advance applied program changed from the "
+                        <> show advanceObserverKnownBytes
+                        <> " bytes #601 tracks: "
+                        <> show advanceBytes
+                    )
+            pure
+                ( Just
+                    ( "#601: the advance and freeze observer program exceeds applied 16,133-byte budget: "
+                        <> show advanceBytes
+                        <> "; it cannot be published as a reference script"
+                    )
+                )
+
+-- | #601: the applied advance and freeze observer, in bytes, with the structural reader.
+advanceObserverKnownBytes :: Int
+advanceObserverKnownBytes = 18_181
+
+-- | The published reference of the advance and freeze observer, or the refusal #601 records.
+requireAdvanceReference :: CheckpointEnv -> IO (TxIn, TxOut ConwayEra)
+requireAdvanceReference env =
+    case (envAdvanceReference env, envAdvanceRefusal env) of
+        (Just reference, _) -> pure reference
+        (Nothing, Just refusal) -> pendingWith refusal >> fail refusal
+        (Nothing, Nothing) -> fail "observer_advance reference was not deployed during setup"
 
 productionMaxReferenceProgramBytes :: Int
 productionMaxReferenceProgramBytes = 16_133
@@ -1002,10 +1031,7 @@ productionRegisterAdvanceScenario env = do
     fixture <- loadRotateStoryFixture
     (registered, checkpointRef) <-
         productionRegisterScenarioWithReference env (rsRegistration fixture)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     let honest =
             signedRotateEvidence
                 env
@@ -1025,7 +1051,7 @@ productionRegisterAdvanceScenario env = do
             honest{aeWitReceipts = take 1 (aeWitReceipts honest)}
         spent = rotateSpentCheckpoint env registered
         created = rsCreated fixture
-    case advancePredicate spent created honest of
+    case advancePredicate spent created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Advance: signed evidence failed the pure predicate: "
@@ -1130,7 +1156,7 @@ productionRegisterFreezeScenario env = do
                 advanced
                 created
                 label
-    case advancePredicate (rotateSpentCheckpoint env advanced) created honest of
+    case advancePredicate (rotateSpentCheckpoint env advanced) created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Freeze: signed evidence failed the pure predicate: "
@@ -1182,10 +1208,7 @@ advanceOnceForRotationStory env fixture = do
     let firstRotation = fsFirstRotation fixture
     (registered, checkpointRef) <-
         productionRegisterScenarioWithReference env (rsRegistration firstRotation)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     let firstEvidence =
             signedRotateEvidence
                 env
@@ -1268,10 +1291,7 @@ productionRegisterConvictScenario env = do
     references <- deployRegisterReferences env
     checkpointRef <-
         requireJust "Convict checkpoint reference is absent" (listToMaybe references)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     enforcementRef <-
         requireJust
             "observer_enforcement reference was not deployed during setup"
@@ -1364,6 +1384,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env registered)
         (rsCreated firstRotation)
+        (spellingOfView (rsCreated firstRotation))
         firstEvidence of
         Left predicateError ->
             fail
@@ -1407,6 +1428,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env firstAdvanced)
         (rsCreated recordedRotation)
+        (spellingOfView (rsCreated recordedRotation))
         recordedEvidence of
         Left predicateError ->
             fail
@@ -1696,7 +1718,6 @@ loadRotateStoryFixture = do
                 inceptionReceipts
     rotation <- either fail pure (atKey "rot" family)
     rotationKed <- either fail pure (atKey "ked" rotation)
-    offsets <- either fail pure (atKey "offsets" family)
     raw <- either fail pure (textAt "raw_hex" rotation >>= decodeHex)
     currentKeys <-
         either fail pure $
@@ -1740,16 +1761,6 @@ loadRotateStoryFixture = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = fromInteger (offset "t" offsets)
-                , aeOffI = fromInteger (offset "i" offsets)
-                , aeOffS = fromInteger (offset "s" offsets)
-                , aeOffK = map fromInteger (offsetsAt "k" offsets)
-                , aeOffKt = fromInteger (offset "kt" offsets)
-                , aeOffN = map fromInteger (offsetsAt "n" offsets)
-                , aeOffNt = fromInteger (offset "nt" offsets)
-                , aeOffBr = map fromInteger (offsetsAt "br" offsets)
-                , aeOffBa = map fromInteger (offsetsAt "ba" offsets)
-                , aeOffBt = fromInteger (offset "bt" offsets)
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1773,16 +1784,6 @@ loadRotateStoryFixture = do
                         >>= decodeHex
                         <&> genKeyDSIGN . mkSeedFromBytes
                 )
-    offset key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerAt key value)
-    offsetsAt key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerArrayAt key value)
 
 loadConvictStoryFixture :: IO ConvictStoryFixture
 loadConvictStoryFixture = do
@@ -1866,7 +1867,6 @@ rotateStoryFrom ::
 rotateStoryFrom registration prior record rotationSigners currentSigners = do
     event <- atKey "event" record
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
     nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
@@ -1893,16 +1893,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = intOffset "t" offsets
-                , aeOffI = intOffset "i" offsets
-                , aeOffS = intOffset "s" offsets
-                , aeOffK = intOffsets "k" offsets
-                , aeOffKt = intOffset "kt" offsets
-                , aeOffN = intOffsets "n" offsets
-                , aeOffNt = intOffset "nt" offsets
-                , aeOffBr = intOffsets "br" offsets
-                , aeOffBa = intOffsets "ba" offsets
-                , aeOffBt = intOffset "bt" offsets
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1916,19 +1906,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
             , rsRotationSigners = rotationSigners
             , rsCurrentSigners = currentSigners
             }
-  where
-    intOffset key value =
-        fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerAt key value)
-    intOffsets key value =
-        map fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerArrayAt key value)
 
 seedSignersAt ::
     Text ->
@@ -1997,7 +1974,6 @@ registrationFixtureFrom ::
     Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String InceptionExport
 registrationFixtureFrom event signatures receipts = do
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     pre <- textAt "pre" event
     aid <- digestRaw pre
@@ -2007,15 +1983,6 @@ registrationFixtureFrom event signatures receipts = do
     currentThreshold <- thresholdAt "kt" ked
     nextThreshold <- thresholdAt "nt" ked
     toad <- hexIntegerAt "bt" ked
-    offT <- integerAt "t" offsets
-    offI <- integerAt "i" offsets
-    offS <- integerAt "s" offsets
-    offK <- integerArrayAt "k" offsets
-    offKt <- integerAt "kt" offsets
-    offN <- integerArrayAt "n" offsets
-    offNt <- integerAt "nt" offsets
-    offB <- integerArrayAt "b" offsets
-    offBt <- integerAt "bt" offsets
     offD <- eventSaidOffset event
     let datum =
             KeyStateView
@@ -2032,15 +1999,6 @@ registrationFixtureFrom event signatures receipts = do
         evidence =
             RegistrationEvidence
                 { reEventBytes = raw
-                , reOffT = fromInteger offT
-                , reOffI = fromInteger offI
-                , reOffS = fromInteger offS
-                , reOffK = map fromInteger offK
-                , reOffKt = fromInteger offKt
-                , reOffN = map fromInteger offN
-                , reOffNt = fromInteger offNt
-                , reOffB = map fromInteger offB
-                , reOffBt = fromInteger offBt
                 , reCtrlSigs = signatures
                 , reWitReceipts = receipts
                 }
@@ -6019,10 +5977,7 @@ terminationJourney env observe = do
     fixture <- loadConvictStoryFixture
     references <- deployRegisterReferences env
     checkpointRef <- requireJust "checkpoint reference is absent" (listToMaybe references)
-    advanceRef <-
-        requireJust
-            "observer_advance reference was not deployed during setup"
-            (envAdvanceReference env)
+    advanceRef <- requireAdvanceReference env
     enforcementRef <-
         requireJust
             "observer_enforcement reference was not deployed during setup"

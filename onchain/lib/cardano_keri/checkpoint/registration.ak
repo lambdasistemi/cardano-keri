@@ -1,34 +1,25 @@
-//// #114 registration predicate + E1-E9 event binding (S3 mirror).
+//// The registration predicate and the binding of an inception event to the datum it books.
 ////
-//// Mirrors the S2 Haskell `Cardano.KERI.AID.Checkpoint.Registration`
-//// verdict-for-verdict: the pure R3/R4/R6/R7/R8 subset of the `Register`
-//// mint branch over `RegistrationEvidence` (the full keripy `icp`
-//// serialization plus prover-supplied per-field offsets) and the genesis
-//// datum, returning a `RegistrationVerdict` sum (`RegistrationValid` ≙
-//// `Right ()`, `RegistrationInvalid(e)` ≙ `Left e`) with one constructor
-//// per check, evaluated in the same order.
+//// The heavy evidence of a registration is the signed `icp` itself, its controller signatures and its witness
+//// receipts. Nothing in it is positioned by the prover: the canonical inception is rebuilt from the datum's qualified
+//// spellings and compared with the signed bytes whole. The datum keeps the qualified text of the identifier and of each
+//// current key; the raw payloads are derived for the signature checks.
 ////
-//// Offsets LOCATE content, they never define it: every expected slice is
-//// computed from the datum (derivation-code-prefixed qb64 or an exact
-//// keripy re-spelling), so pointing an offset at a different field of the
-//// genuine event compares differently-coded bytes and fails (the A-001
-//// offset-misdirection argument; spec "Why offset misdirection fails").
-////
-//// Transaction-shape checks (R1/R2/R5 token presence) are the S5
-//// validator layer; R5 appears here only as the proof-token name
-//// derivation `proof_token_name`. The H1 `<= 1024` byte length tier is
-//// the S4 hash-proof policy's scope — this predicate carries no length
-//// guard. `registration_tests.ak` asserts these verdicts match the
-//// Haskell over the shared generated vectors (`registration_vectors.ak`).
+//// Transaction-shape checks (R1/R2/R5 token presence) are the validator layer; R5 appears here only as the proof-token
+//// name derivation `proof_token_name`. The one-chunk length tier is the hash-proof policy's scope.
 
+use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{blake2b_256, verify_ed25519_signature}
 use aiken/primitive/bytearray
 use cardano_keri/base64url
 use cardano_keri/checkpoint/datum.{
-  DatumError, DatumInvalid, DatumValid, KeyStateView, key_state_well_formed,
+  DatumError, DatumInvalid, DatumValid, KeyStateView,
+  key_state_inception_well_formed,
 }
-use cardano_keri/checkpoint/message.{qb64_aid, qb64_verkey}
+use cardano_keri/checkpoint/event_decoder.{AnchorItem, anchor_after}
+use cardano_keri/checkpoint/message.{qb64_aid}
+use cardano_keri/checkpoint/qualified.{code_b, code_d, code_e, digest_payload}
 use cardano_keri/checkpoint/threshold.{
   Threshold, Unweighted, Weight, Weighted, evaluate,
 }
@@ -57,25 +48,18 @@ pub fn valid_registration_deposit(d_reg: Int) -> Bool {
 // Registration evidence (mirrors the S2 `RegistrationEvidence`)
 // ---------------------------------------------------------
 
-/// The `Register` redeemer evidence: the full keripy `icp` serialization,
-/// per-field value offsets into it (the generator's offset convention:
-/// first byte of the value content between the quotes; a weighted
-/// `kt`/`nt` offset points at the opening `[` of the full compact-JSON
-/// array), controller signatures, and witness receipts. Both signature
-/// families authenticate the exact `event_bytes`.
+/// The `Register` redeemer evidence: the signed `icp` as keripy serialized it, the controller signatures and the witness
+/// receipts. Both signature families authenticate the exact `event_bytes`.
 pub type RegistrationEvidence {
   event_bytes: ByteArray,
-  off_t: Int,
-  off_i: Int,
-  off_s: Int,
-  off_k: List<Int>,
-  off_kt: Int,
-  off_n: List<Int>,
-  off_nt: Int,
-  off_b: List<Int>,
-  off_bt: Int,
   ctrl_sigs: List<(Int, ByteArray)>,
   wit_receipts: List<(Int, ByteArray)>,
+}
+
+/// The qualified spellings the datum keeps: the identifier and each current key, exactly as the event signed them.
+pub type QualifiedSpelling {
+  aid: ByteArray,
+  cur_keys: List<ByteArray>,
 }
 
 // ---------------------------------------------------------
@@ -238,7 +222,7 @@ pub fn validate_inception_datum(
   } else if d.native_sn != 0 {
     InceptionInvalid(InceptionNativeSnNonZero)
   } else {
-    when key_state_well_formed(d) is {
+    when key_state_inception_well_formed(d) is {
       DatumInvalid(err) -> InceptionInvalid(InceptionIllFormed(err))
       DatumValid -> InceptionValid
     }
@@ -259,30 +243,13 @@ pub type RegistrationError {
   /// R4: inception datum validation rejected (AID width, `native_sn`,
   /// F18 + rule 14).
   R4InceptionInvalid(InceptionError)
-  /// E1: the `t` slice is not `"icp"` (`dip`/`drt`/`rot` all reject
-  /// here; the verified slice feeds R4's event type).
-  E1EventTypeMismatch
-  /// E2: the `i` slice is not the datum AID's E-code qb64.
-  E2AidMismatch
-  /// E3: the `s` slice is not `"0"` (an `icp` has `s = 0`).
-  E3SequenceMismatch
-  /// E4: `k` offset count or a slice differs from the datum's
-  /// `cur_keys` D-code qb64 — the keys-must-match gate.
-  E4CurKeysMismatch
-  /// E5: the `kt` slice is not the canonical re-spelling of
-  /// `cur_threshold`.
-  E5CurThresholdMismatch
-  /// E6: `n` offset count or a slice differs from the datum's
-  /// `next_keys` E-code qb64.
-  E6NextKeysMismatch
-  /// E7: the `nt` slice is not the canonical re-spelling of
-  /// `next_threshold`.
-  E7NextThresholdMismatch
-  /// E8: `b` offset count or a slice differs from the datum's witness
-  /// B-code qb64.
-  E8WitnessesMismatch
-  /// E9: the `bt` slice is not the hex re-spelling of `toad`.
-  E9ToadMismatch
+  /// R6: the signed bytes are not the canonical inception of the datum: rebuilt from the datum's spellings they differ
+  /// anywhere before the anchor, the digest `d` is not an `E` digest, or the anchor is not one complete array that
+  /// the closing brace follows.
+  R6EventNotCanonical
+  /// R6: the identifier does not fit its derivation code: a key must be the sole current key under threshold one
+  /// (a `B` key also with empty next keys, witnesses and anchor), a digest must be the event's own digest.
+  R6PrefixMismatch
   /// R7: distinct valid controller positions over `event_bytes` do not
   /// satisfy `cur_threshold`.
   R7QuorumUnsatisfied
@@ -301,119 +268,170 @@ pub type RegistrationVerdict {
   RegistrationInvalid(RegistrationError)
 }
 
-/// R6 — the E1-E9 event-binding slice set. Every expected value is
-/// computed from the datum (derivation-code-prefixed qb64 or exact
-/// re-spelling); the prover's offsets only locate it. A slice is checked
-/// bounds-first, so a truncated (tail) or negative offset fails its
-/// field's check like any mismatch.
+/// R6 — the binding of the event to the datum, by reconstruction: the canonical inception is rebuilt from the datum's own validated
+/// spellings, the digest `d` read at its fixed place, and the whole event compared once up to the anchor, which the one
+/// anchor scanner then reads and ends at the closing brace. No other field is scanned.
 pub fn event_binding(
   d: KeyStateView,
+  q: QualifiedSpelling,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {
-  if !slice_matches(e.event_bytes, e.off_t, "icp") {
-    RegistrationInvalid(E1EventTypeMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_i, qb64_aid(d.cesr_aid)) {
-    RegistrationInvalid(E2AidMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_s, "0") {
-    RegistrationInvalid(E3SequenceMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_k,
-    list.map(d.cur_keys, qb64_verkey),
-  ) {
-    RegistrationInvalid(E4CurKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respell_threshold(d.cur_threshold),
-  ) {
-    RegistrationInvalid(E5CurThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_n,
-    list.map(d.next_keys, qb64_aid),
-  ) {
-    RegistrationInvalid(E6NextKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(d.next_threshold),
-  ) {
-    RegistrationInvalid(E7NextThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_b,
-    list.map(d.witnesses, qb64_witness_verkey),
-  ) {
-    RegistrationInvalid(E8WitnessesMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_bt, respell_hex(d.toad)) {
-    RegistrationInvalid(E9ToadMismatch)
+  let raw = e.event_bytes
+  let size = bytearray.length(raw)
+  if size < 1 || size > 1024 {
+    RegistrationInvalid(R6EventNotCanonical)
   } else {
-    RegistrationValid
+    let said = builtin.slice_bytearray(40, 44, raw)
+    when digest_payload(said) is {
+      None -> RegistrationInvalid(R6EventNotCanonical)
+      Some(_) -> {
+        let prefix = "{\"v\":\"KERI10JSON"
+          |> bytearray.concat(hex6(size))
+          |> bytearray.concat("_\",\"t\":\"icp\",\"d\":\"")
+          |> bytearray.concat(said)
+          |> bytearray.concat("\",\"i\":\"")
+          |> bytearray.concat(q.aid)
+          |> bytearray.concat("\",\"s\":\"0\",\"kt\":")
+          |> bytearray.concat(threshold_json(d.cur_threshold))
+          |> bytearray.concat(",\"k\":")
+          |> bytearray.concat(list_json(q.cur_keys))
+          |> bytearray.concat(",\"nt\":")
+          |> bytearray.concat(threshold_json(d.next_threshold))
+          |> bytearray.concat(",\"n\":")
+          |> bytearray.concat(list_json(list.map(d.next_keys, qb64_aid)))
+          |> bytearray.concat(",\"bt\":\"")
+          |> bytearray.concat(respell_hex(d.toad))
+          |> bytearray.concat("\",\"b\":")
+          |> bytearray.concat(
+              list_json(list.map(d.witnesses, qb64_witness_verkey)),
+            )
+          |> bytearray.concat(",\"c\":[],\"a\":")
+        let n = bytearray.length(prefix)
+        if n >= size || builtin.slice_bytearray(0, n, raw) != prefix {
+          RegistrationInvalid(R6EventNotCanonical)
+        } else {
+          when anchor_after(raw, n) is {
+            None -> RegistrationInvalid(R6EventNotCanonical)
+            Some((anchor, end)) ->
+              if end + 1 != size || builtin.index_bytearray(raw, end) != 125 {
+                RegistrationInvalid(R6EventNotCanonical)
+              } else if prefix_binding(d, q, said, anchor) {
+                RegistrationValid
+              } else {
+                RegistrationInvalid(R6PrefixMismatch)
+              }
+          }
+        }
+      }
+    }
   }
 }
 
-/// The pure registration predicate: R3, R6 (E1-E9), R4, R7, R8, in
-/// order (the same order as the S2 Haskell). R6 precedes R4 because E1's
-/// verified `t` slice is what derives R4's event type (after E1 only
-/// `Icp` can reach it); misdirected offsets that force a duplicate datum
-/// key slip past E4 only to fail R4's F18 (rule 2). The `lovelace`
-/// argument is the state output's value the R8 arithmetic runs over;
-/// transaction shape itself (R1/R2/R5) is the S5 validator layer.
+/// Six lowercase hexadecimal digits of a size.
+pub fn hex6(n: Int) -> ByteArray {
+  let h = respell_hex(n)
+  bytearray.concat(bytearray.take("000000", 6 - bytearray.length(h)), h)
+}
+
+/// A threshold as its JSON value: the quoted hexadecimal string, or the array.
+pub fn threshold_json(t: Threshold) -> ByteArray {
+  let spelled = respell_threshold(t)
+  if bytearray.at(spelled, 0) == 91 {
+    spelled
+  } else {
+    bytearray.concat(bytearray.concat("\"", spelled), "\"")
+  }
+}
+
+/// A list of qualified texts as a JSON array of strings.
+pub fn list_json(items: List<ByteArray>) -> ByteArray {
+  when items is {
+    [] -> "[]"
+    [first, ..rest] ->
+      bytearray.concat(
+        bytearray.concat(
+          "[\"",
+          list.foldl(
+            rest,
+            first,
+            fn(item, acc) {
+              bytearray.concat(bytearray.concat(acc, "\",\""), item)
+            },
+          ),
+        ),
+        "\"]",
+      )
+  }
+}
+
+/// The identifier fits its derivation code. A digest identifier is the event's own digest. A key identifier is the sole
+/// current key, signing alone; a non-transferable one also leaves nothing to rotate to, witness or anchor.
+fn prefix_binding(
+  d: KeyStateView,
+  q: QualifiedSpelling,
+  said: ByteArray,
+  anchor: List<AnchorItem>,
+) -> Bool {
+  let code = bytearray.at(q.aid, 0)
+  if code == code_e {
+    said == q.aid
+  } else if code == code_d {
+    q.cur_keys == [q.aid] && d.cur_threshold == Unweighted(1)
+  } else if code == code_b {
+    q.cur_keys == [q.aid] && d.cur_threshold == Unweighted(1) && d.next_keys == [] && d.witnesses == [] && anchor == []
+  } else {
+    False
+  }
+}
+
+/// The pure registration predicate: R3, R6, R4, R7, R8, in order. The `lovelace` argument is the state
+/// output's value the R8 arithmetic runs over; transaction shape itself (R1/R2/R5) is the validator layer.
 pub fn registration_predicate(
   ctx: DeploymentContext,
   d: KeyStateView,
+  q: QualifiedSpelling,
   lovelace: Int,
   e: RegistrationEvidence,
 ) -> RegistrationVerdict {
   if !valid_registration_deposit(ctx.d_reg) {
     RegistrationInvalid(DRegBelowMinimum)
+  } else if d.seq != 0 {
+    RegistrationInvalid(R3GenesisDatumMismatch)
   } else {
-    // R3: genesis projection.
-    if d.seq != 0 {
-      RegistrationInvalid(R3GenesisDatumMismatch)
-    } else {
-      // R6: the event-binding slice set (E1 derives R4's type).
-      when event_binding(d, e) is {
-        RegistrationInvalid(err) -> RegistrationInvalid(err)
-        RegistrationValid ->
-          // R4: structural inception datum validation.
-          when validate_inception_datum(Icp, d) is {
-            InceptionInvalid(err) ->
-              RegistrationInvalid(R4InceptionInvalid(err))
-            InceptionValid -> {
-              // R7: distinct controller positions over exact event bytes.
-              let signed = verified_positions(
-                d.cur_keys,
+    when event_binding(d, q, e) is {
+      RegistrationInvalid(err) -> RegistrationInvalid(err)
+      RegistrationValid ->
+        when validate_inception_datum(Icp, d) is {
+          InceptionInvalid(err) -> RegistrationInvalid(R4InceptionInvalid(err))
+          InceptionValid -> {
+            let signed = verified_positions(
+              d.cur_keys,
+              e.event_bytes,
+              e.ctrl_sigs,
+            )
+            if !evaluate(d.cur_threshold, list.length(d.cur_keys), signed) {
+              RegistrationInvalid(R7QuorumUnsatisfied)
+            } else {
+              let witnessed = verified_positions(
+                d.witnesses,
                 e.event_bytes,
-                e.ctrl_sigs,
+                e.wit_receipts,
               )
-              if !evaluate(d.cur_threshold, list.length(d.cur_keys), signed) {
-                RegistrationInvalid(R7QuorumUnsatisfied)
+              let receipts_satisfied = if d.toad == 0 {
+                e.wit_receipts == []
               } else {
-                // R7: distinct witness positions over those same bytes.
-                let witnessed = verified_positions(
-                  d.witnesses,
-                  e.event_bytes,
-                  e.wit_receipts,
-                )
-                let receipts_satisfied = if d.toad == 0 {
-                  e.wit_receipts == []
-                } else {
-                  list.length(list.unique(witnessed)) >= d.toad
-                }
-                if !receipts_satisfied {
-                  RegistrationInvalid(R7WitnessQuorumUnsatisfied)
-                } else if lovelace < ctx.min_ada + ctx.d_reg {
-                  // R8: deposit floor.
-                  RegistrationInvalid(R8DepositBelowMinimum)
-                } else {
-                  RegistrationValid
-                }
+                list.length(list.unique(witnessed)) >= d.toad
+              }
+              if !receipts_satisfied {
+                RegistrationInvalid(R7WitnessQuorumUnsatisfied)
+              } else if lovelace < ctx.min_ada + ctx.d_reg {
+                RegistrationInvalid(R8DepositBelowMinimum)
+              } else {
+                RegistrationValid
               }
             }
           }
-      }
+        }
     }
   }
 }
@@ -422,31 +440,14 @@ pub fn registration_predicate(
 // Helpers
 // ---------------------------------------------------------
 
-/// Does the slice of `raw` at `off` equal `expected`? Bounds-checked: an
-/// out-of-range span never matches (mirrors the S2 `sliceMatches`).
+/// Does the slice of `raw` at `off` equal `expected`? Bounds-checked: an out-of-range span never matches. The
+/// conviction binding still locates its fields by position and uses it.
 pub fn slice_matches(raw: ByteArray, off: Int, expected: ByteArray) -> Bool {
   let n = bytearray.length(expected)
   off >= 0 && off + n <= bytearray.length(raw) && bytearray.take(
     bytearray.drop(raw, off),
     n,
   ) == expected
-}
-
-// Offset-count equality + slice equality at every offset (the E4/E6/E8
-// list form; mirrors the S2 `slices`).
-fn slices_match(
-  raw: ByteArray,
-  offs: List<Int>,
-  expected: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> expected == []
-    [o, ..os] ->
-      when expected is {
-        [] -> False
-        [x, ..xs] -> slice_matches(raw, o, x) && slices_match(raw, os, xs)
-      }
-  }
 }
 
 // The positions whose `(idx, sig)` verifies with `keys[idx]` over `msg`

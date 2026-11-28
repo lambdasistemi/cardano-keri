@@ -66,6 +66,8 @@ pub type ThresholdError {
   WeightOutOfBound
   /// Rule 12: a clause's weights sum to `< 1` (unsatisfiable).
   UnsatisfiableClause
+  /// A declaration of next commitments has more weights than commitments.
+  DeclarationWidth
 }
 
 /// The result of the F18 well-formedness check. Aiken's prelude has no
@@ -113,6 +115,37 @@ pub fn well_formed(keys: List<ByteArray>, threshold: Threshold) -> Verdict {
   }
 }
 
+/// The declaration of next commitments an inception makes: the commitments are non-empty, 32 bytes each and distinct,
+/// and the threshold is a numeric one within them or weighted clauses that are each non-empty, whose weights number at
+/// most the commitments (the clauses need not partition them), whose individual weights have a positive denominator
+/// within the bound and lie between zero and one, in any spelling (an unreduced weight is admitted), and whose every
+/// clause totals at least one. Nothing here says which later rotation satisfies it. Every other key state is checked by
+/// `well_formed`.
+pub fn next_declaration_well_formed(
+  keys: List<ByteArray>,
+  threshold: Threshold,
+) -> Verdict {
+  when threshold is {
+    Weighted(clauses) ->
+      // the commitments themselves: non-empty, 32 bytes, distinct
+      when well_formed(keys, Unweighted(1)) is {
+        Invalid(e) -> Invalid(e)
+        Valid ->
+          if list.is_empty(clauses) || list.any(clauses, list.is_empty) {
+            Invalid(EmptyClause)
+          } else if sum_lengths(clauses) > list.length(keys) {
+            Invalid(DeclarationWidth)
+          } else {
+            when check_weights(list.flat_map(clauses, fn(c) { c }), False) is {
+              Invalid(e) -> Invalid(e)
+              Valid -> check_clause_sums(clauses)
+            }
+          }
+      }
+    _ -> well_formed(keys, threshold)
+  }
+}
+
 fn well_formed_weighted(
   keys: List<ByteArray>,
   clauses: List<List<Weight>>,
@@ -125,7 +158,7 @@ fn well_formed_weighted(
     Invalid(PartitionMismatch)
   } else {
     // Rules 7-11 (each weight), then rule 12 (each clause sum).
-    when check_weights(list.flat_map(clauses, fn(c) { c })) is {
+    when check_weights(list.flat_map(clauses, fn(c) { c }), True) is {
       Invalid(e) -> Invalid(e)
       Valid -> check_clause_sums(clauses)
     }
@@ -136,18 +169,19 @@ fn sum_lengths(clauses: List<List<Weight>>) -> Int {
   list.foldl(clauses, 0, fn(c, acc) { acc + list.length(c) })
 }
 
-fn check_weights(ws: List<Weight>) -> Verdict {
+/// Each weight; `reduced` also requires lowest terms.
+fn check_weights(ws: List<Weight>, reduced: Bool) -> Verdict {
   when ws is {
     [] -> Valid
     [w, ..rest] ->
-      when check_weight(w) is {
+      when check_weight(w, reduced) is {
         Invalid(e) -> Invalid(e)
-        Valid -> check_weights(rest)
+        Valid -> check_weights(rest, reduced)
       }
   }
 }
 
-fn check_weight(w: Weight) -> Verdict {
+fn check_weight(w: Weight, reduced: Bool) -> Verdict {
   let Weight { num, den } = w
   if den <= 0 {
     Invalid(NonPositiveDen)
@@ -155,7 +189,7 @@ fn check_weight(w: Weight) -> Verdict {
     Invalid(NegativeNum)
   } else if num > den {
     Invalid(OverUnityWeight)
-  } else if math.gcd(num, den) != 1 {
+  } else if reduced && math.gcd(num, den) != 1 {
     Invalid(UnreducedWeight)
   } else if den > max_weight_denom {
     Invalid(WeightOutOfBound)
@@ -193,6 +227,16 @@ fn sum_all(ws: List<Weight>, num_acc: Int, den_acc: Int) -> (Int, Int) {
 // ---------------------------------------------------------
 // Evaluation
 // ---------------------------------------------------------
+
+/// Whether a declared threshold can authorize over `n` commitments: a numeric threshold always can, a weighted one only
+/// when its weights number exactly the commitments (the model's member width). A declaration of fewer weights than
+/// commitments may be made at an inception, and no signer list satisfies it afterwards.
+pub fn spans(threshold: Threshold, n: Int) -> Bool {
+  when threshold is {
+    Unweighted(_) -> True
+    Weighted(clauses) -> sum_lengths(clauses) == n
+  }
+}
 
 /// Evaluate a threshold against `n` (the key count) and the positions whose
 /// signature verified. `Unweighted(m)` is satisfied when at least `m` distinct

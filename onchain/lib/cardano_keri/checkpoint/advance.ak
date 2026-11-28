@@ -1,59 +1,40 @@
-//// #115 S5 advance evidence + AE1-AE10 + receipt gate (Aiken mirror).
+//// The advance evidence, the binding of a signed rotation to the successor datum, and the receipt gate.
 ////
-//// Mirrors the S4 Haskell `Cardano.KERI.AID.Checkpoint.Advance`
-//// verdict-for-verdict: the `AdvanceEvidence` record (the full keripy
-//// `rot` serialization, per-field value offsets, the witness-delta lists,
-//// the controller signatures, and the incoming-set witness receipts), the
-//// direct `spent`-vs-`new` `advance_equalities` (eq2/eq5/W1-W3/eq6-eq8;
-//// #219: no reconstructed signed-message layer), the AE1-AE10
-//// event-binding slice set (V6), and the incoming-set witness receipt
-//// gate (V7).
+//// The heavy evidence of an advance is the signed `rot` itself, the witness-delta lists, the controller signatures and
+//// the incoming-set witness receipts. Nothing in it is positioned by the prover: the canonical rotation is rebuilt from the
+//// successor datum's qualified spellings and the evidence's witness deltas and compared with the signed bytes whole.
 ////
-//// `advance_predicate` runs, in order: V4 (`advance_equalities`, with
-//// V5's controller-signature evidence — verified against `event_bytes`
-//// directly, #219 — folded in as the revealed-signer positions), V6
-//// (AE1-AE10 event binding), V7 (the receipt quorum). No SAID/blake3 proof
-//// is taken over the rot bytes (ratified QC): `d` and `p` spans are
-//// deliberately unchecked.
+//// `advance_predicate` runs, in order: the message equalities (with the controller-signature evidence, verified
+//// against `event_bytes` directly, folded in as the revealed-signer positions), the event binding (AE1-AE10), and the
+//// incoming-set witness receipt quorum. No digest proof is taken over the rot bytes: `d` and `p` are not checked.
 
+use aiken/builtin
 use aiken/collection/list
 use aiken/crypto.{verify_ed25519_signature}
+use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{KeyStateView}
+use cardano_keri/checkpoint/event_decoder.{anchor_after}
 use cardano_keri/checkpoint/message.{
   AdvanceError, AdvanceInvalid, AdvanceValid, RevealedSuccessorSigners,
-  SpentCheckpoint, advance_equalities, qb64_aid, qb64_verkey,
+  SpentCheckpoint, advance_equalities, qb64_aid,
 }
+use cardano_keri/checkpoint/qualified.{digest_payload}
 use cardano_keri/checkpoint/registration.{
-  qb64_witness_verkey, respell_hex, respell_threshold, slice_matches,
+  QualifiedSpelling, hex6, list_json, qb64_witness_verkey, respell_hex,
+  respell_threshold, threshold_json,
 }
 
 // ---------------------------------------------------------
 // Advance evidence
 // ---------------------------------------------------------
 
-/// The `Advance` redeemer evidence: the full keripy `rot` serialization,
-/// per-field value offsets into it (the #114 offset convention, extended
-/// with the `br`/`ba` witness-delta spans), the ordered witness-delta
-/// lists themselves, the controller signatures, and the incoming-set
-/// witness receipts.
+/// The `Advance` redeemer evidence: the signed `rot`, the ordered witness-delta lists, the controller signatures and the
+/// incoming-set witness receipts.
 ///
-/// `ctrl_sigs` index into `NEW.cur_keys` and sign `event_bytes` directly
-/// (#219: mirrors registration's R7 — no reconstructed Cardano-domain
-/// message preimage). `wit_receipts` index into the DERIVED incoming
-/// witness set (the created datum's own `witnesses`, already W3-derived
-/// and eq7-pinned) and sign `event_bytes` exactly (O1).
+/// `ctrl_sigs` index into `NEW.cur_keys` and sign `event_bytes` directly. `wit_receipts` index into the DERIVED incoming
+/// witness set (the created datum's own `witnesses`, already derived and pinned) and sign `event_bytes` exactly.
 pub type AdvanceEvidence {
   event_bytes: ByteArray,
-  off_t: Int,
-  off_i: Int,
-  off_s: Int,
-  off_k: List<Int>,
-  off_kt: Int,
-  off_n: List<Int>,
-  off_nt: Int,
-  off_br: List<Int>,
-  off_ba: List<Int>,
-  off_bt: Int,
   wit_cut: List<ByteArray>,
   wit_add: List<ByteArray>,
   ctrl_sigs: List<(Int, ByteArray)>,
@@ -64,117 +45,99 @@ pub type AdvanceEvidence {
 // Event binding (V6, AE1-AE10)
 // ---------------------------------------------------------
 
-/// Which AE axis rejected (one constructor per #115 AE1-AE10 check).
+/// Why the event binding rejected.
 pub type AdvanceEventError {
-  /// AE1: the `t` slice is not `"rot"`.
-  AE1EventTypeMismatch
-  /// AE2: the `i` slice is not `NEW.cesr_aid`'s E-code qb64.
-  AE2AidMismatch
-  /// AE3: the `s` slice is not the hex re-spelling of `NEW.native_sn` (the
-  /// rot's own `s = native_sn_to`).
-  AE3SequenceMismatch
-  /// AE4: `k` offset count or a slice differs from `NEW.cur_keys`'s D-code
-  /// qb64.
-  AE4CurKeysMismatch
-  /// AE5: the `kt` slice is not the canonical re-spelling of
-  /// `NEW.cur_threshold`.
-  AE5CurThresholdMismatch
-  /// AE6: `n` offset count or a slice differs from `NEW.next_keys`'s
-  /// E-code qb64.
-  AE6NextKeysMismatch
-  /// AE7: the `nt` slice is not the canonical re-spelling of
-  /// `NEW.next_threshold`.
-  AE7NextThresholdMismatch
-  /// AE8: `br` offset count or a slice differs from the evidence's own
-  /// `wit_cut` B-code qb64.
-  AE8WitCutMismatch
-  /// AE9: `ba` offset count or a slice differs from the evidence's own
-  /// `wit_add` B-code qb64.
-  AE9WitAddMismatch
-  /// AE10: the `bt` slice is not the hex re-spelling of `NEW.toad`.
-  AE10ToadMismatch
+  /// The signed bytes are not the canonical rotation of the successor datum and the witness deltas: rebuilt from them
+  /// they differ anywhere before the anchor, `d` or `p` is not an `E` digest, or the anchor is not one complete array
+  /// that the closing brace follows.
+  AEEventNotCanonical
 }
 
-/// The AE1-AE10 event-binding verdict. `AdvanceEventValid` ≙ `Right ()`,
+/// The event-binding verdict. `AdvanceEventValid` ≙ `Right ()`,
 /// `AdvanceEventInvalid(e)` ≙ `Left e`.
 pub type AdvanceEventVerdict {
   AdvanceEventValid
   AdvanceEventInvalid(AdvanceEventError)
 }
 
-/// V6 — the AE1-AE10 event-binding slice set. Every expected value is
-/// computed from the created datum (derivation-code-prefixed qb64 or exact
-/// keripy re-spelling) or the evidence's own witness-delta lists
-/// (`wit_cut`/`wit_add`); the prover's offsets only locate it (the
-/// #106/#114 offset-misdirection discipline). `d` and `p` are deliberately
-/// never checked (ratified QC — no SAID proof on the advance path).
-pub fn event_binding(
+/// V6 — the binding of the event to the successor datum, by reconstruction: the canonical rotation is rebuilt from the successor datum's
+/// spellings and the evidence's witness deltas, the digests `d` and `p` read at their places, and the whole event
+/// compared once up to the anchor, which the one anchor scanner then reads and ends at the closing brace.
+fn event_binding_holds(
   new: KeyStateView,
+  q: QualifiedSpelling,
   e: AdvanceEvidence,
-) -> AdvanceEventVerdict {
-  if !slice_matches(e.event_bytes, e.off_t, "rot") {
-    AdvanceEventInvalid(AE1EventTypeMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_i, qb64_aid(new.cesr_aid)) {
-    AdvanceEventInvalid(AE2AidMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_s, respell_hex(new.native_sn)) {
-    AdvanceEventInvalid(AE3SequenceMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_k,
-    list.map(new.cur_keys, qb64_verkey),
-  ) {
-    AdvanceEventInvalid(AE4CurKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_kt,
-    respell_threshold(new.cur_threshold),
-  ) {
-    AdvanceEventInvalid(AE5CurThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_n,
-    list.map(new.next_keys, qb64_aid),
-  ) {
-    AdvanceEventInvalid(AE6NextKeysMismatch)
-  } else if !slice_matches(
-    e.event_bytes,
-    e.off_nt,
-    respell_threshold(new.next_threshold),
-  ) {
-    AdvanceEventInvalid(AE7NextThresholdMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_br,
-    list.map(e.wit_cut, qb64_witness_verkey),
-  ) {
-    AdvanceEventInvalid(AE8WitCutMismatch)
-  } else if !slices_match(
-    e.event_bytes,
-    e.off_ba,
-    list.map(e.wit_add, qb64_witness_verkey),
-  ) {
-    AdvanceEventInvalid(AE9WitAddMismatch)
-  } else if !slice_matches(e.event_bytes, e.off_bt, respell_hex(new.toad)) {
-    AdvanceEventInvalid(AE10ToadMismatch)
+) -> Bool {
+  let raw = e.event_bytes
+  let size = bytearray.length(raw)
+  if size < 1 || size > 1024 {
+    False
   } else {
-    AdvanceEventValid
+    let said = builtin.slice_bytearray(40, 44, raw)
+    let lead = "{\"v\":\"KERI10JSON"
+      |> bytearray.concat(hex6(size))
+      |> bytearray.concat("_\",\"t\":\"rot\",\"d\":\"")
+      |> bytearray.concat(said)
+      |> bytearray.concat("\",\"i\":\"")
+      |> bytearray.concat(q.aid)
+      |> bytearray.concat("\",\"s\":\"")
+      |> bytearray.concat(respell_hex(new.native_sn))
+      |> bytearray.concat("\",\"p\":\"")
+    let at = bytearray.length(lead)
+    if at + 44 >= size {
+      False
+    } else {
+      let prior = builtin.slice_bytearray(at, 44, raw)
+      when (digest_payload(said), digest_payload(prior)) is {
+        (Some(_), Some(_)) -> {
+          let prefix = lead
+            |> bytearray.concat(prior)
+            |> bytearray.concat("\",\"kt\":")
+            |> bytearray.concat(threshold_json(new.cur_threshold))
+            |> bytearray.concat(",\"k\":")
+            |> bytearray.concat(list_json(q.cur_keys))
+            |> bytearray.concat(",\"nt\":")
+            |> bytearray.concat(threshold_json(new.next_threshold))
+            |> bytearray.concat(",\"n\":")
+            |> bytearray.concat(list_json(list.map(new.next_keys, qb64_aid)))
+            |> bytearray.concat(",\"bt\":\"")
+            |> bytearray.concat(respell_hex(new.toad))
+            |> bytearray.concat("\",\"br\":")
+            |> bytearray.concat(
+                list_json(list.map(e.wit_cut, qb64_witness_verkey)),
+              )
+            |> bytearray.concat(",\"ba\":")
+            |> bytearray.concat(
+                list_json(list.map(e.wit_add, qb64_witness_verkey)),
+              )
+            |> bytearray.concat(",\"a\":")
+          let n = bytearray.length(prefix)
+          if n >= size || builtin.slice_bytearray(0, n, raw) != prefix {
+            False
+          } else {
+            when anchor_after(raw, n) is {
+              None -> False
+              Some((_, end)) ->
+                end + 1 == size && builtin.index_bytearray(raw, end) == 125
+            }
+          }
+        }
+        _ -> False
+      }
+    }
   }
 }
 
-// Offset-count equality + slice equality at every offset (the AE4/AE6/
-// AE8/AE9 list form; mirrors the S4 Haskell `slices`).
-fn slices_match(
-  raw: ByteArray,
-  offs: List<Int>,
-  expected: List<ByteArray>,
-) -> Bool {
-  when offs is {
-    [] -> expected == []
-    [o, ..os] ->
-      when expected is {
-        [] -> False
-        [x, ..xs] -> slice_matches(raw, o, x) && slices_match(raw, os, xs)
-      }
+/// V6 — the verdict of the binding.
+pub fn event_binding(
+  new: KeyStateView,
+  q: QualifiedSpelling,
+  e: AdvanceEvidence,
+) -> AdvanceEventVerdict {
+  if event_binding_holds(new, q, e) {
+    AdvanceEventValid
+  } else {
+    AdvanceEventInvalid(AEEventNotCanonical)
   }
 }
 
@@ -188,7 +151,7 @@ pub type AdvancePredicateError {
   /// V4: `advance_equalities` rejected (eq1-eq5, W1/W2, eq6 dual-threshold
   /// — including the controller-evidence gate, amended eq7, eq8).
   AdvMessageInvalid(AdvanceError)
-  /// V6: an AE1-AE10 event-binding slice mismatched.
+  /// V6: the event binding rejected.
   AdvEventBinding(AdvanceEventError)
   /// V7: the count of distinct valid incoming-set witness receipts is
   /// below `NEW.toad`.
@@ -226,6 +189,7 @@ pub type AdvancePredicateVerdict {
 pub fn advance_predicate(
   spent: SpentCheckpoint,
   new: KeyStateView,
+  q: QualifiedSpelling,
   e: AdvanceEvidence,
 ) -> AdvancePredicateVerdict {
   let revealed = RevealedSuccessorSigners(
@@ -237,7 +201,7 @@ pub fn advance_predicate(
   when advance_equalities(spent, new, e.wit_cut, e.wit_add, revealed) is {
     AdvanceInvalid(err) -> AdvancePredicateInvalid(AdvMessageInvalid(err))
     AdvanceValid ->
-      when event_binding(new, e) is {
+      when event_binding(new, q, e) is {
         AdvanceEventInvalid(err) ->
           AdvancePredicateInvalid(AdvEventBinding(err))
         AdvanceEventValid ->

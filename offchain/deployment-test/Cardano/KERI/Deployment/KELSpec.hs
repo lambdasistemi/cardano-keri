@@ -9,6 +9,7 @@ import Cardano.KERI.AID.Checkpoint.Advance (
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     KeyStateView (..),
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
     DeploymentContext (..),
@@ -99,15 +100,7 @@ spec =
                 aeWitReceipts (rotationEvidence parsed) `shouldSatisfyLength` 3
                 aeWitCut (rotationEvidence parsed) `shouldSatisfyLength` 0
                 aeWitAdd (rotationEvidence parsed) `shouldSatisfyLength` 0
-                fieldAt
-                    (aeEventBytes $ rotationEvidence parsed)
-                    (aeOffT $ rotationEvidence parsed)
-                    3
-                    `shouldBe` "rot"
-                fieldAt
-                    (aeEventBytes $ rotationEvidence parsed)
-                    (aeOffI $ rotationEvidence parsed)
-                    44
+                BS.take 44 (BS.drop 91 (aeEventBytes $ rotationEvidence parsed))
                     `shouldBe` "EDujsIfURabzXyyBulukdlPkG_BX9d4px6VEQFMd33zT"
 
             it "decodes bare indexed CESR controller-signature lines" $ do
@@ -148,9 +141,6 @@ loadRotation name = do
         pure
         (parseRotationExport bytes)
 
-fieldAt :: BS.ByteString -> Int -> Int -> BS.ByteString
-fieldAt bytes offset size = BS.take size (BS.drop offset bytes)
-
 predicateAccepts :: InceptionExport -> IO ()
 predicateAccepts parsed =
     registrationPredicate
@@ -159,6 +149,7 @@ predicateAccepts parsed =
             , dcDReg = 1_000_000_000
             }
         (inceptionDatum parsed)
+        (spellingOfView (inceptionDatum parsed))
         1_007_000_000
         (inceptionEvidence parsed)
         `shouldBe` Right ()

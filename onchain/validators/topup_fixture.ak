@@ -35,6 +35,7 @@ use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
 use cardano_keri/checkpoint/registration_vectors as reg_vec
+use cardano_keri/checkpoint/spelling_fixture.{qualified_keys}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use deposit_fixture
 use freeze_fixture.{
@@ -497,7 +498,7 @@ pub fn registered_parts(topped_up: Bool) -> Parts {
     refund_to: bytearray.concat(#"61", refund_pkh),
     topped_up,
     keys: KeyMaterial {
-      cur_keys: reg_vec.pos_2key_datum.cur_keys,
+      cur_keys: qualified_keys(reg_vec.pos_2key_datum.cur_keys),
       cur_threshold: reg_vec.pos_2key_datum.cur_threshold,
       next_keys: reg_vec.pos_2key_datum.next_keys,
       next_threshold: reg_vec.pos_2key_datum.next_threshold,

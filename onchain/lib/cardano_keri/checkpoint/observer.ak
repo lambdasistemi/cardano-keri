@@ -16,14 +16,15 @@ use cardano_keri/checkpoint/advance.{
   AdvanceEvidence, AdvancePredicateValid, advance_predicate,
 }
 use cardano_keri/checkpoint/datum.{
-  DatumValid, KeyMaterial, KeyStateView, Live, datum_v2_well_formed,
+  DatumValid, KeyMaterial, KeyStateView, Live, datum_v2_inception_well_formed,
 }
 use cardano_keri/checkpoint/message.{
   SpentCheckpoint, aid_digest, deriveAidAssetName,
 }
+use cardano_keri/checkpoint/qualified
 use cardano_keri/checkpoint/registration.{
-  DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
-  registration_predicate,
+  DeploymentContext, QualifiedSpelling, RegistrationEvidence, RegistrationValid,
+  proof_token_name, registration_predicate,
 }
 
 /// The stable action tag for Register.
@@ -75,14 +76,15 @@ pub fn validate_registration(
   )
   expect InlineDatum(datum_data) = state_output.datum
   let registered = datum.read(datum_data)
-  expect datum_v2_well_formed(registered) == DatumValid
+  expect datum_v2_inception_well_formed(registered) == DatumValid
   expect Live { aid, keys, .. } = registered
   expect Some(digest) = aid_digest(aid)
   // The event's own predicate runs over the key state the datum declares,
   // read as the inception: sequence number and epoch zero.
+  expect Some(d_cur) = qualified.key_payloads(keys.cur_keys)
   let d = KeyStateView {
     cesr_aid: digest,
-    cur_keys: keys.cur_keys,
+    cur_keys: d_cur,
     cur_threshold: keys.cur_threshold,
     next_keys: keys.next_keys,
     next_threshold: keys.next_threshold,
@@ -106,7 +108,13 @@ pub fn validate_registration(
   expect burned_qty == -1
   let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
   expect
-    registration_predicate(ctx, d, lovelace_of(state_output.value), evidence) == RegistrationValid
+    registration_predicate(
+      ctx,
+      d,
+      QualifiedSpelling { aid, cur_keys: keys.cur_keys },
+      lovelace_of(state_output.value),
+      evidence,
+    ) == RegistrationValid
   True
 }
 
@@ -135,9 +143,10 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
     = datum.read(new_data)
   expect new_aid == aid
   expect Some(digest) = aid_digest(aid)
+  expect Some(new_cur) = qualified.key_payloads(new_keys.cur_keys)
   let new = KeyStateView {
     cesr_aid: digest,
-    cur_keys: new_keys.cur_keys,
+    cur_keys: new_cur,
     cur_threshold: new_keys.cur_threshold,
     next_keys: new_keys.next_keys,
     next_threshold: new_keys.next_threshold,
@@ -154,7 +163,12 @@ pub fn validate_advance(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
     old_epoch,
     old_sn,
   )
-  advance_predicate(spent, new, evidence) == AdvancePredicateValid
+  advance_predicate(
+    spent,
+    new,
+    QualifiedSpelling { aid, cur_keys: new_keys.cur_keys },
+    evidence,
+  ) == AdvancePredicateValid
 }
 
 /// The rotation evidence of a freeze: the successor keeps the old keys, so the
@@ -185,9 +199,10 @@ pub fn validate_freeze(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
   )
   expect Some(digest) = aid_digest(aid)
   let rotated = evidence.rotated_keys
+  expect Some(new_cur) = qualified.key_payloads(rotated.cur_keys)
   let new = KeyStateView {
     cesr_aid: digest,
-    cur_keys: rotated.cur_keys,
+    cur_keys: new_cur,
     cur_threshold: rotated.cur_threshold,
     next_keys: rotated.next_keys,
     next_threshold: rotated.next_threshold,
@@ -204,7 +219,12 @@ pub fn validate_freeze(envelope: ObserverEnvelope, tx: Transaction) -> Bool {
     old_epoch,
     old_sn,
   )
-  advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid
+  advance_predicate(
+    spent,
+    new,
+    QualifiedSpelling { aid, cur_keys: rotated.cur_keys },
+    evidence.rotation,
+  ) == AdvancePredicateValid
 }
 
 /// The spent checkpoint an advance or a freeze rotates away from: the spent

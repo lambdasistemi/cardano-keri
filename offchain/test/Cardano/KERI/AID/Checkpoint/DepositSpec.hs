@@ -57,6 +57,7 @@ import Cardano.KERI.AID.Checkpoint.DepositVectors (
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (loadFixture)
 import Cardano.KERI.AID.Checkpoint.Message (SpentCheckpoint (..))
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -120,7 +121,7 @@ liveMarked c poisoned frozen toppedUp sn =
         , lvToppedUp = toppedUp
         , lvKeys =
             KeyMaterial
-                { kmCurKeys = acIcpKeys c
+                { kmCurKeys = map (qualify codeD) (acIcpKeys c)
                 , kmCurThreshold = Unweighted 2
                 , kmNextKeys = scNextKeys (acSpent c)
                 , kmNextThreshold = scNextThreshold (acSpent c)
@@ -153,7 +154,7 @@ successorWith c frozen refund born aid =
         , lvToppedUp = False
         , lvKeys =
             KeyMaterial
-                { kmCurKeys = cdCurKeys created
+                { kmCurKeys = map (qualify codeD) (cdCurKeys created)
                 , kmCurThreshold = cdCurThreshold created
                 , kmNextKeys = cdNextKeys created
                 , kmNextThreshold = cdNextThreshold created

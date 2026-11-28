@@ -13,13 +13,16 @@
 
 use aiken/builtin
 use aiken/collection/list
+use aiken/primitive/bytearray
 use cardano_keri/checkpoint/datum.{
   CesrAidWidth, CheckpointDatumV2, DatumInvalid, DatumValid, DuplicateWitness,
-  KeyMaterial, KeyStateView, Live, NegativeBornAt, NegativeEpoch, NegativeSn,
-  NextIllFormed, TerminationPending, ThresholdIllFormed, ToadRange, WitnessWidth,
-  datum_v2_well_formed, key_state_well_formed,
+  KeyMaterial, KeyNotQualified, KeyStateView, Live, NegativeBornAt,
+  NegativeEpoch, NegativeSn, NextIllFormed, TerminationPending,
+  ThresholdIllFormed, ToadRange, WitnessWidth, datum_v2_well_formed,
+  key_state_well_formed,
 }
 use cardano_keri/checkpoint/datum_v2_vectors as v2_vectors
+use cardano_keri/checkpoint/qualified.{code_d, qualify}
 use cardano_keri/checkpoint/threshold.{
   DuplicateKey, EmptyKeys, KeyWidth, Unweighted, UnweightedRange, Weight,
   Weighted,
@@ -193,6 +196,20 @@ test wf_next_threshold_out_of_range() {
 // Version 2 write-time validity
 // ---------------------------------------------------------
 
+/// The current keys as the datum keeps them: qualified texts. A key that is not 32 bytes stays as it is.
+fn qualified(keys: List<ByteArray>) -> List<ByteArray> {
+  list.map(
+    keys,
+    fn(k) {
+      if bytearray.length(k) == 32 {
+        qualify(code_d, k)
+      } else {
+        k
+      }
+    },
+  )
+}
+
 fn keys_v2(
   cur_keys: List<ByteArray>,
   cur_threshold: threshold.Threshold,
@@ -200,7 +217,7 @@ fn keys_v2(
   toad: Int,
 ) -> KeyMaterial {
   KeyMaterial {
-    cur_keys,
+    cur_keys: qualified(cur_keys),
     cur_threshold,
     next_keys: [nk1],
     next_threshold: Unweighted(1),
@@ -273,7 +290,14 @@ test v2_cur_empty_keys() {
 
 test v2_cur_key_width() {
   datum_v2_well_formed(live_v2(keys_v2([k31], Unweighted(1), [], 0))) == DatumInvalid(
-    ThresholdIllFormed(KeyWidth),
+    KeyNotQualified,
+  )
+}
+
+/// A raw 32 byte key is not a qualified text.
+test v2_cur_key_raw() {
+  datum_v2_well_formed(live_v2(KeyMaterial { ..good_keys(), cur_keys: [k1] })) == DatumInvalid(
+    KeyNotQualified,
   )
 }
 

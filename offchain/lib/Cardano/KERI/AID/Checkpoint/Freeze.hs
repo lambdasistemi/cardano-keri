@@ -32,7 +32,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatumV2 (..),
     KeyMaterial (..),
     KeyStateView,
+    QualifiedSpelling,
     keyStateView,
+    qualifiedSpellingOf,
  )
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
@@ -133,11 +135,12 @@ freezeSettlement FreezeParams{..} facts lovelace = do
 datum's identifier, one more epoch, the rotation's sequence number and keys.
 -}
 freezeRotatedView ::
-    CheckpointDatumV2 -> FreezeEvidence -> Maybe KeyStateView
+    CheckpointDatumV2 -> FreezeEvidence -> Maybe (KeyStateView, QualifiedSpelling)
 freezeRotatedView spent FreezeEvidence{..} = case spent of
-    Live{lvAid, lvEpoch} ->
-        (\raw -> keyStateView raw feRotatedSn (lvEpoch + 1) feRotatedKeys)
-            <$> aidDigest lvAid
+    Live{lvAid, lvEpoch} -> do
+        raw <- aidDigest lvAid
+        view <- keyStateView raw feRotatedSn (lvEpoch + 1) feRotatedKeys
+        pure (view, qualifiedSpellingOf lvAid feRotatedKeys)
     TerminationPending{} -> Nothing
 
 {- | The spent checkpoint the rotation is checked against, derived from the
@@ -199,10 +202,10 @@ freezeVerdict params@FreezeParams{..} FreezeInput{..} = do
             (Left FreezeAidNotCanonical)
             Right
             (freezeSpentView fiPolicy fiSpentTxId fiSpentIndex fiSpentDatum)
-    rotated <-
+    (rotated, spelling) <-
         maybe
             (Left FreezeAidNotCanonical)
             Right
             (freezeRotatedView fiSpentDatum fiEvidence)
     first FreezeRotationRefused $
-        advancePredicate spent rotated (feRotation fiEvidence)
+        advancePredicate spent rotated spelling (feRotation fiEvidence)

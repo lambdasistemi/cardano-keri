@@ -138,7 +138,8 @@ const mutants = [
     premise: 'the signers are the current keys of the rotation, not those of the spent state',
     edits: [
       { file: REGISTER, from: 'expect Live { aid, frozen, born_at, refund_to, .. } = old', to: 'expect Live { aid, frozen, born_at, refund_to, keys: old_keys, .. } = old' },
-      { file: REGISTER, from: '          new_keys.cur_keys,\n', to: '          old_keys.cur_keys,\n' },
+      { file: REGISTER, from: '  expect Some(new_cur_raw) = qualified.key_payloads(new_keys.cur_keys)\n', to: '  expect Some(new_cur_raw) = qualified.key_payloads(new_keys.cur_keys)\n  expect Some(old_cur_raw) = qualified.key_payloads(old_keys.cur_keys)\n' },
+      { file: REGISTER, from: '          new_cur_raw,\n', to: '          old_cur_raw,\n' },
     ],
     killers: [...accepts, ...t(CONNECTED, 'deposit_signed_by_the_keys_of_the_spent_state_is_refused')],
   },
@@ -232,7 +233,7 @@ const mutants = [
   {
     name: 'rotation-evidence',
     premise: 'the rotation is witnessed and later (the unchanged advance predicate)',
-    edits: [{ file: OBSERVER, from: 'advance_predicate(spent, new, evidence) == AdvancePredicateValid\n}', to: 'advance_predicate(spent, new, evidence) == AdvancePredicateValid || True\n}' }],
+    edits: [{ file: OBSERVER, from: '    evidence,\n  ) == AdvancePredicateValid\n}', to: '    evidence,\n  ) == AdvancePredicateValid || True\n}' }],
     killers: t(CONNECTED, 'deposit_with_a_rotation_signed_by_too_few_keys_is_refused', 'deposit_with_an_unevidenced_rotation_is_refused'),
   },
   {

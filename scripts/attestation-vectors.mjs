@@ -76,18 +76,18 @@ const claims = [
   { name: 'a wide index and a wide deposit', application: app, index: 300, datum: wrapped, deposit: 5000000000000 },
 ];
 const evidenceOf = (e) => C(0,
-  B(e.event_bytes), I(e.off_t), I(e.off_i), I(e.off_s), L(...e.off_k.map(I)), I(e.off_kt), L(...e.off_n.map(I)), I(e.off_nt), L(...e.off_b.map(I)), I(e.off_bt),
+  B(e.event_bytes),
   L(...e.ctrl_sigs.map(([k, s]) => L(I(k), B(s)))), L(...e.wit_receipts.map(([k, s]) => L(I(k), B(s)))));
 const evidence = {
-  event_bytes: ascii('icp'), off_t: 1, off_i: 2, off_s: 3, off_k: [4], off_kt: 5, off_n: [6], off_nt: 7, off_b: [8], off_bt: 9,
+  event_bytes: ascii('icp'),
   ctrl_sigs: [[0, 'a1'.repeat(64)]], wit_receipts: [[1, 'b1'.repeat(64)]],
 };
 const otherEvidence = {
-  event_bytes: ascii('icq'), off_t: 11, off_i: 12, off_s: 13, off_k: [14, 15], off_kt: 16, off_n: [17], off_nt: 18, off_b: [], off_bt: 19,
+  event_bytes: ascii('icq'),
   ctrl_sigs: [[1, 'a2'.repeat(64)], [2, 'b2'.repeat(64)]], wit_receipts: [],
 };
 // Event bytes longer than 64 bytes are written in chunks of 64: the case the short ones do not reach.
-const longEvidence = { ...evidence, event_bytes: 'ee'.repeat(100), off_k: [4, 300] };
+const longEvidence = { ...evidence, event_bytes: 'ee'.repeat(100) };
 const issues = [
   { name: 'two requests of distinct evidence', application: app, entries: [{ index: 3, evidence }, { index: 5, evidence: otherEvidence }] },
   { name: 'one request whose event bytes are longer than 64 bytes', application: app, entries: [{ index: 300, evidence: longEvidence }] },
@@ -110,15 +110,6 @@ if (vectors.burn.redeemer !== 'd87a80') throw new Error('Burn is not constructor
 // --- the Aiken module -----------------------------------------------------------
 const aikenEvidence = (e) => `RegistrationEvidence {
         event_bytes: #"${e.event_bytes}",
-        off_t: ${e.off_t},
-        off_i: ${e.off_i},
-        off_s: ${e.off_s},
-        off_k: [${e.off_k.join(', ')}],
-        off_kt: ${e.off_kt},
-        off_n: [${e.off_n.join(', ')}],
-        off_nt: ${e.off_nt},
-        off_b: [${e.off_b.join(', ')}],
-        off_bt: ${e.off_bt},
         ctrl_sigs: [${e.ctrl_sigs.map(([k, s]) => `(${k}, #"${s}")`).join(', ')}],
         wit_receipts: [${e.wit_receipts.map(([k, s]) => `(${k}, #"${s}")`).join(', ')}],
       }`;

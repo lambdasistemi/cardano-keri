@@ -91,6 +91,7 @@ import Cardano.KERI.AID.CESR (
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     ThresholdError,
+    futureThresholdFromData,
     futureWellFormed,
     wellFormed,
  )
@@ -288,7 +289,7 @@ instance FromData KeyMaterial where
             kmNextKeys <- traverse unB nkeys
             kmWitnesses <- traverse unB wits
             kmCurThreshold <- fromBuiltinData (BuiltinData thr)
-            kmNextThreshold <- fromBuiltinData (BuiltinData nthr)
+            kmNextThreshold <- futureThresholdFromData (BuiltinData nthr)
             pure KeyMaterial{kmToad = toad, ..}
     fromBuiltinData _ = Nothing
 

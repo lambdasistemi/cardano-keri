@@ -19,10 +19,12 @@ import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
     ThresholdError (..),
     Weight (..),
+    futureThresholdFromData,
     futureWellFormed,
  )
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import PlutusTx.IsData.Class (FromData (..), ToData (..))
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 commitments :: Int -> [ByteString]
@@ -57,6 +59,17 @@ spec = describe "the future declaration of an inception" $ do
             futureWellFormed (commitments 1 <> commitments 1) (Unweighted 0) `shouldBe` Left DuplicateKey
         it "a commitment of another width is refused" $
             futureWellFormed [BS.replicate 31 1] (Unweighted 0) `shouldBe` Left KeyWidth
+    describe "the future threshold as the datum carries it keeps the signed pair" $ do
+        it "reads the pair (2,4) as signed, where the frozen weight codec asks for lowest terms" $ do
+            futureThresholdFromData (toBuiltinData (Weighted [[Weight 2 4, Weight 2 4]]))
+                `shouldBe` Just (Weighted [[Weight 2 4, Weight 2 4]])
+            (fromBuiltinData (toBuiltinData (Weight 2 4)) :: Maybe Weight) `shouldBe` Nothing
+        it "keeps refusing a weight that is not a fraction of one" $ do
+            futureThresholdFromData (toBuiltinData (Weighted [[Weight 3 2]])) `shouldBe` Nothing
+            futureThresholdFromData (toBuiltinData (Weighted [[Weight 1 0]])) `shouldBe` Nothing
+            futureThresholdFromData (toBuiltinData (Weighted [[Weight (-1) 2]])) `shouldBe` Nothing
+        it "reads a numeric threshold" $
+            futureThresholdFromData (toBuiltinData (Unweighted 0)) `shouldBe` Just (Unweighted 0)
   where
     row name count threshold expected =
         it name $ futureWellFormed (commitments count) threshold `shouldBe` expected

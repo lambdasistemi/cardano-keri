@@ -39,6 +39,7 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
     fitsNextKeys,
     normaliseWeights,
     parseThresholdSpelling,
+    futureThresholdFromData,
     evaluate,
 ) where
 
@@ -219,6 +220,23 @@ normaliseWeights = \case
     reduce w@(Weight num den)
         | den > 0 && num >= 0 = let g = gcd num den in if g > 1 then Weight (num `div` g) (den `div` g) else w
         | otherwise = w
+
+{- | A future (next) threshold as the datum carries it: the weights keep the numerator and
+denominator they were signed with. A weight is a pair with a positive denominator and a numerator
+between zero and the denominator; lowest terms are not asked (a signed 2/4 is the pair (2,4)). The
+current signing threshold is read with the frozen codec, which asks for lowest terms.
+-}
+futureThresholdFromData :: BuiltinData -> Maybe Threshold
+futureThresholdFromData (BuiltinData d) = case d of
+    Constr 0 [I m] -> Just (Unweighted m)
+    Constr 1 [List clauses] -> Weighted <$> traverse clause clauses
+    _ -> Nothing
+  where
+    clause (List weights) = traverse weight weights
+    clause _ = Nothing
+    weight (Constr 0 [I num, I den])
+        | den > 0 && num >= 0 && num <= den = Just (Weight num den)
+    weight _ = Nothing
 
 {- | The threshold a signed spelling declares: bare hexadecimal digits, or a compact JSON array of
 fraction strings (one clause) or of arrays of them (several). The weights keep the spelling they

@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
@@ -75,7 +76,12 @@ spec =
                             (inceptionQualified export)
                         )
                     )
-        fmap (\d -> case d of V2 Live{lvKeys} -> pairs (kmNextThreshold lvKeys); _ -> []) (checkpointDatumFromData literalDatum)
+        fmap
+            ( \case
+                V2 Live{lvKeys} -> pairs (kmNextThreshold lvKeys)
+                _ -> []
+            )
+            (checkpointDatumFromData literalDatum)
             `shouldBe` Just signedPairs
     row (name, signedPairs, commitments) = it name $ do
         s <- scenarioOf [(name, deposit)]

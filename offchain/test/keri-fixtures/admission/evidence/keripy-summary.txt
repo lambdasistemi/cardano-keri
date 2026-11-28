@@ -1,0 +1,14 @@
+keripy 1.3.5 available (SODIUM_LIB set)
+I01   inception   subject   accepted          
+I02   inception   subject   accepted          
+I03a  inception   subject   accepted          
+R01   rotation    subject   accepted          
+R07   rotation    subject   accepted          
+R08a  rotation    subject   accepted          
+R10c  rotation    subject   accepted          
+R17   rotation    subject   accepted          
+R18   rotation    subject   accepted          
+W01   rotation    subject   accepted          
+W09   rotation    subject   accepted          
+X01   interaction subject   accepted          
+X07   interaction subject   accepted          

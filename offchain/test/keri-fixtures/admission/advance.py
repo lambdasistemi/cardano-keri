@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 import keripy_admission as K  # noqa: E402
 import gen_fixtures as G  # noqa: E402
 import registration as R  # noqa: E402  (th, raw_of, hexof)
+from receipts import verdicts  # noqa: E402
 from keri.core import serdering  # noqa: E402
 
 out = os.environ.get("ADMISSION_OUT") or os.getcwd()
@@ -97,17 +98,9 @@ def gen(dest):
 
 def compare(aiken_txt):
     keripy = {r["id"]: r for r in json.load(open(os.path.join(out, "keripy-results.json")))["cases"]}
-    verdict, cur = {}, None
-    for line in open(aiken_txt):
-        line = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", line)
-        m = re.search(r"(?:PASS|FAIL)\s+\[[^\]]*\]\s+(?:\S+\.)?adv_(\w+)", line)
-        if m:
-            cur = m.group(1)
-            continue
-        t = re.match(r"\s*│\s*\|\s*(\w+)\s*$", line)
-        if cur and t:
-            verdict.setdefault(cur, t.group(1))
     notes = {n["id"]: n["reason"] for n in json.load(open(os.path.join(out, "advance-not-built.json")))}
+    expected = [c["id"] for c, st, icp in rows() if c["id"] not in notes]
+    verdict = verdicts(aiken_txt, "adv_", expected, ["Valid", "AdvReceiptQuorumUnsatisfied", "Eq8CreatedIllFormed"] + MSG + EVT)
     table = []
     for c, st, icp in rows():
         tag = c["id"]

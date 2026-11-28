@@ -11,16 +11,46 @@ Relations: "same verdict" (keripy and the layer admit, or both do not), "DISAGRE
 matching inputs), "no like surface" (the layer has no admission predicate for that kind of event).
 """
 import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import keripy_admission as K  # noqa: E402  (the corpus definitions: the expected cases)
+import thresholds as T  # noqa: E402
+import registration as R  # noqa: E402
+import advance as A  # noqa: E402
+from receipts import threshold_results, verdicts  # noqa: E402
 
 ev, outdir = sys.argv[1], sys.argv[2]
 load = lambda n: json.load(open(os.path.join(ev, n)))
 keripy = load("keripy-results.json")["cases"]
 model = load("comparison.json")
-advance = {r["case"]: r for r in load("advance-comparison.json")}
-registration = {r["case"]: r for r in load("registration-comparison.json")}
+advance_list = load("advance-comparison.json")
+registration_list = load("registration-comparison.json")
+advance = {r["case"]: r for r in advance_list}
+registration = {r["case"]: r for r in registration_list}
 thresholds = load("thresholds-comparison.json")
 TRACK = {"I01": "#590", "R17": "#591"}
 problems = []
+
+
+def exact(what, found, expected):
+    """The found identifiers are exactly the expected ones, each once."""
+    dups = sorted({x for x in found if list(found).count(x) > 1})
+    missing = sorted(set(expected) - set(found))
+    extra = sorted(set(found) - set(expected))
+    if dups:
+        problems.append("%s: repeated %s" % (what, dups))
+    if missing:
+        problems.append("%s: missing %s" % (what, missing))
+    if extra:
+        problems.append("%s: unexpected %s" % (what, extra))
+
+
+# the fixtures every layer must answer for, taken from the corpus definitions themselves
+EXPECTED_EVENTS = [c["id"] for c in K.CASES]
+EXPECTED_THRESHOLDS = [c[0] for c in T.CASES]
+EXPECTED_MODEL = [(c["id"], "subject") for c in K.CASES]
+EXPECTED_REGISTRATION = [c["id"] for c, st, sad in R.cases()]
+EXPECTED_ADVANCE = [c["id"] for c, st, icp in A.rows()]
 
 
 def relation(direction):
@@ -35,18 +65,20 @@ def relation(direction):
 
 
 rows = []
-# 1. every case persisted by keripy has an exact log readback (the SAID at its position and the stored bytes)
+# 1. the keripy receipts hold exactly the corpus; every step it persisted has an exact log readback (context steps included)
+exact("keripy results", [c["id"] for c in keripy], EXPECTED_EVENTS)
 for c in keripy:
-    last = c["steps"][-1]
-    if last["outcome"] == "accepted":
-        rb = last.get("readback") or {}
-        if not (rb.get("logged") and rb.get("saidAtSn") == last["said"] and rb.get("storedBytesEqual")):
-            problems.append("%s: accepted without a consistent log readback" % c["id"])
-    elif "escrowIndex" not in last and last["outcome"] == "escrowed":
-        problems.append("%s: escrowed without an escrow index entry" % c["id"])
     for st in c["steps"]:
-        if st["role"] == "context" and st["outcome"] != "accepted":
+        if st["outcome"] == "accepted":
+            rb = st.get("readback") or {}
+            if not (rb.get("logged") and rb.get("saidAtSn") == st["said"] and rb.get("storedBytesEqual")):
+                problems.append("%s: step %s is accepted without a consistent log readback" % (c["id"], st["label"]))
+        elif st["role"] == "context":
             problems.append("%s: context step %s was not persisted: the case is not a valid positive control" % (c["id"], st["label"]))
+        elif st["outcome"] == "escrowed" and "escrowIndex" not in st:
+            problems.append("%s: escrowed without an escrow index entry" % c["id"])
+    if c["steps"][-1]["role"] != "subject":
+        problems.append("%s: no subject step" % c["id"])
 
 
 def kdesc(r):
@@ -55,15 +87,30 @@ def kdesc(r):
 
 # 2. the model layer: one row per subject step
 by_case = {c["id"]: c for c in keripy}
-model_ids = {m["case"] for m in model}
-for cid in by_case:
-    if cid not in model_ids:
-        problems.append("%s: no model row" % cid)
+exact("model rows", [(m["case"], m["role"]) for m in model], EXPECTED_MODEL)
 for m in model:
     rows.append({"case": m["case"], "layer": "model (Lean, decoded inputs)", "input": "%s sn %s %s" % (m["ilk"], m["sn"], (m["said"] or "")[:12]),
                  "what": m["title"], "keripy": kdesc(m), "layer_result": m["model"], "relation": relation(m["direction"]), "tracker": TRACK.get(m["case"], "")})
 
 # 3. the chain layers: every inception and every first rotation has a typed verdict
+exact("registration rows", [r["case"] for r in registration_list], EXPECTED_REGISTRATION)
+exact("advance rows", [r["case"] for r in advance_list], EXPECTED_ADVANCE)
+exact("threshold rows", [t["id"] for t in thresholds], EXPECTED_THRESHOLDS)
+# the transcripts again, read here and compared with the verdicts the comparison carried
+for fname, prefix, src, allowed in (("aiken-registration.txt", "reg_", registration, ["Valid", "R4InceptionInvalid"] + R.ERRORS),
+                                    ("aiken-advance.txt", "adv_", advance, ["Valid", "AdvReceiptQuorumUnsatisfied", "Eq8CreatedIllFormed"] + A.MSG + A.EVT)):
+    try:
+        seen = verdicts(os.path.join(ev, fname), prefix, list(src), allowed)
+    except SystemExit as exc:
+        problems.append(str(exc))
+        continue
+    for cid, r in src.items():
+        if seen.get(cid) != r["chain"]:
+            problems.append("%s: the comparison carries %s, the transcript %s" % (cid, r["chain"], seen.get(cid)))
+try:
+    threshold_results(os.path.join(ev, "aiken-thresholds.txt"), load("thresholds.json")["cases"])
+except SystemExit as exc:
+    problems.append(str(exc))
 for tag, src, layer in (("reg", registration, "Aiken registration_predicate"), ("adv", advance, "Aiken advance_predicate")):
     for cid, r in src.items():
         if r["chain"] in ("", "no evidence built"):

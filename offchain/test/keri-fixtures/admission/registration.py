@@ -14,6 +14,7 @@ import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 import keripy_admission as K  # noqa: E402
+from receipts import verdicts  # noqa: E402
 import gen_fixtures as G  # noqa: E402
 from keri.core import coring, serdering  # noqa: E402
 
@@ -94,18 +95,9 @@ def gen(dest):
 
 def compare(aiken_txt):
     keripy = {r["id"]: r for r in json.load(open(os.path.join(out, "keripy-results.json")))["cases"]}
-    verdict = {}
-    cur = None
-    for line in open(aiken_txt):
-        line = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", line)
-        m = re.search(r"(?:PASS|FAIL)\s+\[[^\]]*\]\s+(?:\S+\.)?reg_(\w+)", line)
-        if m:
-            cur = m.group(1)
-            continue
-        t = re.match(r"\s*│\s*\|\s*(\w+)\s*$", line)
-        if cur and t:
-            verdict.setdefault(cur, t.group(1))
     notes = {n["id"]: n["reason"] for n in json.load(open(os.path.join(out, "registration-not-built.json")))}
+    expected = [c["id"] for c, st, sad in cases() if c["id"] not in notes]
+    verdict = verdicts(aiken_txt, "reg_", expected, ["Valid", "R4InceptionInvalid"] + ERRORS)
     rows = []
     for c, st, sad in cases():
         res = keripy[c["id"]]["steps"][-1]

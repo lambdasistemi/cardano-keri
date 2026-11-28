@@ -13,10 +13,38 @@ import json, os
 
 HERE = os.environ.get("ADMISSION_OUT") or os.getcwd()
 res = json.load(open(os.path.join(HERE, "keripy-results.json")))
+
+def die(msg):
+    raise SystemExit("compare: " + msg)
+
+
+subjects = [(c["id"], st["role"]) for c in res["cases"] for st in c["steps"] if st["role"] == "subject"]
+if len(subjects) != len(set(subjects)):
+    die("keripy results repeat a subject step")
+inputs = {}
+for r in json.load(open(os.path.join(HERE, "lean-input.json")))["rows"]:
+    key = (r["case"], r["role"])
+    if key in inputs:
+        die("the translation repeats a row for %s" % (key,))
+    inputs[key] = r
+if set(inputs) != set(subjects):
+    die("translated rows differ from the subject steps: missing %s, unexpected %s" % (sorted(set(subjects) - set(inputs)), sorted(set(inputs) - set(subjects))))
 lean = {}
 for line in open(os.path.join(HERE, "lean-output.jsonl")):
     r = json.loads(line)
-    lean.setdefault(r["case"], {})[r["role"]] = r
+    key = (r["case"], r["role"])
+    if key in lean:
+        die("more than one model result for %s" % (key,))
+    if "untranslatable" in r:
+        die("the model driver could not read %s: %s" % (key, r["untranslatable"]))
+    lean[key] = r
+if set(lean) != set(inputs):
+    die("model results differ from the translated rows: missing %s, unexpected %s" % (sorted(set(inputs) - set(lean)), sorted(set(lean) - set(inputs))))
+for key, r in lean.items():
+    if inputs[key]["comparable"] and not isinstance(r.get("rotationValid"), bool):
+        die("model result for %s has no rotationValid" % (key,))
+    if not inputs[key]["comparable"] and "notComparable" not in r:
+        die("model result for %s answers a row declared not comparable" % (key,))
 
 KCLS = {"accepted": "accepted", "escrowed": "pending", "refused": "refused", "refused-at-parse": "refused at parse", "unknown": "unknown"}
 
@@ -36,10 +64,10 @@ for c in res["cases"]:
     for st in c["steps"]:
         if st["role"] != "subject":
             continue
-        m = lean.get(c["id"], {}).get(st["role"], {})
+        m = lean[(c["id"], st["role"])]
         base = {"case": c["id"], "stage": c["stage"], "family": c["family"], "title": c["title"], "ilk": st["ilk"], "sn": st["sn"],
                 "said": st["said"], "pre": st["pre"], "raw": st["raw"]}
-        if "notComparable" in m or not m:
+        if "notComparable" in m:
             rows.append({**base, "role": st["role"], "keripy": KCLS[st["outcome"]], "keripyClass": st["class"], "keripyDetail": st["detail"],
                          "model": "no like surface", "direction": "not comparable: " + m.get("notComparable", "no model row")})
         else:

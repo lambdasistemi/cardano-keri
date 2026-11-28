@@ -9,16 +9,12 @@ compare_thresholds.py. Nested weight groups have no representation in the codec'
 listed as such, not skipped silently.
 """
 import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from receipts import representable, subset_label  # noqa: E402
 
 out = os.environ.get("ADMISSION_OUT") or os.getcwd()
 dest = sys.argv[1]
 data = json.load(open(os.path.join(out, "thresholds.json")))
-
-
-def representable(th):
-    if "count" in th:
-        return True
-    return "weighted" in th and all("key" in w for clause in th["weighted"] for w in clause)
 
 
 def aiken_threshold(th):
@@ -46,7 +42,7 @@ for c in data["cases"]:
     lines.append("test wf_%s() {\n  well_formed([%s], %s) == Valid\n}\n" % (c["id"], keys, t))
     for r in range(2 ** c["n"]):
         who = [i for i in range(c["n"]) if (r >> i) & 1]
-        label = "".join(str(i) for i in who) or "none"
+        label = subset_label(who)
         lines.append("test ev_%s_%s() {\n  evaluate(%s, %d, [%s])\n}\n" % (c["id"], label, t, c["n"], ", ".join(map(str, who))))
 open(dest, "w").write("\n".join(lines) + "\n")
 print("wrote", dest, sum(1 for l in lines if l.startswith("test ")), "tests")

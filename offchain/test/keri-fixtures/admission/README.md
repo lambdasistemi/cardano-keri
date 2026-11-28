@@ -30,9 +30,21 @@ bash controls.sh [evidence]         # each mutation of the recorded evidence mus
 ```
 
 Needs nix with flakes. keripy 1.3.5 comes from the pinned flake in the parent directory, Lean 4.27.0 from
-`lean/flake.nix`, Aiken from the pin in `run.sh`. `matrix.py` writes no matrix and exits 1 when a result is missing,
-a persisted event has no consistent log readback, a context step was not persisted, or a chain layer has no named
-verdict. `controls.sh` shows each of those failing on a mutated copy, and the unmodified evidence passing.
+`lean/flake.nix`, Aiken from the pin in `run.sh`.
+
+Every reporting step reads its receipt strictly (`receipts.py`) and exits 1, writing nothing, when a result is missing,
+unexpected or repeated, when a typed verdict is not one the predicate defines, when a test carries more than one verdict,
+when a suite has no completion summary or one that disagrees with its results, when the model driver has no answer for a
+translated row, or when a threshold result lacks one of its signer subsets. `matrix.py` takes the expected cases from the
+corpus definitions, re-reads the Aiken transcripts, and also exits 1 when any step keripy reports as persisted (context
+steps included) has no consistent log readback. A coverage exclusion is declared by the producer (a translated row marked
+not comparable, or a threshold the codec cannot hold) and is never inferred from an absent line.
+
+`controls.sh` runs 17 controls: the unmodified evidence passes every reporting path, and each mutation of a copy of the
+evidence (a missing or extra fixture row, a missing model output, an unknown verdict, a second verdict, a missing
+evaluation receipt, a missing completion summary, a missing signer subset, a contradicted context readback) is rejected with
+its stated reason by the script that reads that receipt. Generated transcripts are normalised where they are produced
+(no carriage returns, no trailing whitespace, the compiler notices of the copied project dropped: only the test section is kept), so the published tree passes `git diff --check`.
 
 ## Layers
 

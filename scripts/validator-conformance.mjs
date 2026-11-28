@@ -97,7 +97,7 @@ function countLine(tree, label) {
     totals.missing + ' not enforced (' + (totals.partial + totals.missing) + ' open of ' + assessed.length + ').';
 }
 const registrationOnMain = read('main','lean/CardanoKeri/ApplicationInceptionPrefix.lean') === null
-  ? 'Main’s application model currently retains the economic inception premise. The standalone #590 draft supplies the signed opening.'
+  ? 'Main’s application model requires, in the booking transaction, exactly +1 of the booking asset for the selected output, derived from the application policy, the output index, the initial datum and the deposit. The attestation issuer, not the application, checks the signed opening; the standalone #590 draft supplies that opening in the model.'
   : 'Main’s application model includes the indexed signed inception opening.';
 const differences = [];
 const mainRotation = read('main','lean/CardanoKeri/Duplicity.lean');

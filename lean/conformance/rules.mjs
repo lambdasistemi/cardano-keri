@@ -10,12 +10,12 @@ const dup = decl => at(model('Duplicity'), 'def ' + decl + ' ');
 const prefix = decl => [
   at(model('ApplicationInceptionPrefix'), decl),
   at(model('InceptionPrefixOpening'), decl),
-  {...book, note: 'economic inception premise only'},
+  {...book, note: 'the same-transaction claim: exactly +1 of the booking asset for the selected output, derived from policy, output index, initial datum and deposit; the signed prefix is checked by the issuer, see #590'},
 ];
 const inception = [
   at(model('ApplicationInceptionPrefix'), 'def inceptionWrites '),
   at(model('CheckpointEventHistory'), 'def inceptionWrites '),
-  {...book, note: 'economic inception premise only'},
+  {...book, note: 'the same-transaction claim: exactly +1 of the booking asset for the selected output, derived from policy, output index, initial datum and deposit; the signed prefix is checked by the issuer, see #590'},
 ];
 const witness = [dup('receiptsValid')];
 const next = [at(model('Duplicity'), 'def Threshold.fitsNextKeys '),
@@ -54,7 +54,7 @@ const baseRules = [
     [at(model('Application'), 'def initialStateDatum ')], 'Enforced at booking',
     [booking('registration_approval(data),'), at(app('inception'), 'facts.aid == key,')]),
   row('enforced', 'The indexed booking evidence belongs to the request and initial datum being approved.',
-    [at(model('InceptionPrefix'), 'def issue '), at(model('Application'), 'def bookingOpening '), {...book,note:'key-level premise'}],
+    [at(model('InceptionPrefix'), 'def issue '), at(model('Application'), 'def bookingOpening '), {...book,note: 'the same-transaction claim: exactly +1 of the booking asset for the selected output, derived from policy, output index, initial datum and deposit'}],
     'Enforced for the indexed attestation', [booking('attested('), issue('expect Some(output) = list.at(tx.outputs, entry.request_index)'), issue('list.all(names, fn(name)')], [576]),
   row('missing', 'Register only an ordinary inception with structurally decoded type, sequence, identifier and signed fields.',
     inception, 'not enforced structurally; the existing predicate compares slices', [reg('if !slice_matches(e.event_bytes, e.off_t'), reg('RegistrationInvalid(E3SequenceMismatch)')], [291,320]),

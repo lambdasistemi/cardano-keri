@@ -1,0 +1,55 @@
+{
+ "case": "R17",
+ "step": "rot",
+ "role": "subject",
+ "comparable": true,
+ "prior": {
+  "aid": 306,
+  "sn": 0,
+  "delegated": false,
+  "nextKeys": [
+   304,
+   305
+  ],
+  "nextThreshold": {
+   "count": 2
+  },
+  "witnesses": []
+ },
+ "signed": {
+  "event": {
+   "aid": 306,
+   "sn": 1,
+   "kind": "rotation",
+   "priorDigest": 307,
+   "keys": [
+    304,
+    305
+   ],
+   "threshold": {
+    "count": 2
+   },
+   "nextKeys": [],
+   "nextThreshold": {
+    "count": 0
+   },
+   "cuts": [],
+   "adds": [],
+   "witnessThreshold": 0,
+   "extension": []
+  },
+  "structureVerified": true,
+  "signatures": [
+   {
+    "signer": 304,
+    "verified": true
+   },
+   {
+    "signer": 305,
+    "verified": true
+   }
+  ],
+  "receipts": []
+ },
+ "keripy": "accepted"
+}

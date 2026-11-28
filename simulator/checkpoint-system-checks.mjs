@@ -46,6 +46,28 @@ assert.equal(systemProperties(convict,kept)['sys_conviction_consumes_commitment'
 const reveal=corpus.traces.find(t=>t.name==='system-premises').cells.find(c=>c.name==='open-commitment');
 const early=structuredClone(reveal);early.command={reveal:{marker:1,now:4}};early.input=reveal.result.ok.state;early.result={ok:{...reveal.result.ok,state:{...reveal.result.ok.state,commitments:[]}}};
 assert.equal(systemProperties(early,early.result)['commitment_closes_in_or_after_window'].holds,false,'fabricated commitment window check');
+// The same retired marker can result from a reveal at expiry or a later sweep.
+const checkClosing = (command, expected, label) => {
+  const cell = {...early, command};
+  assert.equal(systemProperties(cell).commitment_closes_in_or_after_window.holds, expected, label);
+};
+checkClosing({reveal: {marker: 1, now: 10}}, true, 'reveal at slot 10 reaches the same retired state');
+checkClosing({reveal: {marker: 1, now: 20}}, true, 'reveal at expiry');
+checkClosing({sweep: {marker: 1, now: 21}}, true, 'sweep after expiry');
+checkClosing({reveal: {marker: 1, now: 21}}, false, 'expired reveal');
+checkClosing({sweep: {marker: 1, now: 20}}, false, 'sweep at expiry');
+checkClosing({reveal: {marker: 2, now: 20}}, false, 'different marker');
+const wrongSlot = structuredClone(convict);
+wrongSlot.command.local.now = 21;
+assert.equal(systemProperties(wrongSlot).commitment_closes_in_or_after_window.holds, false, 'expired conviction');
+assert.equal(systemProperties(wrongSlot).sys_conviction_after_opening_slot.holds, false, 'entitlement at actual slot');
+const beforeEligibility = structuredClone(convict);
+beforeEligibility.command.local.now = convict.command.local.action.convict.commitment.eligibleAfter - 1;
+const earlyConviction = systemProperties(beforeEligibility);
+for (const name of ['commitment_closes_in_or_after_window', 'sys_conviction_after_opening_slot']) {
+  assert(earlyConviction[name].exhibited, name + ' checked the supplied conviction');
+  assert.equal(earlyConviction[name].holds, false, name + ' refused the pre-eligibility slot');
+}
 // A step that changes the deployment, a top-up that burns an open commitment, a
 // conviction accepted on a commitment of another deployment, and a conviction
 // consuming a commitment in a system of another deployment.
@@ -98,22 +120,36 @@ assert.equal(observed.writer.rotation.event.event.sn, observed.state.present.l.s
 // match that writer, including the witnesses accumulated along its history.
 const journey = corpus.traces.find(trace => trace.name === 'retained-associated-completion');
 const comparedPrefix = journey.cells.slice(0, journey.cells.findIndex(cell => cell.name === 'convict') + 1);
+const beforeClosing = replaySystem(first.params, first.env, journey.deployment,
+  comparedPrefix.slice(0, -1).map(cell => cell.command));
+assert(beforeClosing.records.every(record => record.result.ok));
+assert.deepEqual(beforeClosing.state, convict.input);
+const revealedAtTen = attemptSystem(beforeClosing, {reveal: {marker: 1, now: 10}}).record;
+const sweptAtTwentyOne = attemptSystem(beforeClosing, {sweep: {marker: 1, now: 21}}).record;
+assert(revealedAtTen.result.ok && sweptAtTwentyOne.result.ok);
+assert.deepEqual(revealedAtTen.result.ok.state, sweptAtTwentyOne.result.ok.state);
+assert.equal(revealedAtTen.command.reveal.now, 10);
+assert.equal(sweptAtTwentyOne.command.sweep.now, 21);
+assert.equal(attemptSystem(beforeClosing, beforeEligibility.command).record.result.error,
+  'checkpoint-local-refused', 'conviction before eligibility');
+assert(attemptSystem(beforeClosing, convict.command).record.result.ok, 'conviction at eligibility');
 const writerChanges = {
   'current keys': event => event.keys.push(19),
   'current threshold': event => { event.threshold = {weighted: {clauses: [[{key: {weight: {numerator:1,denominator:1}}}]]}}; },
   'next keys': event => { event.nextKeys = [19]; },
-  'next threshold': event => { event.nextThreshold = {count: {required: 2}}; },
-  witnesses: event => { event.adds = [19]; },
-  'witness threshold': event => { event.adds = [19]; event.witnessThreshold = 1; }
+  'next threshold': event => { event.nextThreshold = {count: {required: 0}}; },
+  witnesses: event => { event.adds = [19, 20]; event.witnessThreshold = 1; },
+  'witness threshold': event => { event.adds = [19, 20]; event.witnessThreshold = 2; }
 };
 for (const [field, change] of Object.entries(writerChanges)) {
   const evidence = structuredClone(first.env);
   const signed = evidence[0][1].writers.rotations.at(-1).signed;
   change(signed.event);
   for (const signature of signed.signatures) signature.event = signed.event;
-  if (signed.event.witnessThreshold > 0) signed.receipts = [{signer:19,event:signed.event,verified:true}];
+  if (signed.event.witnessThreshold > 0)
+    signed.receipts = signed.event.adds.map(signer => ({signer, event: signed.event, verified: true}));
   const replay = replaySystem(first.params, evidence, journey.deployment, comparedPrefix.map(cell => cell.command));
   assert(replay.records.slice(0, -1).every(record => record.result.ok), field + ': changed writer must be reachable');
   assert.equal(replay.records.at(-1).result.error, 'checkpoint-rotation-writer-mismatch', field);
 }
-console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:21}));
+console.log(JSON.stringify({...report,schemaControls:malformed.length+1,immutableOrigin:true,initOnlySessions:true,systemProperties:shown.size,fabricatedCheckerControls:29}));

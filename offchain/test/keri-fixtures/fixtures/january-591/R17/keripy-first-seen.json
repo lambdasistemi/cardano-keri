@@ -1,0 +1,49 @@
+{
+ "keripy": "1.3.5",
+ "frozen_evidence": [
+  {
+   "outcome": "accepted",
+   "readback": {
+    "saidAtSn": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+    "storedBytesEqual": true,
+    "logged": true
+   },
+   "said": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+   "pre": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+   "sn": 0,
+   "ilk": "icp",
+   "label": "icp",
+   "role": "context"
+  },
+  {
+   "outcome": "accepted",
+   "readback": {
+    "saidAtSn": "EOe_K4efRw5TT_8jcNdeoMQScTdSlVydXnfArxeClPR6",
+    "storedBytesEqual": true,
+    "logged": true
+   },
+   "said": "EOe_K4efRw5TT_8jcNdeoMQScTdSlVydXnfArxeClPR6",
+   "pre": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+   "sn": 1,
+   "ilk": "rot",
+   "label": "rot",
+   "role": "subject"
+  }
+ ],
+ "fresh_replay_through_Parser_of_the_two_CESR_streams": {
+  "predecessor": {
+   "said": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+   "sn": 0,
+   "saidAtSn": "ELu3PtIIAv_cjti1B56FZzOZEdg0buJ5GS1UfRh57ybk",
+   "storedBytesEqual": true,
+   "logged": true
+  },
+  "rotation": {
+   "said": "EOe_K4efRw5TT_8jcNdeoMQScTdSlVydXnfArxeClPR6",
+   "sn": 1,
+   "saidAtSn": "EOe_K4efRw5TT_8jcNdeoMQScTdSlVydXnfArxeClPR6",
+   "storedBytesEqual": true,
+   "logged": true
+  }
+ }
+}

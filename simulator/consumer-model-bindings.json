@@ -2,7 +2,7 @@
   "version": 1,
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Checkpoint.lean": "77d38feeddf952bd92c192d874ea0a0f9b25415485b862eeedf36ff58c650800",
+    "lean/CardanoKeri/Checkpoint.lean": "1d951ed3908771e52c65758f254e1a8edd74d1e103cdb64aa8a4b33f5ddf53a1",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
@@ -18,7 +18,7 @@
     "lean/lakefile.lean": "554ac681b2b23be1a781753b370caed924d9a8936be527b3c1fc0712fb1f753a",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b",
-    "simulator/consumer-corpus.json": "dd67138f2d5e0705400622263aa05fdfc1041b6d8418557ce135d7c9f1888eec",
+    "simulator/consumer-corpus.json": "ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825",
     "simulator/consumer-properties.mjs": "2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b"
   },
   "properties": [

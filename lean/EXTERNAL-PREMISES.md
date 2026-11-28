@@ -24,18 +24,51 @@ the same admitted datum. `Env.inceptionWriter aid datum` models that joint read
 (the original registration predicate is in `checkpoint/observer.ak` 65–111 and `checkpoint/registration.ak` 310–352, 363–410). At an advance, `Env.rotationWriter` reads the proposed signed event
 for the spent identifier and position (`checkpoint/observer.ak` 121–158,
 214–231). The system computes the preceding keys and witnesses from the installed
-history. Signature verification, opening key digests, binding witness data to
-the bytes and verifying the prior digest remain interpretation obligations of
-the decoded model. The chain-to-bytes correspondence has no proof here.
+history. Signature verification, opening key digests and binding witness data to the
+signed bytes are interpretation obligations of the decoded model. The immediate
+prior link has the separate, undischarged premise described below.
 
 The decoded writer datum carries the current writer, its established witnesses
 and one previous commitment set. A rotation copies the current next keys,
 threshold and witnesses into the successor. An inception carries no previous
 set. The proof history may grow while this datum retains only one predecessor.
-Comparing complete event content requires an authenticated opening of the event
-that wrote the spent checkpoint, including seals and witness changes. The
-binding of that opening to the spent input and the concrete representation of
-the additional datum fields belong to the datum and validator correspondence.
+The checkpoint carries the current writer’s own KERI event digest (`d`).
+A rotation’s signed prior link (`p`) names its claimed immediately preceding event.
+The conflict comparison uses the installed digest and the rival’s digest.
+
+The controller’s registration booking and the submitter’s keep or deposit
+advance must bind the installed SAID to the exact signed inception or rotation
+bytes, including seals. At conviction the enforcement policy must check the
+convictor’s hash proof of the rival’s signed bytes and read the writer digest
+from the spent checkpoint. KERI SAID derivation uses its prescribed digest-field
+substitution and serialization. `opened_digest_conflict_iff_signed_bytes_differ`
+names both openings and the collision-resistance premise for these two bodies.
+The old content comparison also needs a single decoder of the signed bytes
+for all twelve fields, including the extension. For otherwise eligible rivals,
+`accepts_iff_old_conflict_or_collapsed_bodies` preserves every old conflict and
+characterizes the extra case when different signed bodies decode alike.
+`digest_conflict_iff_faithful_old_conflict` gives exact agreement when that old
+opening distinguishes the two byte strings. Verified signatures and receipts
+must refer to the actual signed body of the event being graded. Lean checks decoded transitions under these premises. Production authentication
+of the complete writer opening at registration and advance remains open.
+
+For an ordinary rotation the relayer or convictor presents the signed next
+threshold. Its width must fit the number of next digests, every weighted clause
+must total at least one, and each nested member list must independently total
+at least one. A numeric next threshold of zero permits abandonment. Cuts must
+belong to the previous witness list and additions must be new to it. The
+result requires a positive receipt threshold exactly when witnesses remain.
+Both the writer and the rival use this rotation judgment. [keripy rotation construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L857-L907)
+and [weighted threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L4026-L4062).
+
+Ordinary inception has no signed prior link, cuts or adds. The controller's
+booking decoder must detect even an empty forbidden field before projecting it
+to the empty decoded value. For registration, advance and rival grading,
+keripy’s event profile requires positive denominators and individual weights
+at most one in both threshold fields. This ceiling extends to group outer and
+member weights and is stricter than KERI 1.1 line 1419. Preserve signed
+fraction spellings. The model checks the decoded bounds. Production raw event
+parsing and complete wire equivalence with keripy remain separate obligations.
 
 The decoded conviction tip uses the complete KERI threshold type for the
 current keys and next commitments, including nested weighted groups. It can
@@ -44,13 +77,53 @@ verification-key and commitment encoders must round trip through their
 respective reads. The existing V2 datum codec covers counts and flat weights.
 The writer must be available in public chain data to the convictor. An inline
 opening can include it directly. A digest requires public event bytes and an
-authenticated injective opening, including seals. The convictor binds this
+binding to those exact signed bytes, including seals, with collision resistance on the compared pair. The convictor binds this
 opening to the spent input in the conviction transaction. A faithful production
-wire representation remains open. `MeasureCheckpointWriter.lean` measures an
-illustrative inline layout with the model's Plutus Data serializer. The
+wire representation remains open. `MeasureCheckpointWriter.lean` measures a
+previous illustrative inline layout, which omitted the writer’s own digest, with the model's Plutus Data serializer. The
 one-key live examples occupy 220 bytes at inception and 313 after either of
 two rotations. The grouped example with 64 seal bytes occupies 412. List
 lengths are variable. Transaction size and validator budgets remain unmeasured.
+
+## A rotation’s immediate prior link
+
+For an ordinary rotation, `Duplicity.rotationValid` consumes
+`SignedEvent.structureVerified`. Its interpretation assumes that the signed
+field `p` equals the digest of the event immediately before the rotation in
+the key event log. Neither the advance policy when a submitter advances the
+checkpoint nor the conviction policy when a convictor presents a rival
+discharges that premise on chain. The carried predecessor contains the last
+establishment’s commitments. An interaction can be the immediate predecessor.
+
+The chain checks signatures against the pre-committed next keys and their
+threshold, the rotation’s own signing threshold, and receipts against the
+resulting witness set and threshold. The signatures and receipts cover the
+signed value of `p`. An honest witness running keripy checks the link against
+its log before issuing a receipt. That external check stands in for the missing
+on-chain check only if the required receipts include such a witness. With a
+zero witness threshold or a colluding quorum there is no such assurance.
+
+`Checkpoint.reachable_writer_authenticated` and
+`Checkpoint.stored_rotation_valid` establish the decoded advance result.
+`Checkpoint.rotated_duplicity_iff_rival_valid`,
+`Checkpoint.rotated_conviction_is_duplicity` and
+`Checkpoint.conviction_establishes_duplicity` give the corresponding
+comparison and conviction results. Interpreting these results as validity in a
+well-formed KERI log requires the prior-link premise for each relevant
+rotation. A chain reader cannot infer that log history or which interactions
+the installed rotation ratifies. The security impact is open.
+[Design discussion](../docs/design/key-compromise.md#the-unchecked-link-to-the-previous-event)
+and [Lean correspondence register, entry 17](https://github.com/lambdasistemi/cardano-keri/issues/435).
+
+The offline measurement *Measuring an interaction link beside a rotation*
+(27 November 2026, SHA-256
+`0d44ae4dc169493e3a5149eae975e170836aef4138ead181f3f2b994e84ccd16`)
+combined separately evaluated link-walk and two-key rotation scripts. For
+314–316-byte interactions the estimate fits one BLAKE3 link beside the rotation,
+or 29 links using BLAKE2b-256, SHA3-256 or SHA2-256. The 100-link BLAKE3
+estimate is 41.870605 ADA in 21 transactions including the rotation. It assumes
+published reference scripts and authenticated intermediate results. The cost of
+authenticating those results and the integrated transaction were unmeasured.
 
 ## Mint observations
 
@@ -168,3 +241,42 @@ The system proof follows the association through intervening events to its
 booking and the earlier conviction. A reader must supply a faithful path from
 deployment. Acceptance of the earlier spent-tip comparison is the conclusion
 about evidence that the recorded leaf supports.
+
+## Ordinary inception prefix at booking
+
+The controller supplies the signed inception and its attachments in the booking
+transaction. The inception attestation policy reads them for the request at the
+specified output index. In `Application.InceptionPrefix.Reads`, `decodeEvidence`
+decodes the event, the original witness list and the seals from that body and
+checks the attachments against its exact signed bytes. A valid structure includes
+verification of the event's own SAID. Qualified keys and AIDs retain their CESR
+codes when interpreted as model identities. The CESR decoder supplies the hard
+code of the full qualified identifier. For a self-addressing identifier,
+`deriveIdentifier` computes the qualified digest of the prescribed serialization
+using the identifier's own code. The event SAID and identifier can use different
+digest codes. [keripy 1.3.5 digest derivation](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L745-L770)
+
+The booking policy opens the writer in the committed initial datum using the
+same evidence. The technical implementation of `openTip` must verify the
+datum's commitment against that opening. Lean compares the opened writer, AID,
+keys, thresholds and witnesses and runs the signature and witness quorum checks.
+For a basic prefix it checks the sole qualified key and the numeric threshold
+one. A non-transferable basic prefix also requires empty next commitments,
+witnesses and seals. A transferable basic prefix permits empty next commitments.
+The numeric signing threshold must be positive. The next threshold's width
+must fit the signed list of next digests. A weighted declaration must have at
+least one clause. Each clause and each nested group of members must reach
+one. For example, two `1/3` weights in a single clause fail, and two signed
+`2/4` weights satisfy it. A numeric zero is permitted for the next declaration. [keripy 1.3.5 threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L694-L716)
+
+System registration reads the booking evidence indexed by the identifier and
+initial datum through `Env.inceptionBytes`. Its issuer and system readers both
+apply `OpeningReads.accepts` to the same decoded fields. `admitted_initial_history`
+states the correspondence when both readers open the same indexed bytes with
+the same public decoders. The simulator interprets prefix codes and
+digests from finite public read tables. Its historical traces use synthetic
+transferable basic identifiers.
+
+After the fold, the reader decodes the kind from the AID of the delivered datum.
+[keripy 1.3.5 prefix classes](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L610-L683)
+and [inception checks](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L1564-L1610).

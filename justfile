@@ -744,7 +744,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-january-591-vectors check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -806,6 +806,10 @@ gen-checkpoint-datum-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs
 
 # #343: the committed datum vector tests are exactly what the Lean vectors generate; also run in CI by scripts/check-consumer-design.sh.
+# #591: the Plutus Data of the January rotation journeys is what the signed fixtures give, signatures verified.
+check-january-591-vectors:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/january-591-vectors.mjs --check
+
 check-checkpoint-datum-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs --check
 

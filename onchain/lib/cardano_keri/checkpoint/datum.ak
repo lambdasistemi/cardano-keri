@@ -13,7 +13,9 @@
 use aiken/builtin
 use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano_keri/checkpoint/threshold.{Invalid, Threshold, ThresholdError}
+use cardano_keri/checkpoint/threshold.{
+  Invalid, Threshold, ThresholdError, Unweighted,
+}
 
 // ---------------------------------------------------------
 // Types (constructor order + field order frozen against the Lean vectors)
@@ -148,6 +150,38 @@ pub fn key_state_well_formed(d: KeyStateView) -> DatumVerdict {
       d.witnesses,
       d.toad,
     )
+  }
+}
+
+/// Well-formedness of the key state a rotation creates. A rotation may publish
+/// no next keys when its next threshold is the integer zero (`n: []`, `nt: "0"`:
+/// the abandonment rotation keripy persists and Lean's `rotationValid` admits);
+/// the created state then has no commitment a later rotation could reveal. Every
+/// other state is judged by `key_state_well_formed`, so registration, which
+/// keeps requiring next keys, is untouched.
+pub fn key_state_after_rotation_well_formed(d: KeyStateView) -> DatumVerdict {
+  if list.is_empty(d.next_keys) && d.next_threshold == Unweighted(0) {
+    if bytearray.length(d.cesr_aid) != 32 {
+      DatumInvalid(CesrAidWidth)
+    } else {
+      when threshold.well_formed(d.cur_keys, d.cur_threshold) is {
+        Invalid(e) -> DatumInvalid(ThresholdIllFormed(e))
+        _ ->
+          if !list.all(d.witnesses, fn(w) { bytearray.length(w) == 32 }) {
+            DatumInvalid(WitnessWidth)
+          } else if list.length(list.unique(d.witnesses)) != list.length(
+            d.witnesses,
+          ) {
+            DatumInvalid(DuplicateWitness)
+          } else if !toad_ok(d.toad, list.length(d.witnesses)) {
+            DatumInvalid(ToadRange)
+          } else {
+            DatumValid
+          }
+      }
+    }
+  } else {
+    key_state_well_formed(d)
   }
 }
 

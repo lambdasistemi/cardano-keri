@@ -16,6 +16,7 @@ module Cardano.KERI.Deployment.LedgerEvaluation (
     parameters,
     systemStart,
     evaluated,
+    measuredBudgets,
     Answers,
     accepts,
     Purpose (..),
@@ -44,6 +45,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (PParams)
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.State (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Node.Client.Ledger (ConwayTx)
@@ -73,6 +75,15 @@ second.
 -}
 systemStart :: SystemStart
 systemStart = SystemStart (posixSecondsToUTCTime (fromIntegral ((1_700_000_000 :: Integer) - 1_000)))
+
+-- | The execution units the ledger measures for each purpose of the transaction, or the typed failure it gives.
+measuredBudgets ::
+    PParams ConwayEra ->
+    Map TxIn (TxOut ConwayEra) ->
+    ConwayTx ->
+    Map (ConwayPlutusPurpose AsIx ConwayEra) (Either (TransactionScriptFailure ConwayEra) ExUnits)
+measuredBudgets params utxo tx =
+    evalTxExUnits params tx (UTxO utxo) (fixedEpochInfo (EpochSize 432_000) (mkSlotLength 1)) systemStart
 
 -- | Every purpose of the transaction as the ledger answers it: the typed failure it gives, not its text.
 evaluated ::

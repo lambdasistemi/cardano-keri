@@ -5,7 +5,7 @@
 import {evidenceFor} from './checkpoint-system-core.mjs';
 import {equal} from './registry-economic-core.mjs';
 import {stateKind,leafOf,hasOutput,actionKind,entitles} from './checkpoint-simulator-core.mjs';
-export const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','commitment_closes_in_or_after_window',
+export const SYSTEM_THEOREMS=['T8_leaf_agrees_with_state','T8_edges_leave_the_leaf','T8_present_implies_registered','T8_leaf_states','T8_utxo_iff_active','T8_leaf_never_absent_again','T8_mint_once','T8_sysstep_partition','sys_conviction_consumes_commitment','sys_conviction_after_opening_slot','commitment_closes_in_or_after_window',
   'registration_installs_booked_facts','local_event_uses_own_authorization','sys_step_keeps_deployment','sys_commitment_survives_key_state_step','sys_conviction_refused_for_other_deployment'];
 const rowAt=(state,aid)=>state.aids.find(r=>equal(r.aid,aid))??{aid,state:'absent',leaf:'absent',status:'never-registered',origin:null,pending:null};
 export function systemProperties(cell,result=cell.result) {
@@ -52,10 +52,19 @@ export function systemProperties(cell,result=cell.result) {
       !after.commitments.some(o=>o.marker===c.marker)&&
       entitles(evidenceFor(cell.env,command.aid),c,old.state.present.l,payee,command.now,command.aid);
   });
-  // A commitment that closes closes inside its window (a reveal or the conviction
-  // that revealed it) or strictly after it (a sweep), never before it is eligible.
-  const closed=accepted?before.commitments.filter(o=>!after.commitments.some(n=>n.marker===o.marker)):[];
-  row('commitment_closes_in_or_after_window',closed.length>0,()=>closed.every(o=>o.eligibleAfter<=command.now));
+  row('sys_conviction_after_opening_slot', convicted, () => {
+    const action = command.action?.convict;
+    return !!action && rows.sys_conviction_consumes_commitment.holds &&
+      action.commitment.openedAt < command.now;
+  });
+  const closed = accepted ? before.commitments.filter(c => !after.commitments.some(n => n.marker === c.marker)) : [];
+  row('commitment_closes_in_or_after_window', closed.length > 0, () => closed.every(c => {
+    const inWindow = c.eligibleAfter <= command.now && command.now <= c.expiresAt;
+    if (kind === 'reveal') return command.marker === c.marker && inWindow;
+    if (kind === 'sweep') return command.marker === c.marker && c.expiresAt < command.now;
+    return convicted && equal(command.action?.convict?.commitment, c) &&
+      rows.sys_conviction_consumes_commitment.holds && inWindow;
+  }));
   // Every step keeps the system's deployment.
   row('sys_step_keeps_deployment',accepted,()=>after.deployment===before.deployment);
   // A step that replaces a live output by a different one with the same key state (a

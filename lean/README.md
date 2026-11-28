@@ -4,7 +4,11 @@ As an identity owner, keep a checkpoint alive — bonds, rotations, freeze and
 unfreeze — until it is convicted; there is no owner exit, no parking and no
 revival. As a relying party, see a checkpoint that is either alive or
 convicted, and refuse pending outputs. Conviction starts pending termination;
-an associated consuming fold completes retirement.
+an associated consuming fold completes retirement. Registration can lock the
+deposit and checkpoint bonds indefinitely. A basic non-transferable identifier
+cannot rotate. An abandoning rotation leaves no commitments for another
+rotation. Neither condition gives the owner a withdrawal or retires the holding.
+Conviction still requires qualifying rival evidence.
 
 The project uses Lean 4.27.0 and the public Singular pin below. Checkpoint owns
 the funded lifecycle; Registry is the imported economic transport adapter;

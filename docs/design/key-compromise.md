@@ -85,8 +85,8 @@ acceptance order and a retained history of what it accepted first. Two rules
 follow, and they hold in both the shipped design and the accepted design:
 
 - For rules **derivable from event content** — superseding, next-key commitment
-  validity, prior-digest chaining, thresholds — the projection must match
-  `keripy` exactly.
+  validity, thresholds — the projection must match `keripy`. The unchecked
+  link to the immediately preceding event is an exception to that admission rule.
 - Where KERI could only settle a contest by one observer's first-seen order,
   the chain **abstains**. Cardano's settlement slot is evidence, never a verdict.
   Resolving by slot would make the chain the authority, and would diverge from
@@ -116,6 +116,16 @@ One honest limit applies to both KERI and Cardano: **the victim's own event is
 what makes the fork visible.** Until the owner publishes a competing event, the
 thief's branch is cryptographically indistinguishable from the controller's.
 Neither system detects a thief who is alone on the history.
+
+## The unchecked link to the previous event
+
+Cardano does not check a rotation’s link to its immediately previous event. This applies both when a rotation advances the checkpoint and when a rival rotation is presented for conviction. A rotation signs the digest of its claimed predecessor, which may be an interaction event between two rotations. The checkpoint checks the pre-committed keys, the signing thresholds and the required witness receipts.
+
+An honest witness running keripy checks the link against its own log before signing a receipt. If the witness threshold is zero, or a colluding quorum supplies the receipts, that assurance is absent. A holder of the pre-committed keys who meets the signing thresholds is the party of concern in that case. **This may be a vulnerability.** Its consequences have not been analysed far enough to say what it allows.
+
+A reader of the chain cannot conclude that the installed rotation belongs to a well-formed key event log or which interaction events it ratifies. Two possibilities remain open for future work. A submitter could present proof of the intervening links with the rotation. A zero-knowledge proof of the same chain using Groth16 circuits is another possibility, beyond current reach. Neither approach has been adopted.
+
+An offline measurement used a two-key rotation and typical interaction events of about 314 bytes. With BLAKE3, one link fit beside the rotation. Checking 100 links was estimated at about 42 ADA across 21 transactions, including the rotation. With the ledger’s builtin BLAKE2b-256, SHA3-256 or SHA2-256, 29 typical links fit beside the same rotation. These estimates combine separately evaluated scripts. Splitting a proof across transactions also requires a way to authenticate each intermediate result. Its implementation and cost were outside the measurement.
 
 ## Rotation is the remedy
 
@@ -192,13 +202,12 @@ size of that bond is a deployment parameter and an economic call.
 
 ### When the fork is real, not merely suspected
 
-In the accepted design, if two witnessed rotations of different content exist at one sequence, both valid against the same previous commitments and each with the receipts of its own derived witnesses, that is not a suspicion, it is duplicity. Presented against the live checkpoint whose key state they accuse, together with an open commitment that names this identifier, deployment, key state, evidence and payee and is still inside its slot window, it can be proved on chain. The checkpoint becomes a pending termination and the commitment's payee takes `D_reg`; the booking of the termination and the fold that consumes its request then retire the identity, terminally. See
+In the accepted design, if two witnessed rotations of different content exist at one sequence, both valid against the same previous commitments and each with the receipts of its own derived witnesses, that is not a suspicion, it is duplicity. Presented against the live checkpoint whose key state they accuse, together with an open commitment that names this identifier, deployment, key state, evidence and payee and is still inside its slot window, the chain can establish the checkpoint’s conviction conditions. The prior-link limit above still applies to both rotations. The checkpoint becomes a pending termination and the commitment's payee takes `D_reg`; the booking of the termination and the fold that consumes its request then retire the identity, terminally. See
 [Identity operations](../architecture/identity-ops.md).
 
 The distinction from the poison is exact and worth keeping: a controller
-*declaration* is epoch-local, because the controller can be superseded; a
-*proof* of establishment-level duplicity is a KERI verdict, and KERI makes that
-permanent.
+*declaration* is epoch-local, because the controller can be superseded; a conviction permanently retires the checkpoint through termination. Reading that
+conviction as a KERI verdict depends on the two rotations having valid prior links.
 
 ## Related pages
 

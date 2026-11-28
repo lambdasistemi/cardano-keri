@@ -1,4 +1,4 @@
-import CardanoKeri.CheckpointEventHistory
+import CardanoKeri.InceptionPrefixOpening
 import CardanoKeri.Registry
 
 /-! Checkpoint lifecycle: alive until convicted, then explicit pending termination.
@@ -69,7 +69,8 @@ structure Env where
   -- The booking policy reads the identified inception from the event
   -- and datum admitted at booking. The advance policy reads the signed
   -- rotation presented for the spent identifier and the proposed successor.
-  inceptionWriter : AID → Nat → Option (Duplicity.SignedEvent × List Nat) := fun _ _ => none
+  inceptionBytes : AID → Nat → Option (List UInt8) := fun _ _ => none
+  inceptionOpening : Application.InceptionPrefix.OpeningReads := {}
   rotationWriter : AID → Epoch → Seq → Seq → Option Duplicity.SignedEvent := fun _ _ _ _ => none
 
 def Env.rotationTo (env : Env) := env.advanceReads.attested .advance
@@ -94,13 +95,35 @@ def Env.comparison (env : Env) (epoch : Epoch) (sn : Seq) :=
   (env.convictionSpend epoch sn).map Registry.Conviction.comparison
 
 def Env.initialHistory (env : Env) (aid : AID) (datum : Option Nat) : Option EventHistory :=
-  match datum with
-  | none => none
-  | some raw => match env.inceptionWriter aid raw with
-    | none => none
-    | some (event, witnesses) =>
-      let history := EventHistory.inception event witnesses
-      if history.authenticated aid then some history else none
+  do
+    let raw ← datum
+    let bytes ← env.inceptionBytes aid raw
+    let e ← env.inceptionOpening.decodeEvidence bytes
+    let k ← Application.InceptionPrefix.kindOf env.inceptionOpening.prefixCode aid
+    if env.inceptionOpening.accepts bytes aid e k then return .inception e.signed e.witnesses
+    else none
+
+/-- Given an installed registration writer, opening its booked datum recovers
+the bytes, the signed inception and the public prefix check on those bytes. -/
+theorem Env.initialHistory_opening {env : Env} {aid datum history}
+    (installed : env.initialHistory aid datum = some history) :
+    ∃ raw bytes e k, datum = some raw ∧ env.inceptionBytes aid raw = some bytes ∧
+      env.inceptionOpening.decodeEvidence bytes = some e ∧
+      Application.InceptionPrefix.kindOf env.inceptionOpening.prefixCode aid = some k ∧
+      inceptionWrites aid e.signed e.witnesses = true ∧
+      env.inceptionOpening.binding bytes aid e k = true ∧ history = .inception e.signed e.witnesses := by
+  cases datum with
+  | none => simp [Env.initialHistory] at installed
+  | some raw =>
+    cases hb : env.inceptionBytes aid raw <;> simp [Env.initialHistory, hb] at installed
+    rename_i bytes
+    cases he : env.inceptionOpening.decodeEvidence bytes <;> simp [he] at installed
+    rename_i e
+    cases hk : Application.InceptionPrefix.kindOf env.inceptionOpening.prefixCode aid <;>
+      simp [hk] at installed
+    rename_i k
+    have fields := Bool.and_eq_true_iff.mp installed.1
+    exact ⟨raw, bytes, e, k, rfl, hb, he, rfl, fields.1, fields.2, installed.2.symm⟩
 
 /-- The checkpoint spend selects its identifier before consulting any evidence.
 A rotation relayer or a hunter supplies the witnessed event for that identifier.
@@ -634,6 +657,23 @@ theorem registration_installs_booked_facts {p : Params} {env : SystemEnv} {s s' 
   exact ⟨aid, origin, rp, re, cfg, receipt, booking, ⟨0, 0, false, false, now, refund, pool, false⟩, delivered,
     by simp [Sys.installOrigin], by simp [Sys.installOrigin, Sys.set], facts.1⟩
 
+/-- Given a system registration, when the delivered origin is installed and
+its public identifier is basic, its recorded inception has that sole signing
+key and numeric signing threshold one. -/
+theorem registration_basic_sole_key {p env s s'} (event : RegistrationEvent p env s s') :
+    ∃ aid origin, s.origins aid = none ∧ s'.origins aid = some origin ∧
+      ∀ transferable, Application.InceptionPrefix.kindOf (env aid).inceptionOpening.prefixCode aid =
+        some (.basic transferable) → origin.inception.writer.event.keys = [aid] ∧
+          origin.inception.writer.event.threshold = .count 1 := by
+  obtain ⟨aid, _, _, _, _, st, _, _, _, _, _, origin, _, fresh, _, _, facts, rfl⟩ := event
+  obtain ⟨_, _, e, k, _, _, _, kind, _, bound, history⟩ := Env.initialHistory_opening facts.2
+  refine ⟨aid, origin, fresh, by simp [Sys.installOrigin], ?_⟩
+  intro transferable basic
+  rw [basic] at kind
+  cases kind
+  simp [Application.InceptionPrefix.OpeningReads.binding] at bound
+  simpa [history, EventHistory.writer] using bound.1
+
 /-- The commitment an action reveals: a conviction reveals the one it carries. -/
 def Action.revealed : Action → Option Commitment
   | .convict _ c => some c
@@ -714,12 +754,15 @@ def Sys.localWriter (s : Sys) (env : Env) (aid : AID) : Action → Option (Optio
 
 -- A local step of one checkpoint. A conviction also reveals its commitment in
 -- the same transaction: the commitment must be open, and its marker is burnt.
-def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
-  ∃ (aid : AID) (a : Action) (now : Slot) (f : Flow) (st : State),
+def LocalEventAt (p : Params) (env : SystemEnv) (s s' : Sys) (aid : AID) (a : Action) (now : Slot) : Prop :=
+  ∃ (f : Flow) (st : State),
     (∀ refund pool0, a ≠ .register refund pool0) ∧
     Step p (env aid) a now (s.states aid) f st ∧
     (s.revealOpen aid a ∧ (s.localWriter (env aid) aid a).isSome = true) ∧
     s' = (s.set aid st (s.localWriter (env aid) aid a).join (st.producingSpend (env aid))).retireRevealed a
+
+def LocalEvent (p : Params) (env : SystemEnv) (s s' : Sys) : Prop :=
+  ∃ aid a now, LocalEventAt p env s s' aid a now
 
 /-- The identity and key-state evidence required by a local action. A deposit
 uses the keys of the new epoch. Freeze, like keep, relays a witnessed rotation. -/
@@ -760,15 +803,21 @@ def OpenEvent (s s' : Sys) : Prop :=
 
 /-- Revealing a commitment without a conviction, inside its window: the payee
 signs and takes the deposit back. -/
-def RevealEvent (s s' : Sys) : Prop :=
-  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+def RevealEventAt (s s' : Sys) (c : Commitment) (now : Slot) : Prop :=
+  s.commitments c.marker = some c ∧
     c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt ∧ s' = s.retire c.marker
+
+def RevealEvent (s s' : Sys) : Prop :=
+  ∃ c now, RevealEventAt s s' c now
 
 /-- Sweeping an expired commitment: strictly after its window, whoever signs takes
 the deposit, and no checkpoint is touched. -/
-def SweepEvent (s s' : Sys) : Prop :=
-  ∃ (c : Commitment) (now : Slot), s.commitments c.marker = some c ∧
+def SweepEventAt (s s' : Sys) (c : Commitment) (now : Slot) : Prop :=
+  s.commitments c.marker = some c ∧
     c.expiresAt < now ∧ s' = s.retire c.marker
+
+def SweepEvent (s s' : Sys) : Prop :=
+  ∃ c now, SweepEventAt s s' c now
 
 /-- A certificate presents two projections of the earlier spend. Compare their
 ledger outpoint and full conviction evidence before associating the histories.

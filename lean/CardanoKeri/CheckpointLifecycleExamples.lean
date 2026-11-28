@@ -1,3 +1,4 @@
+import CardanoKeri.CheckpointCommitmentGoals
 import CardanoKeri.AttestationFixtures
 import CardanoKeri.CheckpointSystemHistory
 import CardanoKeri.RegistryLifecycleExamples
@@ -17,8 +18,10 @@ def env (aid : AID) : Env := {
     (epoch == 1 && sn == 1 && next == 2))),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
-  inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
-    some (Duplicity.writerFixture aid 0 .inception, []) else none,
+  inceptionBytes := fun subject raw => if subject == aid && raw == 777 then some [1] else none,
+  inceptionOpening := {
+    prefixCode := fun subject => if subject == aid then some "D" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some ⟨Duplicity.writerFixture aid 0 .inception, []⟩ else none },
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := KeyReads.symbolic
@@ -128,6 +131,96 @@ theorem committed_step : SysStep p env rotated committed := by
   apply SysStep.openCommitment
   exact ⟨commitment, rfl, by decide, rfl⟩
 
+/-- Given the registered and rotated checkpoint, when its payee convicts at
+slot five, the checked transition consumes the open marker and produces pending. -/
+private theorem conviction_at_five : (ClosingEvent.convict 11 7 5).Occurs p env committed pending commitment := by
+  refine ⟨
+    { refund := some { addr := 42, b := 2, pool := 4 },
+      convictor := some { addr := 7, dreg := 3 } },
+    .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
+  · intro refund pool equal; cases equal
+  · exact Step.convict 5 7 commitment (by decide) (by decide)
+  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
+
+-- The same two states admit both commands. The headline timing result for
+-- the reveal must still use slot 10, even when the caller also has the sweep.
+example : commitment.eligibleAfter ≤ 10 ∧ 10 ≤ commitment.expiresAt := by
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  have reveal : (ClosingEvent.reveal 10).Occurs p env committed (committed.retire 1) commitment :=
+    ⟨rfl, by decide, by decide, rfl⟩
+  have sweep : (ClosingEvent.sweep 21).Occurs p env committed (committed.retire 1) commitment :=
+    ⟨rfl, by decide, rfl⟩
+  have applyReveal := commitment_closes_in_or_after_window p env reachable
+    (m := 1) (c := commitment) (event := .reveal 10) rfl (s' := committed.retire 1)
+  fail_if_success exact (applyReveal sweep).2.2
+  have sweepBound : commitment.expiresAt < 21 :=
+    (commitment_closes_in_or_after_window p env reachable (m := 1) (c := commitment)
+      (event := .sweep 21) rfl sweep).2.2
+  fail_if_success exact sweepBound
+  exact (applyReveal reveal).2.2
+
+-- The headline itself rules out a conviction at slot 4 for this reachable
+-- opening, even though the same successor can be produced at slot 5.
+example : ¬ (ClosingEvent.convict 11 7 4).Occurs p env committed pending commitment := by
+  intro early
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  have window := (commitment_closes_in_or_after_window p env reachable (m := 1)
+    (c := commitment) (event := .convict 11 7 4) rfl early).2.2
+  exact (by decide : ¬ commitment.eligibleAfter ≤ 4) window.1
+
+-- A conviction supplied at slot 5 entitles the supplied payee at slot 5.
+example : commitment.entitles (env 11) rotatedLive 7 5 ∧ commitment.openedAt < 5 := by
+  have reachable : SysReach p env committed :=
+    .step (.step (.step (.init deployment) registered_step) rotated_step) committed_step
+  exact (sys_conviction_after_opening_slot p env reachable (aid := 11) (payee := 7)
+    (now := 5) (l := rotatedLive) rfl conviction_at_five).2
+
+-- The former time-only conclusion holds for every commitment, without a step.
+example (c : Commitment) : ∃ now : Slot,
+    (c.eligibleAfter ≤ now ∧ now ≤ c.expiresAt) ∨ c.expiresAt < now :=
+  ⟨c.expiresAt + 1, Or.inr (Nat.lt_succ_self _)⟩
+
+-- With no opening in the initial system, none of the three closing events occurs.
+example (c : Commitment) (event : ClosingEvent) :
+    ¬ event.Occurs p env (Sys.init deployment) (Sys.init deployment) c := by
+  intro actual
+  have held : (Sys.init deployment).commitments c.marker = some c := by
+    cases event with
+    | convict aid payee now =>
+      obtain ⟨_, _, _, _, checks, _⟩ := actual
+      exact ((Sys.revealOpen_iff _ _ _).mp checks.1 c rfl).1
+    | reveal => exact actual.1
+    | sweep => exact actual.1
+  cases held
+
+-- Slot 21 satisfies the old conclusion for this exact commitment. The actual
+-- conviction at slot five cannot instead be certified with the expired slot.
+example : commitment.expiresAt < 21 ∧
+    ¬ (ClosingEvent.convict 11 7 21).Occurs p env committed pending commitment := by
+  refine ⟨by decide, fun actual => ?_⟩
+  exact (by decide : ¬ 21 ≤ commitment.expiresAt) (ClosingEvent.timing actual).2
+
+-- The old after-opening conclusion also holds with no closing transaction:
+-- slot six entitles the payee, while keeping the marker open precludes a conviction.
+example : committed.commitments commitment.marker = some commitment ∧
+    commitment.entitles (env 11) rotatedLive 7 6 ∧ commitment.openedAt < 6 ∧
+    ¬ (ClosingEvent.convict 11 7 6).Occurs p env committed committed commitment := by
+  refine ⟨rfl, by decide, by decide, ?_⟩
+  intro actual
+  obtain ⟨_, _, _, _, _, target⟩ := actual
+  have marker := congrArg (fun s : Sys => s.commitments commitment.marker) target
+  have held : committed.commitments commitment.marker = some commitment := rfl
+  simp [Sys.retireRevealed, Action.revealed, Sys.retire, held] at marker
+
+example : (ClosingEvent.reveal 20).Occurs p env committed (committed.retire 1) commitment :=
+  ⟨rfl, by decide, by decide, rfl⟩
+example : (ClosingEvent.sweep 21).Occurs p env committed (committed.retire 1) commitment :=
+  ⟨rfl, by decide, rfl⟩
+example : ¬ (ClosingEvent.sweep 20).Occurs p env committed (committed.retire 1) commitment :=
+  fun actual => (by decide : ¬ commitment.expiresAt < 20) (ClosingEvent.timing actual)
+
 /-- Given the complete parameters and hypotheses:
 
 No additional local parameters; use the definitions in this module.
@@ -137,15 +230,8 @@ Then the complete conclusion is:
 
 SysStep p env committed pending
 -/
-theorem pending_step : SysStep p env committed pending := by
-  apply SysStep.local
-  refine ⟨11, .convict 7 commitment, 5,
-    { refund := some { addr := 42, b := 2, pool := 4 },
-      convictor := some { addr := 7, dreg := 3 } },
-    .terminationPending rotatedLive.hash, ?_, ?_, ?_, rfl⟩
-  · intro refund pool equal; cases equal
-  · exact Step.convict 5 7 commitment (by decide) (by decide)
-  · exact ⟨by unfold Sys.revealOpen; decide, rfl⟩
+theorem pending_step : SysStep p env committed pending :=
+  ClosingEvent.system_step (event := .convict 11 7 5) conviction_at_five
 
 
 /-- Given the complete parameters and hypotheses:
@@ -483,10 +569,10 @@ private def threshold : Duplicity.Threshold := .weighted [[.group ⟨1, 1⟩ [�
 
 private def writer (aid sn : Nat) : Duplicity.SignedEvent :=
   let content := { (Duplicity.writerFixture aid sn .rotation).event with
-    threshold := threshold, nextThreshold := threshold }
+    eventDigest := s!"nested-writer/{aid}/{sn}", threshold := threshold, nextThreshold := threshold }
   Duplicity.signed content [aid] []
 
-private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1] } [11] []
+private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1], eventDigest := "lifecycle-sibling" } [11] []
 private def history := EventHistory.rotation origin.inception (writer 11 1)
 private def comparison : CheckpointConviction.Comparison :=
   ⟨history.datum.tip KeyEncoding.symbolic 1, sibling⟩

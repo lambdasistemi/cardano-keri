@@ -1,0 +1,49 @@
+{
+ "keripy": "1.3.5",
+ "frozen_evidence": [
+  {
+   "outcome": "accepted",
+   "readback": {
+    "saidAtSn": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+    "storedBytesEqual": true,
+    "logged": true
+   },
+   "said": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+   "pre": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+   "sn": 0,
+   "ilk": "icp",
+   "label": "icp",
+   "role": "context"
+  },
+  {
+   "outcome": "accepted",
+   "readback": {
+    "saidAtSn": "EF5AUuGgtyd-xAM6i7eID5fk11ziCwGJ9i2gVhUhzEhY",
+    "storedBytesEqual": true,
+    "logged": true
+   },
+   "said": "EF5AUuGgtyd-xAM6i7eID5fk11ziCwGJ9i2gVhUhzEhY",
+   "pre": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+   "sn": 1,
+   "ilk": "rot",
+   "label": "rot",
+   "role": "subject"
+  }
+ ],
+ "fresh_replay_through_Parser_of_the_two_CESR_streams": {
+  "predecessor": {
+   "said": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+   "sn": 0,
+   "saidAtSn": "EKtoobRQ1VY8EIeng6MIIwVwPymTqPg4Z-aXgUrSOoR5",
+   "storedBytesEqual": true,
+   "logged": true
+  },
+  "rotation": {
+   "said": "EF5AUuGgtyd-xAM6i7eID5fk11ziCwGJ9i2gVhUhzEhY",
+   "sn": 1,
+   "saidAtSn": "EF5AUuGgtyd-xAM6i7eID5fk11ziCwGJ9i2gVhUhzEhY",
+   "storedBytesEqual": true,
+   "logged": true
+  }
+ }
+}

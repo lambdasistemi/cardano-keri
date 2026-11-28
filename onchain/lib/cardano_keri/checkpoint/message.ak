@@ -34,7 +34,7 @@ use aiken/primitive/bytearray
 use cardano_keri/base64url
 use cardano_keri/blake3
 use cardano_keri/checkpoint/datum.{
-  DatumError, DatumInvalid, KeyStateView, key_state_well_formed,
+  DatumError, DatumInvalid, KeyStateView, key_state_after_rotation_well_formed,
 }
 use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 
@@ -228,7 +228,7 @@ pub fn advance_equalities(
   ) {
     // eq6a: the evidence satisfies the rotation's own current threshold.
     AdvanceInvalid(Eq6CurrentQuorumUnsatisfied)
-  } else if !evaluate(
+  } else if list.is_empty(spent.next_keys) || !evaluate(
     spent.next_threshold,
     list.length(spent.next_keys),
     positions_in(
@@ -239,7 +239,9 @@ pub fn advance_equalities(
       ),
     ),
   ) {
-    // eq6b: the evidence revealed in new.cur_keys satisfies the committed
+    // eq6b: a state that published no next keys has nothing to reveal, so no
+    // rotation follows it (Lean `signingValid`: `!prior.nextKeys.isEmpty`); else
+    // the evidence revealed in new.cur_keys satisfies the committed
     // (next_keys, next_threshold) — the KERI pre-rotation gate. Each
     // revealing key is digested once (blake3 over its 44-char qb64) to find
     // its committed position; the KEL n entries are matched byte-for-byte.
@@ -251,7 +253,7 @@ pub fn advance_equalities(
     AdvanceInvalid(Eq7CreatedStateMismatch)
   } else {
     // eq8: nothing ill-formed can be written (F18 + rule 14 on the successor).
-    when key_state_well_formed(new) is {
+    when key_state_after_rotation_well_formed(new) is {
       DatumInvalid(e) -> AdvanceInvalid(Eq8CreatedIllFormed(e))
       _ -> AdvanceValid
     }

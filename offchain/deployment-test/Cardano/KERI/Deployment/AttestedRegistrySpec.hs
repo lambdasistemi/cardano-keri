@@ -34,6 +34,7 @@ import Cardano.KERI.Deployment.Registry (
 import Cardano.KERI.Deployment.Script (
     Blueprint,
     CheckpointTerms (..),
+    Observers (..),
     ScriptArtifact (..),
     loadBlueprint,
     scriptHashBytes,
@@ -94,7 +95,8 @@ spec = describe "the registry of the attested generation" $ do
     it "is the deployed generation's registry with another checkpoint validator" $ do
         (old, new) <- derive 0
         let scripts = attestedScripts new
-        scriptsObservers scripts `shouldBe` scriptsObservers old
+        -- every observer but the advance observer, which the attested generation no longer deploys
+        (\o -> o{observerAdvance = observerAdvance (scriptsObservers old)}) (scriptsObservers scripts) `shouldBe` scriptsObservers old
         scriptsAttestation scripts `shouldBe` scriptsAttestation old
         scriptsApplication scripts `shouldBe` scriptsApplication old
         scriptsTemplate scripts `shouldBe` scriptsTemplate old
@@ -138,11 +140,11 @@ spec = describe "the registry of the attested generation" $ do
             scripts = attestedScripts new
         -- the two policies depend on the version and on each other only: the identifiers do not move with the registry
         (hashOf (attestationFact policies), hashOf (attestationChange policies))
-            `shouldBe` ("d245219785d72bc3620eae79334e42b75fb40b16b6cc3ce00a67a466", "eb52cb2ed997047c3a633fbe982551dbd58effc3dea020176d34c5df")
+            `shouldBe` ("8820ee6877973be5ee1be2de32af53bdea3fb4afd253965678ecdf29", "c51fb1d0b78e838a68d65b1e1c5ad852e0996b92ec23498b7af1c38a")
         (size (attestationFact policies), size (attestationChange policies), size (scriptsCheckpoint scripts))
-            `shouldBe` (10_629, 8_355, 8_911)
+            `shouldBe` (10_661, 12_903, 8_911)
         size (scriptsCheckpoint old) `shouldBe` 8_957
-        hashOf (scriptsCheckpoint scripts) `shouldBe` "b7eb31c99a6e1d8db2a1bc199f13d69e0c0bc97568226716ea0c32b8"
+        hashOf (scriptsCheckpoint scripts) `shouldBe` "57e04ac646586416b467cd2b72e3a099313000b47393de00a3f0f62a"
         hashOf (scriptsApplication scripts) `shouldBe` "ef613f113b7d89aaa0fc62b172f1c5569d7bd3d38bf735a36403a941"
         -- the deployed generation's checkpoint over the same terms and seed, for the record: it is not the attested one
         hashOf (scriptsCheckpoint old) `shouldBe` "738dc75d29890a795d427e08bbedd1e166bd98b5f39e5d01c5fc70fe"

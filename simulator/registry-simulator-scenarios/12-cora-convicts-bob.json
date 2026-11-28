@@ -106,7 +106,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "writer/11/1"
             }
           },
           "rival": {
@@ -134,7 +135,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "sibling/11/1"
             },
             "structureVerified": true,
             "signatures": [
@@ -164,7 +166,8 @@
                   "cuts": [],
                   "adds": [],
                   "witnessThreshold": 0,
-                  "extension": []
+                  "extension": [],
+                  "eventDigest": "sibling/11/1"
                 },
                 "verified": true
               }
@@ -245,7 +248,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "writer/12/1"
             }
           },
           "rival": {
@@ -273,7 +277,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "sibling/12/1"
             },
             "structureVerified": true,
             "signatures": [
@@ -303,7 +308,8 @@
                   "cuts": [],
                   "adds": [],
                   "witnessThreshold": 0,
-                  "extension": []
+                  "extension": [],
+                  "eventDigest": "sibling/12/1"
                 },
                 "verified": true
               }
@@ -384,7 +390,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "writer/13/1"
             }
           },
           "rival": {
@@ -412,7 +419,8 @@
               "cuts": [],
               "adds": [],
               "witnessThreshold": 0,
-              "extension": []
+              "extension": [],
+              "eventDigest": "sibling/13/1"
             },
             "structureVerified": true,
             "signatures": [
@@ -442,7 +450,8 @@
                   "cuts": [],
                   "adds": [],
                   "witnessThreshold": 0,
-                  "extension": []
+                  "extension": [],
+                  "eventDigest": "sibling/13/1"
                 },
                 "verified": true
               }
@@ -2984,7 +2993,8 @@
                           "required": 1
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "alternative"
                     },
                     "receipts": [
                       {
@@ -3014,7 +3024,8 @@
                               "required": 1
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "alternative"
                         },
                         "signer": 10,
                         "verified": true
@@ -3048,7 +3059,8 @@
                               "required": 1
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "alternative"
                         },
                         "signer": 2,
                         "verified": true
@@ -3129,7 +3141,8 @@
                           "required": 1
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "first"
                     }
                   }
                 },
@@ -3438,7 +3451,8 @@
                           "required": 1
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "seals"
                     },
                     "receipts": [
                       {
@@ -3472,7 +3486,8 @@
                               "required": 1
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "seals"
                         },
                         "signer": 11,
                         "verified": true
@@ -3510,7 +3525,8 @@
                               "required": 1
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "seals"
                         },
                         "signer": 1,
                         "verified": true
@@ -3591,7 +3607,8 @@
                           "required": 1
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "first"
                     }
                   }
                 },
@@ -3808,7 +3825,8 @@
                           "required": 2
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "exact-key-rival"
                     },
                     "receipts": [
                       {
@@ -3838,7 +3856,8 @@
                               "required": 2
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "exact-key-rival"
                         },
                         "signer": 10,
                         "verified": true
@@ -3872,7 +3891,8 @@
                               "required": 2
                             }
                           },
-                          "witnessThreshold": 1
+                          "witnessThreshold": 1,
+                          "eventDigest": "exact-key-rival"
                         },
                         "signer": 1,
                         "verified": true
@@ -3953,7 +3973,8 @@
                           "required": 1
                         }
                       },
-                      "witnessThreshold": 1
+                      "witnessThreshold": 1,
+                      "eventDigest": "first"
                     }
                   }
                 },

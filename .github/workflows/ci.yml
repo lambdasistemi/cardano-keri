@@ -158,6 +158,8 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-identity-vectors.mjs --check
       - name: Freeze corpus drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-freeze-vectors.mjs --check
+      - name: January rotation journeys vectors drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/january-591-vectors.mjs --check
       - name: Freeze mutation controls
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#aiken github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/check-freeze-mutants.mjs
       - name: Deposit vectors drift

@@ -39,7 +39,7 @@ current model separately.
 
 A proof submitter needs a valid competing rotation to be recognized even when
 it exposes a different subset of committed keys or adds new keys and witnesses.
-The checkpoint now evaluates both ordinary, non-delegated rotations against a
+The Lean checkpoint model evaluates both ordinary, non-delegated rotations against a
 common authenticated predecessor. Each branch must satisfy the prior-next
 threshold and its own current threshold using signatures bound to that branch.
 Each derives its own witness list by removing cuts before adding witnesses and
@@ -47,15 +47,18 @@ must carry enough distinct, verified receipts from that resulting list.
 
 Weighted signing thresholds use exact rational arithmetic, conjunctive clauses
 and nested groups. Both rotations must occupy the checkpoint's native sequence
-and differ in complete content, including seals and other content that the
-checkpoint projection does not retain. The first accepted event stays the
-reference; presenting a rival does not roll the tip back. Sequence zero,
-delegated identities and interaction conflicts are refused by this profile.
+and have distinct authenticated event digests. The digests identify the signed
+bodies, including seals and the original spelling of a signing weight. Two
+rotations can decode to identical weights and still conflict. Replaying the
+same signed body leaves the writer’s digest unchanged. The model keeps the
+first accepted event as the reference and excludes sequence zero, delegated
+identities and interaction conflicts from this profile.
 
 | Choice | Rejected alternative and reason |
 |---|---|
 | Grade each branch with its own threshold and derived witnesses | Reusing the tip's keys, threshold or witnesses rejects valid partial and augmented rotations and can accept inadequately signed rivals. |
-| Require complete content inequality | Comparing only projected fields misses conflicts that differ in seals; accepting identical content invents duplicity. |
+| Compare the writer’s and rival’s authenticated own event digests | A valid rival with a distinct digest at the same position establishes a conflict. Equal decoded weights can come from different signed bodies. A replay has the same digest. The guarantee requires faithful openings on both sides. The mechanism which installs the writer digest on chain remains open. |
+| Apply the keripy event admission profile | Ordinary inception omits the prior link and witness deltas. A fraction in a current or next rule has a positive denominator and an individual weight at most one, including group outer and member weights. The individual ceiling follows keripy 1.3.5 and is stricter than the pinned KERI 1.1 clause. Preserve the signed spelling and exact integers. |
 | Authenticate the common prior-next context | Allowing a rival to choose its own predecessor or witness context would make the proof self-authorizing. |
 
 The executable definitions are `Duplicity.duplicityAt` and the computed
@@ -66,14 +69,19 @@ model's concrete corpus through both its module and the code embedded in its
 page. Its compact evidence selector chooses a documented example pair; it does
 not verify real signatures.
 
-**Declared technical boundary:** keys and their committed digests share an
-abstract identity after a verified opening. Signature verification, wire
-structure, self-addressing identifiers and prior-link validation are primitive
-results bound to complete event content. The decoder must represent all
-remaining bytes injectively in the event's extension field. The environment
-must authenticate the predecessor and recorded accepted event. Byte encoding, cryptographic soundness and that context
-authentication are not proved here. No Aiken conviction path is accepted by
-this model change.
+The controller at booking or the submitter at advance must bind the installed
+writer digest to its signed bytes. At conviction, the policy reads the writer
+digest from the spent checkpoint and checks the convictor’s opening of the
+rival digest against the rival’s signed bytes. The predecessor must be
+authenticated. Comparing the digests assumes collision resistance for this
+pair of signed bodies.
+
+Keys and their commitments share an identity after a verified opening. The
+model takes wire structure, prior links, signatures and receipts as verified
+inputs. Implementing these bindings in the decoder and validators remains
+open. The earlier decoded-content comparison agrees with the digest test
+when its decoding distinguishes the two signed bodies, including their
+extension bytes.
 
 The [concrete replay adapter](watcher-conformance/replay-concrete.mjs) runs
 scratch adaptations of the original twelve rapid-rotation probes and eight

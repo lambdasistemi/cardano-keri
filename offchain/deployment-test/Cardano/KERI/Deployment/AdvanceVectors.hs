@@ -15,12 +15,21 @@ module Cardano.KERI.Deployment.AdvanceVectors (
     hexBytes,
     asText,
     loadVectorNamed,
+    loadJanuaryVector,
+    JanuaryExpectation (..),
+    loadJanuaryExpectation,
+    NestedSeal (..),
+    loadNestedSeal,
+    loadTrailingPair,
+    loadScalarPair,
+    loadTextPair,
     loadVector,
     Seeds (..),
     loadSeeds,
     signedBy,
 ) where
 
+import Control.Monad ((>=>))
 import Crypto.Error (CryptoFailable (..))
 import Crypto.PubKey.Ed25519 qualified as Ed25519
 import Data.Aeson (Value (..), eitherDecodeFileStrict)
@@ -97,6 +106,89 @@ loadVectorNamed name = do
     path <- getDataFileName "test/keri-fixtures/fixtures/advance-split-cases.json"
     top <- eitherDecodeFileStrict path >>= either fail pure
     either fail pure (field name top >>= vectorOf)
+
+{- | A journey of #591 (@R01@ as @r01@, @R17@ as @r17@): the datums, the evidence and the fact of a rotation with its own
+predecessor inception, written by @scripts/january-591-vectors.mjs@ from the signed bytes and keripy's attachments.
+-}
+loadJanuaryVector :: Text -> IO Vector
+loadJanuaryVector name = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure (field name top >>= vectorOf)
+
+-- | What the signed rotation declares for its successor, read from the signed event by the generator, not from the datums.
+data JanuaryExpectation = JanuaryExpectation
+    { expectedNextKeys :: [ByteString]
+    , expectedNextThreshold :: Integer
+    , expectedSpentNextKeys :: [ByteString]
+    }
+
+loadJanuaryExpectation :: Text -> IO JanuaryExpectation
+loadJanuaryExpectation name = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure $ do
+        expect <- field name top >>= field "expect"
+        keys <- field "nextKeys" expect >>= hexList
+        spent <- field "spentNextKeys" expect >>= hexList
+        threshold <- field "nextThreshold" expect >>= asNumber
+        Right (JanuaryExpectation keys threshold spent)
+  where
+    hexList v = case v of
+        Array xs -> traverse (asText >=> hexBytes) (toList xs)
+        _ -> Left "not an array"
+    asNumber v = case v of
+        Number n -> Right (truncate n)
+        _ -> Left "not a number"
+
+-- | The rotation body of R01 whose seal spells the abandonment fields: the body, and the offsets of that spelling.
+data NestedSeal = NestedSeal {sealBody :: ByteString, sealOffNt :: Integer, sealOffBt :: Integer}
+
+loadNestedSeal :: IO NestedSeal
+loadNestedSeal = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure $ do
+        seal <- field "nested_seal" top
+        body <- field "body" seal >>= asText >>= hexBytes
+        offNt <- field "offNt" seal >>= asNumber
+        offBt <- field "offBt" seal >>= asNumber
+        Right (NestedSeal body offNt offBt)
+  where
+    asNumber v = case v of
+        Number n -> Right (truncate n)
+        _ -> Left "not a number"
+
+-- | The body of R01 followed, after its last member, by a repeated top-level declaration.
+loadTrailingPair :: IO ByteString
+loadTrailingPair = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure (field "trailing_pair" top >>= field "body" >>= asText >>= hexBytes)
+
+-- | Two bodies of R01 that differ in the scalars of their last member: valid numbers, and a minus sign without digits.
+loadScalarPair :: IO (ByteString, ByteString)
+loadScalarPair = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure $ do
+        pair <- field "scalar_pair" top
+        valid <- field "valid" pair >>= asText >>= hexBytes
+        malformed <- field "malformed" pair >>= asText >>= hexBytes
+        Right (valid, malformed)
+
+{- | Two bodies of R01 that differ in the text of their last member: every length and boundary of well-formed UTF-8, and an
+isolated continuation byte.
+-}
+loadTextPair :: IO (ByteString, ByteString)
+loadTextPair = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure $ do
+        pair <- field "text_pair" top
+        valid <- field "valid" pair >>= asText >>= hexBytes
+        malformed <- field "malformed" pair >>= asText >>= hexBytes
+        Right (valid, malformed)
 
 loadVector :: IO Vector
 loadVector = loadVectorNamed "two_key"

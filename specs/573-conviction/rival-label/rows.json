@@ -1,0 +1,624 @@
+{
+  "rows": [
+    {
+      "case": "D05",
+      "step": "rot (first seen)",
+      "role": "accepted",
+      "comparable": true,
+      "prior": {
+        "aid": 232,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          230,
+          231
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 232,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 233,
+          "keys": [
+            230,
+            231
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            234,
+            235
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EMU9Syn_eL7jDsamQ9K5nWmRdpHm5okaQspBKw6b5y9Z"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 230,
+            "verified": true
+          },
+          {
+            "signer": 231,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "accepted"
+    },
+    {
+      "case": "D05",
+      "step": "rot (rival)",
+      "role": "rival",
+      "comparable": true,
+      "prior": {
+        "aid": 232,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          230,
+          231
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 232,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 233,
+          "keys": [
+            230,
+            231
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            236,
+            237
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EBilsqpuE2_EmeGunpmj1ZALRlj_alamdzR_ZhEI33Z0"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 230,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "escrowed",
+      "accepted": {
+        "event": {
+          "aid": 232,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 233,
+          "keys": [
+            230,
+            231
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            234,
+            235
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EMU9Syn_eL7jDsamQ9K5nWmRdpHm5okaQspBKw6b5y9Z"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 230,
+            "verified": true
+          },
+          {
+            "signer": 231,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      }
+    },
+    {
+      "case": "D07",
+      "step": "rot (first seen)",
+      "role": "accepted",
+      "comparable": true,
+      "prior": {
+        "aid": 246,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          244,
+          245
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 246,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 247,
+          "keys": [
+            244,
+            245
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            248,
+            249
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "ECtcvqCS4BT4a1tuQBdEpcvBrww2AIh_h_t9Ons-JAwv"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 244,
+            "verified": true
+          },
+          {
+            "signer": 245,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "accepted"
+    },
+    {
+      "case": "D07",
+      "step": "rot (rival)",
+      "role": "rival",
+      "comparable": true,
+      "prior": {
+        "aid": 246,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          244,
+          245
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 246,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 247,
+          "keys": [
+            244,
+            245
+          ],
+          "threshold": {
+            "count": 1
+          },
+          "nextKeys": [
+            248,
+            249
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EAImX09CuhV-GVPIjhDB_IAyLRKcKr9kXDANXH76QFJX"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 244,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "escrowed",
+      "accepted": {
+        "event": {
+          "aid": 246,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 247,
+          "keys": [
+            244,
+            245
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            248,
+            249
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "ECtcvqCS4BT4a1tuQBdEpcvBrww2AIh_h_t9Ons-JAwv"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 244,
+            "verified": true
+          },
+          {
+            "signer": 245,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      }
+    },
+    {
+      "case": "D09",
+      "step": "rot (first seen)",
+      "role": "accepted",
+      "comparable": true,
+      "prior": {
+        "aid": 322,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          320,
+          321
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 322,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 323,
+          "keys": [
+            320,
+            321
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            324,
+            325
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 320,
+            "verified": true
+          },
+          {
+            "signer": 321,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "accepted"
+    },
+    {
+      "case": "D09",
+      "step": "rot (rival)",
+      "role": "rival",
+      "comparable": true,
+      "prior": {
+        "aid": 322,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          320,
+          321
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 322,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 323,
+          "keys": [
+            320,
+            321
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            324,
+            325
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EOf5r14zzFEHw0Sgrwxfdt7-z-LqmPt_n8nNVqpvM0CN"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 320,
+            "verified": true
+          },
+          {
+            "signer": 321,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "escrowed",
+      "accepted": {
+        "event": {
+          "aid": 322,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 323,
+          "keys": [
+            320,
+            321
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            324,
+            325
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 320,
+            "verified": true
+          },
+          {
+            "signer": 321,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      }
+    },
+    {
+      "case": "D10",
+      "step": "rot (first seen)",
+      "role": "accepted",
+      "comparable": true,
+      "prior": {
+        "aid": 328,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          326,
+          327
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 328,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 329,
+          "keys": [
+            326,
+            327
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            330,
+            331
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 326,
+            "verified": true
+          },
+          {
+            "signer": 327,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "accepted"
+    },
+    {
+      "case": "D10",
+      "step": "rot (rival)",
+      "role": "rival",
+      "comparable": true,
+      "prior": {
+        "aid": 328,
+        "sn": 0,
+        "delegated": false,
+        "nextKeys": [
+          326,
+          327
+        ],
+        "nextThreshold": {
+          "count": 2
+        },
+        "witnesses": []
+      },
+      "signed": {
+        "event": {
+          "aid": 328,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 329,
+          "keys": [
+            326,
+            327
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            330,
+            331
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "EH6G89vGgBNXD-U-o_d_mdeG1adUR-vjzWgUkp_VF0IT"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 326,
+            "verified": true
+          },
+          {
+            "signer": 327,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      },
+      "keripy": "escrowed",
+      "accepted": {
+        "event": {
+          "aid": 328,
+          "sn": 1,
+          "kind": "rotation",
+          "priorDigest": 329,
+          "keys": [
+            326,
+            327
+          ],
+          "threshold": {
+            "count": 2
+          },
+          "nextKeys": [
+            330,
+            331
+          ],
+          "nextThreshold": {
+            "count": 2
+          },
+          "cuts": [],
+          "adds": [],
+          "witnessThreshold": 0,
+          "extension": [],
+          "eventDigest": "ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq"
+        },
+        "structureVerified": true,
+        "signatures": [
+          {
+            "signer": 326,
+            "verified": true
+          },
+          {
+            "signer": 327,
+            "verified": true
+          }
+        ],
+        "receipts": []
+      }
+    }
+  ]
+}

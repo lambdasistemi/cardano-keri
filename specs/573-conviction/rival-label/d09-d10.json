@@ -1,0 +1,161 @@
+{
+  "source": {
+    "file": "offchain/test/keri-fixtures/admission/evidence/keripy-results.json",
+    "commit": "d67af49f467e2811818327af27f465411299e8dd",
+    "sha256": "3d1e7425ff7567d8e89f2b15b502c016c1d7a1c1a991646692d267be8db244df"
+  },
+  "cases": [
+    {
+      "id": "D09",
+      "stage": "D",
+      "family": "rival",
+      "title": "same fields as the first-seen rotation, serialized as CBOR (other SAID, equal content)",
+      "steps": [
+        {
+          "outcome": "accepted",
+          "class": "",
+          "detail": "",
+          "readback": {
+            "saidAtSn": "EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh",
+            "storedBytesEqual": true,
+            "logged": true
+          },
+          "said": "EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh",
+          "pre": "EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh",
+          "sn": 0,
+          "ilk": "icp",
+          "label": "icp",
+          "raw": "{\"v\":\"KERI10JSON000189_\",\"t\":\"icp\",\"d\":\"EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh\",\"i\":\"EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh\",\"s\":\"0\",\"kt\":\"2\",\"k\":[\"DLKR1xpzw7rzllN2FCOxBrzWk1G6DW_z52UewKB06Iiq\",\"DDwmI-qXsqhBxmEJAY2CI24bNLOwnFWXJdgiNhVfvGQP\"],\"nt\":\"2\",\"n\":[\"ELpcWV3k9eHN5oz08MYNCp1I00HuaPLQbQJTC9bSn8Uj\",\"EBvZJzj_JxlQoWQSTYrW2T4Vtc60dPhndPUyZH0_beVL\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
+          "role": "context"
+        },
+        {
+          "outcome": "accepted",
+          "class": "",
+          "detail": "",
+          "readback": {
+            "saidAtSn": "EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc",
+            "storedBytesEqual": true,
+            "logged": true
+          },
+          "said": "EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc",
+          "pre": "EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh",
+          "sn": 1,
+          "ilk": "rot",
+          "label": "rot (first seen)",
+          "raw": "{\"v\":\"KERI10JSON0001be_\",\"t\":\"rot\",\"d\":\"EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc\",\"i\":\"EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh\",\"s\":\"1\",\"p\":\"EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh\",\"kt\":\"2\",\"k\":[\"DOL4HfFLCm6Ldjanj7z6fallAHqi_CeZIYa4twg-Lh27\",\"DHYy38cB1K2tE4G88MVmjdJtWC8It6rL5jSWjGp0znm7\"],\"nt\":\"2\",\"n\":[\"EEvoO5ZrSBrLWJk8w3uCV7asRPODUt3Mc5BFVTIIzh2a\",\"EMSBauECOzjunIDIYw1uFRuQT_a31PzzgUYSmXSrKxXn\"],\"bt\":\"0\",\"br\":[],\"ba\":[],\"a\":[]}",
+          "role": "accepted"
+        },
+        {
+          "outcome": "escrowed",
+          "class": "LikelyDuplicitousError",
+          "detail": "Likely Duplicitous Event sn=1 type=rot SAID=EOf5r14zzFEHw0Sgrwxfdt7-z-LqmPt_n8nNVqpvM0CN",
+          "escrowIndex": {
+            "partial-signatures": false,
+            "partial-witness-receipts": false,
+            "out-of-order": false,
+            "likely-duplicitous": true
+          },
+          "readback": {
+            "saidAtSn": "EB1p5urcirq4ySrkSvE4nkwpTJc9QjrMfOsvVyKdDDvc",
+            "storedBytesEqual": true,
+            "logged": false
+          },
+          "said": "EOf5r14zzFEHw0Sgrwxfdt7-z-LqmPt_n8nNVqpvM0CN",
+          "pre": "EOGVm_LeAsiJlHbR5SFULiDG8S758xrvt4dJERuqzzXh",
+          "sn": 1,
+          "ilk": "rot",
+          "label": "rot (rival)",
+          "raw": "hex:ae6176714b455249313043424f523030303138375f617463726f746164782c454f66357231347a7a46454877305367727778666474372d7a2d4c716d50745f6e386e4e567170764d30434e6169782c454f47566d5f4c654173694a6c486252355346554c69444738533735387872767434644a455275717a7a5868617361316170782c454f47566d5f4c654173694a6c486252355346554c69444738533735387872767434644a455275717a7a5868626b746132616b82782c444f4c344866464c436d364c646a616e6a377a3666616c6c414871695f43655a495961347477672d4c683237782c4448597933386342314b327445344738384d566d6a644a74574338497436724c356a53576a4770307a6e6d37626e746132616e82782c4545766f4f355a725342724c574a6b38773375435637617352504f445574334d63354246565449497a683261782c454d5342617545434f7a6a756e4944495977317546527551545f613331507a7a675559536d5853724b78586e62627461306262728062626180616180",
+          "role": "rival",
+          "standalone": {
+            "outcome": "accepted",
+            "class": "",
+            "detail": "",
+            "escrowIndex": null,
+            "readback": {
+              "saidAtSn": "EOf5r14zzFEHw0Sgrwxfdt7-z-LqmPt_n8nNVqpvM0CN",
+              "storedBytesEqual": true,
+              "logged": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "D10",
+      "stage": "D",
+      "family": "rival",
+      "title": "same fields, kt written as a JSON number (other SAID, equal content)",
+      "steps": [
+        {
+          "outcome": "accepted",
+          "class": "",
+          "detail": "",
+          "readback": {
+            "saidAtSn": "ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_",
+            "storedBytesEqual": true,
+            "logged": true
+          },
+          "said": "ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_",
+          "pre": "ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_",
+          "sn": 0,
+          "ilk": "icp",
+          "label": "icp",
+          "raw": "{\"v\":\"KERI10JSON000189_\",\"t\":\"icp\",\"d\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"i\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"s\":\"0\",\"kt\":\"2\",\"k\":[\"DD07Y3N7CXI5pz9YZfKt0YL_GMLfJAVWgsox7v_-JPfV\",\"DImt_xPVX9xzGCHxAo6_eLteQTWxtcV2blX077Dd2uPm\"],\"nt\":\"2\",\"n\":[\"EA7RVHmquUpRSIxtHHodsLGtCoH6y5P9q-Y4BHKRtqa0\",\"EKcsN1uHMuQ2-Bc-hsK67_hebYFtIfZzCeiO8c4NytEm\"],\"bt\":\"0\",\"b\":[],\"c\":[],\"a\":[]}",
+          "role": "context"
+        },
+        {
+          "outcome": "accepted",
+          "class": "",
+          "detail": "",
+          "readback": {
+            "saidAtSn": "ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq",
+            "storedBytesEqual": true,
+            "logged": true
+          },
+          "said": "ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq",
+          "pre": "ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_",
+          "sn": 1,
+          "ilk": "rot",
+          "label": "rot (first seen)",
+          "raw": "{\"v\":\"KERI10JSON0001be_\",\"t\":\"rot\",\"d\":\"ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq\",\"i\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"s\":\"1\",\"p\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"kt\":\"2\",\"k\":[\"DDJKdaqT6Zw_MM1CSuQmgysvO3G8yroOUrGatLPLo7gj\",\"DIkNBtyLt-bsrZq6WEoEamhQi3iRAMJC9-nGvytfxvZu\"],\"nt\":\"2\",\"n\":[\"EE-e3JFCdFJjdSGpswLkI0rQXtMGMWVhQ-mc5-rC4wob\",\"EAR7eLXnq-ReS2XpS0wvAAhe026jocOtO5np2_2rsTSJ\"],\"bt\":\"0\",\"br\":[],\"ba\":[],\"a\":[]}",
+          "role": "accepted"
+        },
+        {
+          "outcome": "escrowed",
+          "class": "LikelyDuplicitousError",
+          "detail": "Likely Duplicitous Event sn=1 type=rot SAID=EH6G89vGgBNXD-U-o_d_mdeG1adUR-vjzWgUkp_VF0IT",
+          "escrowIndex": {
+            "partial-signatures": false,
+            "partial-witness-receipts": false,
+            "out-of-order": false,
+            "likely-duplicitous": true
+          },
+          "readback": {
+            "saidAtSn": "ENN05X0AckwRfQZfjTkQfuWuIHbqdxP4lgrRu_RNHUGq",
+            "storedBytesEqual": true,
+            "logged": false
+          },
+          "said": "EH6G89vGgBNXD-U-o_d_mdeG1adUR-vjzWgUkp_VF0IT",
+          "pre": "ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_",
+          "sn": 1,
+          "ilk": "rot",
+          "label": "rot (rival)",
+          "raw": "{\"v\":\"KERI10JSON0001bc_\",\"t\":\"rot\",\"d\":\"EH6G89vGgBNXD-U-o_d_mdeG1adUR-vjzWgUkp_VF0IT\",\"i\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"s\":\"1\",\"p\":\"ECgW5ZeUxdXrOBkpiK7lblNUPeo1ha1ZKf7FbQEIryR_\",\"kt\":2,\"k\":[\"DDJKdaqT6Zw_MM1CSuQmgysvO3G8yroOUrGatLPLo7gj\",\"DIkNBtyLt-bsrZq6WEoEamhQi3iRAMJC9-nGvytfxvZu\"],\"nt\":\"2\",\"n\":[\"EE-e3JFCdFJjdSGpswLkI0rQXtMGMWVhQ-mc5-rC4wob\",\"EAR7eLXnq-ReS2XpS0wvAAhe026jocOtO5np2_2rsTSJ\"],\"bt\":\"0\",\"br\":[],\"ba\":[],\"a\":[]}",
+          "role": "rival",
+          "standalone": {
+            "outcome": "accepted",
+            "class": "",
+            "detail": "",
+            "escrowIndex": null,
+            "readback": {
+              "saidAtSn": "EH6G89vGgBNXD-U-o_d_mdeG1adUR-vjzWgUkp_VF0IT",
+              "storedBytesEqual": true,
+              "logged": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

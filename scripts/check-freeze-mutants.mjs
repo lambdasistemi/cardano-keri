@@ -37,7 +37,7 @@ const MESSAGE = 'lib/cardano_keri/checkpoint/message.ak';
 
 // The Lean's premises first, then the facts the validator also checks.
 const mutants = [
-  { name: 'rotation-evidence', premise: 'rotationTo: the rotation is witnessed', file: OBSERVER, from: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid\n}', to: 'advance_predicate(spent, new, evidence.rotation) == AdvancePredicateValid || True\n}' },
+  { name: 'rotation-evidence', premise: 'rotationTo: the rotation is witnessed', file: OBSERVER, from: '    evidence.rotation,\n  ) == AdvancePredicateValid\n}', to: '    evidence.rotation,\n  ) == AdvancePredicateValid || True\n}' },
   { name: 'later-sequence-number', premise: "l.sn < sn'", file: MESSAGE, from: 'new.native_sn > spent.native_sn', to: 'new.native_sn >= spent.native_sn' },
   { name: 'short-pool', premise: 'l.pool < P', file: REGISTER, from: '  expect pool < premium\n', to: '  expect pool >= 0\n' },
   { name: 'unfrozen', premise: 'l.frozen = false', file: REGISTER, from: '        poisoned: False,\n        frozen: False,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old', to: '        poisoned: False,\n        frozen: _,\n        born_at,\n        refund_to,\n        topped_up,\n        keys,\n      }\n    = old' },

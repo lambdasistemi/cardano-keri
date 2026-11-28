@@ -1,27 +1,17 @@
-//// #114 S4 — hash-proof minting policy tests (H1-H4, RED first).
+//// The hash-proof minting policy: tests (H1-H4).
 ////
-//// Each test drives the REAL `hash_proof.hash_proof.mint` handler on a
-//// full `Transaction` (the `cage_context.mint_context` harness; #99
-//// precedent). Honest mints cover the three size tiers: the committed
-//// keripy `honest_2key` icp (393 B, S1 bundle), the committed
-//// `reg_witnessed` icp (533 B — reused straight from
-//// `registration_vectors.ak`, with the S3 `witnessed_proof_name` golden
-//// as the minted asset name), and a deterministic synthetic 1024 B
-//// boundary vector (blank-first construction: dress two disjoint 44-char
-//// spans with `"#"×44`, blake3 the blank, substitute `qb64_aid(digest)`
-//// into both spans — no committed fixture approaches the boundary; blake3
-//// of arbitrary bytes is still the binding, A-001/Q-001 ruling).
-////
-//// The keripy fixture spans sit at `off_d = 40`, `off_i = 91` (keripy
-//// field order `v,t,d,i,...` is fixed; 91 matches the S1-exported `i`
-//// offset — `d` is not exported by S1, located as the first of the two
-//// qb64-AID occurrences and verified by the SAID relation
-//// `blake3(said_blank) == aid` before committing, see Q-001/A-001).
+//// Each test drives the REAL `hash_proof.hash_proof.mint` handler on a full `Transaction` (the
+//// `cage_context.mint_context` harness). Honest mints cover the size tiers: the committed keripy `honest_2key` icp
+//// (393 B), the committed `reg_witnessed` icp (533 B, reused from `registration_vectors.ak` with its proof-name
+//// golden), and a one-chunk boundary event of exactly 1,024 B (the 393 B event with a filler anchor, its own digest
+//// computed by blake3 over the dressed blank), plus an event whose identifier is a key: its `d` is the digest of
+//// the event with `d` blanked only. The event is read from its own bytes; no position is supplied.
 
 use aiken/primitive/bytearray
 use cage_context.{mint_context}
 use cardano/assets.{PolicyId, from_asset, merge}
 use cardano/transaction.{Transaction}
+use cardano_keri/checkpoint/advance_vectors as adv
 use cardano_keri/checkpoint/registration.{proof_token_name}
 use cardano_keri/checkpoint/registration_vectors as vec
 use hash_proof.{HashProofRedeemer}
@@ -44,17 +34,8 @@ const honest2_bytes: ByteArray =
 const honest2_aid: ByteArray =
   #"82c7ebac162d209cdc4e98bd76774ad09ee3ad4983abc4936e71b699653ad3e5"
 
-const honest2_off_d: Int = 40
-
-const honest2_off_i: Int = 91
-
 const honest2_redeemer: HashProofRedeemer =
-  HashProofRedeemer {
-    input_bytes: honest2_bytes,
-    cesr_aid: honest2_aid,
-    off_i: honest2_off_i,
-    off_d: honest2_off_d,
-  }
+  HashProofRedeemer { input_bytes: honest2_bytes, cesr_aid: honest2_aid }
 
 const honest2_name: ByteArray = proof_token_name(honest2_bytes, honest2_aid)
 
@@ -72,40 +53,41 @@ const honest2_wrong_aid: ByteArray =
 // reg_witnessed — committed keripy icp, 533 B tier (registration_vectors)
 // ---------------------------------------------------------------------
 
-/// `d` span offset for reg_witnessed (same keripy header shape; not
-/// S1-exported, located + SAID-verified as documented above).
-const witnessed_off_d: Int = 40
-
 const witnessed_redeemer: HashProofRedeemer =
   HashProofRedeemer {
     input_bytes: vec.pos_witnessed_evidence.event_bytes,
     cesr_aid: vec.pos_witnessed_datum.cesr_aid,
-    off_i: vec.pos_witnessed_evidence.off_i,
-    off_d: witnessed_off_d,
   }
 
 // ---------------------------------------------------------------------
-// synthetic 1024 B boundary vector (blank-first construction)
+// one-chunk boundary event of exactly 1,024 B
 // ---------------------------------------------------------------------
 
-/// 1024 B: filler byte i % 256 with qb64_aid(digest) substituted at
-/// off_d = 9 and off_i = 61, where digest = blake3 of the dressed blank.
+/// The 393 B keripy event with the anchor `["x…x"]` sized to 1,024 B, version size `000400`, and its own digest in
+/// `d` and `i` computed over the blank with both dressed.
 const boundary_bytes: ByteArray =
-  #"000102030405060708454274365f504654536a356f75525a61595076364837766d6b4c4d79393932357a6b6f4b443573614631756235363738393a3b3c454274365f504654536a356f75525a61595076364837766d6b4c4d79393932357a6b6f4b4435736146317562696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"
+  #"7b2276223a224b45524931304a534f4e3030303430305f222c2274223a22696370222c2264223a22454d53515f513247544f554267562d7a58514462656757685f39344f4a65326b57355f7142657279736c2d6c222c2269223a22454d53515f513247544f554267562d7a58514462656757685f39344f4a65326b57355f7142657279736c2d6c222c2273223a2230222c226b74223a2232222c226b223a5b2244446d69555565653470426e4e636551385233536c645a4368463467577768324a3139552d5a387446627538222c22444265764364594d375a6b4a6b57496656345a6843674f3445596c5a64677a75386a3537485861615776376f225d2c226e74223a2232222c226e223a5b22454f5466464c795759797166776c52315a706372324d5555536b6354526b4c316c7058726541615f74723949222c22454b454656726e2d49794e4f597a323056674f2d4a4563744b5161397a344e64535f77417454325f45554463225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b227878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878225d7d"
 
-/// blake3 of the dressed 1024 B blank.
+/// blake3 of the dressed 1,024 B blank.
 const boundary_aid: ByteArray =
-  #"1b7afcf1534a3e68b9165a60fbfa1fbbe690b332f7ddb9ce4a0a0f9b1a175b9b"
+  #"c490fd0d864ce501815fb35d00db7a05a1ffde0e25eda45b9fea05eaf2b25fa5"
 
 const boundary_redeemer: HashProofRedeemer =
-  HashProofRedeemer {
-    input_bytes: boundary_bytes,
-    cesr_aid: boundary_aid,
-    off_i: 61,
-    off_d: 9,
-  }
+  HashProofRedeemer { input_bytes: boundary_bytes, cesr_aid: boundary_aid }
 
 const boundary_name: ByteArray = proof_token_name(boundary_bytes, boundary_aid)
+
+// ---------------------------------------------------------------------
+// a key identifier: i is a D-code key, d the digest with d blanked only
+// ---------------------------------------------------------------------
+
+/// The 393 B event with `i` the qualified key `DAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8g`.
+const key_prefix_bytes: ByteArray =
+  #"7b2276223a224b45524931304a534f4e3030303138395f222c2274223a22696370222c2264223a2245476130636630445f646e5a394b6f4d4a637159666f6143496478546d657651734864744f4b573451614b59222c2269223a2244414543417751464267634943516f4c4441304f4478415245684d554652595847426b614778776448683867222c2273223a2230222c226b74223a2232222c226b223a5b2244446d69555565653470426e4e636551385233536c645a4368463467577768324a3139552d5a387446627538222c22444265764364594d375a6b4a6b57496656345a6843674f3445596c5a64677a75386a3537485861615776376f225d2c226e74223a2232222c226e223a5b22454f5466464c795759797166776c52315a706372324d5555536b6354526b4c316c7058726541615f74723949222c22454b454656726e2d49794e4f597a323056674f2d4a4563744b5161397a344e64535f77417454325f45554463225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d"
+
+/// The raw payload of that identifier: the key itself.
+const key_prefix_aid: ByteArray =
+  #"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 
 // ---------------------------------------------------------------------
 // reg_oversize — committed keripy icp, 1271 B (H1 must reject)
@@ -118,12 +100,7 @@ const oversize_aid: ByteArray =
   #"21a25250788d904f32fa7fcfc594c244a2202757d02ae3cd53a662dd2a8973cf"
 
 const oversize_redeemer: HashProofRedeemer =
-  HashProofRedeemer {
-    input_bytes: oversize_bytes,
-    cesr_aid: oversize_aid,
-    off_i: 91,
-    off_d: 40,
-  }
+  HashProofRedeemer { input_bytes: oversize_bytes, cesr_aid: oversize_aid }
 
 // ---------------------------------------------------------------------
 // helpers
@@ -138,7 +115,7 @@ fn mint_only(name: ByteArray, qty: Int) -> Transaction {
 /// Redeemer content is ignored on the burn branch; an all-zero one keeps
 /// that claim honest in every burn test.
 const burn_redeemer: HashProofRedeemer =
-  HashProofRedeemer { input_bytes: #"", cesr_aid: #"", off_i: 0, off_d: 0 }
+  HashProofRedeemer { input_bytes: #"", cesr_aid: #"" }
 
 // ---------------------------------------------------------------------
 // honest mints (H1-H3) — the three size tiers
@@ -187,7 +164,7 @@ test accept_burn_batch() {
 }
 
 // ---------------------------------------------------------------------
-// H1 rejections — size tier and span shape
+// H1 rejections — size tier, identifier width, the event itself
 // ---------------------------------------------------------------------
 
 test reject_oversize_1271b() fail {
@@ -196,23 +173,6 @@ test reject_oversize_1271b() fail {
     policy,
     mint_only(proof_token_name(oversize_bytes, oversize_aid), 1),
   )
-}
-
-/// off_i = 60 overlaps the off_d = 40 span (40 + 44 > 60).
-test reject_overlapping_spans() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_i: 60 }
-  hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
-}
-
-/// off_i = 1000 runs past the 393 B input.
-test reject_out_of_range_span() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_i: 1000 }
-  hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
-}
-
-test reject_negative_off_d() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_d: -1 }
-  hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
 }
 
 /// 31-byte AID (genuine digest truncated), otherwise-honest package ->
@@ -239,10 +199,10 @@ test reject_long_aid() fail {
 }
 
 // ---------------------------------------------------------------------
-// H2 rejections — span content and digest binding
+// H2 rejections — identifier payload and digest binding
 // ---------------------------------------------------------------------
 
-/// Spans hold the genuine qb64; the claimed AID differs -> H2a.
+/// The identifier holds the genuine qb64; the claimed payload differs.
 test reject_wrong_aid() fail {
   let redeemer = HashProofRedeemer {
     ..honest2_redeemer,
@@ -255,14 +215,7 @@ test reject_wrong_aid() fail {
   )
 }
 
-/// Both spans point one byte off the genuine content -> H2a.
-test reject_wrong_span_offsets() fail {
-  let redeemer = HashProofRedeemer { ..honest2_redeemer, off_d: 41, off_i: 92 }
-  hash_proof.hash_proof.mint(redeemer, policy, mint_only(honest2_name, 1))
-}
-
-/// One byte flipped OUTSIDE the spans: H2a passes, the said-blank digest
-/// no longer matches -> H2b.
+/// One byte flipped outside the identifier: the dressed preimage no longer hashes to `d`.
 test reject_tampered_bytes() fail {
   let redeemer = HashProofRedeemer {
     ..honest2_redeemer,
@@ -326,4 +279,84 @@ test reject_burn_branch_positive() fail {
   let value = from_asset(policy, honest2_name, -1)
     |> merge(from_asset(policy, vec.witnessed_proof_name, 1))
   hash_proof.hash_proof.mint(burn_redeemer, policy, mint_context([], [], value))
+}
+
+// ---------------------------------------------------------------------
+// the event is read from its own bytes
+// ---------------------------------------------------------------------
+
+test accept_mint_key_identifier() {
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer {
+      input_bytes: key_prefix_bytes,
+      cesr_aid: key_prefix_aid,
+    },
+    policy,
+    mint_only(proof_token_name(key_prefix_bytes, key_prefix_aid), 1),
+  )
+}
+
+/// The same event under the digest of the identifier of another: the payload must be the key's.
+test reject_key_identifier_digest_payload() fail {
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer { input_bytes: key_prefix_bytes, cesr_aid: honest2_aid },
+    policy,
+    mint_only(proof_token_name(key_prefix_bytes, honest2_aid), 1),
+  )
+}
+
+test reject_bytes_that_are_not_an_event() fail {
+  let junk = "not an event"
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer { input_bytes: junk, cesr_aid: honest2_aid },
+    policy,
+    mint_only(proof_token_name(junk, honest2_aid), 1),
+  )
+}
+
+/// A rotation is read as a rotation: only an inception is proved.
+test reject_rotation_event() fail {
+  let rot = adv.pos_adv_wit_2key_evidence.event_bytes
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer { input_bytes: rot, cesr_aid: honest2_aid },
+    policy,
+    mint_only(proof_token_name(rot, honest2_aid), 1),
+  )
+}
+
+// ---------------------------------------------------------------------
+// the identifier field must be closed: the 44 characters the mint reads are the whole value of `i`
+// ---------------------------------------------------------------------
+
+/// The 393 B event with `i` one character longer than the 44 the mint reads (`<honest identifier>x`), its version size
+/// `18a`, and its own digest computed over the preimage as the mint dresses it (the 44 characters blanked, the extra
+/// one left).
+const unclosed_identifier_bytes: ByteArray =
+  #"7b2276223a224b45524931304a534f4e3030303138615f222c2274223a22696370222c2264223a22454b624f6b6955734b6a474156392d2d6e72343179517a73684d375a42644839764554456a614f4867566536222c2269223a2245494c48363677574c5343633345365976585a33537443653436314a673676456b32357874706c6c4f74506c78222c2273223a2230222c226b74223a2232222c226b223a5b2244446d69555565653470426e4e636551385233536c645a4368463467577768324a3139552d5a387446627538222c22444265764364594d375a6b4a6b57496656345a6843674f3445596c5a64677a75386a3537485861615776376f225d2c226e74223a2232222c226e223a5b22454f5466464c795759797166776c52315a706372324d5555536b6354526b4c316c7058726541615f74723949222c22454b454656726e2d49794e4f597a323056674f2d4a4563744b5161397a344e64535f77417454325f45554463225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d"
+
+/// Matched control: a `B` key identifier (the key itself), `d` the digest of the event with `d` blanked.
+const b_key_bytes: ByteArray =
+  #"7b2276223a224b45524931304a534f4e3030303138395f222c2274223a22696370222c2264223a22454b4a43576d72582d334e636e366f695269725855444a6231393953742d4250645a71666b50464753664878222c2269223a22424345694979516c4a69636f4b536f724c4330754c7a41784d6a4d304e5459334f446b364f7a7739506a3941222c2273223a2230222c226b74223a2232222c226b223a5b2244446d69555565653470426e4e636551385233536c645a4368463467577768324a3139552d5a387446627538222c22444265764364594d375a6b4a6b57496656345a6843674f3445596c5a64677a75386a3537485861615776376f225d2c226e74223a2232222c226e223a5b22454f5466464c795759797166776c52315a706372324d5555536b6354526b4c316c7058726541615f74723949222c22454b454656726e2d49794e4f597a323056674f2d4a4563744b5161397a344e64535f77417454325f45554463225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d"
+
+const b_key_aid: ByteArray =
+  #"2122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40"
+
+test accept_mint_b_key_identifier() {
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer { input_bytes: b_key_bytes, cesr_aid: b_key_aid },
+    policy,
+    mint_only(proof_token_name(b_key_bytes, b_key_aid), 1),
+  )
+}
+
+/// The payload is the honest one and the digest is right over the dressed preimage; only the field is not closed.
+test reject_unclosed_identifier_field() fail {
+  hash_proof.hash_proof.mint(
+    HashProofRedeemer {
+      input_bytes: unclosed_identifier_bytes,
+      cesr_aid: honest2_aid,
+    },
+    policy,
+    mint_only(proof_token_name(unclosed_identifier_bytes, honest2_aid), 1),
+  )
 }

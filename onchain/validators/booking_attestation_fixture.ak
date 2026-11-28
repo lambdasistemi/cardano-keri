@@ -6,12 +6,15 @@
 //// A refusal of the policy is the script failing: each refusal is a `fail` test
 //// over the transaction of the accepting control beside it, one difference away.
 
+use aiken/builtin
 use aiken/collection/list
+use aiken/primitive/bytearray
 use cardano/address.{from_verification_key}
 use cardano/assets.{add, from_lovelace}
 use cardano/transaction.{Input, Mint, NoDatum, Output, Transaction}
 use cardano_keri/application/configuration_vectors as cfg
 use cardano_keri/application/held.{RegistrationData}
+use cardano_keri/base64url
 use cardano_keri/checkpoint/datum.{KeyStateView}
 use cardano_keri/checkpoint/registration.{RegistrationEvidence}
 use cardano_keri/checkpoint/registration_vectors as vec
@@ -19,7 +22,7 @@ use keri_application_booking_fixture.{
   as_data, attesting, entry, issue_redeemer, minting, redeeming, requests_tx,
 }
 use keri_application_connected.{
-  connected_request_of, hash_proof_policy, proof_name_of,
+  connected_request_for, connected_request_of, hash_proof_policy, proof_name_of,
 }
 use keri_application_requests.{application, attestation_policy, reference}
 
@@ -202,4 +205,44 @@ pub fn attestation_redeemer(tx: Transaction) -> Data {
     },
   )
   redeemer
+}
+
+/// The booking of the inception whose key state is `state`, identified by the text `identifier`, shown by the signed
+/// body `event` and the controller signature `signature` (one indexed signature at position 0).
+pub fn booking_of_signed(
+  state: KeyStateView,
+  identifier: ByteArray,
+  event: ByteArray,
+  signature: ByteArray,
+) -> Transaction {
+  let inception = Inception {
+    state,
+    evidence: RegistrationEvidence {
+      event_bytes: event,
+      ctrl_sigs: [(0, signature)],
+      wit_receipts: [],
+    },
+  }
+  booking_of_request(
+    connected_request_for(inception.state, identifier),
+    inception,
+  )
+}
+
+/// The signed body of an export, its identifier text and its 64 signature bytes: the export is the body followed by
+/// `-VAX-AAB` and one 88 character indexed signature.
+pub fn export_parts(
+  export: ByteArray,
+  size: Int,
+) -> (ByteArray, ByteArray, ByteArray) {
+  let text = builtin.slice_bytearray(size + 8, 88, export)
+  expect Some(raw) = base64url.decode(
+    bytearray.concat("AA", bytearray.drop(text, 2)),
+  )
+  let body = builtin.slice_bytearray(0, size, export)
+  (
+    body,
+    builtin.slice_bytearray(91, 44, body),
+    builtin.slice_bytearray(2, 64, raw),
+  )
 }

@@ -26,6 +26,7 @@ import Cardano.KERI.AID.Checkpoint.Deposit (
     depositIntentPreimage,
  )
 import Cardano.KERI.AID.Checkpoint.Message (deriveAidAssetName)
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Value (RotationSettlement (..))
 import Cardano.KERI.AID.Checkpoint.Wire (advanceSpendRedeemerData, asPlcData)
 import Cardano.KERI.ChainQuery (ActiveCheckpoint (..))
@@ -113,7 +114,7 @@ spec = describe "Advance package and plan from a live version 2 checkpoint" $ do
                 lvFrozen `shouldBe` False
                 lvBornAt `shouldBe` bornAt
                 lvRefundTo `shouldBe` refundTo
-                kmCurKeys lvKeys `shouldBe` cdCurKeys (rotationDatum rotation)
+                kmCurKeys lvKeys `shouldBe` map (qualify codeD) (cdCurKeys (rotationDatum rotation))
             TerminationPending{} -> expectationFailure "the successor is not live"
         datumKeyState (V2 (advanceSuccessorFacts package))
             `shouldBe` Just (rotationDatum rotation)

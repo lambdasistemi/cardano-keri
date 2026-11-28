@@ -28,17 +28,26 @@ const convict = text => at(ck('enforcement'), text);
 const issue = text => at(app('attestation'), text);
 const booking = text => at(app('registration'), text);
 
-export const entryPoints = [
-  at('onchain/validators/keri_application.ak', 'application_mint('),
-  issue('fn inception_proof('), issue('expect registration_predicate(ctx, d, lovelace, evidence)'),
-  at(ck('observer'), 'advance_predicate(spent, new, evidence) == AdvancePredicateValid'),
-  at(ck('enforcement_observer'), 'expect convict_predicate(tip, decoded) == ConvictValid'),
-];
+export const entryPoints = {
+  january: [
+    at('onchain/validators/keri_application.ak', 'application_mint('),
+    issue('fn inception_proof('), issue('expect registration_predicate(ctx, d, lovelace, evidence)'),
+    at(ck('observer'), 'advance_predicate(spent, new, evidence) == AdvancePredicateValid'),
+    at(ck('enforcement_observer'), 'expect convict_predicate(tip, decoded) == ConvictValid'),
+  ],
+  main: [
+    at('onchain/validators/keri_application.ak', 'application_mint('),
+    issue('fn inception_proof('), issue('registration_predicate('),
+    at(ck('observer'), 'pub fn validate_registration('), at(ck('observer'), 'pub fn validate_advance('),
+    at(ck('observer'), 'pub fn validate_freeze('), at('onchain/validators/hash_proof.ak', 'expect proven('),
+    at(ck('enforcement_observer'), 'expect convict_predicate(tip, decoded) == ConvictValid'),
+  ],
+};
 
 function row(coverage, rule, models, status, sites, tickets = []) {
   return {coverage, rule, models, status, sites, tickets};
 }
-export const rules = [
+const baseRules = [
   row('enforced', 'Booking reads the registry configuration and checks the request shape, checkpoint address, deposit and clock.',
     [book], 'Enforced at the application mint', [booking('configuration_of(application_policy'), booking('registration_shape(application_policy, output, data)'), booking('booking_clock(data,')]),
   row('enforced', 'Booking commits the initial state for the request key and mints exactly one registration approval.',
@@ -102,3 +111,35 @@ export const rules = [
     [dup('duplicity')], 'not enforced; the predicate compares selected forward fields',
     [convict('fn forward_agrees(')], [573]),
 ];
+
+// Main's assessment where the December validators changed what a row says; January keeps the reviewed binding.
+const onMain = {
+  'Register only an ordinary inception': {coverage: 'enforced', status: 'Enforced: the canonical inception is rebuilt from the datum and compared whole with the signed bytes; type, sequence and identifier are inside the comparison',
+    sites: [reg('pub fn event_binding('), reg('|> bytearray.concat("_\\",\\"t\\":\\"icp\\"'), reg('|> bytearray.concat("\\",\\"s\\":\\"0\\",\\"kt\\":")')]},
+  'An ordinary inception has no prior digest': {coverage: 'enforced', status: 'Enforced by the rebuilt event, which has none of these fields',
+    sites: [reg('pub fn event_binding('), reg('|> bytearray.concat(",\\"c\\":[],\\"a\\":")')]},
+  'Derive a basic prefix from the sole signing key': {coverage: 'enforced', status: 'Enforced at registration for B and D identifiers: the sole current key is the identifier under numeric threshold one',
+    sites: [reg('} else if code == code_d {'), at(ck('qualified'), 'pub fn identifier_parts(')]},
+  'A non-transferable basic inception has no next keys': {coverage: 'enforced', status: 'Enforced at registration for B identifiers: empty next keys, witnesses and anchor',
+    sites: [reg('} else if code == code_b {')]},
+  'For a self-addressing prefix': {coverage: 'partial', status: 'Partial: the E identifier is the event\u2019s own digest, verified by blake3 over the dressed preimage at the proof mint; other admitted digest codes remain open',
+    sites: [at(ck('own_digest'), 'payload == cesr_aid && blake3.verify('), reg('said == q.aid'), issue('let proof_name = proof_token_name(')]},
+  'Match current and next keys': {coverage: 'enforced', status: 'Enforced: all six projections and the witness list are inside the rebuilt event, which is compared whole',
+    sites: [reg('pub fn event_binding('), reg('|> bytearray.concat(list_json(q.cur_keys))'), reg('|> bytearray.concat(respell_hex(d.toad))')]},
+  'A future numeric zero permits an empty next list': {coverage: 'partial', status: 'Enforced at inception: the empty next set with threshold zero is a valid declaration, and a checkpoint that declared no next keys cannot be advanced; a rotation to an empty next list stays refused',
+    sites: [datum('if next_keys == [] && next_threshold == Unweighted(0) {'), adv('} else if spent.next_keys == [] ||'), datum('when threshold.well_formed(next_keys')]},
+  'Bound the declared next threshold by the available commitments': {coverage: 'enforced', status: 'Enforced for the inception declaration: the weights number at most the commitments, each weight lies between zero and one with a positive denominator, each clause totals at least one; later key states keep the flat F18 partition rule',
+    sites: [datum('threshold.next_declaration_well_formed(next_keys'), threshold('pub fn next_declaration_well_formed('), threshold('} else if sum_lengths(clauses) > list.length(keys) {')]},
+  'Each declared weighted next clause must reach one': {coverage: 'partial', status: 'Partial: enforced for flat clauses at the inception declaration, whose clauses need not partition the commitments. Its weight type has no nested group',
+    sites: [threshold('pub fn next_declaration_well_formed('), threshold('Invalid(DeclarationWidth)'), threshold('pub type Weight {')]},
+  'Weighted threshold arithmetic accepts satisfiable unreduced weights': {coverage: 'partial', status: 'Partial: an inception\u2019s next declaration admits unreduced weights; current thresholds and later key states refuse them, and denominators above 2^32 are refused everywhere',
+    sites: [threshold('fn check_weights('), threshold('} else if reduced && math.gcd(num, den) != 1'), threshold('} else if den > max_weight_denom')]},
+  'A rotation proves its own signing quorum': {coverage: 'enforced', status: 'Enforced on the ordinary advance and freeze paths, including the exact member width of a weighted prior declaration: a declaration of fewer weights than commitments, admitted at an inception, authorizes no rotation',
+    sites: [adv('AdvanceInvalid(Eq6CurrentQuorumUnsatisfied)'), adv('} else if spent.next_keys == [] || !threshold.spans('), at(ck('threshold'), 'pub fn spans(')]},
+  'Advance reads a structurally decoded ordinary rotation': {coverage: 'enforced', status: 'Enforced: the canonical rotation is rebuilt from the successor datum and the witness deltas and compared whole; sequence and identifier are inside the comparison',
+    sites: [at(ck('advance'), 'pub fn event_binding('), at(ck('advance'), 'AdvanceEventInvalid(AEEventNotCanonical)'), adv('} else if !(new.seq == spent.seq + 1')]},
+};
+export const rules = baseRules.map(rule => {
+  const key = Object.keys(onMain).find(k => rule.rule.startsWith(k));
+  return key ? {...rule, main: onMain[key]} : rule;
+});

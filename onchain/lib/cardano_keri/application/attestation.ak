@@ -36,13 +36,14 @@ use cardano/assets.{AssetName, PolicyId, quantity_of, tokens}
 use cardano/transaction.{Transaction}
 use cardano_keri/application/held.{Registration, held_datum}
 use cardano_keri/checkpoint/datum.{
-  DatumValid, KeyStateView, Live, datum_v2_well_formed,
+  DatumValid, KeyStateView, Live, datum_v2_inception_well_formed,
 }
 use cardano_keri/checkpoint/message.{aid_digest}
 use cardano_keri/checkpoint/observer.{checkpoint_min_ada}
+use cardano_keri/checkpoint/qualified
 use cardano_keri/checkpoint/registration.{
-  DeploymentContext, RegistrationEvidence, RegistrationValid, proof_token_name,
-  registration_predicate,
+  DeploymentContext, QualifiedSpelling, RegistrationEvidence, RegistrationValid,
+  proof_token_name, registration_predicate,
 }
 
 /// The action the claim of a booking names.
@@ -124,12 +125,13 @@ fn inception_proof(
   tx: Transaction,
 ) -> ByteArray {
   let registered = datum.read(datum_data)
-  expect datum_v2_well_formed(registered) == DatumValid
+  expect datum_v2_inception_well_formed(registered) == DatumValid
   expect Live { aid, keys, .. } = registered
   expect Some(digest) = aid_digest(aid)
+  expect Some(d_cur) = qualified.key_payloads(keys.cur_keys)
   let d = KeyStateView {
     cesr_aid: digest,
-    cur_keys: keys.cur_keys,
+    cur_keys: d_cur,
     cur_threshold: keys.cur_threshold,
     next_keys: keys.next_keys,
     next_threshold: keys.next_threshold,
@@ -147,7 +149,14 @@ fn inception_proof(
       },
     )
   let ctx = DeploymentContext { min_ada: checkpoint_min_ada, d_reg }
-  expect registration_predicate(ctx, d, lovelace, evidence) == RegistrationValid
+  expect
+    registration_predicate(
+      ctx,
+      d,
+      QualifiedSpelling { aid, cur_keys: keys.cur_keys },
+      lovelace,
+      evidence,
+    ) == RegistrationValid
   proof_name
 }
 

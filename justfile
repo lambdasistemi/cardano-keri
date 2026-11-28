@@ -744,7 +744,7 @@ check-flake-lock-guard:
 # --self-test) exercises the exact code this recipe runs, not a copy of it;
 # the guard's own INV-259-ASSERT caller-presence check requires this exact
 # invocation to remain in this recipe.
-ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
+ci: check-flake-lock-guard ci-release-scripts check-singular-lean check-singular-aiken check-consumer-vectors check-consumer-identity-vectors check-reader-corpus-copy check-inv-bind-grammar-rows check-inv-bind-frozen-rows check-link9-exports check-link2-exports check-empty-next-inceptions check-checkpoint-datum-vectors check-checkpoint-writer-vectors check-checkpoint-freeze-vectors check-freeze-mutants check-deposit-mutants check-checkpoint-deposit-vectors check-checkpoint-deposit-corpus check-application-configuration-vectors check-application-vectors check-identities ci-onchain ci-blake3 mpf-proof-check ci-offchain check-offered-interface
     ./scripts/check-flake-lock-guard.sh --assert-lock-unchanged
 
 # #478: clean exact-compiler build and public proposition controls, identical to CI.
@@ -806,6 +806,22 @@ gen-checkpoint-datum-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs
 
 # #343: the committed datum vector tests are exactly what the Lean vectors generate; also run in CI by scripts/check-consumer-design.sh.
+# The grammar rows of the INV-BIND gate are what their generator writes, for the Aiken and the Haskell reader.
+check-link9-exports:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/link9-exports.mjs --check
+
+check-link2-exports:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/link2-exports.mjs --check
+
+check-empty-next-inceptions:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#b3sum --command node scripts/empty-next-inceptions.mjs --check
+
+check-inv-bind-frozen-rows:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/inv-bind-frozen-rows.mjs --check
+
+check-inv-bind-grammar-rows:
+    nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/inv-bind-grammar-rows.mjs --check
+
 check-checkpoint-datum-vectors:
     nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-datum-vectors.mjs --check
 

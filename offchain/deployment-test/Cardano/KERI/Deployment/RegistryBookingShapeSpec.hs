@@ -391,7 +391,7 @@ shapeTests shapes = do
         redeemerOf (scBooking s) (applicationPolicyId registry)
             `shouldBe` Just (PLC.List [actionData (BookRegistration position) | (position, _, _) <- claims])
         redeemerOf (scBooking s) hashProofPolicy
-            `shouldBe` Just (PLC.Constr 0 [PLC.B "", PLC.B "", PLC.I 0, PLC.I 0])
+            `shouldBe` Just (PLC.Constr 0 [PLC.B "", PLC.B ""])
     it "pays the approvals with the requests, the attestations to an output of their own and the rest to change that holds lovelace alone, and no output holds a hash proof" $ do
         s <- scenarioOf shapes
         let registry = scRegistry s

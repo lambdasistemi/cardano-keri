@@ -42,6 +42,7 @@ import Cardano.KERI.AID.Checkpoint.FreezeCorpus (
     corpusP,
  )
 import Cardano.KERI.AID.Checkpoint.Message (SpentCheckpoint (..))
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Data.ByteString qualified as BS
 import Data.Either (isRight)
@@ -91,7 +92,7 @@ liveMarked c poisoned frozen toppedUp sn =
         , lvToppedUp = toppedUp
         , lvKeys =
             KeyMaterial
-                { kmCurKeys = acIcpKeys c
+                { kmCurKeys = map (qualify codeD) (acIcpKeys c)
                 , kmCurThreshold = Unweighted 2
                 , kmNextKeys = scNextKeys (acSpent c)
                 , kmNextThreshold = scNextThreshold (acSpent c)
@@ -105,7 +106,7 @@ evidenceOf c =
     FreezeEvidence
         { feRotatedKeys =
             KeyMaterial
-                { kmCurKeys = cdCurKeys created
+                { kmCurKeys = map (qualify codeD) (cdCurKeys created)
                 , kmCurThreshold = cdCurThreshold created
                 , kmNextKeys = cdNextKeys created
                 , kmNextThreshold = cdNextThreshold created
@@ -201,7 +202,7 @@ spec = describe "Checkpoint.Freeze (#345, Lean Step.freeze)" $ do
         beforeAll (loadFixture "advance.json") $
             it "is the fixture's created key state: the old identifier, one more epoch, the rotation's keys" $ \fx ->
                 withCaseIO fx $ \c ->
-                    freezeRotatedView (liveOf c False False 0) (evidenceOf c)
+                    fmap fst (freezeRotatedView (liveOf c False False 0) (evidenceOf c))
                         `shouldBe` Just (acCreated c)
 
     describe "freezeVerdict: the validator's premises, each by name" $

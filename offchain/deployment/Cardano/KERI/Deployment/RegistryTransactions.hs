@@ -843,11 +843,12 @@ mintHashProof parameters deployment payer export validity = do
     evidence = inceptionEvidence export
     raw = reEventBytes evidence
     aid = cdCesrAid (inceptionDatum export)
-    offI = reOffI evidence
-    offD = inceptionDigestOffset export
+    -- the keripy layout fixes the places of the two digests: d at byte 40, i at byte 91
+    offI = 91 :: Int
+    offD = 40 :: Int
     proofName = AssetName (SBS.toShort (inceptionProofName export))
     hashProofRedeemer =
-        Constr 0 [B raw, B aid, I (fromIntegral offI), I (fromIntegral offD)]
+        Constr 0 [B raw, B aid]
     saidBlank =
         BS.take offD raw
             <> B8.replicate 44 '#'
@@ -1164,7 +1165,7 @@ hashProofBurnExUnits :: ExUnits
 hashProofBurnExUnits = ExUnits 500_000 500_000_000
 
 hashProofBurnRedeemer :: PLC.Data
-hashProofBurnRedeemer = Constr 0 [B "", B "", I 0, I 0]
+hashProofBurnRedeemer = Constr 0 [B "", B ""]
 
 -- | The redeemers of a set of purposes, each with its budget or the fallback.
 redeemerMap ::

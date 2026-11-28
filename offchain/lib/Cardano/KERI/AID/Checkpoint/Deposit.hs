@@ -44,8 +44,10 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     KeyMaterial (..),
     Verkey,
     keyStateView,
+    qualifiedSpellingOf,
  )
 import Cardano.KERI.AID.Checkpoint.Freeze (freezeSpentView)
+import Cardano.KERI.AID.Checkpoint.Qualified (keyPayloads)
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold, evaluate)
 import Cardano.KERI.AID.Checkpoint.Value (heldValue, withValue)
 import Cardano.KERI.AID.Ed25519 (verifyEd25519)
@@ -259,9 +261,10 @@ depositVerdict DepositParams{..} DepositInput{..} = do
                 dnSpentDatum
                 sn'
             )
+    rawKeys <- maybe (Left DepositNotAuthorized) Right (keyPayloads (kmCurKeys keys'))
     unless
         ( depositSigned
-            (kmCurKeys keys')
+            rawKeys
             (kmCurThreshold keys')
             dnSignatures
             (depositIntentPreimage intent{diNewEpoch = epoch'})
@@ -279,5 +282,7 @@ depositVerdict DepositParams{..} DepositInput{..} = do
             (Left DepositAidNotCanonical)
             Right
             (freezeSpentView dnPolicy dnSpentTxId dnSpentIndex dnSpentDatum)
+    rotatedView <-
+        maybe (Left DepositAidNotCanonical) Right (keyStateView rawAid sn' epoch' keys')
     first DepositRotationRefused $
-        advancePredicate spent (keyStateView rawAid sn' epoch' keys') dnRotation
+        advancePredicate spent rotatedView (qualifiedSpellingOf aid keys') dnRotation

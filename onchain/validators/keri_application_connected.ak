@@ -4,6 +4,7 @@
 //// The application, the lifecycle observer and the checkpoint validator are run
 //// over it by the tests that import this module; it imports no validator.
 
+use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/address.{Script, VerificationKey, from_verification_key}
 use cardano/assets.{add, from_lovelace}
@@ -13,6 +14,7 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/application/row_vectors as rows
 use cardano_keri/checkpoint/datum.{KeyMaterial, KeyStateView, Live}
 use cardano_keri/checkpoint/message.{qb64_aid}
+use cardano_keri/checkpoint/qualified.{code_b, code_d, qualify}
 use cardano_keri/checkpoint/registration.{
   RegistrationEvidence, proof_token_name,
 }
@@ -48,9 +50,14 @@ pub fn live_datum() -> Data {
 
 /// The initial checkpoint datum of the inception whose key state is `d`.
 pub fn live_datum_of(d: KeyStateView) -> Data {
+  live_datum_for(d, qb64_aid(d.cesr_aid))
+}
+
+/// The initial checkpoint datum of the inception whose key state is `d` and whose identifier text is `aid`.
+pub fn live_datum_for(d: KeyStateView, aid: ByteArray) -> Data {
   datum.write(
     Live {
-      aid: qb64_aid(d.cesr_aid),
+      aid,
       sn: 0,
       epoch: 0,
       poisoned: False,
@@ -58,7 +65,22 @@ pub fn live_datum_of(d: KeyStateView) -> Data {
       born_at: 10,
       refund_to: bytearray.push(refund_hash(), 96),
       topped_up: False,
-      keys: keys_of(d),
+      keys: KeyMaterial {
+        ..keys_of(d),
+        cur_keys: list.map(
+          d.cur_keys,
+          fn(key) {
+            qualify(
+              if bytearray.at(aid, 0) == code_b {
+                code_b
+              } else {
+                code_d
+              },
+              key,
+            )
+          },
+        ),
+      },
     },
   )
 }
@@ -72,7 +94,7 @@ pub fn refund_hash() -> ByteArray {
 
 pub fn keys_of(d: KeyStateView) -> KeyMaterial {
   KeyMaterial {
-    cur_keys: d.cur_keys,
+    cur_keys: list.map(d.cur_keys, fn(key) { qualify(code_d, key) }),
     cur_threshold: d.cur_threshold,
     next_keys: d.next_keys,
     next_threshold: d.next_threshold,
@@ -93,10 +115,18 @@ pub fn connected_request() -> RegistrationData {
 
 /// The request of the inception whose key state is `d`.
 pub fn connected_request_of(d: KeyStateView) -> RegistrationData {
+  connected_request_for(d, qb64_aid(d.cesr_aid))
+}
+
+/// The request of the inception whose key state is `d` and whose identifier text is `aid`.
+pub fn connected_request_for(
+  d: KeyStateView,
+  aid: ByteArray,
+) -> RegistrationData {
   RegistrationData {
     ..rows.request_data(9001),
-    key: qb64_aid(d.cesr_aid),
-    initial_datum: live_datum_of(d),
+    key: aid,
+    initial_datum: live_datum_for(d, aid),
     deposit: floor,
   }
 }

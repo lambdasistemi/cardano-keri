@@ -156,6 +156,16 @@ jobs:
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-vectors.mjs --check
       - name: Consumer identity vectors drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/consumer-identity-vectors.mjs --check
+      - name: Link 9 exports drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/link9-exports.mjs --check
+      - name: Link 2 exports drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/link2-exports.mjs --check
+      - name: Empty-next inceptions drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#b3sum --command node scripts/empty-next-inceptions.mjs --check
+      - name: INV-BIND frozen rows drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/inv-bind-frozen-rows.mjs --check
+      - name: INV-BIND grammar rows drift
+        run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/inv-bind-grammar-rows.mjs --check
       - name: Freeze corpus drift
         run: nix shell github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46#nodejs --command node scripts/checkpoint-freeze-vectors.mjs --check
       - name: Freeze mutation controls

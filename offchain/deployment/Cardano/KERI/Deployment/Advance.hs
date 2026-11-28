@@ -30,6 +30,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     KeyStateView (..),
     canonicalCbor,
     rotatedLive,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.Deposit (
     DepositFacts (..),
@@ -289,6 +290,7 @@ attachControllerSignatures signatures package = do
         ( advancePredicate
             (advanceSpent updated)
             (advanceSuccessor updated)
+            (spellingOfView (advanceSuccessor updated))
             evidence
         )
     pure updated

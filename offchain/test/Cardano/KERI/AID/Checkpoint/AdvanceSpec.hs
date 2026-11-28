@@ -38,18 +38,20 @@ import Cardano.KERI.AID.Checkpoint.Advance (
     AdvanceEvidence (..),
     AdvancePredicateError (..),
     advancePredicate,
+    eventBinding,
     reconstructAdvanceMessage,
  )
 import Cardano.KERI.AID.Checkpoint.Datum (
     DatumError (..),
     KeyStateView (..),
+    QualifiedSpelling (..),
     canonicalCbor,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     arrayField,
     decodeHex,
     digestRaw,
-    intArrayField,
     intField,
     loadFixture,
     lookupKey,
@@ -75,7 +77,6 @@ import Data.Char (isDigit)
 import Data.Foldable (toList)
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as TE
 import Test.Hspec (
     Expectation,
     Spec,
@@ -164,7 +165,7 @@ data AdvCase = AdvCase
     , acCreated :: KeyStateView
     -- ^ The @NEW@ successor datum implied by the rot event.
     , acEvidence :: AdvanceEvidence
-    -- ^ Honest offsets, the fixture's own event_raw ctrl sigs + receipts.
+    -- ^ The fixture's own event_raw ctrl sigs + receipts.
     , acNewSet :: [ByteString]
     -- ^ The W3-derived incoming witness set.
     , acOldWitnesses :: [ByteString]
@@ -180,13 +181,11 @@ data AdvCase = AdvCase
     , acEventRawCtrlSigs :: [(Int, ByteString)]
     -- ^ The bundle's own KERI signatures over @event_raw@ (@rot_sigs@).
     , acOldWitnessSigners :: [(ByteString, SignKeyDSIGN Ed25519DSIGN)]
-    -- ^ @(raw verkey, signer)@ for every outgoing witness, in old order.
-    , acOffP :: Int
-    -- ^ Offset of the unchecked @p@ (prior-event SAID) region.
-    , acOffD :: Int
-    -- ^ Offset of the unchecked @d@ (this event's own SAID) region.
-    , acOffA :: Int
-    -- ^ Offset of the unchecked @a@ (anchored seals) region.
+    {- ^ @(raw verkey, signer)@ for every outgoing witness, in old order.
+    ^ Offset of the unchecked @p@ (prior-event SAID) region.
+    ^ Offset of the unchecked @d@ (this event's own SAID) region.
+    ^ Offset of the unchecked @a@ (anchored seals) region.
+    -}
     }
 
 -- | Build the 'AdvCase' of a sub-fixture.
@@ -210,33 +209,12 @@ advCase doc key = do
     rotNext <- traverse digestRaw =<< textArrayField rotKed "n"
     rotNextThr <- thresholdOf rotKed "nt"
     toad <- parseHexInt =<< textField rotKed "bt"
-    offs <- field sub "offsets"
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offBr <- offList offs "br"
-    offBa <- offList offs "ba"
     seeds <- field sub "signer_seeds"
     rotSigners <- map mkSigner <$> seedList seeds "rotation_current"
     icpSigners <- map mkSigner <$> seedList seeds "inception_current"
     oldWitSigners <- map mkSigner <$> seedList seeds "witness_outgoing"
     eventRawCtrlSigs <- indexedSigs sub "rot_sigs"
     honestReceipts <- indexedSigs sub "rot_witness_receipts"
-    offP <- off offs "p"
-    saidText <- textField rot "said"
-    offD <-
-        note
-            "d offset not found in raw bytes"
-            (findSubstring (TE.encodeUtf8 saidText) raw)
-    offA <-
-        note
-            "a offset not found in raw bytes"
-            (fmap (+ 5) (findSubstring "\"a\":[" raw))
     let survivors = filter (`notElem` cuts) oldWitnesses
         newSet = survivors <> adds
         asset = deriveAidAssetName aid
@@ -269,16 +247,6 @@ advCase doc key = do
         evidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = offT
-                , aeOffI = offI
-                , aeOffS = offS
-                , aeOffK = offK
-                , aeOffKt = offKt
-                , aeOffN = offN
-                , aeOffNt = offNt
-                , aeOffBr = offBr
-                , aeOffBa = offBa
-                , aeOffBt = offBt
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = eventRawCtrlSigs
@@ -298,14 +266,9 @@ advCase doc key = do
             , acIcpKeys = icpKeys
             , acEventRawCtrlSigs = eventRawCtrlSigs
             , acOldWitnessSigners = zip oldWitnesses oldWitSigners
-            , acOffP = offP
-            , acOffD = offD
-            , acOffA = offA
             }
   where
     field v k = note (k <> " missing") (lookupKey k v)
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- | Run a check against a built fixture case, failing on load error.
 withCase :: Value -> Text -> (AdvCase -> Expectation) -> Expectation
@@ -315,11 +278,11 @@ withCase fx key k = case advCase fx key of
 
 -- | Shorthand: run the predicate on a case's own honest evidence.
 runAdv :: AdvCase -> Either AdvancePredicateError ()
-runAdv c = advancePredicate (acSpent c) (acCreated c) (acEvidence c)
+runAdv c = advancePredicate (acSpent c) (acCreated c) (spellingOfView (acCreated c)) (acEvidence c)
 
 -- | Shorthand: run the predicate on a case's datum with substitute evidence.
 runAdvWith :: AdvCase -> AdvanceEvidence -> Either AdvancePredicateError ()
-runAdvWith c = advancePredicate (acSpent c) (acCreated c)
+runAdvWith c = advancePredicate (acSpent c) (acCreated c) (spellingOfView (acCreated c))
 
 -- ---------------------------------------------------------------
 -- Harness helpers
@@ -375,16 +338,6 @@ first1 :: [a] -> a
 first1 (x : _) = x
 first1 [] = error "fixture list unexpectedly empty"
 
--- | The offset of the first occurrence of @needle@ in @haystack@, if any.
-findSubstring :: ByteString -> ByteString -> Maybe Int
-findSubstring needle haystack = go 0
-  where
-    n = BS.length needle
-    go i
-        | i + n > BS.length haystack = Nothing
-        | needle `BS.isPrefixOf` BS.drop i haystack = Just i
-        | otherwise = go (i + 1)
-
 -- ---------------------------------------------------------------
 -- The spec
 -- ---------------------------------------------------------------
@@ -395,7 +348,6 @@ spec =
         beforeAll (loadFixture "advance.json") $ do
             positives
             eventBindingNegatives
-            misdirectionFamily
             controllerEvidenceNegatives
             permissionlessHoldsAndAntiReplay
             deltaMalformations
@@ -431,137 +383,51 @@ positives =
 
 eventBindingNegatives :: SpecWith Value
 eventBindingNegatives =
-    describe "V6: AE1-AE10 event-binding negatives (one per axis)" $ do
-        it "AE1: off_t pointed at i -> AE1EventTypeMismatch" $ \fx ->
+    describe "V6: the rebuilt event binding, one refusal per field of the rotation" $ do
+        let honest c = eventBinding (acCreated c) (spellingOfView (acCreated c)) (acEvidence c)
+            refuses _ d q ev = eventBinding d q ev `shouldBe` Left AEEventNotCanonical
+        it "the honest rotation is bound" $ \fx ->
+            withCase fx "adv_wit_2key" $ \c -> honest c `shouldBe` Right ()
+        it "undecodable bytes are not the canonical rotation" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffT = aeOffI (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE1EventTypeMismatch)
-        it "AE2: off_i shifted by one -> AE2AidMismatch" $ \fx ->
+                refuses c (acCreated c) (spellingOfView (acCreated c)) (acEvidence c){aeEventBytes = "rot"}
+        it "an inception is not the canonical rotation" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffI = aeOffI (acEvidence c) + 1}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "AE3: off_s pointed at t -> AE3SequenceMismatch" $ \fx ->
+                refuses c (acCreated c) (spellingOfView (acCreated c)) (acEvidence c){aeEventBytes = acRaw c <> "!"}
+        it "another identifier" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffS = aeOffT (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE3SequenceMismatch)
-        it "AE4: overlapping off_k spans -> AE4CurKeysMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c -> do
-                let k0 = first1 (aeOffK (acEvidence c))
-                runAdvWith c (acEvidence c){aeOffK = [k0, k0 + 1]}
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "AE5: off_kt pointed at bt -> AE5CurThresholdMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffKt = aeOffBt (acEvidence c)}
-                    `shouldBe` Left
-                        (AdvEventBinding AE5CurThresholdMismatch)
-        it
-            "AE6: off_n pointed at off_k (E vs D code) -> AE6NextKeysMismatch"
-            $ \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffN = aeOffK (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE6NextKeysMismatch)
-        it "AE7: off_nt pointed at kt -> AE7NextThresholdMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffNt = aeOffKt (acEvidence c)}
-                    `shouldBe` Left
-                        (AdvEventBinding AE7NextThresholdMismatch)
-        it "AE8: off_br pointed at ba -> AE8WitCutMismatch" $ \fx ->
+                let d = acCreated c
+                 in refuses c d (spellingOfView d){qsAid = BS.map (\b -> if b == 69 then 70 else b) (qsAid (spellingOfView d))} (acEvidence c)
+        it "another sequence number" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBr = aeOffBa (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "AE9: off_ba pointed at br -> AE9WitAddMismatch" $ \fx ->
+                let d = (acCreated c){cdNativeSn = cdNativeSn (acCreated c) + 1}
+                 in refuses c d (spellingOfView d) (acEvidence c)
+        it "other current keys" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBa = aeOffBr (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE9WitAddMismatch)
-        it "AE10: off_bt pointed at kt -> AE10ToadMismatch" $ \fx ->
-            withCase fx "adv_wit_7key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffBt = aeOffKt (acEvidence c)}
-                    `shouldBe` Left (AdvEventBinding AE10ToadMismatch)
-
--- ---------------------------------------------------------------
--- A-001 condition 1: the offset-misdirection family
--- ---------------------------------------------------------------
-
-misdirectionFamily :: SpecWith Value
-misdirectionFamily =
-    describe "A-001 offset-misdirection family (acceptance gate)" $ do
-        it "truncated slice: off_i at the byte tail -> AE2" $ \fx ->
+                let d = acCreated c
+                 in refuses c d (spellingOfView d){qsCurKeys = reverse (qsCurKeys (spellingOfView d))} (acEvidence c)
+        it "another current threshold" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c){aeOffI = BS.length (acRaw c) - 10}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "negative offset rejected -> AE2" $ \fx ->
+                let d = (acCreated c){cdCurThreshold = Unweighted 1}
+                 in refuses c d (spellingOfView d) (acEvidence c)
+        it "other next keys" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffI = -1}
-                    `shouldBe` Left (AdvEventBinding AE2AidMismatch)
-        it "duplicated off_k entries -> AE4" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c -> do
-                let k0 = first1 (aeOffK (acEvidence c))
-                runAdvWith c (acEvidence c){aeOffK = [k0, k0]}
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "off_br pointed into off_k (B vs D code) -> AE8" $ \fx ->
+                let d = (acCreated c){cdNextKeys = reverse (cdNextKeys (acCreated c))}
+                 in refuses c d (spellingOfView d) (acEvidence c)
+        it "another next threshold" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffBr = take 1 (aeOffK (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "shortened off_k (1 of 2) -> AE4CurKeysMismatch" $ \fx ->
+                let d = (acCreated c){cdNextThreshold = Unweighted 1}
+                 in refuses c d (spellingOfView d) (acEvidence c)
+        it "another witness cut" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffK = take 1 (aeOffK (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE4CurKeysMismatch)
-        it "shortened off_n (1 of 2) -> AE6NextKeysMismatch" $ \fx ->
+                refuses c (acCreated c) (spellingOfView (acCreated c)) (acEvidence c){aeWitCut = []}
+        it "another witness add" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith
-                    c
-                    (acEvidence c)
-                        { aeOffN = take 1 (aeOffN (acEvidence c))
-                        }
-                    `shouldBe` Left (AdvEventBinding AE6NextKeysMismatch)
-        it "emptied off_br (0 of 1) -> AE8WitCutMismatch" $ \fx ->
+                refuses c (acCreated c) (spellingOfView (acCreated c)) (acEvidence c){aeWitAdd = []}
+        it "another toad" $ \fx ->
             withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBr = []}
-                    `shouldBe` Left (AdvEventBinding AE8WitCutMismatch)
-        it "emptied off_ba (0 of 1) -> AE9WitAddMismatch" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBa = []}
-                    `shouldBe` Left (AdvEventBinding AE9WitAddMismatch)
-        it "off_t redirected into the unchecked p region -> AE1" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffT = acOffP c}
-                    `shouldBe` Left (AdvEventBinding AE1EventTypeMismatch)
-        it "off_kt redirected into the unchecked d region -> AE5" $ \fx ->
-            withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffKt = acOffD c}
-                    `shouldBe` Left
-                        (AdvEventBinding AE5CurThresholdMismatch)
-        it "off_bt redirected into the unchecked a region -> AE10" $
-            \fx -> withCase fx "adv_wit_2key" $ \c ->
-                runAdvWith c (acEvidence c){aeOffBt = acOffA c}
-                    `shouldBe` Left (AdvEventBinding AE10ToadMismatch)
+                let d = (acCreated c){cdToad = cdToad (acCreated c) + 1}
+                 in refuses c d (spellingOfView d) (acEvidence c)
 
 -- ---------------------------------------------------------------
 -- V5: controller-evidence negatives (folded into eq6 by advanceEqualities)
@@ -616,6 +482,7 @@ controllerEvidenceNegatives =
                 advancePredicate
                     (acSpent c)
                     substituted
+                    (spellingOfView substituted)
                     (acEvidence c){aeCtrlSigs = sigs}
                     `shouldBe` Left
                         (AdvMessageInvalid Eq6PriorNextQuorumUnsatisfied)
@@ -648,6 +515,7 @@ permissionlessHoldsAndAntiReplay =
                  in advancePredicate
                         (acSpent c)
                         skippedCreated
+                        (spellingOfView skippedCreated)
                         (acEvidence c)
                         `shouldBe` Left (AdvMessageInvalid Eq5SequenceMismatch)
 
@@ -691,6 +559,7 @@ deltaMalformations =
                 advancePredicate
                     (acSpent c)
                     (acCreated c){cdWitnesses = acOldWitnesses c}
+                    (spellingOfView (acCreated c))
                     (acEvidence c)
                     `shouldBe` Left
                         (AdvMessageInvalid Eq7CreatedStateMismatch)
@@ -702,6 +571,7 @@ deltaMalformations =
                  in advancePredicate
                         (acSpent c)
                         (acCreated c){cdWitnesses = wrongOrder}
+                        (spellingOfView (acCreated c))
                         (acEvidence c)
                         `shouldBe` Left
                             (AdvMessageInvalid Eq7CreatedStateMismatch)
@@ -712,6 +582,7 @@ deltaMalformations =
                 advancePredicate
                     (acSpent c)
                     created
+                    (spellingOfView created)
                     (acEvidence c)
                     `shouldBe` Left
                         (AdvMessageInvalid (Eq8CreatedIllFormed ToadRange))

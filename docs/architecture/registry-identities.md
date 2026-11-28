@@ -67,15 +67,15 @@ deployed registry runs it yet.
 | Booking width (milliseconds) | `5000` |
 | Checkpoint minimum ADA (lovelace) | `2000000` |
 | Termination request carrier (lovelace) | `1500000` |
-| Booking attestation policy hash | `58854d37463e29fedf5990994f5e5e988770948d9cd1ca0e53e971ea` |
-| Booking attestation program bytes | `9261` |
-| Application script hash | `ea1b254f1cae4aa9ddaf09bdbb64aac646b8282adec55c822b2e4329` |
+| Booking attestation policy hash | `979c3228e64505011e3ed2a8cff3d6a576d1ad8eaf4ed0201824afd4` |
+| Booking attestation program bytes | `12672` |
+| Application script hash | `7c0671c1cdd46b99ee8413f0ea8505acd63c3996e9c262e2b7be3551` |
 | Application program bytes | `10856` |
-| State script hash | `66cf7ec25e703c46d3f884cf089f70702bcfba0e8685945cce108cf8` |
+| State script hash | `ce0c670f1f06d26cf279c56f63a13fa2bcbfac9df0e5becf36d10e65` |
 | State script program bytes | `7786` |
 | Application and state script across two seeds | `the same` |
-| Checkpoint validator script hash | `f7cb75d0a4d43cf00cf452acc91cb07e4e0f370efc19ace725694da2` |
-| Checkpoint validator program bytes | `8957` |
+| Checkpoint validator script hash | `a3a50bc337464e1a58b5b4077e8386c53d171aae51724990149aa70a` |
+| Checkpoint validator program bytes | `9634` |
 | Reference registry name | `a060e76604c811bc4f47264e86a593a4539d57e251709f83af18ad5789d6c0b3` |
 <!-- identities:end -->
 

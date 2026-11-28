@@ -29,6 +29,7 @@ import Cardano.KERI.Deployment.RegistryFilesSpec qualified as RegistryFilesSpec
 import Cardano.KERI.Deployment.RegistryFoldHandoffSpec qualified as RegistryFoldHandoffSpec
 import Cardano.KERI.Deployment.RegistryFoldSpec qualified as RegistryFoldSpec
 import Cardano.KERI.Deployment.RegistryFoldV3Spec qualified as RegistryFoldV3Spec
+import Cardano.KERI.Deployment.RegistryFutureDatumSpec qualified as RegistryFutureDatumSpec
 import Cardano.KERI.Deployment.RegistryKoiosCommandSpec qualified as RegistryKoiosCommandSpec
 import Cardano.KERI.Deployment.RegistryKoiosRecordedSpec qualified as RegistryKoiosRecordedSpec
 import Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec qualified as RegistryKoiosValidityEndSpec
@@ -102,6 +103,7 @@ suite = hspec $ do
     RegistrationEvidenceSpec.spec
     RegistryReadbackSpec.spec
     RegistryReadbackCommandSpec.spec
+    RegistryFutureDatumSpec.spec
     KoiosReadsSpec.spec
     KoiosRegistryRuntimeSpec.spec
     KoiosSettlementSpec.spec

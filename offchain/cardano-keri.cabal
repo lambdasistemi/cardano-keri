@@ -570,6 +570,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryFoldHandoffSpec
     Cardano.KERI.Deployment.RegistryFoldSpec
     Cardano.KERI.Deployment.RegistryFoldV3Spec
+    Cardano.KERI.Deployment.RegistryFutureDatumSpec
     Cardano.KERI.Deployment.RegistryKoiosCommandSpec
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec

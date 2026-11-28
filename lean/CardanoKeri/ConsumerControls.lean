@@ -48,16 +48,16 @@ def completionIdentity (j : Journey) : Except String SingularApplicationHeld.Fol
 def fieldQueries (j : Journey) : List (String × Wire.Query) := Id.run do
   let r := j.registration
   let anchor : Wire.Query := ⟨tables r.checkpoint, context,
-    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 7, r.holding⟩
+    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 6, r.holding⟩
   let active := representativeAsset interpretation context
   let holding := fun assets => { anchor with holding.assets := assets }
   let release := fun r => { anchor with environment.release := some r }
   let rival := fun c => { anchor with holding.assets := [(representativeAsset interpretation c, 1)] }
   let mut rows := [
     ("positive-anchor", anchor),
-    ("maturity-minus-one", { anchor with now := 6 }),
-    ("maturity-plus-one", { anchor with now := 8 }),
-    ("zero-w-birth", { anchor with params.W := 0, now := 2 }),
+    ("maturity-minus-one", { anchor with now := 5 }),
+    ("maturity-plus-one", { anchor with now := 7 }),
+    ("zero-w-birth", { anchor with params.W := 0, now := 1 }),
     ("wrong-policy", holding [(⟨active.policy + 1, active.name⟩, 1)]),
     ("wrong-name", holding [(⟨active.policy, active.name + 1⟩, 1)]),
     ("missing-token", holding []), ("quantity-zero", holding [(active, 0)]),
@@ -193,7 +193,7 @@ def rivalQuery (j : Journey) : Except String Wire.Query := do
   let allocation := fun r => if r == registryAsset interpretation rival then 9 else r.name + 100
   let r ← registerJoint interpretation rival allocation commit q
   pure ⟨tables j.registration.checkpoint, context,
-    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 7, r.holding⟩
+    ⟨context.network, some context.release, some context.checkpointCredential⟩, cp, 6, r.holding⟩
 
 /-- Real unrelated and mixed folds, beginning at this journey's actual stored
 association. The foreign fold is valid but cannot complete Alice; the mixed
@@ -221,7 +221,7 @@ def associationEvents (j : Journey) : Except String (List Json) := do
   unless (advance j.booked foreign).toOption.isNone do throw "foreign-completion-accepted"
   let terminal ← advance j.booked mixed
   unless decide (terminal.certified.state.states context.aid = .convicted) do throw "mixed-completion-not-terminal"
-  pure [(SystemWire.cell "valid-foreign-fold-refused" cp evidence j.booked foreign).1,
-    (SystemWire.cell "mixed-fold-completes-recorded-request" cp evidence j.booked mixed).1]
+  pure [(SystemWire.cell "valid-foreign-fold-refused" cp [(context.aid, evidence)] j.booked foreign).1,
+    (SystemWire.cell "mixed-fold-completes-recorded-request" cp [(context.aid, evidence)] j.booked mixed).1]
 
 end CardanoKeri.ConsumerIdentity.Witness

@@ -10,13 +10,28 @@ const root=path.resolve(import.meta.dirname,'../..');
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const dir=path.join(root,'lean/CardanoKeri');
 const files=fs.readdirSync(dir).filter(f=>/^(Application|Checkpoint|Registry|Consumer|Reader|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
-function separator(text,wanted){let depth=0;for(let i=0;i<text.length;i++){if('({['.includes(text[i]))depth++;if(')}]'.includes(text[i]))depth--;if(depth===0&&text.slice(i,i+wanted.length)===wanted)return i;}throw Error('missing top-level '+wanted);}
+function separator(text, wanted) {
+  let depth = 0;
+  let letBinding = false;
+  // A let in the result type has its own assignment before the proof begins.
+  for (const token of text.matchAll(/"(?:\\.|[^"\\])*"|--[^\n]*|\b(?:let|have)\b|:=|[(){}\[\]:]/g)) {
+    const value = token[0];
+    if ('({['.includes(value)) depth++;
+    else if (')}]'.includes(value)) depth--;
+    else if (depth === 0) {
+      if (value === 'let' || value === 'have') letBinding = true;
+      else if (value === ':=' && letBinding) letBinding = false;
+      else if (value === wanted) return token.index;
+    }
+  }
+  throw Error('missing top-level ' + wanted);
+}
 export function collect(){
   const sources={},rows=[];
   for(const file of files){
     const relative='lean/CardanoKeri/'+file,text=fs.readFileSync(path.join(root,relative),'utf8');sources[relative]=hash(text);
     const stack=[];
-    const events=[...text.matchAll(/^(?:(namespace|section)\s*([^\n]*)|(mutual)$|end(?:\s+[^\n]*)?|(private )?theorem\s+([^\s({:]+))/gm)];
+    const events=[...text.matchAll(/^(?:(namespace|section)\s*([^\n]*)|(mutual)$|end(?:\s+[^\n]*)?|(?:@\[[^\]\n]+\][ \t]+)*(private )?theorem\s+([^\s({:]+))/gm)];
     for(const ev of events){
       if(ev[1]){stack.push({kind:ev[1],name:ev[2].trim()});continue;}
       if(ev[3]){stack.push({kind:'mutual',name:''});continue;}
@@ -40,6 +55,8 @@ export function collect(){
 const target=path.join(import.meta.dirname,'theorem-stories.json'),current=collect();
 if(process.argv.includes('--write'))fs.writeFileSync(target,JSON.stringify(current,null,2)+'\n');
 else {assert.deepEqual(JSON.parse(fs.readFileSync(target)),current,'theorem story/source/statement drift');
+  const resultType = 'let tip := read checkpoint\n  let event := read tip\n  valid event = true';
+  assert.equal(separator(resultType + ' := by decide', ':='), resultType.length + 1);
   const missing=structuredClone(current);missing.rows.pop();assert.notDeepEqual(missing,current);
   const altered=structuredClone(current);altered.rows[0].story.then='True';assert.notDeepEqual(altered,current);
 }

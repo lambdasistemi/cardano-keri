@@ -69,8 +69,9 @@ structure ChildEvent where
   nonce : Nat
   deriving DecidableEq, Repr
 
-/-- The delegation side of the environment: the child's event SAID, which
-the plain advance path never computes and the approval walk must. -/
+/-- In a delegation certificate mint the submitter presents the child event
+and the approval walk. The policy uses the child's recomputed event SAID
+when matching the parent's seal. The plain advance path does not use it. -/
 structure DEnv extends Env where
   eventDigest : ChildEvent → Digest
 

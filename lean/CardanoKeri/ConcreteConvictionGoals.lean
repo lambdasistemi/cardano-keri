@@ -15,29 +15,29 @@ theorem Env.duplicityAt_iff (env : Env) (epoch : Epoch) (sn : Seq) :
 
 /-- Given Any environment and epoch, with sequence zero.
 When Evaluate duplicity at inception.
-Then The guard is false regardless of supplied context or rival; no booking may bypass it. -/
+Then The guard is false regardless of supplied context or rival; this is the independent KERI reader. The enforcement decision uses acceptsRival. -/
 theorem Env.inception_duplicity_refused (env : Env) (epoch : Epoch) :
     env.duplicityAt epoch 0 = false := by
   cases hc : env.convictionContext epoch 0 <;>
     cases hr : env.convictionRival epoch 0 <;>
       simp [Env.duplicityAt, hc, hr, CardanoKeri.Duplicity.sequence_zero_refused]
 
-/-- Given All arguments and the exact successful local Checkpoint conviction premise in the statement, against the actual source live key state.
-When Invert that local conviction into explicit terminationPending at the unchanged source key state.
-Then For T12 inversions the pending target is arbitrary and must equal the actual source hash; a wrong pending-key successor is excluded by this owning equality. Every original action, addressed D/B/pool payment, concrete-context, event-validity, same-sequence and distinct-event clause in the full conclusion is preserved verbatim. The representative and generic key remain active at the combined booking boundary; no local burn or retirement is asserted. -/
-theorem convict_requires_concrete_pair (p : Params) (env : Env)
-    {a : Action} {t : Slot} {l : Live} {f : Flow}
-    (h : Step p env a t (.present l) f (.terminationPending l.hash)) :
-    ∃ context rival, env.convictionContext l.epoch l.sn = some context ∧
-      env.convictionRival l.epoch l.sn = some rival ∧
-      context.epoch = l.epoch ∧ context.accepted.event.sn = l.sn ∧
-      Duplicity.rotationValid context.prior context.accepted = true ∧
-      Duplicity.rotationValid context.prior rival = true ∧
-      context.accepted.event.sn = rival.event.sn ∧
-      context.accepted.event ≠ rival.event := by
-  obtain ⟨context, rival, hc, hr, hd⟩ :=
-    (Env.duplicityAt_iff env l.epoch l.sn).mp (T12_convict_exact p env h).2.2
-  exact ⟨context, rival, hc, hr, (Duplicity.duplicityAt_iff _ _ _ _).mp hd⟩
+/-- Given any step entering pending termination, when its spent input and
+rival are read, then the one-rival comparison succeeded for its native
+epoch and sequence. The permitted conclusion is the enforcement decision. -/
+theorem conviction_has_spent_tip_comparison (p : Params) (env : Env)
+    {a : Action} {t : Slot} {l : Live} {f : Flow} {key : KeyState}
+    (h : Step p env a t (.present l) f (.terminationPending key)) :
+    ∃ comparison, env.comparison l.epoch l.sn = some comparison ∧
+      comparison.tip.epoch = l.epoch ∧ comparison.tip.sn = l.sn ∧
+      CheckpointConviction.accepts comparison.tip comparison.rival = true := by
+  have accepted := (T12_convict_exact p env h).2.2
+  cases found : env.comparison l.epoch l.sn with
+  | none => simp [Env.acceptsRival, found] at accepted
+  | some comparison =>
+    simp only [Env.acceptsRival, found, Option.map_some, Option.getD_some,
+      CheckpointConviction.Comparison.acceptsAt, Bool.and_eq_true, beq_iff_eq] at accepted
+    exact ⟨comparison, rfl, accepted.1.1, accepted.1.2, accepted.2⟩
 
 /-- Given A concrete context/rival pair satisfies Duplicity.duplicityAt epoch sn; next is strictly larger than sn.
 When Evaluate that same pair at epoch,next.

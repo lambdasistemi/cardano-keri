@@ -35,21 +35,32 @@ for (const file of files) {
   accepted.expect.result.ok.state.gen++;
   assert(checkScenario(falseResult).problems.some(p => p.includes('full result mismatch')), 'fabricated result control'); controls++;
 }
-assert.equal(cells, 64, 'story and fork cell census');
+assert.equal(cells, 67, 'story and fork cell census');
 const sc = JSON.parse(readFileSync(join(here, 'registry-simulator-scenarios', files.find(f => f.startsWith('12-'))), 'utf8'));
-const tree = playStory(sc.id), live = tree.nodes.find(n => n.session.state.carriers[0]?.st === 'live');
+const tree = playStory(sc.id), live = tree.nodes.find(n => n.session.state.carriers[0]?.pendingSpend === null);
 assert(live, 'reachable live input');
 const session = live.session;
 const valid = { convictCkpt: { aid: 11 } };
 const before = JSON.stringify(session);
 const success = attempt(session, valid);
 assert(success.record.result.ok, 'positive conviction');
-assert.equal(success.session.state.carriers[0].st, 'terminationPending', 'conviction retains pending custody');
+assert.deepEqual(success.session.state.carriers[0].pendingSpend, {reference: {tx:105,index:0}, aid:11, position:{epoch:1,sn:1}}, 'conviction retains pending custody');
 assert.equal(JSON.stringify(session), before, 'immutable source session');
 assert.equal(success.session.state.carriers[0].token, session.state.carriers[0].token, 'retained token');
 assert.deepEqual(success.session.state.trie, session.state.trie, 'retained active key');
-const withoutEvidence = setEvidence(session, { ...session.env, duplicity: [] });
+const withoutEvidence = setEvidence(session, { ...session.env, convictions: [] });
 assert.equal(attempt(withoutEvidence, valid).record.result.error, 'keri-conviction-refused', 'stored key evidence');
+// Independently exercise the signature and the output fields on the paid path.
+const badSignature = structuredClone(session.env);
+badSignature.convictions[0].comparison.rival.signatures = [];
+assert.equal(attempt(setEvidence(session, badSignature), valid).record.result.error, 'keri-conviction-refused');
+const differentOutput = structuredClone(session.env);
+differentOutput.convictions[0].output.index = 3;
+const changedReceipt = attempt(setEvidence(session, differentOutput), valid);
+assert.equal(changedReceipt.session.state.carriers[0].pendingSpend.reference.index, 3);
+const oldBooking = sc.steps.find(step => step.action.bookTermination).action;
+assert.equal(attempt(changedReceipt.session, oldBooking).record.result.error, 'keri-conviction-required');
+controls += 3;
 const changed = submit(tree, valid, live.id);
 assert.equal(changed.nodes.length, tree.nodes.length + 1, 'free attempt is sibling');
 assert.equal(tree.nodes[live.id].children.length + 1, changed.nodes[live.id].children.length, 'original continuation retained');
@@ -59,7 +70,7 @@ const invalid = [
   ['unsafe state Number', x => { x.state.nextToken = 9007199254740992; }],
   ['fractional unused parameter', x => { x.params.tip = 0.5; }],
   ['negative unused evidence', x => { x.env.inception.push(-1); }],
-  ['unsafe evidence Number', x => { x.env.duplicity.push([11, 9007199254740992]); }],
+  ['unsafe evidence Number', x => { x.env.convictions[0].comparison.tip.epoch = 9007199254740992; }],
   ['unknown state field', x => { x.state.stranger = 1; }],
   ['negative held datum', x => { x.state.carriers[0].original.datum = -1; }],
   ['small numeric string', x => { x.state.gen = '1'; }],
@@ -74,9 +85,8 @@ for (const [label, mutate] of invalid) {
 assert.throws(() => init({ ...sc.config, root: [256] }), /invalid-wire/, 'root byte domain'); controls++;
 assert.throws(() => newSession({ ...sc.params, D: 0 }, sc.config, sc.env), /params.proofs/, 'positive bond'); controls++;
 const large = structuredClone(session);
-large.state.carriers[0].k = '9007199254740992';
-large.env.duplicity = [[11, '9007199254740992']];
-assert.equal(attempt(large, valid).session.state.carriers[0].k, '9007199254740992', 'exact key above Number bound');
+large.env.convictions[0].comparison.tip.epoch = '9007199254740992';
+assert.equal(attempt(large, valid).session.state.carriers[0].pendingSpend.position.epoch, '9007199254740992', 'exact key above Number bound');
 const fakeCell = { params: session.params, env: session.env, input: session.state, action: valid, result: success.record.result };
 const broken = structuredClone(fakeCell); broken.result.ok.state.nextToken = 9007199254740992;
 assert.throws(() => checkCell(broken), /invalid-exact-integer/, 'corpus result exact-number validation'); controls++;

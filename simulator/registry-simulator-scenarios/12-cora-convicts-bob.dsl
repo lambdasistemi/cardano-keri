@@ -27,17 +27,8 @@ actors:
   7: "termination booker"
   42: "Alice, request refund address"
 env:
-  duplicity:
-    - [11, 0]
-    - [11, 1]
-    - [11, 2]
-    - [12, 0]
-    - [12, 1]
-    - [12, 2]
-    - [13, 0]
-    - [13, 1]
-    - [13, 2]
   inception: [11, 12, 13, 14, 15]
+  convictions: [{"comparison":{"tip":{"aid":11,"epoch":1,"sn":1,"keys":{"curKeys":[[11]],"curThreshold":{"count":{"required":1}},"nextKeys":[[11]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":11,"sn":0,"delegated":false,"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[11],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":11,"event":{"aid":11,"sn":1,"kind":"rotation","priorDigest":0,"keys":[11],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":105}},{"comparison":{"tip":{"aid":12,"epoch":1,"sn":1,"keys":{"curKeys":[[12]],"curThreshold":{"count":{"required":1}},"nextKeys":[[12]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":12,"sn":0,"delegated":false,"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[12],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":12,"event":{"aid":12,"sn":1,"kind":"rotation","priorDigest":0,"keys":[12],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":106}},{"comparison":{"tip":{"aid":13,"epoch":1,"sn":1,"keys":{"curKeys":[[13]],"curThreshold":{"count":{"required":1}},"nextKeys":[[13]],"nextThreshold":{"count":{"required":1}},"witnesses":[],"toad":0},"previous":{"aid":13,"sn":0,"delegated":false,"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"witnesses":[]},"writer":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[13],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]}},"rival":{"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"structureVerified":true,"signatures":[{"signer":13,"event":{"aid":13,"sn":1,"kind":"rotation","priorDigest":0,"keys":[13],"threshold":{"count":{"required":1}},"nextKeys":[14],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}],"receipts":[]}},"output":{"index":0,"tx":107}}]
 step:
   now: 0
   actor: "anyone presenting the required evidence"
@@ -150,7 +141,7 @@ step:
         state:
           bindings:
             - [11, 0]
-          carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"live","token":0}]
+          carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
           config:
             activePolicy: 8
             applicationPolicy: 7
@@ -191,7 +182,7 @@ step:
         state:
           bindings:
             - [11, 0]
-          carriers: [{"aid":11,"k":0,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"st":"terminationPending","token":0}]
+          carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
           config:
             activePolicy: 8
             applicationPolicy: 7
@@ -238,6 +229,12 @@ step:
           singularTags: [{"registryId":9,"token":{"name":11,"policy":8}}]
           submittedAt: null
         trieReadyTagsMinted: [{"name":"5600603241348410377","policy":9}]
+        pendingReference:
+          index: 0
+          tx: 105
+        position:
+          epoch: 1
+          sn: 1
       fee: 1
   expect:
     ok: true
@@ -268,7 +265,7 @@ step:
           gen: 1
           nextToken: 1
           registrations: []
-          terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"keyState":0,"original":{"datum":711,"key":11,"kind":"active","output":111},"token":0}}]
+          terminations: [{"booking":{"custodyInputs":[{"datum":711,"key":11,"kind":"active","output":111}],"request":{"carrierAda":2,"contents":{"applicationTags":[],"lovelace":3,"otherAssets":[],"trieReadyTags":[{"name":"5600603241348410377","policy":9}]},"declaredTip":1,"destination":111,"key":11,"reference":{"index":0,"tx":200},"refundAddress":null,"registryId":9,"singularTags":[{"registryId":9,"token":{"name":11,"policy":8}}],"submittedAt":null},"trieReadyTagsMinted":[{"name":"5600603241348410377","policy":9}]},"payload":{"aid":11,"booker":7,"bookingFee":1,"original":{"datum":711,"key":11,"kind":"active","output":111},"spend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}}]
           treasury: 2
           trie:
             - [11,{"known":{"s":"active"}}]
@@ -469,6 +466,185 @@ fork:
       result:
         error: key-exists
     note: "Try processing another registration of this AID"
+fork:
+  id: partial-other-committed-key
+  at: 2
+  title: "Cora presents a different committed key"
+  expectFinal:
+    bindings:
+      - [11, 0]
+    carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
+    config:
+      activePolicy: 8
+      applicationPolicy: 7
+      bookingWidth: 1
+      maxFee: 1
+      processTime: 5
+      registrationCost: 2
+      registryId: 9
+      retractTime: 0
+      root: [187, 43, 111, 81, 131, 142, 177, 246]
+    gen: 1
+    nextToken: 1
+    registrations: []
+    terminations: []
+    treasury: 2
+    trie:
+      - [11,{"known":{"s":"active"}}]
+  step:
+    env:
+      inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"rival":{"event":{"adds":[],"aid":11,"cuts":[],"extension":[99],"keys":[2],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"receipts":[{"event":{"adds":[],"aid":11,"cuts":[],"extension":[99],"keys":[2],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"signer":10,"verified":true}],"signatures":[{"event":{"adds":[],"aid":11,"cuts":[],"extension":[99],"keys":[2],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"signer":2,"verified":true}],"structureVerified":true},"tip":{"aid":11,"epoch":1,"keys":{"curKeys":[[1]],"curThreshold":{"count":{"required":1}},"nextKeys":[[4]],"nextThreshold":{"count":{"required":1}},"toad":1,"witnesses":[[10]]},"previous":{"aid":11,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"sn":0,"witnesses":[10]},"sn":1,"writer":{"adds":[],"aid":11,"cuts":[],"extension":[],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1}}},"output":{"index":0,"tx":105}}]
+    now: 0
+    actor: "anyone presenting the required evidence"
+    as: Cora
+    action:
+      convictCkpt:
+        aid: 11
+    expect:
+      ok: true
+      result:
+        ok:
+          flow:
+            bondReturn: null
+            bookingFee: 0
+            deposited: 0
+            intoRequest: 0
+            locked: []
+            premium: null
+          observations: [{"aid":11,"binding":0,"leaf":{"known":{"s":"active"}},"minAda":4,"supply":1}]
+          state:
+            bindings:
+              - [11, 0]
+            carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
+            config:
+              activePolicy: 8
+              applicationPolicy: 7
+              bookingWidth: 1
+              maxFee: 1
+              processTime: 5
+              registrationCost: 2
+              registryId: 9
+              retractTime: 0
+              root: [187, 43, 111, 81, 131, 142, 177, 246]
+            gen: 1
+            nextToken: 1
+            registrations: []
+            terminations: []
+            treasury: 2
+            trie:
+              - [11,{"known":{"s":"active"}}]
+    note: "Cora presents a different committed key"
+fork:
+  id: rival-witness-change
+  at: 2
+  title: "Cora presents receipts from the rival’s new witness"
+  expectFinal:
+    bindings:
+      - [11, 0]
+    carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
+    config:
+      activePolicy: 8
+      applicationPolicy: 7
+      bookingWidth: 1
+      maxFee: 1
+      processTime: 5
+      registrationCost: 2
+      registryId: 9
+      retractTime: 0
+      root: [187, 43, 111, 81, 131, 142, 177, 246]
+    gen: 1
+    nextToken: 1
+    registrations: []
+    terminations: []
+    treasury: 2
+    trie:
+      - [11,{"known":{"s":"active"}}]
+  step:
+    env:
+      inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"rival":{"event":{"adds":[11],"aid":11,"cuts":[10],"extension":[99],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"receipts":[{"event":{"adds":[11],"aid":11,"cuts":[10],"extension":[99],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"signer":11,"verified":true}],"signatures":[{"event":{"adds":[11],"aid":11,"cuts":[10],"extension":[99],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1},"signer":1,"verified":true}],"structureVerified":true},"tip":{"aid":11,"epoch":1,"keys":{"curKeys":[[1]],"curThreshold":{"count":{"required":1}},"nextKeys":[[4]],"nextThreshold":{"count":{"required":1}},"toad":1,"witnesses":[[10]]},"previous":{"aid":11,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"sn":0,"witnesses":[10]},"sn":1,"writer":{"adds":[],"aid":11,"cuts":[],"extension":[],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1}}},"output":{"index":0,"tx":105}}]
+    now: 0
+    actor: "anyone presenting the required evidence"
+    as: Cora
+    action:
+      convictCkpt:
+        aid: 11
+    expect:
+      ok: true
+      result:
+        ok:
+          flow:
+            bondReturn: null
+            bookingFee: 0
+            deposited: 0
+            intoRequest: 0
+            locked: []
+            premium: null
+          observations: [{"aid":11,"binding":0,"leaf":{"known":{"s":"active"}},"minAda":4,"supply":1}]
+          state:
+            bindings:
+              - [11, 0]
+            carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":{"aid":11,"position":{"epoch":1,"sn":1},"reference":{"index":0,"tx":105}},"token":0}]
+            config:
+              activePolicy: 8
+              applicationPolicy: 7
+              bookingWidth: 1
+              maxFee: 1
+              processTime: 5
+              registrationCost: 2
+              registryId: 9
+              retractTime: 0
+              root: [187, 43, 111, 81, 131, 142, 177, 246]
+            gen: 1
+            nextToken: 1
+            registrations: []
+            terminations: []
+            treasury: 2
+            trie:
+              - [11,{"known":{"s":"active"}}]
+    note: "Cora presents receipts from the rival’s new witness"
+fork:
+  id: tip-keys-insufficient-own-threshold
+  at: 2
+  title: "The rival lacks its own signing quorum"
+  expectFinal:
+    bindings:
+      - [11, 0]
+    carriers: [{"aid":11,"minAda":4,"original":{"datum":711,"key":11,"kind":"active","output":111},"pendingSpend":null,"token":0}]
+    config:
+      activePolicy: 8
+      applicationPolicy: 7
+      bookingWidth: 1
+      maxFee: 1
+      processTime: 5
+      registrationCost: 2
+      registryId: 9
+      retractTime: 0
+      root: [187, 43, 111, 81, 131, 142, 177, 246]
+    gen: 1
+    nextToken: 1
+    registrations: []
+    terminations: []
+    treasury: 2
+    trie:
+      - [11,{"known":{"s":"active"}}]
+  step:
+    env:
+      inception: [11, 12, 13, 14, 15]
+      convictions: [{"comparison":{"rival":{"event":{"adds":[],"aid":11,"cuts":[],"extension":[1],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":2}},"witnessThreshold":1},"receipts":[{"event":{"adds":[],"aid":11,"cuts":[],"extension":[1],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":2}},"witnessThreshold":1},"signer":10,"verified":true}],"signatures":[{"event":{"adds":[],"aid":11,"cuts":[],"extension":[1],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":2}},"witnessThreshold":1},"signer":1,"verified":true}],"structureVerified":true},"tip":{"aid":11,"epoch":1,"keys":{"curKeys":[[1]],"curThreshold":{"count":{"required":1}},"nextKeys":[[4]],"nextThreshold":{"count":{"required":1}},"toad":1,"witnesses":[[10]]},"previous":{"aid":11,"delegated":false,"nextKeys":[1,2],"nextThreshold":{"count":{"required":1}},"sn":0,"witnesses":[10]},"sn":1,"writer":{"adds":[],"aid":11,"cuts":[],"extension":[],"keys":[1],"kind":"rotation","nextKeys":[4],"nextThreshold":{"count":{"required":1}},"priorDigest":50,"sn":1,"threshold":{"count":{"required":1}},"witnessThreshold":1}}},"output":{"index":0,"tx":105}}]
+    now: 0
+    actor: "anyone presenting the required evidence"
+    as: Cora
+    action:
+      convictCkpt:
+        aid: 11
+    expect:
+      ok: false
+      reason: keri-conviction-refused
+      result:
+        error: keri-conviction-refused
+    note: "The rival lacks its own signing quorum"
 expectFinal:
   bindings:
     - [11, 0]

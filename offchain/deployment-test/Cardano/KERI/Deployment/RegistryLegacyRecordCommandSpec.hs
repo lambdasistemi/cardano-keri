@@ -149,6 +149,7 @@ foldOver work identity record = do
                     , rfRequest = requestOf
                     , rfSnapshot = snapshot
                     , rfSnapshotOut = Nothing
+                    , rfPending = []
                     }
         )
         work

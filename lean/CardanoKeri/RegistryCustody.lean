@@ -196,7 +196,7 @@ theorem local_conviction_retains (p : Params) (env : Env) (cfg : Singular.Config
     {s s' : Sys} {aid : Nat} {f : Flow} {c : Carrier}
     (hr : Reach p env cfg s) (hc : carrierAt s aid = some c)
     (hs : convictCkpt env s aid = .ok (f, s')) :
-    carrierAt s' aid = some { c with st := .terminationPending } ∧
+    carrierAt s' aid = some (c.convicted env aid) ∧
     minAdaAt s' aid = p.Mc ∧ s'.toWorld = s.toWorld ∧
     s'.bindings = s.bindings ∧ s'.nextToken = s.nextToken ∧ s'.gen = s.gen ∧
     s'.terminations = s.terminations ∧ s'.registrations = s.registrations ∧
@@ -205,14 +205,14 @@ theorem local_conviction_retains (p : Params) (env : Env) (cfg : Singular.Config
   have key : c.aid = aid := by simpa using List.find?_some hc
   have world := local_actions_world p env (action := .convictCkpt aid) ⟨aid, rfl⟩ hs
   obtain ⟨current, _, _, _, rfl, rfl⟩ := (convictCkpt_iff env s s' aid f).mp hs
-  let edit := fun old : Carrier => if old.aid == aid then { old with st := .terminationPending } else old
+  let edit := fun old : Carrier => if old.aid == aid then (old.convicted env aid) else old
   have same : ∀ old, (edit old).aid = old.aid := by intro old; dsimp [edit]; split <;> rfl
-  have found : carrierAt { s with carriers := s.carriers.map edit } aid = some { c with st := .terminationPending } := by
+  have found : carrierAt { s with carriers := s.carriers.map edit } aid = some (c.convicted env aid) := by
     rw [carrier_edit_lookup s edit same aid]
     simp [hc, edit, key]
   refine ⟨found, ?_, world, rfl, rfl, rfl, rfl, rfl, ?_, rfl⟩
   · change ((carrierAt { s with carriers := s.carriers.map edit } aid).map (·.minAda)).getD 0 = p.Mc
-    simp [found, shape.2.2.1]
+    simp [found, Carrier.convicted, shape.2.2.1]
   · intro other different
     apply carrier_edit_other s edit same other
     intro old key
@@ -279,7 +279,7 @@ in either store, second booking of the same carrier, and a tail-drop mutant
 that otherwise still admits both bookings. Full concrete Checkpoint evidence
 controls are exercised separately from the whole-record preservation claim. -/
 theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Config)
-    {s s' : Sys} {aid booker fee : Nat} {b : Singular.TerminationBooking} {f : Flow}
+    {s s' : Sys} {aid booker fee : Nat} {b : CardanoKeri.Registry.TerminationBooking} {f : Flow}
     (hr : Reach p env cfg s)
     (hs : bookTermination p s aid booker fee b = .ok (f, s')) :
     Singular.trieGet s'.trie aid = .known .active ∧
@@ -292,7 +292,7 @@ theorem booking_keeps_active_supply (p : Params) (env : Env) (cfg : Singular.Con
     (bookTermination_iff p s s' aid booker fee b f).mp hs
   subst s'
   let entry : TerminationEntry := { booking := b, payload := {
-    aid := aid, token := c.token, keyState := c.k, original := c.original,
+    spend := b.spend, aid := aid, token := c.token, original := c.original,
     booker := booker, bookingFee := fee } }
   have found : pendingAt { s with
       carriers := s.carriers.filter (fun old => old.aid != aid),

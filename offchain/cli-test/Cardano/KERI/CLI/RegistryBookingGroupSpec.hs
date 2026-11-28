@@ -54,6 +54,7 @@ foldOptions =
         <> [ ("--request", "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3")
            , ("--snapshot", "snapshot.json")
            , ("--snapshot-out", "next-snapshot.json")
+           , ("--pending", "ccddeeff00112233445566778899aabbccddeeff00112233445566778899aabb#0")
            ]
 
 registerSettings :: RegistryRegisterSettings
@@ -89,6 +90,7 @@ foldSettings =
         , rfRequest = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899#3"
         , rfSnapshot = "snapshot.json"
         , rfSnapshotOut = Just "next-snapshot.json"
+        , rfPending = ["ccddeeff00112233445566778899aabbccddeeff00112233445566778899aabb#0"]
         }
 
 returnOptions :: [(String, String)]
@@ -131,7 +133,7 @@ argumentsOf options = concat [[name, value] | (name, value) <- options]
 -- | The options a command cannot run without.
 requiredRegister, requiredFold :: [String]
 requiredFold =
-    ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--request", "--snapshot"]
+    ["--blueprint", "--funding-address", "--release-identity", "--reference-record"]
 requiredRegister = ["--blueprint", "--funding-address", "--release-identity", "--reference-record", "--kli-export"]
 
 spec :: Spec
@@ -190,7 +192,7 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
                 emptyOption `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
                 emptyVariable <- timeOf [("SINGULAR_NETWORK_TIME", "")] []
                 emptyVariable `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
-    describe "registry fold, which reads no network time" $ do
+    describe "registry fold, which reads the network time on a provider" $ do
         let command = ["registry", "fold"] <> argumentsOf foldOptions
             timeOf environment extra = do
                 parsed <- parseWith environment (command <> extra)
@@ -198,12 +200,16 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
                     Right (RegistryFold settings) -> Right (chosenNetworkTime (rfProvider settings))
                     Right _ -> Left "the arguments were taken for another command"
                     Left errors -> Left (show errors)
-        it "runs as before beside an empty SINGULAR_NETWORK_TIME: the variable is not read" $
-            timeOf [("SINGULAR_NETWORK_TIME", "")] [] >>= (`shouldBe` Right Nothing)
-        it "takes no directory from SINGULAR_NETWORK_TIME" $
-            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] [] >>= (`shouldBe` Right Nothing)
-        it "does not know the option: it is not recognised, as before" $
-            timeOf [] ["--network-time", "time-dir"] >>= (`shouldSatisfy` either ("--network-time" `isInfixOf`) (const False))
+        it "is the option's directory" $
+            timeOf [] ["--network-time", "time-dir"] >>= (`shouldBe` Right (Just "time-dir"))
+        it "is the directory SINGULAR_NETWORK_TIME names when no option is given, and the option first when both are" $ do
+            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] [] >>= (`shouldBe` Right (Just "variable-dir"))
+            timeOf [("SINGULAR_NETWORK_TIME", "variable-dir")] ["--network-time", "option-dir"] >>= (`shouldBe` Right (Just "option-dir"))
+        it "is refused when the option is given an empty value, or the variable is empty and no option is given" $ do
+            emptyOption <- timeOf [] ["--network-time", ""]
+            emptyOption `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
+            emptyVariable <- timeOf [("SINGULAR_NETWORK_TIME", "")] []
+            emptyVariable `shouldSatisfy` either ("needs a nonempty value" `isInfixOf`) (const False)
     it "parses every option of register to its own setting" $ do
         result <- parseWith [] (["registry", "register"] <> argumentsOf registerOptions)
         case result of
@@ -233,10 +239,10 @@ spec = describe "#351 ckeri registry register and ckeri registry fold: the comma
             Right (RegistryFold settings) -> rfSnapshotOut settings `shouldBe` Nothing
             other -> expectationFailure ("not parsed: " <> showResult other)
     it "takes every input from the environment as well as from options" $ do
-        let environment = [("CKERI_" <> envName name, value) | (name, value) <- foldOptions]
+        let environment = [("CKERI_" <> envName name, value) | (name, value) <- foldOptions, name /= "--pending"]
         result <- parseWith environment ["registry", "fold"]
         case result of
-            Right (RegistryFold settings) -> settings `shouldBe` foldSettings
+            Right (RegistryFold settings) -> settings `shouldBe` foldSettings{rfPending = []}
             other -> expectationFailure ("not parsed: " <> showResult other)
     it "refuses each input that is left out, naming its environment variable" $ do
         mapM_

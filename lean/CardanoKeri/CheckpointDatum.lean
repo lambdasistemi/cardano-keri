@@ -1,3 +1,4 @@
+import CardanoKeri.CheckpointConviction
 import CardanoKeri.ConsumerBytesGoals
 
 /-! The checkpoint inline datum, version 2, and the consumer's decoder (#498).
@@ -194,25 +195,6 @@ def ofBytes? (bs : List Nat) : Option Data :=
   | _ => none
 
 /-! ## The layout -/
-
-/-- A threshold weight `num/den`, unread by the model. -/
-abbrev Weight := Int × Int
-
-/-- A KERI signing threshold, as `threshold.ak`'s `Threshold`. -/
-inductive Threshold where
-  | unweighted (m : Int)
-  | weighted (clauses : List (List Weight))
-  deriving Repr, DecidableEq, Inhabited
-
-/-- The key material a checkpoint carries and the model does not read. -/
-structure KeyMaterial where
-  curKeys : List (List Nat)
-  curThreshold : Threshold
-  nextKeys : List (List Nat)
-  nextThreshold : Threshold
-  witnesses : List (List Nat)
-  toad : Int
-  deriving Repr, DecidableEq, Inhabited
 
 def boolData : Bool → Data
   | false => .constr 0 []

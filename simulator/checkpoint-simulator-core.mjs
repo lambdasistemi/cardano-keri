@@ -15,7 +15,7 @@
  *
  * No DOM, no storage, no clock. Evidence (the Lean `Env`) is a table of
  * primitive decisions supplied by the scenario or by the person playing.
- * Duplicity rows select concrete example pairs checked by the core. They
+ * Position rows select a spent tip and one signed rival. Separate KERI cases
  * do not verify wire bytes or cryptography. Every Nat-typed field is a non-negative integer
  * or the action is refused by name.
  *
@@ -32,6 +32,9 @@
  * checkpoint-simulator.html by checkpoint-simulator-build.mjs; the page
  * runs this code, not a copy of it.
  */
+
+import * as checkpointEvidence from './checkpoint-conviction.mjs';
+import * as checkpointWire from './registry-wire.mjs';
 
 /* @@CORE:model@@ */
 // ---- canonical JSON ---------------------------------------------------------
@@ -120,7 +123,7 @@ const LEAN_GUARDS = {
   'freeze-bond-missing': { decls: ['Step.freeze'], hyp: 'hb', text: 'l.frozen = false' },
   'already-topped-up': { decls: ['Step.topUp'], hyp: 'hfresh', text: 'l.toppedUp = false' },
   'top-up-below-premium': { decls: ['Step.topUp'], hyp: 'hx', text: 'p.P ≤ x' },
-  'no-duplicity-proof': { decls: ['Step.convict'], hyp: 'hdup', text: 'env.duplicityAt' },
+  'no-duplicity-proof': { decls: ['Step.convict'], hyp: 'hdup', text: 'env.acceptsRival' },
   'commitment-not-entitling': { decls: ['Step.convict'], hyp: 'hent', text: 'c.entitles env l payee now' },
   'slot-regression': { decls: ['Trace.cons'], hyp: 'hle', text: "t ≤ t'" },
   // no constructor has the (action, state): stepFn's fall-through, the theorem names it
@@ -234,8 +237,8 @@ function normalizeAction(a) {
       if (!ks || typeof ks !== 'object' || Array.isArray(ks) || Object.keys(ks).length !== 2 || !('epoch' in ks) || !('sn' in ks))
         return { ok: false, reason: 'invalid-action', field: 'commitment.keyState' };
       const ke = bad([ks.epoch, 'commitment.keyState.epoch'], [ks.sn, 'commitment.keyState.sn']); if (ke) return ke;
-      if (!Array.isArray(c.evidence) || c.evidence.length !== 2 || !c.evidence.every(x => x && typeof x === 'object' && !Array.isArray(x)))
-        return { ok: false, reason: 'invalid-action', field: 'commitment.evidence' };
+      try { checkpointWire.validateRival(c.evidence); }
+      catch { return { ok: false, reason: 'invalid-action', field: 'commitment.evidence' }; }
       return { ok: true, kind, action: { convict: { payee: d.payee, commitment: c } } };
     }
   }
@@ -287,103 +290,32 @@ const envDepositAuthorized = (env, e) => envHas(env, 'depositAuthorized', [e]);
 const envQuorum = (env, e) => envHas(env, 'quorum', [e]);
 // Concrete transcription of CardanoKeri.Duplicity. The public scenario table
 // selects a documented example pair; it does not assert a duplicity verdict.
-const unique = xs => [...new Set(xs)];
-const distinct = xs => unique(xs).length === xs.length;
-const fractionAdd = (a, b) => [a[0] * b[1] + b[0] * a[1], a[1] * b[1]];
-const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
-const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
-function thresholdSatisfied(threshold, keys, signers) {
-  const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
-  const clauses = threshold.weighted.clauses;
-  let offset = 0;
-  const valid = clauses.length > 0 && clauses.every(clause => {
-    let sum = [0n, 1n];
-    if (!clause.length) return false;
-    for (const w of clause) {
-      const term = w.key || w.group;
-      if (!term.weight.denominator) return false;
-      if (w.key) {
-        if (signed[offset]) sum = fractionAdd(sum, fraction(term.weight));
-        offset++;
-      } else {
-        if (!term.members.length || term.members.some(m => !m.denominator)) return false;
-        let inner = [0n, 1n];
-        for (const member of term.members) {
-          if (signed[offset]) inner = fractionAdd(inner, fraction(member));
-          offset++;
-        }
-        if (atLeastOne(inner)) sum = fractionAdd(sum, fraction(term.weight));
-      }
-    }
-    return atLeastOne(sum);
-  });
-  return valid && offset === keys.length;
-}
-function verifiedSigners(event, signatures) {
-  return unique(signatures.filter(s => s.verified && canon(s.event) === canon(event)).map(s => s.signer));
-}
-function derivedWitnesses(prior, event) {
-  return unique([...prior.witnesses.filter(w => !event.cuts.includes(w)), ...event.adds]);
-}
-function signingValid(prior, signed) {
-  const event = signed.event, signers = verifiedSigners(event, signed.signatures);
-  const exposed = prior.nextKeys.filter(k => event.keys.includes(k));
-  return prior.nextKeys.length > 0 && distinct(prior.nextKeys) && distinct(event.keys) && event.keys.length > 0 &&
-    thresholdSatisfied(prior.nextThreshold, prior.nextKeys, signers.filter(k => exposed.includes(k))) &&
-    thresholdSatisfied(event.threshold, event.keys, signers);
-}
-function receiptsValid(prior, signed) {
-  const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
-  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
-    event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
-}
-function rotationValid(prior, signed) {
-  return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
-    signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
-}
+const { thresholdSatisfied, verifiedSigners, derivedWitnesses, signingValid, receiptsValid, rotationValid } = checkpointEvidence;
 function concreteDuplicityAt(epoch, sn, context, rival) {
   return context.epoch === epoch && context.accepted.event.sn === sn &&
     rotationValid(context.prior, context.accepted) && rotationValid(context.prior, rival) &&
     context.accepted.event.sn === rival.event.sn && canon(context.accepted.event) !== canon(rival.event);
 }
-function duplicityFixture(epoch, sn) {
-  const count = required => ({ count: { required } });
-  const signed = (event, keys, witnesses) => ({ event, structureVerified: true,
-    signatures: keys.map(signer => ({ signer, event, verified: true })),
-    receipts: witnesses.map(signer => ({ signer, event, verified: true })) });
-  const prior = { aid: 1, sn: Math.max(0, sn - 1), delegated: false, nextKeys: [1, 2], nextThreshold: count(1), witnesses: [10] };
-  const event = { aid: 1, sn, kind: 'rotation', priorDigest: 50, keys: [1], threshold: count(1),
-    nextKeys: [4], nextThreshold: count(1), cuts: [], adds: [], witnessThreshold: 1, extension: [] };
-  return { context: { epoch, prior, accepted: signed(event, [1], [10]) },
-    rival: signed({ ...event, keys: [2, 3], threshold: count(2), cuts: [10], adds: [11], extension: [99] }, [2, 3], [11]) };
+// The trace table selects the finite observation for the already selected identifier.
+function observedSpend(env, aid, epoch, sn) {
+  return envHas(env, 'duplicityAt', [epoch, sn]) ? checkpointEvidence.convictionFixture(aid, epoch, sn) : null;
 }
-// Env.evidenceAt over the tables: the fixture pair at a key state the table lists, as [context, rival]
-const envEvidenceAt = (env, e, sn) => {
-  if (!envHas(env, 'duplicityAt', [e, sn])) return null;
-  const { context, rival } = duplicityFixture(e, sn);
-  return [context, rival];
-};
-// a commitment naming the key state of `l`, the evidence shown at it and `payee`: opened by a
-// transaction whose validity range ends at `openedAt`, eligible from the next slot, expiring
-// eighteen slots later (the trace driver's `commitmentAt`)
 function commitmentFor(l, payee, openedAt) {
-  const { context, rival } = duplicityFixture(l.epoch, l.sn);
-  return { aid: 0, deployment: 0, keyState: { epoch: l.epoch, sn: l.sn }, evidence: [context, rival], payee, openedAt,
+  const {rival} = checkpointEvidence.convictionFixture(0, l.epoch, l.sn).comparison;
+  return { aid: 0, deployment: 0, keyState: { epoch: l.epoch, sn: l.sn }, evidence: rival, payee, openedAt,
     eligibleAfter: openedAt + 1, expiresAt: openedAt + 18, marker: 1 };
 }
-// Commitment.entitles: it names this output's key state, the evidence shown there and this payee,
-// and now is inside its window
-function entitles(env, c, l, payee, now) {
-  const shown = envEvidenceAt(env, l.epoch, l.sn);
-  return c.keyState.epoch === l.epoch && c.keyState.sn === l.sn && shown !== null && canon(shown) === canon(c.evidence) &&
-    c.payee === payee && c.eligibleAfter <= now && now <= c.expiresAt;
+function entitles(env, c, l, payee, now, aid = 0) {
+  const rival = observedSpend(env, aid, l.epoch, l.sn)?.comparison.rival;
+  return c.keyState.epoch === l.epoch && c.keyState.sn === l.sn && rival !== undefined &&
+    rival.event.aid === c.aid && canon(rival) === canon(c.evidence) && c.payee === payee &&
+    c.eligibleAfter <= now && now <= c.expiresAt;
 }
-const envDuplicityAt = (env, e, sn) => {
-  if (!envHas(env, 'duplicityAt', [e, sn])) return false;
-  const { context, rival } = duplicityFixture(e, sn);
-  return concreteDuplicityAt(e, sn, context, rival);
-};
+function envAcceptsRival(env, epoch, sn, aid = 0) {
+  const comparison = observedSpend(env, aid, epoch, sn)?.comparison;
+  return !!comparison && comparison.tip.epoch === epoch && comparison.tip.sn === sn &&
+    checkpointEvidence.acceptsComparison(comparison);
+}
 // Env.bondOpOk: a keep needs nothing; a deposit needs the new keys' signature (D-038)
 const bondOpOk = (env, e, op) => op === 'keep' || envDepositAuthorized(env, e);
 // a row is {kind:[args]}; returns the env with the row added / removed
@@ -494,7 +426,7 @@ function validateFlow(f) {
 // action, the complete state, the complete evidence table. Each refuses by
 // name (`invalid-params` / `invalid-nat` / `invalid-action` / `invalid-state`
 // / `invalid-evidence`) with the offending field.
-function step(p, env, action, now, state) {
+function step(p, env, action, now, state, aid = 0) {
   const refuse = (reason, field) => (field ? { ok: false, reason, field } : { ok: false, reason });
   const pv = validateParams(p); if (pv) return refuse('invalid-params', pv);
   if (!isNat(now)) return refuse('invalid-nat', 'now');
@@ -548,8 +480,8 @@ function step(p, env, action, now, state) {
       return some({ poolIn: a.topUp.x }, present({ ...l, pool: pool2, toppedUp: true }));
     }
     case 'convict': {
-      if (!envDuplicityAt(env, l.epoch, l.sn)) return refuse('no-duplicity-proof');
-      if (!entitles(env, a.convict.commitment, l, a.convict.payee, now)) return refuse('commitment-not-entitling');
+      if (!envAcceptsRival(env, l.epoch, l.sn, aid)) return refuse('no-duplicity-proof');
+      if (!entitles(env, a.convict.commitment, l, a.convict.payee, now, aid)) return refuse('commitment-not-entitling');
       return some({ refund: payment(l.refundTo, 0, bHeldOf(p, l), l.pool), convictor: payment(a.convict.payee, p.D, 0, 0) }, terminationPending(hashOfLive(l)));
     }
   }
@@ -769,7 +701,7 @@ function explain(rec, s) {
     case 'already-topped-up': return 'This key state was already topped up: a top-up is allowed once between two rotations, so a stream of tiny top-ups cannot keep the checkpoint busy. The next touch needs KERI evidence: a rotation, a poison, a freeze or a conviction.';
     case 'top-up-below-premium': return `The top-up (${d.x}) is less than one premium (${p.P}): a top-up refills at least one premium.`;
     case 'commitment-not-entitling': return `The conviction reveals no commitment entitling its payee now: the commitment must name this key state (epoch ${l.epoch}, sequence ${l.sn}), the evidence shown at it and the payee paid, and the slot must lie in its window, after the upper bound of its opening transaction’s validity range and no later than it expires. The pool and the poison, freeze and top-up marks do not matter; a rotation changes the key state.`;
-    case 'no-duplicity-proof': return `No second rotation at sequence ${l.sn} revealing the keys of epoch ${l.epoch}, signed at the current threshold and receipted by the tip’s witnesses, was presented.`;
+    case 'no-duplicity-proof': return `No accepted rival was presented at sequence ${l.sn}, epoch ${l.epoch}. A distinct rotation must meet the carried previous commitments and its own signing and witness rules.`;
     case 'slot-regression': return `Slot ${rec.slot} is before the last accepted slot ${rec.now}: the chain does not go backwards.`;
   }
   return 'Refused: ' + rec.reason;
@@ -793,7 +725,7 @@ const THEOREMS = [
     plain: 'From a poisoned state the current quorum can do nothing and no proof can freeze it; nothing but the next keys yields a consumable state. The current keys’ only Cardano power is the poison. When the next keys never signed a rotation, no step is by the next keys and none freezes the checkpoint.' },
   { id: 'T5', title: 'Every ruled transition is enabled when its evidence is',
     lean: ['T5_every_bond_option', 'T5_keep_is_rotated', 'T5_deposit_on_full_is_keep', 'T5_keep_needs_no_intent', 'T5_poison_enabled', 'T5_freeze_enabled', 'T5_convict_enabled'],
-    plain: 'Given a witnessed rotation (and, for a deposit, the new keys’ signature on it), both bond options are enabled whatever the pool holds (payment is never a gate); a keep is exactly the rotated datum plus the premium, and a deposit on full bonds is a keep; given the quorum an unpoisoned state can be poisoned; given a later rotation, a short pool, the freeze bond held and no poison the freeze is enabled; given a duplicity proof conviction is enabled from every present state.' },
+    plain: 'Given a witnessed rotation (and, for a deposit, the new keys’ signature on it), both bond options are enabled whatever the pool holds (payment is never a gate); a keep is exactly the rotated datum plus the premium, and a deposit on full bonds is a keep; given the quorum an unpoisoned state can be poisoned; given a later rotation, a short pool, the freeze bond held and no poison the freeze is enabled; an accepted rival and an entitling commitment enable conviction from a present state.' },
   { id: 'T6', title: 'Three value components that never mix; the refund address is fixed; a deposit is signed by the new keys',
     lean: ['T6_component_conservation', 'T6_dreg_never_a_fee', 'T6_dreg_never_moves_between_present_states', 'T6_dreg_enters_only_at_birth', 'T6_refund_fixed', 'step_from_present_keeps_refund', 'T6_refund_fixed_along_trace', 'T6_refund_is_registration_address', 'T6_conviction_refunds_registration_address', 'T6_frozen_flips_only_by_rotation_or_freeze', 'T6_deposit_requires_new_keys', 'T6_relayer_cannot_park_age_or_close'],
     plain: 'For each of the conviction bond, the freeze bond and the pool: held plus in equals held after plus out. The conviction bond is never a fee, never moves between present states, and enters only at the registration. The refund address is the one the registration named and no step changes it: a conviction pays the freeze bond held and the pool to exactly that address. A deposit carries the new keys’ signature (D-038): a relayer with public data alone lands a keep and nothing else.' },
@@ -810,8 +742,8 @@ const THEOREMS = [
     lean: ['T10_inert_without_next_keys', 'T10_only_deposit_restores', 'T10_current_quorum_never_restores', 'T10_bonds_are_observable', 'convicted_holds_no_bonds_or_pool'],
     plain: 'If the freeze bond is missing, no step by anyone but the next keys yields a consumable state; only a depositing rotation restores consumability, and it does not restart juvenility; the current quorum never produces a consumable state; the bonds are positive, so a live checkpoint and a pending or convicted identity are observably different in value; a convicted identity holds no bonds or pool.' },
   { id: 'T12', title: 'Conviction needs a proof and is exact',
-    lean: ['T12_convicted_terminal', 'trace_from_convicted', 'T12_convict_exact', 'convict_requires_entitlement', 'commitment_survives_topUp', 'commitment_survives_freeze', 'commitment_survives_poison', 'rotation_voids_commitment', 'pending_step_impossible', 'trace_from_pending', 'pending_has_no_local_exit', 'pending_consumer_refused', 'pending_custody_observations'],
-    plain: 'No local step leaves pending custody or Convicted. Concrete duplicity enters pending custody with the retained representative, and only for the payee of a commitment naming this key state and this evidence, inside its window. A top-up, a freeze and a poison keep an open commitment; a rotation voids it. A conviction pays D to the convictor and the remaining bonds and pool to the refund address. Only an associated Registry fold completes retirement.' },
+    lean: ['pending_only_by_conviction', 'trace_pending_convicted', 'reachable_pending_convicted', 'T12_convicted_terminal', 'trace_from_convicted', 'T12_convict_exact', 'convict_requires_entitlement', 'commitment_survives_topUp', 'commitment_survives_freeze', 'commitment_survives_poison', 'rotation_voids_commitment', 'pending_step_impossible', 'trace_from_pending', 'pending_has_no_local_exit', 'pending_consumer_refused', 'pending_custody_observations'],
+    plain: 'No local step leaves pending custody or Convicted. An accepted rival comparison enters pending custody with the retained representative, and only for the payee of a commitment naming this key state and this evidence, inside its window. A top-up, a freeze and a poison keep an open commitment; a rotation voids it. A conviction pays D to the convictor and the remaining bonds and pool to the refund address. Only an associated Registry fold completes retirement.' },
   { id: 'T14', title: 'The pool moves only by premium or top-up; a top-up is once per key state, at least one premium',
     lean: ['T14_pool_decreases_only_by_premium', 'T14_pool_increases_only_by_topup', 'topUp_adds_at_least_premium', 'second_topUp_refused', 'rotation_clears_topped_up', 'topped_up_set_only_by_topUp', 'topped_up_cleared_only_by_rotation', 'topped_up_kept_by_poison_and_freeze', 'topped_up_moves_only_on_evidence', 'at_most_one_topUp_between_rotations', 'registration_pool_at_least_premium'],
     plain: 'Between live states the pool decreases only by the premium under a paid rotation, and increases only by a top-up that changes nothing but the pool and the top-up mark. A registration delivers at least one premium. A top-up adds at least one premium, at most once between two rotations: it marks the key state, every rotation clears the mark, poison and freeze keep it, and a marked checkpoint moves only on KERI evidence.' },
@@ -836,7 +768,7 @@ function evidenceBits(env, state, action) {
     case 'rotate': return [envRotationTo(env, l.epoch, l.sn, d["sn'"]), bondOpOk(env, e1, d.op)];
     case 'freeze': return [envRotationTo(env, l.epoch, l.sn, d["sn'"])];
     case 'poison': return [envQuorum(env, l.epoch)];
-    case 'convict': return [envDuplicityAt(env, l.epoch, l.sn)];
+    case 'convict': return [envAcceptsRival(env, l.epoch, l.sn)];
   }
   return [];
 }
@@ -936,7 +868,7 @@ function theoremReport(before, after, rec) {
   row('T5_keep_needs_no_intent', rot && op === 'keep' && rotEv, () => [[ok, 'a keep was refused although the rotation is witnessed: ' + rec.reason]]);
   row('T5_poison_enabled', kind === 'poison' && stepped && !!lp && envQuorum(env, lp.epoch) && !lp.poisoned, () => [[ok, 'the quorum signed on a clean state but the poison was refused: ' + rec.reason]]);
   row('T5_freeze_enabled', kind === 'freeze' && rotEv && lp.pool < p.P && !lp.frozen && !lp.poisoned, () => [[ok, 'the freeze’s evidence held but it was refused: ' + rec.reason]]);
-  row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envDuplicityAt(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot), () => [[ok, 'a duplicity proof and an entitling commitment were presented but the conviction was refused: ' + rec.reason]]);
+  row('T5_convict_enabled', kind === 'convict' && stepped && !!lp && envAcceptsRival(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot), () => [[ok, 'an accepted rival comparison and an entitling commitment were presented but the conviction was refused: ' + rec.reason]]);
   row('convict_requires_entitlement', ok && kind === 'convict', () => [[!!lp && entitles(env, d.commitment, lp, d.payee, rec.slot), 'a conviction landed without a commitment entitling its payee at this slot']]);
   // ---- a commitment follows the key state. The commitment sampled is one a hunter opened over the key state
   // before this step, read in its first eligible slot, with and without a proof of duplicity at that key state.
@@ -1015,6 +947,37 @@ function theoremReport(before, after, rec) {
     [preK !== 'convicted' || heldZero(hi), 'a convicted identity holds bonds or pool'],
     [!ok || postK !== 'convicted' || heldZero(ho), 'a step left bonds or pool on a convicted identity']]);
   // ---- T12: conviction needs a proof and is exact; convicted is terminal
+  const pending = postK === 'terminationPending' ? post.terminationPending.h : null;
+  const acceptedAt = (table, slot, action, live) => {
+    const reveal = action?.convict;
+    return !!reveal && !!live && eq(hashOfLive(live), pending) &&
+      envAcceptsRival(table, live.epoch, live.sn) && entitles(table, reveal.commitment, live, reveal.payee, slot);
+  };
+  row('pending_only_by_conviction', ok && !!pending, () => [
+    [acceptedAt(env, rec.slot, a, lp), 'pending custody has no accepted conviction of its spent key state']]);
+  // The trace quantifies over one environment. Replay its accepted prefix with
+  // the accumulated evidence and the current parameters, starting at its seed.
+  function readPendingTrace() {
+    if (!mine || !boundaryOk || !pending) return null;
+    let state = origin, lastSlot = before.originSlot, revealed = false;
+    for (const [slot, action] of before.history) {
+      const result = step(p, before.envAll, action, slot, state);
+      if (!result.ok || slot < lastSlot) return null;
+      revealed ||= acceptedAt(before.envAll, slot, action, liveOf(state));
+      state = result.state;
+      lastSlot = slot;
+    }
+    if (!eq(state, pre) || (ok && rec.slot < lastSlot)) return null;
+    if (!ok) return {revealed, endsHere: eq(pre, post)};
+    const result = step(p, before.envAll, a, rec.slot, state);
+    return {revealed: revealed || acceptedAt(before.envAll, rec.slot, a, lp),
+      endsHere: result.ok && eq(result.state, post)};
+  }
+  const pendingTrace = readPendingTrace();
+  row('trace_pending_convicted', !!pendingTrace, () => [
+    [eq(origin, post) || pendingTrace.revealed, 'the playing history neither starts pending here nor contains the matching reveal']]);
+  row('reachable_pending_convicted', !!pendingTrace && origin === 'absent', () => [
+    [pendingTrace.endsHere && pendingTrace.revealed, 'the play from absent has no trace to this pending state with a matching reveal']]);
   row('T12_convicted_terminal', stepped && preK === 'convicted', () => [[!ok, 'a step left Convicted']]);
   row('pending_step_impossible', stepped && preK === 'terminationPending', () => [[!ok, 'a local step left pending custody']]);
   row('pending_has_no_local_exit', stepped && preK === 'terminationPending', () => [[!ok, 'the local function accepted a pending action']]);
@@ -1024,7 +987,7 @@ function theoremReport(before, after, rec) {
   const wasConvicted = mine && (stateKind(origin) === 'convicted' || before.records.some(r => r.ok && r.aid === rec.aid && stateKind(r.state) === 'convicted'));
   row('trace_from_convicted', wasConvicted, () => [[stateKind(post) === 'convicted' && eq(post, pre), 'a play that reached Convicted moved on']]);
   row('T12_convict_exact', kind === 'convict' && stepped && preK === 'present', () => [
-    [ok === (envDuplicityAt(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot)), 'conviction accepted without a proof against the checkpoint’s key state or without a commitment entitling its payee, or refused with both'],
+    [ok === (envAcceptsRival(env, lp.epoch, lp.sn) && entitles(env, d.commitment, lp, d.payee, rec.slot)), 'conviction accepted without a proof against the checkpoint’s key state or without a commitment entitling its payee, or refused with both'],
     [!ok || (postK === 'terminationPending' && eq(post.terminationPending.h, hashOfLive(lp))), 'a conviction did not reach Convicted'],
     [!ok || eq(f, flow({ refund: payment(lp.refundTo, 0, bHeldOf(p, lp), lp.pool), convictor: payment(d.payee, p.D, 0, 0) })), 'the conviction flow is not exactly D to the convictor and the rest to the refund address']]);
   // ---- T14: the pool
@@ -1254,7 +1217,7 @@ function checkCorpus(corpus) {
 
 export {
   hasOutput, representativeHeld,
-  thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, duplicityFixture,
+  thresholdSatisfied, derivedWitnesses, verifiedSigners, signingValid, receiptsValid, rotationValid, concreteDuplicityAt, observedSpend,
   canon, isNat, commitmentFor, entitles, REASONS, VERDICTS, LEAN_GUARDS, LEAN_SPLITS, VERDICT_CONJUNCTS, constructorOf,
   validateParams, ACTION_KINDS, BOND_OPS, actionKind, normalizeAction, actorOf,
   EV_KINDS, EV_ARITY, emptyEnv, envHas, envAdd, envRemove, envUnion, validateEnv, bondOpOk, stateKind, liveOf, present, payment, flow, held, paid, snOf, leafOf, leafKind, rotated, premium, bHeldOf,

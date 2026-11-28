@@ -19,8 +19,10 @@ itself. It verifies the event evidence supplied in a transaction.
 One rule sits above everything else on this page: **the chain projects the
 KEL and never originates identity state.** Every arrow points one way. The
 design is built only against what a controller and its witnesses already
-publish; the chain never asks KERI for anything, and never pronounces a
-verdict KERI itself would not. Where KERI says a verdict is formed is
+publish. A terminal conviction requires agreement with KERI duplicity. In the Lean model, an accepted conviction at a rotated checkpoint establishes
+KERI duplicity. Lean refuses conviction at a never-rotated checkpoint because
+it has no preceding commitments. Evidence that the on-chain validator refuses
+that spend is still outstanding. See the [witness assumptions](#keri-witnesses). KERI describes where a verdict is formed in
 [validator roles and event locality](https://trustoverip.github.io/kswg-keri-specification/#validator-roles-and-event-locality).
 
 Two consequences that shape the whole trust boundary:
@@ -33,9 +35,13 @@ Two consequences that shape the whole trust boundary:
   event that un-duplicates an identifier. What KERI leaves to each validator is
   the trust decision, which it may take either way (the
   [review's reading of the specification's own text](watcher-conformance.md#the-specification-has-a-trust-text-tension)).
-  **This project's selected policy is that conviction is terminal**: the
-  convicted (terminal after a duplicity proof) leaf never reopens and the
-  conviction bond, the stake posted against that proof, is seized. The reasons
+  **This project's selected policy is that conviction is terminal.** The
+  conviction mint checks the rival under its own rules against the previous
+  commitments carried by the live checkpoint. Every conviction in a reachable
+  modeled execution establishes a KERI duplicity. A valid conflict at that
+  position has an accepted comparison. Spending also requires Cora’s open
+  commitment and its reveal window. Once the fold retires the leaf, it never
+  reopens. These decisions
   are ours, not KERI's: a bond that could be recovered would not deter, and
   inventing a recovery event KERI lacks would be the chain originating identity
   state.
@@ -240,10 +246,37 @@ is served at the consumer's risk: `toad` is on the consumer surface precisely
 so an application requiring public KERI acceptance can reject such identities
 by policy.
 
-A colluding quorum at or above `toad` can do one thing worse than lying about
-liveness: it can receipt two rotations at one sequence. That is part of the
-duplicity a conviction proves, which also needs both rotations valid against the same previous commitments, one native sequence and different content, and it is why the conviction's exposure is
-bounded by `D_reg` and by the witness set the controller chose.
+A colluding quorum at or above `toad` can receipt two rotations at one native
+sequence. KERI duplicity requires different content and two rotations valid
+against the same previous commitments, each with its own signing threshold
+and receipts from its derived witnesses. The exposure is bounded by `D_reg`
+and by the witness set the controller chose.
+
+At the checkpoint spend the mint checks the rival’s signing threshold, the
+previous next-key threshold and receipts from witnesses derived by applying
+the rival’s cuts and additions. The whole event must differ from the
+authenticated writer, including seals. At inception Lean refuses the comparison
+because there is no previous establishment. Validator evidence for that refusal
+remains outstanding. The termination booker spends the pending output, and the
+folder processes the booked request.
+
+The readable input retains the writer’s authenticated content, its established
+witnesses, and one preceding commitment set. A relayer advancing the live
+output copies the previous next keys, threshold and witness list from the
+spent datum. The convictor must be able to recover the exact writer, including
+seals, from public chain data. An inline opening can supply it directly. A
+digest requires an authenticated opening available to that role on chain.
+Neither the rival nor the commitment opener selects the preceding context.
+
+A Lean size study serializes one possible inline representation as Plutus Data.
+With a 44-byte identifier, 32-byte key and digest fields, a 28-byte refund
+address, one signing key and no witnesses, the live datum measures 220 bytes
+at inception and 313 after each of two rotations. The predecessor occupies
+96 bytes after rotation. Grouping the signing and next thresholds and adding
+64 seal bytes gives 412 bytes. Larger lists or seals increase the size. The
+study fixes neither a production format nor a transaction limit. Production
+datum size, script budget and transaction fit require the validator and codec
+work. The executable measurement is in `lean/MeasureCheckpointWriter.lean`.
 
 ### Relayers and hunters
 
@@ -330,13 +363,15 @@ stateDiagram-v2
   Swept --> [*]: marker burnt, deposit to whoever signs
 ```
 
-The conviction step checks the commitment it reveals against the output it
-convicts; the system checks that the commitment is open and belongs here, and
-burns it. The table lists every condition and the step that states it.
+The convictor presents one signed rival in the checkpoint spend. The mint
+must attest this comparison at the indexed output. Transaction 105 in the
+connected Lean example supplies the abstract attestation and has an empty
+observed mint field. Ledger correspondence remains open under #576.
 
 | A conviction is accepted only when | Where the model states it |
 |---|---|
-| the checkpoint has duplicity at its current key state | the conviction step |
+| the rival names the same identifier and sequence, satisfies the previous commitments and its own signing and receipt thresholds, and differs from the complete writer event | the checkpoint spend (`Env.acceptsRival`) |
+| the spent position and key material match the authenticated writer for this identifier | the system step (`Sys.comparisonMatchesWriter`) |
 | the commitment names the key state this checkpoint output carries | the conviction step (`Commitment.entitles`) |
 | the commitment names the evidence the conviction shows | the conviction step |
 | the commitment names the payee the conviction pays | the conviction step |
@@ -404,7 +439,16 @@ not match. An unavailable indexer affects liveness only.
 
 ### The registry
 
-Registration and terminal completion use actual registry folds. Rotations,
+Registration and terminal completion use actual registry folds. In a proved
+system registration, the checkpoint is born at the booking time and carries
+the booked refund address. The initial pool is exactly what remains of the
+delivered carrier after minimum ADA and both bonds. A folder obtains these
+facts from the booking on chain.
+
+A local rotation, deposit or poison step reads the authorization for the
+identifier it changes. Two checkpoints at the same sequence and epoch can
+have different authorizations. The modeled poison spend requires the current
+keys of that identifier. Rotations,
 poison, freezing, top-ups and conviction are local Checkpoint
 transitions. Pending custody remains until its recorded request is consumed
 by a matching fold. The consumer authenticates the holding against its fixed
@@ -447,7 +491,7 @@ The **State** column marks whether the response is that of the earlier deployed 
 | Authorize a payment from a poisoned checkpoint | Reject: the consumer requires an unpoisoned state | designed |
 | Take `D_reg` without an accepted conviction | Reject: `D_reg` is never a fee source | designed |
 | Freeze an identity whose pool pays | Reject: the freeze requires `pool < P` | designed |
-| Convict without two witnessed rotations at one sequence | Reject: both rotations must be valid against the same previous commitments, with their own thresholds and the receipts of their own derived witnesses, at one sequence and with different content; and the commitment must be open, eligible, name this payee, identifier and deployment | designed |
+| Convict without two valid witnessed rotations at one sequence | The mint refuses a rival that fails the previous commitments, falls short of its own signing threshold, lacks receipts from its derived witnesses, or repeats the writer’s content. Spending also requires an open, eligible commitment naming the payee, identifier and deployment. | designed |
 | Copy a conviction and pay yourself | Reject: `D_reg` goes only to the payee of a commitment opened beforehand over this identifier, deployment, key state and evidence | designed |
 | Open a commitment and use it in the same slot | Reject: a commitment is eligible only after the upper bound of its opening transaction's validity range, which is no earlier than the slot it was opened in | designed |
 | Top up, freeze or poison a checkpoint to void a hunter's commitment | No effect: the commitment names the key state, and these steps keep it | designed |

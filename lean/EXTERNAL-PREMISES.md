@@ -201,3 +201,42 @@ The system proof follows the association through intervening events to its
 booking and the earlier conviction. A reader must supply a faithful path from
 deployment. Acceptance of the earlier spent-tip comparison is the conclusion
 about evidence that the recorded leaf supports.
+
+## Ordinary inception prefix at booking
+
+The controller supplies the signed inception and its attachments in the booking
+transaction. The inception attestation policy reads them for the request at the
+specified output index. In `Application.InceptionPrefix.Reads`, `decodeEvidence`
+decodes the event, the original witness list and the seals from that body and
+checks the attachments against its exact signed bytes. A valid structure includes
+verification of the event's own SAID. Qualified keys and AIDs retain their CESR
+codes when interpreted as model identities. The CESR decoder supplies the hard
+code of the full qualified identifier. For a self-addressing identifier,
+`deriveIdentifier` computes the qualified digest of the prescribed serialization
+using the identifier's own code. The event SAID and identifier can use different
+digest codes. [keripy 1.3.5 digest derivation](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L745-L770)
+
+The booking policy opens the writer in the committed initial datum using the
+same evidence. The technical implementation of `openTip` must verify the
+datum's commitment against that opening. Lean compares the opened writer, AID,
+keys, thresholds and witnesses and runs the signature and witness quorum checks.
+For a basic prefix it checks the sole qualified key and the numeric threshold
+one. A non-transferable basic prefix also requires empty next commitments,
+witnesses and seals. A transferable basic prefix permits empty next commitments.
+The numeric signing threshold must be positive. The next threshold's width
+must fit the signed list of next digests. A weighted declaration must have at
+least one clause. Each clause and each nested group of members must reach
+one. For example, two `1/3` weights in a single clause fail, and two signed
+`2/4` weights satisfy it. A numeric zero is permitted for the next declaration. [keripy 1.3.5 threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L694-L716)
+
+System registration reads the booking evidence indexed by the identifier and
+initial datum through `Env.inceptionBytes`. Its issuer and system readers both
+apply `OpeningReads.accepts` to the same decoded fields. `admitted_initial_history`
+states the correspondence when both readers open the same indexed bytes with
+the same public decoders. The simulator interprets prefix codes and
+digests from finite public read tables. Its historical traces use synthetic
+transferable basic identifiers.
+
+After the fold, the reader decodes the kind from the AID of the delivered datum.
+[keripy 1.3.5 prefix classes](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L610-L683)
+and [inception checks](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/serdering.py#L1564-L1610).

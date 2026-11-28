@@ -62,7 +62,10 @@ private def admittedWeight (rule : Threshold) (expected : Bool) : Bool :=
   nextThreshold := .weighted [[.key ⟨2,1⟩, .key ⟨0,1⟩]] } first
 
 def setup : SystemEnv := fun aid => {env aid with
-  inceptionWriter := fun _ _ => some (inceptionEvent, [10])
+  inceptionOpening := {
+    prefixCode := fun subject => if subject == 11 then some "E" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some ⟨inceptionEvent, [10]⟩ else none
+    deriveIdentifier := fun bytes => if bytes == [1] then some 11 else none }
   rotationWriter := fun _ _ _ sn => some (if sn = 1 then first else second)}
 def atRegistration := (Sys.init deployment).installOrigin 11 (.present live) bookingOrigin
 def h1 := EventHistory.rotation bookingOrigin.inception first

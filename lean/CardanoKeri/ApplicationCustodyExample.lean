@@ -1,3 +1,4 @@
+import CardanoKeri.InceptionPrefix
 import CardanoKeri.ApplicationCustodyHistory
 import CardanoKeri.CheckpointLifecycleExamples
 
@@ -88,6 +89,121 @@ private def regObs := observation [funds]
 #guard Registry.Examples.env.inception release.applicationPolicy registration
 #guard SingularApplicationHeld.Assets.mintQty regObs.assets bookingAttestation == 1
 
+/-! Exercise both policies on the same funded registration. The small identifiers
+below denote whole qualified keys. Each interpretation supplies the specified
+decoding of identifier 11 and the signed evidence at registration output zero. -/
+section PrefixAdmission
+open InceptionPrefix Duplicity
+
+private def prefixEvent (next : List Nat) : Content :=
+  ⟨11, 0, .inception, 0, [11], .count 1, next, .count next.length, [], [], 0, [], "inception"⟩
+
+private def signedByKeys (e : Content) : SignedEvent :=
+  ⟨e, true, e.keys.map (fun key => ⟨key, e, true⟩), []⟩
+
+private def readsFor (code : String) (e : InceptionPrefix.Evidence)
+    (digest : Option Nat := none) : InceptionPrefix.Reads where
+  bytesAt := fun tx index => if tx.outputs[index]? == some request then some [1] else none
+  decodeEvidence := fun bytes => if bytes == [1] then some e else none
+  prefixCode := fun aid => if aid == 11 then some code else none
+  deriveIdentifier := fun bytes => if bytes == [1] then digest else none
+  openTip := fun raw bytes => if raw == data.initialDatum && bytes == [1]
+    then some ((WriterDatum.inception e.signed.event e.witnesses).tip KeyEncoding.symbolic 0)
+    else none
+  keys := KeyReads.symbolic
+
+private def prefixBooking (reads : InceptionPrefix.Reads) (tx := regObs) : Bool :=
+  admitted i aenv rp p release reads 0 tx
+
+private def evidence (e : Content) (witnesses : List Nat := []) : InceptionPrefix.Evidence :=
+  ⟨signedByKeys e, witnesses⟩
+
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with nextThreshold := .count 1}))
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [22] with nextThreshold := .count 2}))
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with nextThreshold := .count 1}))
+#guard !prefixBooking (readsFor "E" (evidence {prefixEvent [] with threshold := .count 0}) (some 11))
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with extension := [7]}))
+
+private def basic := evidence (prefixEvent [])
+#guard prefixBooking (readsFor "B" basic)
+#guard prefixBooking (readsFor "D" basic)
+#guard prefixBooking (readsFor "D" (evidence (prefixEvent [22])))
+#guard !prefixBooking (readsFor "B" (evidence (prefixEvent [22])))
+private def witnessed : InceptionPrefix.Evidence :=
+  let e := { prefixEvent [] with witnessThreshold := 1 }
+  ⟨{ signedByKeys e with receipts := [⟨17, e, true⟩] }, [17]⟩
+#guard prefixBooking (readsFor "D" witnessed)
+#guard !prefixBooking (readsFor "B" witnessed)
+#guard !prefixBooking (readsFor "D" {witnessed with signed.receipts := []})
+#guard !prefixBooking (readsFor "B" (evidence {prefixEvent [] with extension := [7]}))
+#guard prefixBooking (readsFor "D" (evidence {prefixEvent [] with extension := [7]}))
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with keys := [12]}))
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with keys := [11, 12]}))
+#guard !prefixBooking (readsFor "D"
+  (evidence {prefixEvent [] with threshold := .weighted [[.key ⟨1, 1⟩]]}))
+#guard prefixBooking (readsFor "E" (evidence {prefixEvent [] with keys := [12]}) (some 11))
+#guard !prefixBooking (readsFor "E" basic (some 12))
+#guard !prefixBooking (readsFor "E" basic none)
+/-- The same indexed booking verdicts checked by the pinned keripy reference. -/
+def inceptionReferenceCases : List (String × Bool) :=
+  let booking := fun code body => prefixBooking (readsFor code (evidence body))
+  let future := fun (next : List Nat) (clauses : List (List Weight)) =>
+    booking "D" {prefixEvent next with nextThreshold := .weighted clauses}
+  let half := Weight.key ⟨1, 2⟩
+  let third := Weight.key ⟨1, 3⟩
+  let one := Weight.key ⟨1, 1⟩
+  [("B empty", booking "B" (prefixEvent [])),
+   ("D empty", booking "D" (prefixEvent [])),
+   ("B next", booking "B" (prefixEvent [22])),
+   ("D next", booking "D" (prefixEvent [22])),
+   ("B witness", prefixBooking (readsFor "B" witnessed)),
+   ("D witness", prefixBooking (readsFor "D" witnessed)),
+   ("B seal", booking "B" {prefixEvent [] with extension := [7]}),
+   ("D seal", booking "D" {prefixEvent [] with extension := [7]}),
+   ("D weighted one", booking "D" {prefixEvent [] with threshold := .weighted [[.key ⟨1,1⟩]]}),
+   ("E digest", prefixBooking (readsFor "E" basic (some 11))),
+   ("D missing next", booking "D" {prefixEvent [] with nextThreshold := .count 1}),
+   ("D oversized next", booking "D" {prefixEvent [22] with nextThreshold := .count 2}),
+   ("B missing next", booking "B" {prefixEvent [] with nextThreshold := .count 1}),
+   ("E zero signing", prefixBooking (readsFor "E" (evidence {prefixEvent [] with threshold := .count 0}) (some 11))),
+   ("D zero next with digest", booking "D" {prefixEvent [22] with nextThreshold := .count 0}),
+   ("D next below one", future [21,22] [[third, third]]),
+   ("D next unreduced", future [21,22] [[.key ⟨2,4⟩, .key ⟨2,4⟩]]),
+   ("D next partial coverage", future [21,22,23] [[one], [one]]),
+   ("D weighted next without commitments", future [] [[one]]),
+   ("D next exact one", future [21,22] [[half, half]]),
+   ("D next second clause below one", future [21,22] [[one], [third]]),
+   ("D next inner below one", future [21,22,23] [[one, .group ⟨1,2⟩ [⟨1,3⟩, ⟨1,3⟩]]]),
+   ("D next nested exact one", future [21,22,23] [[half, .group ⟨1,2⟩ [⟨1,2⟩, ⟨1,2⟩]]]),
+   ("D next no clauses", future [] [])]
+
+-- Reopen the indexed evidence using the actual registration history reader.
+private def installed (reads : InceptionPrefix.Reads) :=
+  let system : Checkpoint.Env := {env 11 with
+    inceptionOpening := reads.toOpeningReads
+    inceptionBytes := fun aid raw => if aid == 11 && raw == data.initialDatum then reads.bytesAt regObs 0 else none}
+  system.initialHistory 11 (some data.initialDatum)
+
+#guard (installed (readsFor "B" basic)).isSome
+#guard (installed (readsFor "D" (evidence {prefixEvent [] with keys := [12]}))).isNone
+#guard (installed (readsFor "E" basic (some 11))).isSome
+#guard (installed (readsFor "E" basic (some 12))).isNone
+
+#guard !prefixBooking (readsFor "B" {basic with signed.signatures := []})
+#guard !prefixBooking (readsFor "A" basic)
+#guard !prefixBooking {readsFor "B" basic with prefixCode := fun _ => none}
+#guard !prefixBooking {readsFor "B" basic with bytesAt := fun _ _ => none}
+#guard !prefixBooking {readsFor "B" basic with
+    openTip := fun _ _ => some ((WriterDatum.inception (prefixEvent [22]) []).tip KeyEncoding.symbolic 0)}
+#guard !prefixBooking (readsFor "B" basic) {regObs with assets.mint := [(approval, 1)]}
+#guard !prefixBooking {readsFor "D" basic with
+    bytesAt := fun _ index => if index == 1 then some [1] else none}
+#guard !prefixBooking {readsFor "D" basic with bytesAt := fun _ _ => some [2]}
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with kind := .delegatedInception}))
+#guard !prefixBooking (readsFor "D" (evidence
+    {prefixEvent [22] with nextThreshold := .weighted [[.key ⟨3, 2⟩]]}))
+end PrefixAdmission
+
 example : Attestation.NetMintField regObs.assets := by unfold Attestation.NetMintField; decide
 example : Attestation.InvokesMintPolicies regObs.assets := by
   intro asset nonzero
@@ -136,6 +252,10 @@ private def genesisWorld := {advanceWorld initWorld openObs with
   domain := [.state seed]}
 private def requestWorld := advanceWorld genesisWorld regObs
 private def foldedObs := adapted foldObs record 2
+#guard delivered i data carrier foldedObs
+#guard InceptionPrefix.holdingKind i (readsFor "B" basic).prefixCode carrier == some (.basic false)
+#guard InceptionPrefix.holdingKind i (readsFor "D" basic).prefixCode carrier == some (.basic true)
+
 private def foldWorld := {advanceWorld requestWorld foldedObs with
   registries := [registry1]
   domain := genesisWorld.domain ++ foldObs.changes.flatMap (changePreimages foldObs)}

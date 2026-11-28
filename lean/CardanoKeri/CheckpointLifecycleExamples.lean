@@ -17,8 +17,10 @@ def env (aid : AID) : Env := {
     (epoch == 1 && sn == 1 && next == 2))),
   depositAuthorized := fun _ => false,
   quorum := fun _ => false,
-  inceptionWriter := fun subject raw => if subject == aid && raw == 777 then
-    some (Duplicity.writerFixture aid 0 .inception, []) else none,
+  inceptionBytes := fun subject raw => if subject == aid && raw == 777 then some [1] else none,
+  inceptionOpening := {
+    prefixCode := fun subject => if subject == aid then some "D" else none
+    decodeEvidence := fun bytes => if bytes == [1] then some ⟨Duplicity.writerFixture aid 0 .inception, []⟩ else none },
   rotationWriter := fun subject _ _ target => if subject == aid then
     some (Duplicity.writerFixture aid target .rotation) else none,
   keyReads := KeyReads.symbolic

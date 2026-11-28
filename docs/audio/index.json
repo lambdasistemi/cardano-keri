@@ -13510,6 +13510,12 @@
     "name": "docs-design-user-experience/register-07",
     "pause_ms": 400,
     "v": "4d22d591309e"
+   },
+   {
+    "index": 8,
+    "name": "docs-design-user-experience/register-08",
+    "pause_ms": 400,
+    "v": "2740e7e07bd8"
    }
   ],
   "rotate": [

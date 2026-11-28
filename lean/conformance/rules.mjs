@@ -86,8 +86,12 @@ export const rules = [
     [at(ck('advance'),'if !slice_matches(e.event_bytes, e.off_t'),adv('} else if !(new.seq == spent.seq + 1')], [291,320]),
   row('enforced', 'Each cut removes a previous witness; additions are new and disjoint from cuts.',
     witness, 'Enforced at advance for membership, duplicate entries and overlap', [adv('AdvanceInvalid(EqW1CutInvalid)'),adv('AdvanceInvalid(EqW2AddInvalid)')], [598]),
-  row('enforced', 'Derive the incoming witnesses and require a positive receipt threshold when the resulting set is nonempty.',
+  // This checkout's successor check is the stronger `key_state_after_rotation_well_formed`: it applies the same receipt threshold
+  // rule (`toad_ok`, zero exactly when no witness remains) and admits the abandonment state, so the coverage is unchanged. The
+  // January column keeps the published pin's `key_state_well_formed`.
+  {...row('enforced', 'Derive the incoming witnesses and require a positive receipt threshold when the resulting set is nonempty.',
     witness, 'Enforced at advance; an empty result permits zero', [adv('when key_state_well_formed(new)'),datum('1 <= toad && toad <= wit_count'),at(ck('advance'),'if e.wit_receipts != []')], [598]),
+    main: {sites: [adv('when key_state_after_rotation_well_formed(new) is {'),datum('1 <= toad && toad <= wit_count'),at(ck('advance'),'if e.wit_receipts != []')]}},
   row('missing', 'Weighted threshold arithmetic accepts satisfiable unreduced weights and denominators above 2^32.',
     [dup('Weight.wellFormed')], 'not enforced as the same domain; F18 refuses both representations', [threshold('} else if math.gcd(num, den) != 1'),threshold('} else if den > max_weight_denom')], [597]),
   row('missing', 'Each rival rotation independently meets its next-rule width, weight and signing requirements against the common predecessor.',

@@ -11,7 +11,7 @@ production derivation/ ('deriveRegistryScripts') through the Plutus ledger
 evaluator ('evaluateScriptCounting'), with the version 3 script context written
 here as Plutus Data from the ledger's own layout, by code that shares nothing with
 the Aiken fixtures. The request, its datum and its evidence are built with the
-library's encoders ('heldDatumData', 'liveOfKeyState', 'bookingAttestationName')
+library's encoders ('heldDatumData', 'liveOfInception', 'bookingAttestationName')
 from the committed keripy inception of @reg_2key@.
 
 Each story is an accepted transaction beside its refused neighbour that differs by
@@ -22,7 +22,19 @@ one thing:
 * a booking of the application whose attestation is held by an input of the
   transaction and not minted by it (the application's mint, over the same request).
 -}
-module Cardano.KERI.Deployment.AttestationBoundarySpec (spec) where
+module Cardano.KERI.Deployment.AttestationBoundarySpec (
+    spec,
+    Inception (..),
+    Booking (..),
+    accepted,
+    acceptedWithBudget,
+    booking,
+    issueOf,
+    applicationBooking,
+    derived,
+    mintingContext,
+    terms,
+) where
 
 import Cardano.KERI.AID.Application (
     Action (..),
@@ -41,10 +53,13 @@ import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.CESR (Primitive (..), parsePrimitive, qb64Aid)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
+    CheckpointDatumV2 (..),
+    KeyMaterial (..),
     KeyStateView (..),
     checkpointDatumToData,
     liveOfKeyState,
  )
+import Cardano.KERI.AID.Checkpoint.Qualified (codeD, qualify)
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
@@ -108,13 +123,17 @@ evaluationContext =
 
 -- | Whether the ledger accepts the applied program over the script context.
 accepted :: ScriptArtifact -> Data -> Bool
-accepted artifact context =
+accepted artifact context = either (const False) (const True) (acceptedWithBudget artifact context)
+
+-- | The budget the ledger counts for the accepted evaluation, or the refusal.
+acceptedWithBudget :: ScriptArtifact -> Data -> Either String ExBudget
+acceptedWithBudget artifact context =
     case deserialiseScript (MajorProtocolVersion 10) (artifactProgram artifact) of
         Left err -> error (show err)
         Right script ->
             case snd (evaluateScriptCounting (MajorProtocolVersion 10) Quiet evaluationContext script context) of
-                Left _ -> False
-                Right (_ :: ExBudget) -> True
+                Left err -> Left (show err)
+                Right budget -> Right budget
 
 -- ---------------------------------------------------------------------------
 -- The version 3 script context, as Plutus Data
@@ -221,6 +240,10 @@ mintingContextWith policy references validity inputs outputs minted redeemer =
 data Inception = Inception
     { inceptionView :: KeyStateView
     , inceptionEvidence :: RegistrationEvidence
+    , inceptionIdentifier :: ByteString
+    -- ^ the qualified text of the identifier, as the datum and the request keep it
+    , inceptionKeys :: [ByteString]
+    -- ^ the qualified texts of the current keys
     }
 
 field :: Text -> Value -> Either String Value
@@ -285,19 +308,7 @@ inceptionOf top = do
     nexts <- field "n" ked >>= list >>= traverse (text >=> digest)
     kt <- field "kt" ked >>= text >>= hexInt
     nt <- field "nt" ked >>= text >>= hexInt
-    offs <- field "offsets" sub
-    let off f = field f offs >>= int
-        offs' f = field f offs >>= list >>= traverse int
     sigs <- field "event_sigs" sub >>= list >>= traverse sigOf
-    offT <- off "t"
-    offI <- off "i"
-    offS <- off "s"
-    offKt <- off "kt"
-    offNt <- off "nt"
-    offBt <- off "bt"
-    offK <- offs' "k"
-    offN <- offs' "n"
-    offB <- offs' "b"
     pure
         Inception
             { inceptionView =
@@ -315,18 +326,11 @@ inceptionOf top = do
             , inceptionEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = sigs
                     , reWitReceipts = []
                     }
+            , inceptionIdentifier = qb64Aid aid
+            , inceptionKeys = map (qualify codeD) keys
             }
   where
     sigOf s = do
@@ -380,12 +384,43 @@ derived = do
 deposit :: Integer
 deposit = 1_009_000_000
 
+{- | The datum a registration commits for the inception: the key state with the signed qualified identifier and
+keys, as 'liveOfInception' writes it (draft #600 at @ce10e471@: the committed datum's key state is the signed
+evidence's key state, whose keys are the qualified @k@ of the event).
+-}
+qualifiedDatum :: Inception -> CheckpointDatumV2
+qualifiedDatum Inception{inceptionView = view, inceptionIdentifier = identifier, inceptionKeys = keys} =
+    case liveOfKeyState refund 10 view of
+        live@Live{lvKeys} -> live{lvAid = identifier, lvKeys = lvKeys{kmCurKeys = keys}}
+        other -> other
+
+-- | The same key state with the raw 32-byte current keys: the spelling before the qualified datum.
+rawKeysDatum :: Inception -> CheckpointDatumV2
+rawKeysDatum Inception{inceptionView = view} =
+    case liveOfKeyState refund 10 view of
+        live@Live{lvKeys} -> live{lvKeys = lvKeys{kmCurKeys = cdCurKeys view}}
+        other -> other
+
+-- | The same qualified datum whose first current key carries the B code instead of D.
+swappedCodeDatum :: Inception -> CheckpointDatumV2
+swappedCodeDatum inception =
+    case qualifiedDatum inception of
+        live@Live{lvKeys} ->
+            live{lvKeys = lvKeys{kmCurKeys = map (("B" <>) . BS.drop 1) (take 1 (kmCurKeys lvKeys)) <> drop 1 (kmCurKeys lvKeys)}}
+        other -> other
+
+refund :: ByteString
+refund = BS.cons 0x60 (BS.replicate 28 0x02)
+
 -- | The request of the inception: the datum it commits is its key's initial state.
 requestOf :: RegistryScripts -> Inception -> (RegistrationData, Data)
-requestOf scripts Inception{inceptionView = view} =
+requestOf = requestOfWith qualifiedDatum
+
+requestOfWith :: (Inception -> CheckpointDatumV2) -> RegistryScripts -> Inception -> (RegistrationData, Data)
+requestOfWith datumOf scripts inception@Inception{inceptionIdentifier = identifier} =
     ( RegistrationData
         { requestRegistry = scriptsRegistry scripts
-        , requestKey = qb64Aid (cdCesrAid view)
+        , requestKey = identifier
         , requestController = BS.replicate 28 0x01
         , requestRefundAddress = unstakedAddress (KeyCredential (BS.replicate 28 0x02))
         , requestHoldingAddress = unstakedAddress (ScriptCredential (BS.replicate 28 0x03))
@@ -398,9 +433,7 @@ requestOf scripts Inception{inceptionView = view} =
     , initial
     )
   where
-    initial =
-        checkpointDatumToData
-            (V2 (liveOfKeyState (BS.cons 0x60 (BS.replicate 28 0x02)) 10 view))
+    initial = checkpointDatumToData (V2 (datumOf inception))
 
 data Booking = Booking
     { bookingContext :: Data
@@ -412,7 +445,16 @@ token spent and burned, its attestation minted (or not), under the redeemer.
 -}
 booking ::
     RegistryScripts -> Inception -> [(ByteString, Integer)] -> (ByteString -> Data) -> Booking
-booking scripts inception extraMint redeemerOf =
+booking = bookingWith qualifiedDatum
+
+bookingWith ::
+    (Inception -> CheckpointDatumV2) ->
+    RegistryScripts ->
+    Inception ->
+    [(ByteString, Integer)] ->
+    (ByteString -> Data) ->
+    Booking
+bookingWith datumOf scripts inception extraMint redeemerOf =
     Booking
         { bookingContext =
             mintingContext
@@ -441,7 +483,7 @@ booking scripts inception extraMint redeemerOf =
         , bookingName = name
         }
   where
-    (request, initial) = requestOf scripts inception
+    (request, initial) = requestOfWith datumOf scripts inception
     applicationPolicy = scriptHashBytes (artifactScriptHash (scriptsApplication scripts))
     attestationPolicy = scriptHashBytes (artifactScriptHash (scriptsAttestation scripts))
     proofPolicy = scriptHashBytes (artifactScriptHash (observerHashProof (scriptsObservers scripts)))
@@ -527,6 +569,19 @@ spec = describe "the booking attestation policy, as the ledger evaluates it" $ d
         let probe = booking scripts inception [] (issueOf inception)
             minted = booking scripts inception [(bookingName probe, 1)] (issueOf inception)
         accepted (scriptsAttestation scripts) (bookingContext minted) `shouldBe` True
+    describe "one variable: the spelling of the current keys in the committed datum" $ do
+        let verdict datumOf = do
+                scripts <- derived
+                inception <- loadInception
+                let probe = bookingWith datumOf scripts inception [] (issueOf inception)
+                    minted = bookingWith datumOf scripts inception [(bookingName probe, 1)] (issueOf inception)
+                pure (accepted (scriptsAttestation scripts) (bookingContext minted))
+        it "accepts the datum of liveOfInception, the signed qualified keys" $
+            verdict qualifiedDatum >>= (`shouldBe` True)
+        it "refuses the same datum with the raw 32-byte keys" $
+            verdict rawKeysDatum >>= (`shouldBe` False)
+        it "refuses the same qualified datum when a key carries another derivation code" $
+            verdict swappedCodeDatum >>= (`shouldBe` False)
     it "refuses the same booking with a surplus positive name beside the attestation" $ do
         scripts <- derived
         inception <- loadInception

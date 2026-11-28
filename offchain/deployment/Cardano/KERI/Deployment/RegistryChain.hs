@@ -66,7 +66,7 @@ module Cardano.KERI.Deployment.RegistryChain (
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.KERI.AID.Application (OutputReference (..), stateTokenName)
 import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
-import Cardano.KERI.AID.Checkpoint.Datum (CheckpointDatumV2 (..), liveOfKeyState)
+import Cardano.KERI.AID.Checkpoint.Datum (QualifiedIdentity (..))
 import Cardano.KERI.AID.Consumer (Release (..))
 import Cardano.KERI.AID.Release (ReleaseIdentity (..))
 import Cardano.KERI.Deployment.KEL (InceptionExport (..))
@@ -620,13 +620,11 @@ withinUnits (ExUnits memory steps) (ExUnits limitMemory limitSteps) =
 feeOf :: ConwayTx -> Integer
 feeOf tx = let Coin fee = tx ^. bodyTxL . feeTxBodyL in fee
 
-{- | The key an export registers under: the identifier the registration datum
-carries, as the registry's key set and the active token name spell it.
+{- | The key an export registers under: the signed qualified identifier, exactly as
+spelled in @i@, as the registry's key set and the active token name spell it.
 -}
 exportKey :: InceptionExport -> ByteString
-exportKey export = case liveOfKeyState "" 0 (inceptionDatum export) of
-    Live{lvAid} -> lvAid
-    TerminationPending{} -> error "exportKey: an inception is live"
+exportKey = qiAid . inceptionQualified
 
 {- | The runtime, every call of which returns once the node's connection has ended. The status
 says whether the node client's thread is still running ('Nothing') or has ended, and why.

@@ -611,8 +611,11 @@ test aid_digest_refuses_text_that_is_not_the_aid_of_a_digest() {
     aid_digest(bytearray.drop(text, 1)) == None,
     aid_digest(bytearray.concat(text, "A")) == None,
     aid_digest("") == None,
-    // another derivation code
-    aid_digest(bytearray.push(bytearray.drop(text, 1), 68)) == None,
+    // a derivation code that is neither a key nor a digest we read
+    aid_digest(bytearray.push(bytearray.drop(text, 1), 70)) == None,
+    // a key code reads as the identifier of a key
+    aid_digest(bytearray.push(bytearray.drop(text, 1), 68)) == aid_digest(text),
+    aid_digest(bytearray.push(bytearray.drop(text, 1), 66)) == aid_digest(text),
     // a character outside the alphabet
     aid_digest(
       bytearray.concat(bytearray.take(text, 20), "+")

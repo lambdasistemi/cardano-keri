@@ -10,6 +10,7 @@
 //// that shared a fault with it would prove nothing about that group.
 
 use aiken/cbor
+use aiken/collection/list
 use aiken/primitive/bytearray
 use cage_context.{out_ref}
 use cardano/address.{Credential, Script, from_script}
@@ -25,6 +26,7 @@ use cardano_keri/checkpoint/message.{qb64_aid}
 use cardano_keri/checkpoint/observer.{
   ObserverClaim, ObserverEnvelope, observe_freeze,
 }
+use cardano_keri/checkpoint/threshold.{Threshold, Weight, Weighted}
 use checkpoint_observer
 use checkpoint_register
 use freeze_fixture.{
@@ -907,4 +909,42 @@ test freeze_refuses_a_checkpoint_that_holds_only_the_retired_register_token() fa
 
 test freeze_refuses_a_successor_at_a_staked_address() fail {
   freeze_over(with_successor_address(freeze_base(), staked(policy)))
+}
+
+// ---- the prior declaration authorizes at its exact member width -------------------------------------------------------
+
+fn whole_clauses() -> Threshold {
+  Weighted([[Weight { num: 1, den: 1 }], [Weight { num: 1, den: 1 }]])
+}
+
+fn frozen_from(next_keys: List<ByteArray>) -> Bool {
+  let old = Parts {
+    ..parts(live(False, False)),
+    keys: KeyMaterial {
+      ..spent_keys(),
+      next_keys,
+      next_threshold: whole_clauses(),
+    },
+  }
+  freeze_spending(
+    from_parts(old),
+    floor_unfrozen + 1_000_000,
+    from_parts(Parts { ..old, frozen: True }),
+    floor_frozen + 1_000_000,
+  )
+}
+
+/// Two whole-weight clauses over three commitments: width two, three commitments.
+test freeze_refuses_a_partial_width_prior_declaration() fail {
+  frozen_from(
+    list.concat(
+      spent.next_keys,
+      [#"0909090909090909090909090909090909090909090909090909090909090909"],
+    ),
+  )
+}
+
+/// The matched control: the same clauses over exactly two commitments.
+test freeze_accepts_an_exact_width_prior_declaration() {
+  frozen_from(spent.next_keys)
 }

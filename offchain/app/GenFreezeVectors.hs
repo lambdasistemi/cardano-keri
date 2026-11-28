@@ -64,16 +64,6 @@ evidence =
         , feRotation =
             AdvanceEvidence
                 { aeEventBytes = "rot"
-                , aeOffT = 1
-                , aeOffI = 2
-                , aeOffS = 3
-                , aeOffK = [4]
-                , aeOffKt = 5
-                , aeOffN = [6]
-                , aeOffNt = 7
-                , aeOffBr = [8]
-                , aeOffBa = [9]
-                , aeOffBt = 10
                 , aeWitCut = ["cut"]
                 , aeWitAdd = ["add"]
                 , aeCtrlSigs = [(0, BS.replicate 64 0xc1)]
@@ -119,16 +109,6 @@ output =
         , "    rotated_sn: 6,"
         , "    rotation: AdvanceEvidence {"
         , "      event_bytes: " <> hex "rot" <> ","
-        , "      off_t: 1,"
-        , "      off_i: 2,"
-        , "      off_s: 3,"
-        , "      off_k: [4],"
-        , "      off_kt: 5,"
-        , "      off_n: [6],"
-        , "      off_nt: 7,"
-        , "      off_br: [8],"
-        , "      off_ba: [9],"
-        , "      off_bt: 10,"
         , "      wit_cut: [" <> hex "cut" <> "],"
         , "      wit_add: [" <> hex "add" <> "],"
         , "      ctrl_sigs: [(0, " <> hex (BS.replicate 64 0xc1) <> ")],"

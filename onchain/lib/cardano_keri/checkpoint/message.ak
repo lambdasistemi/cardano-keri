@@ -36,6 +36,7 @@ use cardano_keri/blake3
 use cardano_keri/checkpoint/datum.{
   DatumError, DatumInvalid, KeyStateView, key_state_well_formed,
 }
+use cardano_keri/checkpoint/qualified
 use cardano_keri/checkpoint/threshold.{Threshold, evaluate}
 
 // ---------------------------------------------------------
@@ -228,7 +229,10 @@ pub fn advance_equalities(
   ) {
     // eq6a: the evidence satisfies the rotation's own current threshold.
     AdvanceInvalid(Eq6CurrentQuorumUnsatisfied)
-  } else if !evaluate(
+  } else if spent.next_keys == [] || !threshold.spans(
+    spent.next_threshold,
+    list.length(spent.next_keys),
+  ) || !evaluate(
     spent.next_threshold,
     list.length(spent.next_keys),
     positions_in(
@@ -239,7 +243,10 @@ pub fn advance_equalities(
       ),
     ),
   ) {
-    // eq6b: the evidence revealed in new.cur_keys satisfies the committed
+    // eq6b: a weighted declaration authorizes only at its exact member width (fewer weights than commitments may be
+    // declared at an inception and no signer list satisfies it afterwards). A checkpoint that declared no next keys has
+    // nothing to reveal and is never advanced: a zero threshold over
+    // no commitments would be satisfied by no evidence at all. Otherwise the evidence revealed in new.cur_keys satisfies the committed
     // (next_keys, next_threshold) — the KERI pre-rotation gate. Each
     // revealing key is digested once (blake3 over its 44-char qb64) to find
     // its committed position; the KEL n entries are matched byte-for-byte.
@@ -280,22 +287,8 @@ fn positions_in(keys: List<ByteArray>, controlled: List<ByteArray>) -> List<Int>
   )
 }
 
-/// The raw 32-byte digest of a version 2 checkpoint's AID text: the
-/// 44-character CESR text with code `'E'`, valid base64url, whose leading
-/// byte (the code's padding) is zero. `None` for any other text, so
-/// `qb64_aid(digest) == text` holds exactly when this returns the digest.
+/// The raw 32 byte payload of a checkpoint's identifier text: 44 characters, code `B`, `D` or `E`, whose padding bits
+/// are zero. `None` for any other text.
 pub fn aid_digest(text: ByteArray) -> Option<ByteArray> {
-  if bytearray.length(text) == 44 && bytearray.at(text, 0) == 69 {
-    when base64url.decode(bytearray.push(bytearray.drop(text, 1), 65)) is {
-      Some(raw) ->
-        if bytearray.at(raw, 0) == 0 {
-          Some(bytearray.drop(raw, 1))
-        } else {
-          None
-        }
-      None -> None
-    }
-  } else {
-    None
-  }
+  qualified.identifier_payload(text)
 }

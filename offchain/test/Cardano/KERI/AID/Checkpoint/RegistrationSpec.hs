@@ -21,14 +21,13 @@ the pure predicate carries no length guard.
 module Cardano.KERI.AID.Checkpoint.RegistrationSpec (spec) where
 
 import Cardano.KERI.AID.Checkpoint.Datum (
-    DatumError (..),
     KeyStateView (..),
     blake2b_256,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.FixtureLoader (
     decodeHex,
     digestRaw,
-    intArrayField,
     intField,
     loadFixture,
     lookupKey,
@@ -52,7 +51,6 @@ import Cardano.KERI.AID.Checkpoint.Registration (
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold (..),
-    ThresholdError (..),
     Weight (..),
  )
 import Data.Aeson (Value (..))
@@ -123,16 +121,6 @@ regCase fx key = do
     kt <- thresholdOf ked "kt"
     nt <- thresholdOf ked "nt"
     bt <- parseHexInt =<< textField ked "bt"
-    offs <- note (key <> ".offsets missing") (lookupKey "offsets" sub)
-    offT <- off offs "t"
-    offI <- off offs "i"
-    offS <- off offs "s"
-    offKt <- off offs "kt"
-    offNt <- off offs "nt"
-    offBt <- off offs "bt"
-    offK <- offList offs "k"
-    offN <- offList offs "n"
-    offB <- offList offs "b"
     eventSigs <- committedSigs sub "event_sigs"
     witnessReceipts <- optionalCommittedSigs sub "witness_receipts"
     obsoleteSigs <- oldMessageSigs
@@ -155,24 +143,12 @@ regCase fx key = do
             , rcEvidence =
                 RegistrationEvidence
                     { reEventBytes = raw
-                    , reOffT = offT
-                    , reOffI = offI
-                    , reOffS = offS
-                    , reOffK = offK
-                    , reOffKt = offKt
-                    , reOffN = offN
-                    , reOffNt = offNt
-                    , reOffB = offB
-                    , reOffBt = offBt
                     , reCtrlSigs = eventSigs
                     , reWitReceipts = witnessReceipts
                     }
             , rcOldMessageSigs = obsoleteSigs
             , rcWitnessReceipts = witnessReceipts
             }
-  where
-    off o f = fromIntegral <$> intField o f
-    offList o f = map fromIntegral <$> intArrayField o f
 
 -- | Run a check against a built fixture case, failing on load error.
 withCase ::
@@ -283,7 +259,7 @@ oldMessageSigs =
 
 -- | Shorthand: run the predicate on a case under 'ctx0' / 'funded'.
 runReg :: RegCase -> Either RegistrationError ()
-runReg c = registrationPredicate ctx0 (rcDatum c) funded (rcEvidence c)
+runReg c = regPred ctx0 (rcDatum c) funded (rcEvidence c)
 
 -- ---------------------------------------------------------------
 -- The spec
@@ -300,7 +276,6 @@ spec =
             receiptNegatives
             depositNegatives
             deploymentFloor
-            misdirectionFamily
             proofToken
             respelling
             witnessQb64
@@ -324,7 +299,7 @@ positives =
                     `shouldBe` (Right (), Right ())
         it "deposit boundary: exactly min_ada + d_reg passes" $
             \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     (dcMinAda ctx0 + dcDReg ctx0)
@@ -340,7 +315,7 @@ genesisAndSchema =
     describe "R3 genesis datum / R4 schema predicate" $ do
         it "seq /= 0 -> R3GenesisDatumMismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c){cdSeq = 1}
                     funded
@@ -348,13 +323,19 @@ genesisAndSchema =
                     `shouldBe` Left R3GenesisDatumMismatch
         it "native_sn /= 0 -> R4 InceptionNativeSnNonZero" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c){cdNativeSn = 1}
                     funded
                     (rcEvidence c)
                     `shouldBe` Left
                         (R4InceptionInvalid InceptionNativeSnNonZero)
+        it "duplicated current keys -> R6EventNotCanonical" $ \fx ->
+            withCase fx "reg_witnessed" $ \c -> do
+                let k0raw = first1 (cdCurKeys (rcDatum c))
+                    d = (rcDatum c){cdCurKeys = [k0raw, k0raw]}
+                regPred ctx0 d funded (rcEvidence c)
+                    `shouldBe` Left R6EventNotCanonical
 
 -- ---------------------------------------------------------------
 -- R6: per-slice E1-E9 negatives
@@ -363,13 +344,13 @@ genesisAndSchema =
 sliceNegatives :: SpecWith Value
 sliceNegatives =
     describe "R6 slice checks: one rejection per E1-E9 axis" $ do
-        it "E1: reg_dip rejected -> E1EventTypeMismatch" $ \fx ->
+        it "E1: reg_dip rejected -> R6EventNotCanonical" $ \fx ->
             withCase fx "reg_dip" $ \c ->
-                runReg c `shouldBe` Left E1EventTypeMismatch
-        it "E1: reg_drt rejected -> E1EventTypeMismatch" $ \fx ->
+                runReg c `shouldBe` Left R6EventNotCanonical
+        it "E1: reg_drt rejected -> R6EventNotCanonical" $ \fx ->
             withCase fx "reg_drt" $ \c ->
-                runReg c `shouldBe` Left E1EventTypeMismatch
-        it "E2: crossed AID in the datum -> E2AidMismatch" $ \fx ->
+                runReg c `shouldBe` Left R6EventNotCanonical
+        it "E2: crossed AID in the datum -> R6EventNotCanonical" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 withCase fx "reg_weighted" $ \other -> do
                     let d =
@@ -377,22 +358,12 @@ sliceNegatives =
                                 { cdCesrAid =
                                     cdCesrAid (rcDatum other)
                                 }
-                    registrationPredicate
+                    regPred
                         ctx0
                         d
                         funded
                         (rcEvidence c)
-                        `shouldBe` Left E2AidMismatch
-        it "E3: off_s pointed at t -> E3SequenceMismatch" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffS = reOffT (rcEvidence c)
-                        }
-                    `shouldBe` Left E3SequenceMismatch
+                        `shouldBe` Left R6EventNotCanonical
         it "E4: squat - attacker keys over victim bytes" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 withCase fx "reg_weighted" $ \other -> do
@@ -401,23 +372,23 @@ sliceNegatives =
                                 { cdCurKeys =
                                     take 2 (cdCurKeys (rcDatum other))
                                 }
-                    registrationPredicate
+                    regPred
                         ctx0
                         d
                         funded
                         (rcEvidence c)
-                        `shouldBe` Left E4CurKeysMismatch
+                        `shouldBe` Left R6EventNotCanonical
         it "E5: restated unweighted kt -> E5 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c){cdCurThreshold = Unweighted 1}
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E5CurThresholdMismatch
+                    `shouldBe` Left R6EventNotCanonical
         it "E5: mutated weighted clause -> E5 mismatch" $ \fx ->
             withCase fx "reg_weighted" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                         { cdCurThreshold =
@@ -431,10 +402,10 @@ sliceNegatives =
                         }
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E5CurThresholdMismatch
+                    `shouldBe` Left R6EventNotCanonical
         it "E6: substituted next digest -> E6 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                         { cdNextKeys =
@@ -442,18 +413,18 @@ sliceNegatives =
                         }
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E6NextKeysMismatch
+                    `shouldBe` Left R6EventNotCanonical
         it "E7: restated nt -> E7 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c){cdNextThreshold = Unweighted 1}
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E7NextThresholdMismatch
+                    `shouldBe` Left R6EventNotCanonical
         it "E8: substituted witness verkey -> E8 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                         { cdWitnesses =
@@ -461,10 +432,10 @@ sliceNegatives =
                         }
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E8WitnessesMismatch
+                    `shouldBe` Left R6EventNotCanonical
         it "E8: witness count mismatch -> E8 mismatch" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                         { cdWitnesses =
@@ -472,15 +443,15 @@ sliceNegatives =
                         }
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E8WitnessesMismatch
-        it "E9: restated toad -> E9ToadMismatch" $ \fx ->
+                    `shouldBe` Left R6EventNotCanonical
+        it "E9: restated toad -> R6EventNotCanonical" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c){cdToad = 1}
                     funded
                     (rcEvidence c)
-                    `shouldBe` Left E9ToadMismatch
+                    `shouldBe` Left R6EventNotCanonical
 
 -- | Total head for fixture lists the bundle guarantees non-empty.
 first1 :: [a] -> a
@@ -493,12 +464,6 @@ flipFirst [] = []
 flipFirst (x : xs) = BS.cons (BS.head x `xor255`) (BS.tail x) : xs
   where
     xor255 b = 255 - b
-
--- | Flip the final byte without disturbing any E1-E9 field slice.
-flipLast :: ByteString -> ByteString
-flipLast raw
-    | BS.null raw = raw
-    | otherwise = BS.init raw <> BS.singleton (255 - BS.last raw)
 
 -- | Flip one signature byte while preserving its 64-byte shape.
 flipSignature :: ByteString -> ByteString
@@ -515,7 +480,7 @@ signatureNegatives =
     describe "R7 controller signatures over exact event bytes" $ do
         it "event-own controller signatures are accepted" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -523,7 +488,7 @@ signatureNegatives =
                     `shouldBe` Right ()
         it "old InceptionMessage-only signatures reject -> R7" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -533,7 +498,7 @@ signatureNegatives =
                     `shouldBe` Left R7QuorumUnsatisfied
         it "below threshold: 1 of kt=2 -> R7 unsatisfied" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -545,7 +510,7 @@ signatureNegatives =
         it "negative controller index fails closed -> R7" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (_idx, sig) = first1 (reCtrlSigs (rcEvidence c))
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -558,7 +523,7 @@ signatureNegatives =
         it "out-of-range controller index fails closed -> R7" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (_idx, sig) = first1 (reCtrlSigs (rcEvidence c))
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -571,7 +536,7 @@ signatureNegatives =
         it "bad controller signature fails -> R7" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (idx, sig) = first1 (reCtrlSigs (rcEvidence c))
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -583,7 +548,7 @@ signatureNegatives =
                         `shouldBe` Left R7QuorumUnsatisfied
         it "below weighted threshold: 2 of 3 quarters" $ \fx ->
             withCase fx "reg_weighted" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -594,7 +559,7 @@ signatureNegatives =
                     `shouldBe` Left R7QuorumUnsatisfied
         it "duplicated index does not stack -> R7 unsatisfied" $
             \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -609,7 +574,7 @@ signatureNegatives =
             withCase fx "reg_witnessed" $ \c ->
                 case reCtrlSigs (rcEvidence c) of
                     (idx0, sig0) : (idx1, sig1) : _ ->
-                        registrationPredicate
+                        regPred
                             ctx0
                             (rcDatum c)
                             funded
@@ -620,12 +585,12 @@ signatureNegatives =
                             `shouldBe` Left R7QuorumUnsatisfied
                     _ -> expectationFailure "expected two controller signatures"
         it "controller signatures crossed onto different event bytes -> R7" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+            withCase fx "reg_witnessed" $ \c -> withCase fx "reg_weighted" $ \other ->
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
-                    (rcEvidence c){reEventBytes = flipLast (rcRaw c)}
+                    (rcEvidence c){reCtrlSigs = reCtrlSigs (rcEvidence other)}
                     `shouldBe` Left R7QuorumUnsatisfied
 
 -- ---------------------------------------------------------------
@@ -640,7 +605,7 @@ receiptNegatives =
                 runReg c `shouldBe` Right ()
         it "receipt-free witnessed inception rejects" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -648,7 +613,7 @@ receiptNegatives =
                     `shouldBe` Left R7WitnessQuorumUnsatisfied
         it "below toad receipt set rejects" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -658,7 +623,7 @@ receiptNegatives =
                     `shouldBe` Left R7WitnessQuorumUnsatisfied
         it "duplicate receipt index counts once" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -669,7 +634,7 @@ receiptNegatives =
         it "negative receipt index fails closed" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (_idx, sig) = first1 (rcWitnessReceipts c)
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -681,7 +646,7 @@ receiptNegatives =
         it "out-of-range receipt index fails closed" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (_idx, sig) = first1 (rcWitnessReceipts c)
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -692,7 +657,7 @@ receiptNegatives =
                         `shouldBe` Left R7WitnessQuorumUnsatisfied
         it "wrong witness keys over event bytes reject" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -703,7 +668,7 @@ receiptNegatives =
         it "bad witness receipt signature rejects" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
                 let (idx, sig) = first1 (rcWitnessReceipts c)
-                 in registrationPredicate
+                 in regPred
                         ctx0
                         (rcDatum c)
                         funded
@@ -715,7 +680,7 @@ receiptNegatives =
                         `shouldBe` Left R7WitnessQuorumUnsatisfied
         it "toad=0 requires a literally empty receipt list" $ \fx ->
             withCase fx "reg_2key" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     funded
@@ -733,7 +698,7 @@ depositNegatives =
     describe "R8 deposit floor" $
         it "one lovelace short -> R8DepositBelowMinimum" $ \fx ->
             withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
+                regPred
                     ctx0
                     (rcDatum c)
                     (dcMinAda ctx0 + dcDReg ctx0 - 1)
@@ -750,137 +715,12 @@ deploymentFloor =
         it "4,999,999 rejects even when the output meets the applied bond" $ \fx ->
             withCase fx "reg_witnessed" $ \c -> do
                 let invalidCtx = ctx0{dcDReg = registrationDepositFloor - 1}
-                registrationPredicate
+                regPred
                     invalidCtx
                     (rcDatum c)
                     (dcMinAda invalidCtx + dcDReg invalidCtx)
                     (rcEvidence c)
                     `shouldBe` Left DRegBelowMinimum
-
--- ---------------------------------------------------------------
--- A-001 QB condition 1: the offset-misdirection family
--- ---------------------------------------------------------------
-
-misdirectionFamily :: SpecWith Value
-misdirectionFamily =
-    describe "A-001 offset-misdirection family (acceptance gate)" $ do
-        it "wrong offset: off_i shifted by one -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI = reOffI (rcEvidence c) + 1
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "overlapping spans: off_k[1] = off_k[0] + 1 -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c -> do
-                let k0 = first1 (reOffK (rcEvidence c))
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c){reOffK = [k0, k0 + 1]}
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_k pointed into n entries (D vs E code) -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK = reOffN (rcEvidence c)
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_k pointed into b entries (D vs B code) -> E4" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK =
-                            take 2 (reOffB (rcEvidence c))
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "off_i pointed at a k entry (E vs D code) -> E2" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI =
-                            first1 (reOffK (rcEvidence c))
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "off_b pointed at k entries (B vs D code) -> E8" $
-            \fx -> withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffB =
-                            reOffK (rcEvidence c)
-                                <> drop
-                                    2
-                                    (reOffB (rcEvidence c))
-                        }
-                    `shouldBe` Left E8WitnessesMismatch
-        it "truncated slice: off_i at the byte tail -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffI = BS.length (rcRaw c) - 10
-                        }
-                    `shouldBe` Left E2AidMismatch
-        it "truncated slice: last off_k at the tail -> E4" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c)
-                        { reOffK =
-                            take
-                                1
-                                (reOffK (rcEvidence c))
-                                <> [BS.length (rcRaw c) - 20]
-                        }
-                    `shouldBe` Left E4CurKeysMismatch
-        it "negative offset rejected -> E2" $ \fx ->
-            withCase fx "reg_witnessed" $ \c ->
-                registrationPredicate
-                    ctx0
-                    (rcDatum c)
-                    funded
-                    (rcEvidence c){reOffI = -1}
-                    `shouldBe` Left E2AidMismatch
-        it "duplicated offsets duplicate the key -> R4 F18" $ \fx ->
-            withCase fx "reg_witnessed" $ \c -> do
-                let k0raw = first1 (cdCurKeys (rcDatum c))
-                    k0off = first1 (reOffK (rcEvidence c))
-                    d = (rcDatum c){cdCurKeys = [k0raw, k0raw]}
-                registrationPredicate
-                    ctx0
-                    d
-                    funded
-                    (rcEvidence c)
-                        { reOffK = [k0off, k0off]
-                        }
-                    `shouldBe` Left
-                        ( R4InceptionInvalid
-                            ( InceptionIllFormed
-                                ( ThresholdIllFormed
-                                    DuplicateKey
-                                )
-                            )
-                        )
 
 -- ---------------------------------------------------------------
 -- R5 (name derivation only in S2): the proof-token name
@@ -936,16 +776,11 @@ respelling =
         it "unity weight spells without a denominator" $ \_fx ->
             respellThreshold (Weighted [[Weight 1 1]])
                 `shouldBe` "[\"1\"]"
-        it "the weighted fixture kt slice IS the re-spelling" $
-            \fx -> withCase fx "reg_weighted" $ \c -> do
-                let e = rcEvidence c
-                    expected =
-                        respellThreshold
-                            (cdCurThreshold (rcDatum c))
-                BS.take
-                    (BS.length expected)
-                    (BS.drop (reOffKt e) (rcRaw c))
-                    `shouldBe` expected
+        it "the weighted fixture kt spelling IS the re-spelling" $
+            \fx -> withCase fx "reg_weighted" $ \c ->
+                ("\"kt\":" <> respellThreshold (cdCurThreshold (rcDatum c)))
+                    `BS.isInfixOf` rcRaw c
+                    `shouldBe` True
 
 -- ---------------------------------------------------------------
 -- E8 material: the B-code (non-transferable) witness qb64
@@ -984,3 +819,7 @@ bEntries fx = do
     ev <- note "event missing" (lookupKey "event" sub)
     ked <- note "ked missing" (lookupKey "ked" ev)
     textArrayField ked "b"
+
+-- | The predicate over the datum's own qualified spellings: the identifier an @E@ digest, each key a @D@ key.
+regPred :: DeploymentContext -> KeyStateView -> Integer -> RegistrationEvidence -> Either RegistrationError ()
+regPred ctx d = registrationPredicate ctx d (spellingOfView d)

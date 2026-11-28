@@ -1,0 +1,261 @@
+{
+  "cases": [
+    {
+      "admitted": true,
+      "commitments": 2,
+      "declaration": [
+        "2/4",
+        "2/4"
+      ],
+      "expected": true,
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next unreduced",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303136345f222c2274223a22696370222c2264223a224541616d6861385a7a786d6970636c35454e3448525a59544e384544776676557664484f575a524f63595965222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b22322f34222c22322f34225d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EAamha8Zzxmipcl5EN4HRZYTN8EDwfvUvdHOWZROcYYe",
+      "signature_hex": "570abfc5bcc1e37ee01427a0e1a7a39625362f3fd61d70757ab7f849d18689e8251fc3d025a44a84db74990a16e82c8156ab576aa40169507edb16a5ed0a1b01",
+      "signed_nt": [
+        "2/4",
+        "2/4"
+      ],
+      "writer": "admitted",
+      "writer_nt": [
+        "1/2",
+        "1/2"
+      ]
+    },
+    {
+      "admitted": true,
+      "commitments": 3,
+      "declaration": [
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "expected": true,
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next partial coverage",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f",
+        "EPviGvynkeKG-kpPJU6VG5-gsI0la2JEc74I_p6Fcm1-"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303139335f222c2274223a22696370222c2264223a22454d4e424670484a5f7454496b334f734835714e4731777872304f3376574a384268717361476b564f326f76222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b5b2231225d2c5b2231225d5d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466222c22455076694776796e6b654b472d6b70504a55365647352d677349306c61324a45633734495f703646636d312d225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EMNBFpHJ_tTIk3OsH5qNG1wxr0O3vWJ8BhqsaGkVO2ov",
+      "signature_hex": "13f70dbfa689e3aa5b408a773cb19ed31a6a2b9111a36b0081e7db8a86932a93cd95b37ffbb05e85810f04c8a4a46493c69142a5bd0dfa259436e53eefd81b03",
+      "signed_nt": [
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ],
+      "writer": "admitted",
+      "writer_nt": [
+        [
+          "1"
+        ],
+        [
+          "1"
+        ]
+      ]
+    },
+    {
+      "admitted": true,
+      "commitments": 2,
+      "declaration": [
+        "1/2",
+        "1/2"
+      ],
+      "expected": true,
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next exact one",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303136345f222c2274223a22696370222c2264223a22454e32767757656b546358457a587536657577437861735f654f71445f7a6a68634671636c523733577a3173222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b22312f32222c22312f32225d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EN2vwWekTcXEzXu6euwCxas_eOqD_zjhcFqclR73Wz1s",
+      "signature_hex": "629da16b1dc3123233c6cff096c3ca578a7e11f537de018b1f01ec87492b939960949c260eae41136884658f8b23f882da8325fca5fc948bfc7c8a3952e9ea00",
+      "signed_nt": [
+        "1/2",
+        "1/2"
+      ],
+      "writer": "admitted",
+      "writer_nt": [
+        "1/2",
+        "1/2"
+      ]
+    },
+    {
+      "admitted": true,
+      "commitments": 3,
+      "declaration": [
+        "1/2",
+        {
+          "1/2": [
+            "1/2",
+            "1/2"
+          ]
+        }
+      ],
+      "expected": true,
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next nested exact one",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f",
+        "EPviGvynkeKG-kpPJU6VG5-gsI0la2JEc74I_p6Fcm1-"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303161335f222c2274223a22696370222c2264223a224545754d356e715730713071726d522d6e4f796a4e587441484d66446d6e6f3278767379614a50374e4b614a222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b22312f32222c7b22312f32223a5b22312f32222c22312f32225d7d5d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466222c22455076694776796e6b654b472d6b70504a55365647352d677349306c61324a45633734495f703646636d312d225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EEuM5nqW0q0qrmR-nOyjNXtAHMfDmno2xvsyaJP7NKaJ",
+      "signature_hex": "8e520a3f659f405e9b6ec52b192c8b24240ae6aa10153292bb77b4151683f04ffcb4dcf5c40bd59b4945d2443cddbcfb60f7c8afe4a533a1d0e191c5660d160d",
+      "signed_nt": [
+        "1/2",
+        {
+          "1/2": [
+            "1/2",
+            "1/2"
+          ]
+        }
+      ],
+      "writer": "admitted",
+      "writer_nt": [
+        "1/2",
+        {
+          "1/2": [
+            "1/2",
+            "1/2"
+          ]
+        }
+      ]
+    },
+    {
+      "admitted": false,
+      "commitments": 2,
+      "declaration": [
+        "1/3",
+        "1/3"
+      ],
+      "expected": false,
+      "kever": "refused: Invalid sith clause = [Fraction(1, 3), Fraction(1, 3)], all top levelclause weight sums must be >= 1.",
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next below one",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303136345f222c2274223a22696370222c2264223a22454a695570596c58366f657934783555554c5442776a684b71586c587168486e55304a4f684971346d666147222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b22312f33222c22312f33225d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EJiUpYlX6oey4x5UULTBwjhKqXlXqhHnU0JOhIq4mfaG",
+      "signature_hex": "5eba0340676c821153dadfdf6e601d9c347eb5048b4cbea78961e898d1074401f4336b85290e8dabdba805cb357b47c667358090fcb85fc30b673764c413ac06",
+      "signed_nt": [
+        "1/3",
+        "1/3"
+      ],
+      "writer": "refused: Invalid sith clause = [Fraction(1, 3), Fraction(1, 3)], all top levelclause weight sums must be >= 1."
+    },
+    {
+      "admitted": false,
+      "commitments": 0,
+      "declaration": [
+        "1"
+      ],
+      "expected": false,
+      "kever": "refused: Invalid nsith = None for keys = []",
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D weighted next without commitments",
+      "next": [],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303066665f222c2274223a22696370222c2264223a224543337451635033456a335f626e332d785a715f4f684c536d51735976586a4b703379786944734c49566b49222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b2231225d2c226e223a5b5d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EC3tQcP3Ej3_bn3-xZq_OhLSmQsYvXjKp3yxiDsLIVkI",
+      "signature_hex": "cc05164383ca5a246387ee5903e6f1d0310ed00c01ac0c2612b346d4bc0ac539001402478c91bb6a8984bd149562f3fbe79343371408b8f4de64e8cd7aff3308",
+      "signed_nt": [
+        "1"
+      ],
+      "writer": "refused: Invalid nsith = None for keys = []"
+    },
+    {
+      "admitted": false,
+      "commitments": 2,
+      "declaration": [
+        [
+          "1"
+        ],
+        [
+          "1/3"
+        ]
+      ],
+      "expected": false,
+      "kever": "refused: Invalid sith clause = [Fraction(1, 3)], all top levelclause weight sums must be >= 1.",
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next second clause below one",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303136365f222c2274223a22696370222c2264223a22454b536d554341674c3533736d33424f4562786e5a474e523578765372684b6f6d4f78677258784d2d7a356f222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b5b2231225d2c5b22312f33225d5d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EKSmUCAgL53sm3BOEbxnZGNR5xvSrhKomOxgrXxM-z5o",
+      "signature_hex": "e1c9e71244e696be3f1dc0957b118f7f5f43ca790a51ce31fcc8c804b525e7ca27dc1fd77d3c894e963f26c4aca95a8f9d38206966646f44176d565cdf697804",
+      "signed_nt": [
+        [
+          "1"
+        ],
+        [
+          "1/3"
+        ]
+      ],
+      "writer": "refused: Invalid sith clause = [Fraction(1, 3)], all top levelclause weight sums must be >= 1."
+    },
+    {
+      "admitted": false,
+      "commitments": 3,
+      "declaration": [
+        "1",
+        {
+          "1/2": [
+            "1/3",
+            "1/3"
+          ]
+        }
+      ],
+      "expected": false,
+      "kever": "refused: Invalid sith clause = [1, (Fraction(1, 2), [Fraction(1, 3), Fraction(1, 3)])], element = (Fraction(1, 2), [Fraction(1, 3), Fraction(1, 3)]). All nested clause w",
+      "key": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "label": "D next inner below one",
+      "next": [
+        "EH0-8xnnp6HVMLFLWoQmVI3R9Y8VLamPVA-eSUvpzrib",
+        "EIGKupqZrGiLf_26kcBGAsZ0rEytydPUbr5cgnJqCr4f",
+        "EPviGvynkeKG-kpPJU6VG5-gsI0la2JEc74I_p6Fcm1-"
+      ],
+      "pre": "DNBKsjJ0K7SrOhNovUYV5ObQIkq3GgFrr4UgozLJd4c3",
+      "raw_hex": "7b2276223a224b45524931304a534f4e3030303161315f222c2274223a22696370222c2264223a22454946694a336938714f7053585f64795254754c3737447a3255584f5966437043794c646238796a41454e56222c2269223a22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333222c2273223a2230222c226b74223a2231222c226b223a5b22444e424b736a4a304b3753724f684e6f76555956354f6251496b713347674672723455676f7a4c4a64346333225d2c226e74223a5b2231222c7b22312f32223a5b22312f33222c22312f33225d7d5d2c226e223a5b224548302d38786e6e703648564d4c464c576f516d56493352395938564c616d5056412d65535576707a726962222c224549474b7570715a7247694c665f32366b63424741735a30724579747964505562723563676e4a7143723466222c22455076694776796e6b654b472d6b70504a55365647352d677349306c61324a45633734495f703646636d312d225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d",
+      "said": "EIFiJ3i8qOpSX_dyRTuL77Dz2UXOYfCpCyLdb8yjAENV",
+      "signature_hex": "b0f665f50612786f36da7c8cd53e38684cc1e6cc94c8e2c7adc4017df260134177b38e3bafed2766cec977a7887d7bc0195f3a2ec0311ee33ffcac635071380c",
+      "signed_nt": [
+        "1",
+        {
+          "1/2": [
+            "1/3",
+            "1/3"
+          ]
+        }
+      ],
+      "writer": "refused: Invalid sith clause = [1, (Fraction(1, 2), [Fraction(1, 3), Fraction(1, 3)])], element = (Fraction(1, 2), [Fraction(1, 3"
+    }
+  ],
+  "keripy": "1.3.5",
+  "model": "draft #600 ce10e471fa5e2168d30a006c377698afbe20391d lean/check-inception-prefix.py (future_cases)"
+}

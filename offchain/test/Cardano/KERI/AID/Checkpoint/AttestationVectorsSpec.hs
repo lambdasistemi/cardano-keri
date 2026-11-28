@@ -70,9 +70,7 @@ tree v = case v of
 evidenceOf :: Value -> Parsed RegistrationEvidence
 evidenceOf v = do
     eventBytes <- field "event_bytes" v >>= bytes
-    let off name = fromIntegral <$> (field name v >>= integer)
-        offs name = field name v >>= array >>= traverse (fmap fromIntegral . integer)
-        indexed name =
+    let indexed name =
             field name v
                 >>= array
                 >>= traverse
@@ -83,16 +81,7 @@ evidenceOf v = do
                             _ -> Left "not an indexed signature"
                     )
     RegistrationEvidence eventBytes
-        <$> off "off_t"
-        <*> off "off_i"
-        <*> off "off_s"
-        <*> offs "off_k"
-        <*> off "off_kt"
-        <*> offs "off_n"
-        <*> off "off_nt"
-        <*> offs "off_b"
-        <*> off "off_bt"
-        <*> indexed "ctrl_sigs"
+        <$> indexed "ctrl_sigs"
         <*> indexed "wit_receipts"
 
 serialised :: Data -> ByteString

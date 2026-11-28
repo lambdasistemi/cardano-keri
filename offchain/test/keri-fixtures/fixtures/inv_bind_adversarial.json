@@ -1,0 +1,121 @@
+{
+  "note": "#291 INV-BIND RED fixtures. Grind rows copy sealed #134 witnesses; malformed rows are explicit transforms of committed reg_2key. 1216/9ms is class context only.",
+  "witness_commit": "ec99bbb4e34c75222312ef1a374dc9df12a45a73",
+  "witness_files": {
+    "OFF-T-COLLISION-WITNESS.md": "f9ccd1e02a52d9c6062d507f02f9347434e45d633deba47cf9347e634de0a933",
+    "OFF-T-COLLISION-DIP-DRT-WITNESS.md": "f80fb1110da836bc2c756a7e063b64b8871681a0c652fdbc5fa53ec45489088c"
+  },
+  "class_context": {
+    "random_verkey_tries": 1216,
+    "random_verkey_ms": 9,
+    "not_w1_w2_attempt_count": true
+  },
+  "FX291-GRIND-DIP": {
+    "family": "registration",
+    "salter_raw": "0123456789abcdef",
+    "match_trial": 283,
+    "raw_len": 351,
+    "raw_sha256": "36efe0ac9fb3371804464ca4017dcf5ca1e5a3bd3c91aded682136fbac376c8f",
+    "said": "EMmE-VQro3ZGkkx2nHqdzfLkN8JhSQmMU6zHSppRTUGL",
+    "true_t": 30,
+    "forged_off_t": 237,
+    "collision_context": "yUoVz0YWjQYDicp_f6h6Xk1dWuI",
+    "offsets": {
+      "t_true": 30,
+      "i": 91,
+      "s": 142,
+      "kt": 151,
+      "k": [160],
+      "nt": 213,
+      "n": [222],
+      "bt": 275,
+      "b": []
+    },
+    "current_key_qb64": "DGdjpn4Eux10KNiXtV2ReFoMpRvRcfX_LuMa1U946w_j",
+    "current_key_hex": "6763a67e04bb1d7428d897b55d91785a0ca51bd171f5ff2ee31ad54f78eb0fe3",
+    "next_digest_qb64": "EIOyUoVz0YWjQYDicp_f6h6Xk1dWuI30DfuWmjNotom2",
+    "next_digest_hex": "83b2528573d185a34180e2729fdfea1e97935756b88df40dfb969a3368b689b6",
+    "aid_hex": "c984f9542ba37646924c769c7a9dcdf2e437c26149098c53acc74a9a514d418b",
+    "sig_qb64": "AAAfKChMXdMiCq86oCPt_IH6dDxj3FqeIMzGJk95CK-3Xb-5Zz97KvdA7dS9Spuji9CG8xhbaCw-ZuP9cm5D0BgG",
+    "sig_hex": "1f28284c5dd3220aaf3aa023edfc81fa743c63dc5a9e20ccc6264f7908afb75dbfb9673f7b2af740edd4bd4a9ba38bd086f3185b682c3e66e3fd726e43d01806",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303135665f222c2274223a22646970222c2264223a22454d6d452d5651726f335a476b6b78326e4871647a664c6b4e384a6853516d4d55367a48537070525455474c222c2269223a22454d6d452d5651726f335a476b6b78326e4871647a664c6b4e384a6853516d4d55367a48537070525455474c222c2273223a2230222c226b74223a2231222c226b223a5b224447646a706e3445757831304b4e69587456325265466f4d705276526366585f4c754d613155393436775f6a225d2c226e74223a2231222c226e223a5b2245494f79556f567a3059576a5159446963705f66366836586b31645775493330446675576d6a4e6f746f6d32225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d2c226469223a22454a53383557374b534d744a616d5746525669756234794e6872743673506431644b6b6c534959434e325345227d"
+  },
+  "FX291-GRIND-DRT": {
+    "family": "advance",
+    "match_trial": 1055,
+    "raw_len": 352,
+    "raw_sha256": "e5dab2bfd70cf103882b40c1453ba2da543268a3df5aeaa1e34346bfdacee447",
+    "said": "EFBLCdSOFTfZG-L6tL0rotpLj81fMsNZs769T3dizQ6U",
+    "true_t": 30,
+    "forged_off_t": 59,
+    "collision_context": "OFTfZG-L6tL0rotpLj81fMsNZs7",
+    "prior_event_said": "EMmE-VQro3ZGkkx2nHqdzfLkN8JhSQmMU6zHSppRTUGL",
+    "offsets": {
+      "t_true": 30,
+      "i": 91,
+      "s": 142,
+      "kt": 202,
+      "k": [211],
+      "nt": 264,
+      "n": [273],
+      "bt": 326,
+      "br": [],
+      "ba": []
+    },
+    "current_key_qb64": "DF-MVNF7Lz_RtunA3OewtsGAmKbvnpuxSQo2zcG1rcpO",
+    "current_key_hex": "5f8c54d17b2f3fd1b6e9c0dce7b0b6c18098a6ef9e9bb1490a36cdc1b5adca4e",
+    "next_digest_qb64": "EJJ8mNyN5skq19eFi2ELiXeGkc1mGHH5W72L6BKZAgxO",
+    "next_digest_hex": "927c98dc8de6c92ad7d7858b610b89778691cd661871f95bbd8be81299020c4e",
+    "aid_hex": "c984f9542ba37646924c769c7a9dcdf2e437c26149098c53acc74a9a514d418b",
+    "said_hex": "504b09d48e1537d91be2fab4bd2ba2da4b8fcd5f32c359b3bebd4f7762cd0e94",
+    "sig_qb64": "AACWmxbETJHZCtUZCvwRcIPkvqUBCwZsyXE18PIFE4nVIbjf_kxOZ1PVJfSLmwLmVStrdJuCRbBho-FPBFoEyVwB",
+    "sig_hex": "969b16c44c91d90ad5190afc117083e4bea5010b066cc97135f0f2051389d521b8dffe4c4e6753d525f48b9b02e6552b6b749b8245b061a3e14f045a04c95c01",
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303136305f222c2274223a22647274222c2264223a224546424c4364534f4654665a472d4c36744c30726f74704c6a3831664d734e5a73373639543364697a513655222c2269223a22454d6d452d5651726f335a476b6b78326e4871647a664c6b4e384a6853516d4d55367a48537070525455474c222c2273223a2231222c2270223a22454d6d452d5651726f335a476b6b78326e4871647a664c6b4e384a6853516d4d55367a48537070525455474c222c226b74223a2231222c226b223a5b2244462d4d564e46374c7a5f5274756e41334f6577747347416d4b62766e70757853516f327a6347317263704f225d2c226e74223a2231222c226e223a5b22454a4a386d4e794e35736b71313965466932454c695865476b63316d474848355737324c36424b5a4167784f225d2c226274223a2230222c226272223a5b5d2c226261223a5b5d2c2261223a5b5d7d"
+  },
+  "malformed_base": "reg_2key",
+  "malformed_controllers": [
+    {
+      "index": 0,
+      "seed_hex": "ac062df27688e74322bdeac2622820e8aabcd295d2a7891a236ff55edc08fdc3",
+      "verkey_qb64": "DALKi_Qx5bbsWEkWazuXlQS1DqO6HydDU9J4sCL26tAm",
+      "source": "registration.json reg_2key.signer_seeds.current[0]"
+    },
+    {
+      "index": 1,
+      "seed_hex": "8b78b7cbe0b41bf323288766f7c6df871cf7140d27e622de8170800b3ca2161c",
+      "verkey_qb64": "DPMst2tlgrBHzzR482CbEgfuy7DY_eKrwHvraMrLNLNM",
+      "source": "registration.json reg_2key.signer_seeds.current[1]"
+    }
+  ],
+  "FX291-VERSION-SIZE": {
+    "transform": "replace declared KERI JSON size 000189 with 000188; byte length stays 393",
+    "version_hex_at": 16
+  },
+  "FX291-TRAILING": {
+    "transform": "append one unparsed 0x21 byte to the signed-shape base"
+  },
+  "FX291-DUPLICATE": {
+    "transform": "append ,\"s\":\"1\" before the closing brace; update version to 000191; keep off_s on the favorable 0 at 142"
+  },
+  "FX291-REORDERED": {
+    "transform": "move t after i; recompute off_t=132 off_i=81; remaining spans unchanged",
+    "offsets": {
+      "t": 132,
+      "i": 81,
+      "s": 142,
+      "kt": 151,
+      "k": [160, 207],
+      "nt": 260,
+      "n": [269, 316],
+      "bt": 369,
+      "b": []
+    },
+    "raw_hex": "7b2276223a224b45524931304a534f4e3030303138395f222c2264223a2245445078775f59484631647a6f41356e554f7165386b335835637957477a575647314359486c4f494e303261222c2269223a2245445078775f59484631647a6f41356e554f7165386b335835637957477a575647314359486c4f494e303261222c2274223a22696370222c2273223a2230222c226b74223a2232222c226b223a5b2244414c4b695f51783562627357456b57617a75586c51533144714f364879644455394a3473434c323674416d222c2244504d737432746c677242487a7a52343832436245676675793744595f654b7277487672614d724c4e4c4e4d225d2c226e74223a2232222c226e223a5b2245467342585f746570315a635947513079554436355f43336e5a4d5053726d4738524e6735614a734d484657222c22454a4933723834355a666f6e5673696657615f4a65346d3537702d765a6f53493453507648396b48764a4144225d2c226274223a2230222c2262223a5b5d2c2263223a5b5d2c2261223a5b5d7d"
+  },
+  "FX291-DELIMITER": {
+    "transform": "replace the comma after the t value (byte 34) with semicolon"
+  },
+  "FX291-UNKNOWN": {
+    "transform": "append ,\"zz\":\"0\" before the closing brace; update version to 000192"
+  }
+}

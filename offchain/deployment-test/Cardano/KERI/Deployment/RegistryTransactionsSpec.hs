@@ -65,7 +65,9 @@ import Cardano.KERI.AID.Application.StateTemplate (stateTemplate)
 import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV2 (..),
+    KeyMaterial (..),
     KeyStateView (..),
+    QualifiedIdentity (..),
     keyMaterialOf,
  )
 import Cardano.KERI.AID.Checkpoint.Registration (
@@ -80,6 +82,7 @@ import Cardano.KERI.Deployment.KEL (
     InceptionExport (..),
     parseInceptionExport,
  )
+import Cardano.KERI.Deployment.ReferenceInception (futureCaseExport, prefixCaseExport, referenceExport)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
     RegistryTerms (..),
@@ -168,10 +171,12 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
+import Data.List (stripPrefix)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromJust, listToMaybe)
 import Data.Ratio ((%))
 import Data.Set qualified as Set
+import Data.Text qualified as T
 import Data.Text.Encoding qualified as Text
 import Data.Word (Word8)
 import Lens.Micro ((&), (.~), (^.))
@@ -357,11 +362,18 @@ interval =
         , upperPosixMs = 1_700_000_025_000
         }
 
+{- | An export by fixture file name; a name of the form @reference:ID@ is the
+independent reference inception of that id, built through the same decoder.
+-}
 load :: FilePath -> IO InceptionExport
-load name = do
-    path <- getDataFileName ("deployment-test/fixtures/" <> name)
-    stream <- BS.readFile path
-    either fail pure (parseInceptionExport stream)
+load name
+    | Just reference <- stripPrefix "reference:" name = referenceExport (T.pack reference)
+    | Just label <- stripPrefix "case:" name = prefixCaseExport (T.pack label)
+    | Just label <- stripPrefix "future:" name = futureCaseExport (T.pack label)
+    | otherwise = do
+        path <- getDataFileName ("deployment-test/fixtures/" <> name)
+        stream <- BS.readFile path
+        either fail pure (parseInceptionExport stream)
 
 spec :: Spec
 spec = do
@@ -926,7 +938,7 @@ initialFacts export refund =
         , lvBornAt = upperPosixMs interval
         , lvRefundTo = serialiseAddr refund
         , lvToppedUp = False
-        , lvKeys = keyMaterialOf (inceptionDatum export)
+        , lvKeys = (keyMaterialOf (inceptionDatum export)){kmCurKeys = qiCurKeys (inceptionQualified export)}
         }
 
 {- | The booking of one request, the hash proof of whose inception an earlier premint

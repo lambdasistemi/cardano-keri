@@ -97,7 +97,7 @@ function countLine(tree, label) {
     totals.missing + ' not enforced (' + (totals.partial + totals.missing) + ' open of ' + assessed.length + ').';
 }
 const registrationOnMain = read('main','lean/CardanoKeri/ApplicationInceptionPrefix.lean') === null
-  ? 'Main’s application model currently retains the economic inception premise. The standalone #590 draft supplies the signed opening.'
+  ? 'Main’s application model requires, in the booking transaction, exactly +1 of the booking asset for the selected output, derived from the application policy, the output index, the initial datum and the deposit. The attestation issuer, not the application, checks the signed opening; the standalone #590 draft supplies that opening in the model.'
   : 'Main’s application model includes the indexed signed inception opening.';
 const differences = [];
 const mainRotation = read('main','lean/CardanoKeri/Duplicity.lean');
@@ -105,8 +105,8 @@ if (!mainRotation.includes('0 < n && n <=')) differences.push('zero signing thre
 if (!mainRotation.includes('def Threshold.fitsNextKeys')) differences.push('declared next rule (#595)');
 if (!mainRotation.includes('signed.event.cuts.all prior.witnesses.contains')) differences.push('witness changes (#598)');
 if (!mainRotation.includes('context.accepted.event.eventDigest ≠ rival.event.eventDigest')) differences.push('signed digest identity (#573)');
-const entries = entryPoints.map(s => resolve('main', s)).join(', ');
-const janEntries = entryPoints.map(s => resolve('january', s)).join(', ');
+const entries = entryPoints.main.map(s => resolve('main', s)).join(', ');
+const janEntries = entryPoints.january.map(s => resolve('january', s)).join(', ');
 function fingerprint(tree) {
   const hash = createHash('sha256');
   for (const [file, source] of [...sources].sort(([a],[b]) => a.localeCompare(b))) {

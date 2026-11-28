@@ -18,6 +18,14 @@ import Cardano.KERI.AID.Checkpoint.EnforcementSpec qualified as EnforcementSpec
 import Cardano.KERI.AID.Checkpoint.EntitlementSpec qualified as EntitlementSpec
 import Cardano.KERI.AID.Checkpoint.FreezeBondSpec qualified as FreezeBondSpec
 import Cardano.KERI.AID.Checkpoint.FreezeSpec qualified as FreezeSpec
+import Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec qualified as FutureDeclarationSpec
+import Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec qualified as InceptionPrefixSpec
+import Cardano.KERI.AID.Checkpoint.InvBindAdversarialSpec qualified as InvBindAdversarialSpec
+import Cardano.KERI.AID.Checkpoint.InvBindFrozenGrammarSpec qualified as InvBindFrozenGrammarSpec
+import Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec qualified as InvBindGrammarSpec
+import Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec qualified as InvBindPrefixSpec
+import Cardano.KERI.AID.Checkpoint.InvBindSpec qualified as InvBindSpec
+import Cardano.KERI.AID.Checkpoint.InvBindTopStringsSpec qualified as InvBindTopStringsSpec
 import Cardano.KERI.AID.Checkpoint.Keri68OracleSpec qualified as Keri68OracleSpec
 import Cardano.KERI.AID.Checkpoint.MessageSpec qualified as MessageSpec
 import Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec qualified as NineFieldDatumSpec
@@ -49,8 +57,11 @@ main = hspec $ do
     MpfProofMirrorSpec.spec
     SignSpec.spec
     ThresholdSpec.spec
+    FutureDeclarationSpec.spec
     AdvanceFixturesSpec.spec
     AdvanceSpec.spec
+    InvBindAdversarialSpec.spec
+    InvBindGrammarSpec.spec
     DatumSpec.spec
     DatumV2Spec.spec
     DeployedGenerationSpec.spec
@@ -58,6 +69,11 @@ main = hspec $ do
     MessageSpec.spec
     Keri68OracleSpec.spec
     EnforcementSpec.spec
+    InceptionPrefixSpec.spec
+    InvBindFrozenGrammarSpec.spec
+    InvBindPrefixSpec.spec
+    InvBindSpec.spec
+    InvBindTopStringsSpec.spec
     FreezeBondSpec.spec
     FreezeSpec.spec
     TopUpSpec.spec

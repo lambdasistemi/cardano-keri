@@ -5,6 +5,7 @@ import Cardano.KERI.Deployment.AdvanceSpec qualified as AdvanceSpec
 import Cardano.KERI.Deployment.AttestationBoundarySpec qualified as AttestationBoundarySpec
 import Cardano.KERI.Deployment.BountyEntitlementSpec qualified as BountyEntitlementSpec
 import Cardano.KERI.Deployment.ChainIndexSpec qualified as ChainIndexSpec
+import Cardano.KERI.Deployment.CompiledEntryPointsSpec qualified as CompiledEntryPointsSpec
 import Cardano.KERI.Deployment.EndpointBoardSpec qualified as EndpointBoardSpec
 import Cardano.KERI.Deployment.EndpointBoardTransactionSpec qualified as EndpointBoardTransactionSpec
 import Cardano.KERI.Deployment.FreezePackageSpec qualified as FreezePackageSpec
@@ -14,6 +15,7 @@ import Cardano.KERI.Deployment.KoiosRegistryRuntimeSpec qualified as KoiosRegist
 import Cardano.KERI.Deployment.KoiosSettlementSpec qualified as KoiosSettlementSpec
 import Cardano.KERI.Deployment.KoiosSubmissionSpec qualified as KoiosSubmissionSpec
 import Cardano.KERI.Deployment.ManifestSpec qualified as ManifestSpec
+import Cardano.KERI.Deployment.RegistrationEvidenceSpec qualified as RegistrationEvidenceSpec
 import Cardano.KERI.Deployment.RegistrationSpec qualified as RegistrationSpec
 import Cardano.KERI.Deployment.RegistryApplicationSpec qualified as RegistryApplicationSpec
 import Cardano.KERI.Deployment.RegistryAttemptSpec qualified as RegistryAttemptSpec
@@ -28,12 +30,15 @@ import Cardano.KERI.Deployment.RegistryFilesSpec qualified as RegistryFilesSpec
 import Cardano.KERI.Deployment.RegistryFoldHandoffSpec qualified as RegistryFoldHandoffSpec
 import Cardano.KERI.Deployment.RegistryFoldSpec qualified as RegistryFoldSpec
 import Cardano.KERI.Deployment.RegistryFoldV3Spec qualified as RegistryFoldV3Spec
+import Cardano.KERI.Deployment.RegistryFutureDatumSpec qualified as RegistryFutureDatumSpec
 import Cardano.KERI.Deployment.RegistryKoiosCommandSpec qualified as RegistryKoiosCommandSpec
 import Cardano.KERI.Deployment.RegistryKoiosRecordedSpec qualified as RegistryKoiosRecordedSpec
 import Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec qualified as RegistryKoiosValidityEndSpec
 import Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec qualified as RegistryLegacyRecordCommandSpec
 import Cardano.KERI.Deployment.RegistryOneOutputSpec qualified as RegistryOneOutputSpec
 import Cardano.KERI.Deployment.RegistryProviderSpec qualified as RegistryProviderSpec
+import Cardano.KERI.Deployment.RegistryReadbackCommandSpec qualified as RegistryReadbackCommandSpec
+import Cardano.KERI.Deployment.RegistryReadbackSpec qualified as RegistryReadbackSpec
 import Cardano.KERI.Deployment.RegistryRegisterSpec qualified as RegistryRegisterSpec
 import Cardano.KERI.Deployment.RegistryRegisterStagesSpec qualified as RegistryRegisterStagesSpec
 import Cardano.KERI.Deployment.RegistryReplaySpec qualified as RegistryReplaySpec
@@ -96,6 +101,10 @@ suite = hspec $ do
     TopUpPackageSpec.spec
     TopUpTransactionSpec.spec
     KELSpec.spec
+    RegistrationEvidenceSpec.spec
+    RegistryReadbackSpec.spec
+    RegistryReadbackCommandSpec.spec
+    RegistryFutureDatumSpec.spec
     KoiosReadsSpec.spec
     KoiosRegistryRuntimeSpec.spec
     KoiosSettlementSpec.spec
@@ -105,6 +114,7 @@ suite = hspec $ do
     RegistrationSpec.spec
     RegistryScriptsSpec.spec
     AttestationBoundarySpec.spec
+    CompiledEntryPointsSpec.spec
     RegistryFilesSpec.spec
     RegistryProviderSpec.spec
     RegistryKoiosCommandSpec.spec

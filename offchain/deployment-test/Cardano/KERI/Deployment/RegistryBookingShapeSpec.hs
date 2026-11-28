@@ -32,6 +32,8 @@ module Cardano.KERI.Deployment.RegistryBookingShapeSpec (
     attestationPolicyBytes,
     redeemerOf,
     foldOf,
+    foldAt,
+    firstRecord,
 ) where
 
 import Cardano.KERI.AID.Application (
@@ -41,6 +43,7 @@ import Cardano.KERI.AID.Application (
     actionData,
     activeTokenName,
  )
+import Cardano.KERI.AID.Checkpoint.Datum (KeyStateView (..), checkpointDatumFromData)
 import Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationBurnData,
     bookingAttestationIssueData,
@@ -97,17 +100,19 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Node.Client.Ledger (ConwayTx)
 import Control.Monad (foldM, void)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.ByteString.Short qualified as SBS
 import Data.Foldable (toList)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Lens.Micro ((&), (.~), (^.))
 import PlutusCore.Data qualified as PLC
-import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
+import Test.Hspec (Spec, describe, it, shouldBe, shouldNotBe, shouldSatisfy)
 
 -- | The shapes of the requests a scenario books: an export and the deposit its request commits.
-single, double :: [(FilePath, Integer)]
+single, double, keyDerived :: [(FilePath, Integer)]
 single = [("kli-export-single.cesr", deposit)]
+keyDerived = [("reference:I01", deposit)]
 double = [("kli-export-single.cesr", deposit), ("kli-export-2-of-5.cesr", deposit + 7_000_000)]
 
 -- | A booking built by the builders, with everything it was built from.
@@ -239,7 +244,37 @@ spec :: Spec
 spec = describe "#559 the booking transaction of interface v3" $ do
     mapM_
         (\(label, shapes) -> describe label (shapeTests shapes))
-        [("one request", single), ("two requests of other identities and deposits", double)]
+        [ ("one request", single)
+        , ("two requests of other identities and deposits", double)
+        , ("one request of a key-derived identifier (D code, own SAID apart)", keyDerived)
+        ]
+
+    describe "a weighted future declaration is booked with a datum the codec reads back" $
+        mapM_
+            ( \name -> it name $ do
+                s <- scenarioOf [(name, deposit)]
+                case map requestInitialDatum (scRecords s) of
+                    [PLC.Constr 1 [live]] -> void (checkpointDatumFromData (PLC.Constr 1 [live])) `shouldBe` Just ()
+                    other -> fail ("the initial datum is not a version 2 checkpoint: " <> show other)
+            )
+            ["future:D next unreduced", "future:D next partial coverage"]
+    describe "a key-derived inception is booked under its signed qualified identifier" $ do
+        it "keys the request, the initial datum and the stored current keys by the exact signed spelling" $ do
+            s <- scenarioOf keyDerived
+            let aid = "DKx2eNz1Wnq8AkCuLVA5IaAWze0OncYRfoF3LQG5H-PZ"
+            map requestKey (scRecords s) `shouldBe` [aid]
+            case map requestInitialDatum (scRecords s) of
+                [PLC.Constr 1 [PLC.Constr 0 (PLC.B stored : _ : _ : _ : _ : _ : _ : _ : PLC.Constr 0 (PLC.List keys : _) : _)]] -> do
+                    stored `shouldBe` aid
+                    keys `shouldBe` [PLC.B aid]
+                other -> fail ("the initial datum is not the live checkpoint: " <> show other)
+        it "names the hash proof over the raw payload of the signed identifier, not its qualified text" $ do
+            s <- scenarioOf keyDerived
+            case scExports s of
+                [export] -> do
+                    inceptionProofName export `shouldNotBe` inceptionProofName export{inceptionDatum = (inceptionDatum export){cdCesrAid = BS.replicate 32 0}}
+                    BS.length (cdCesrAid (inceptionDatum export)) `shouldBe` 32
+                _ -> fail "one export was expected"
 
     describe "the fold of a booked request: it supplies no evidence, no proof and no withdrawal" $ do
         it "burns the approval, mints the one active token of the key and nothing else" $ do
@@ -391,7 +426,7 @@ shapeTests shapes = do
         redeemerOf (scBooking s) (applicationPolicyId registry)
             `shouldBe` Just (PLC.List [actionData (BookRegistration position) | (position, _, _) <- claims])
         redeemerOf (scBooking s) hashProofPolicy
-            `shouldBe` Just (PLC.Constr 0 [PLC.B "", PLC.B "", PLC.I 0, PLC.I 0])
+            `shouldBe` Just (PLC.Constr 0 [PLC.B "", PLC.B ""])
     it "pays the approvals with the requests, the attestations to an output of their own and the rest to change that holds lovelace alone, and no output holds a hash proof" $ do
         s <- scenarioOf shapes
         let registry = scRegistry s
@@ -450,12 +485,16 @@ attestationNames registry s =
 
 -- | The fold of the first request of a scenario, by the wallet that booked it, before its deadline.
 foldOf :: Scenario -> IO ConwayTx
-foldOf s = do
+foldOf s = foldAt s 0
+
+-- | The fold of the request at an output position of the booking.
+foldAt :: Scenario -> Int -> IO ConwayTx
+foldAt s position = do
     let booking = scBooking s
         plan =
             FoldPlan
-                { foldRequest = outputAt booking 0
-                , foldBooked = firstRecord s
+                { foldRequest = outputAt booking position
+                , foldBooked = scRecords s !! position
                 , foldRegistered = []
                 , foldTerminated = []
                 , foldState = scState s

@@ -1,69 +1,31 @@
-//// #114 S4 — the hash-proof minting policy (Tx A of the registration
-//// path; spec "The hash-proof minting policy", H1-H4 as amended by the
-//// slice-4 Q-001/A-001 ruling).
+//// The hash-proof minting policy (the first transaction of a registration).
 ////
-//// Parameter-free. A mint proves, in its own transaction, that the
-//// expensive blake3 work binding (input_bytes, cesr_aid) was done: a KERI
-//// `E`-code AID is the blake3 digest of the SAID-DUMMIED serialization
-//// (keripy dresses the 44-char `i` and `d` value spans with `"#"×44`
-//// before digesting), never of the final bytes. H2 therefore (a) pins
-//// both spans to `qb64_aid(cesr_aid)` and (b) verifies blake3 over the
-//// dummy-spliced blank — equality outside the spans holds by construction
-//// of the splice (the #106 shared-check discipline).
+//// Parameter-free. A mint proves, in its own transaction, that the expensive blake3 work binding an inception event to
+//// its own digest was done. The event is read by the structural reader from its exact bytes; no position is supplied.
+//// The digest `d` is the blake3 of the event with `d` blanked, and with `i` blanked as well when the identifier is
+//// itself a digest (keripy's dressing). The redeemer names the raw 32 byte payload of the identifier `i`, whatever its
+//// code: for a key identifier it is the key, for a digest identifier it is the digest.
 ////
-//// The token name (H3) stays over the FINAL bytes —
-//// `proof_token_name(input_bytes, cesr_aid)`, the S3 derivation — which
-//// is what lets Tx B's R5 recompute the same name from
-//// `evidence.event_bytes` with one cheap native blake2b. No placement
-//// constraint: the token is pure existence evidence (spec). Burning is
-//// always permitted (H4) — the registration transaction burns the proof.
+//// The token name stays over the FINAL bytes, `proof_token_name(input_bytes, cesr_aid)`, so the registration, which
+//// holds the same bytes, recomputes it with one cheap native blake2b. Burning is always permitted: the registration
+//// transaction burns the proof.
 ////
-//// Trust note (spec, amended): with prover-supplied spans the policy
-//// proves "`cesr_aid` is the SAID of `input_bytes` under the claimed
-//// spans". Fake spans over self-authored bytes buy an attacker nothing
-//// beyond honest self-registration — Tx B's admission still requires
-//// E1-E9 + R4 + R7 threshold signatures over the same bytes.
+//// Trust note: the policy proves that the event's `d` is its own digest and that the raw payload of its `i` is
+//// `cesr_aid`. A fake event over self-authored bytes buys an attacker nothing beyond honest self-registration: the
+//// registration still requires the binding to the datum and the controller signatures over the same bytes.
 
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/primitive/bytearray
 use cardano/assets.{AssetName, PolicyId, tokens}
 use cardano/transaction.{Transaction}
-use cardano_keri/blake3
-use cardano_keri/checkpoint/message.{qb64_aid}
-use cardano_keri/checkpoint/registration.{proof_token_name, slice_matches}
+use cardano_keri/checkpoint/own_digest.{proven}
+use cardano_keri/checkpoint/registration.{proof_token_name}
 
-/// keripy's SAID dressing for one 44-char qb64 span: `"#"` × 44.
-const dummy_span: ByteArray = "############################################"
-
-/// The Tx-A redeemer: the FINAL keripy `icp` serialization, the raw
-/// 32-byte AID digest, and the offsets of the 44-char `i` and `d` value
-/// spans inside it (keripy's field order `v,t,d,i,...` is fixed, so the
-/// `d` span always precedes the `i` span — H1 encodes that ordering).
+/// The redeemer: the FINAL keripy `icp` serialization and the raw 32 byte payload of its identifier.
 pub type HashProofRedeemer {
   input_bytes: ByteArray,
   cesr_aid: ByteArray,
-  off_i: Int,
-  off_d: Int,
-}
-
-/// `input_bytes` with both 44-char spans overwritten by `"#"` × 44 — the
-/// SAID blank the AID digest was computed over. Callers must have checked
-/// `0 <= off_d`, `off_d + 44 <= off_i`, `off_i + 44 <= len` (H1).
-pub fn splice_dummies(
-  input_bytes: ByteArray,
-  off_i: Int,
-  off_d: Int,
-) -> ByteArray {
-  bytearray.take(input_bytes, off_d)
-    |> bytearray.concat(dummy_span)
-    |> bytearray.concat(
-        input_bytes
-          |> bytearray.drop(off_d + 44)
-          |> bytearray.take(off_i - off_d - 44),
-      )
-    |> bytearray.concat(dummy_span)
-    |> bytearray.concat(bytearray.drop(input_bytes, off_i + 44))
 }
 
 // A non-empty mint map whose entries are all strictly negative — the H4
@@ -84,20 +46,11 @@ validator hash_proof {
       // (the redeemer content is ignored).
       True
     } else {
-      let HashProofRedeemer { input_bytes, cesr_aid, off_i, off_d } = redeemer
-      // H1 — one blake3 chunk, 32-byte AID, spans disjoint (d before i,
-      // keripy field order) and inside the input.
-      let len = bytearray.length(input_bytes)
-      expect len <= 1024
+      let HashProofRedeemer { input_bytes, cesr_aid } = redeemer
+      // H1, H2 — one blake3 chunk: the event's own digest is the blake3 of its dressed preimage and the payload of its
+      // identifier is the claimed one.
       expect bytearray.length(cesr_aid) == 32
-      expect 0 <= off_d && off_d + 44 <= off_i && off_i + 44 <= len
-      // H2a — both spans hold the qb64 of the claimed AID (an `icp` is
-      // self-addressing: d == i).
-      let expected_span = qb64_aid(cesr_aid)
-      expect slice_matches(input_bytes, off_d, expected_span)
-      expect slice_matches(input_bytes, off_i, expected_span)
-      // H2b — the SAID binding: blake3 over the dummy-spliced blank.
-      expect blake3.verify(splice_dummies(input_bytes, off_i, off_d), cesr_aid)
+      expect proven(input_bytes, cesr_aid)
       // H3 — exactly one entry under this policy: the pair-binding name
       // over the FINAL bytes at quantity one (full-map inspection).
       expect [Pair(minted_name, minted_qty)] = entries

@@ -115,8 +115,10 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     checkpointDatumToData,
     convictedOf,
     keyMaterialOf,
+    liveOfInception,
     liveOfKeyState,
     rotatedLive,
+    spellingOfView,
  )
 import Cardano.KERI.AID.Checkpoint.Deposit (
     BondOption (..),
@@ -150,9 +152,6 @@ import Cardano.KERI.AID.Checkpoint.FreezeBond (
 import Cardano.KERI.AID.Checkpoint.Message (
     SpentCheckpoint (..),
     deriveAidAssetName,
- )
-import Cardano.KERI.AID.Checkpoint.Registration (
-    RegistrationEvidence (..),
  )
 import Cardano.KERI.AID.Checkpoint.Threshold (Threshold (..))
 import Cardano.KERI.AID.Checkpoint.TopUp (
@@ -208,7 +207,7 @@ import Cardano.KERI.AID.E2E.Script (
  )
 import Cardano.KERI.AID.Migration.Types (OutputRef (..))
 import Cardano.KERI.AID.Release qualified as Rel
-import Cardano.KERI.Deployment.KEL (InceptionExport (..), parseInceptionExport)
+import Cardano.KERI.Deployment.KEL (InceptionExport (..), inceptionFromEvent, parseInceptionExport)
 import Cardano.KERI.Deployment.RefusalAt (Verdict (..), evaluationRefusedAt, purposeName, requireRefusedAt, verdictAt)
 import Cardano.KERI.Deployment.Registry (
     RegistryScripts (..),
@@ -1025,7 +1024,7 @@ productionRegisterAdvanceScenario env = do
             honest{aeWitReceipts = take 1 (aeWitReceipts honest)}
         spent = rotateSpentCheckpoint env registered
         created = rsCreated fixture
-    case advancePredicate spent created honest of
+    case advancePredicate spent created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Advance: signed evidence failed the pure predicate: "
@@ -1130,7 +1129,7 @@ productionRegisterFreezeScenario env = do
                 advanced
                 created
                 label
-    case advancePredicate (rotateSpentCheckpoint env advanced) created honest of
+    case advancePredicate (rotateSpentCheckpoint env advanced) created (spellingOfView created) honest of
         Left predicateError ->
             fail
                 ( "checkpoint Freeze: signed evidence failed the pure predicate: "
@@ -1364,6 +1363,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env registered)
         (rsCreated firstRotation)
+        (spellingOfView (rsCreated firstRotation))
         firstEvidence of
         Left predicateError ->
             fail
@@ -1407,6 +1407,7 @@ prepareConvictActive env references checkpointRef advanceRef row fixture = do
     case advancePredicate
         (rotateSpentCheckpoint env firstAdvanced)
         (rsCreated recordedRotation)
+        (spellingOfView (rsCreated recordedRotation))
         recordedEvidence of
         Left predicateError ->
             fail
@@ -1696,7 +1697,6 @@ loadRotateStoryFixture = do
                 inceptionReceipts
     rotation <- either fail pure (atKey "rot" family)
     rotationKed <- either fail pure (atKey "ked" rotation)
-    offsets <- either fail pure (atKey "offsets" family)
     raw <- either fail pure (textAt "raw_hex" rotation >>= decodeHex)
     currentKeys <-
         either fail pure $
@@ -1740,16 +1740,6 @@ loadRotateStoryFixture = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = fromInteger (offset "t" offsets)
-                , aeOffI = fromInteger (offset "i" offsets)
-                , aeOffS = fromInteger (offset "s" offsets)
-                , aeOffK = map fromInteger (offsetsAt "k" offsets)
-                , aeOffKt = fromInteger (offset "kt" offsets)
-                , aeOffN = map fromInteger (offsetsAt "n" offsets)
-                , aeOffNt = fromInteger (offset "nt" offsets)
-                , aeOffBr = map fromInteger (offsetsAt "br" offsets)
-                , aeOffBa = map fromInteger (offsetsAt "ba" offsets)
-                , aeOffBt = fromInteger (offset "bt" offsets)
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1773,16 +1763,6 @@ loadRotateStoryFixture = do
                         >>= decodeHex
                         <&> genKeyDSIGN . mkSeedFromBytes
                 )
-    offset key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerAt key value)
-    offsetsAt key value =
-        either
-            (error . ("loadRotateStoryFixture: " <>))
-            id
-            (integerArrayAt key value)
 
 loadConvictStoryFixture :: IO ConvictStoryFixture
 loadConvictStoryFixture = do
@@ -1866,7 +1846,6 @@ rotateStoryFrom ::
 rotateStoryFrom registration prior record rotationSigners currentSigners = do
     event <- atKey "event" record
     ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
     currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
     nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
@@ -1893,16 +1872,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
         unsignedEvidence =
             AdvanceEvidence
                 { aeEventBytes = raw
-                , aeOffT = intOffset "t" offsets
-                , aeOffI = intOffset "i" offsets
-                , aeOffS = intOffset "s" offsets
-                , aeOffK = intOffsets "k" offsets
-                , aeOffKt = intOffset "kt" offsets
-                , aeOffN = intOffsets "n" offsets
-                , aeOffNt = intOffset "nt" offsets
-                , aeOffBr = intOffsets "br" offsets
-                , aeOffBa = intOffsets "ba" offsets
-                , aeOffBt = intOffset "bt" offsets
                 , aeWitCut = cuts
                 , aeWitAdd = adds
                 , aeCtrlSigs = []
@@ -1916,19 +1885,6 @@ rotateStoryFrom registration prior record rotationSigners currentSigners = do
             , rsRotationSigners = rotationSigners
             , rsCurrentSigners = currentSigners
             }
-  where
-    intOffset key value =
-        fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerAt key value)
-    intOffsets key value =
-        map fromInteger $
-            either
-                (error . ("rotateStoryFrom: " <>))
-                id
-                (integerArrayAt key value)
 
 seedSignersAt ::
     Text ->
@@ -1996,61 +1952,8 @@ signedRotateEvidence _env _input fixture signers receipts =
 registrationFixtureFrom ::
     Value -> [(Int, ByteString)] -> [(Int, ByteString)] -> Either String InceptionExport
 registrationFixtureFrom event signatures receipts = do
-    ked <- atKey "ked" event
-    offsets <- atKey "offsets" event
     raw <- textAt "raw_hex" event >>= decodeHex
-    pre <- textAt "pre" event
-    aid <- digestRaw pre
-    currentKeys <- textArrayAt "k" ked >>= traverse verkeyRaw
-    nextKeys <- textArrayAt "n" ked >>= traverse digestRaw
-    witnesses <- textArrayAt "b" ked >>= traverse verkeyRaw
-    currentThreshold <- thresholdAt "kt" ked
-    nextThreshold <- thresholdAt "nt" ked
-    toad <- hexIntegerAt "bt" ked
-    offT <- integerAt "t" offsets
-    offI <- integerAt "i" offsets
-    offS <- integerAt "s" offsets
-    offK <- integerArrayAt "k" offsets
-    offKt <- integerAt "kt" offsets
-    offN <- integerArrayAt "n" offsets
-    offNt <- integerAt "nt" offsets
-    offB <- integerArrayAt "b" offsets
-    offBt <- integerAt "bt" offsets
-    offD <- eventSaidOffset event
-    let datum =
-            KeyStateView
-                { cdCesrAid = aid
-                , cdCurKeys = currentKeys
-                , cdCurThreshold = currentThreshold
-                , cdNextKeys = nextKeys
-                , cdNextThreshold = nextThreshold
-                , cdWitnesses = witnesses
-                , cdToad = toad
-                , cdSeq = 0
-                , cdNativeSn = 0
-                }
-        evidence =
-            RegistrationEvidence
-                { reEventBytes = raw
-                , reOffT = fromInteger offT
-                , reOffI = fromInteger offI
-                , reOffS = fromInteger offS
-                , reOffK = map fromInteger offK
-                , reOffKt = fromInteger offKt
-                , reOffN = map fromInteger offN
-                , reOffNt = fromInteger offNt
-                , reOffB = map fromInteger offB
-                , reOffBt = fromInteger offBt
-                , reCtrlSigs = signatures
-                , reWitReceipts = receipts
-                }
-    pure
-        InceptionExport
-            { inceptionAid = pre
-            , inceptionDatum = datum
-            , inceptionEvidence = evidence
-            , inceptionDigestOffset = fromInteger offD
-            }
+    inceptionFromEvent raw signatures receipts
 
 enforcementEvidenceFrom :: Value -> [(Int, ByteString)] -> Either String EnforcementEvidence
 enforcementEvidenceFrom event signatures = do
@@ -2082,16 +1985,6 @@ enforcementEvidenceFrom event signatures = do
         <*> pure toad
         <*> pure signatures
         <*> pure []
-
-eventSaidOffset :: Value -> Either String Integer
-eventSaidOffset event = do
-    raw <- textAt "raw_hex" event >>= decodeHex
-    said <- textAt "said" event
-    let needle = Text.encodeUtf8 said
-    maybe
-        (Left "event SAID not found in raw serialization")
-        (Right . fromIntegral)
-        (findSubsequence needle raw)
 
 {- | The long-lived #116 enforcement fixtures intentionally preserve their
 original raw KERI events without an offsets envelope.  Re-derive the exact
@@ -2162,7 +2055,11 @@ the validity interval, refunding the registering wallet.
 -}
 registeredFacts :: CheckpointEnv -> InceptionExport -> ValidityPlan -> CheckpointDatumV2
 registeredFacts env fixture validity =
-    liveOfKeyState (serialiseAddr (envOwner env)) (upperPosixMs validity) (inceptionDatum fixture)
+    liveOfInception
+        (serialiseAddr (envOwner env))
+        (upperPosixMs validity)
+        (inceptionDatum fixture)
+        (inceptionQualified fixture)
 
 {- | What differs between the transactions that present a rotation to the
 rotation observer: an Advance writes the rotated datum and pays the premium, a
@@ -4860,7 +4757,15 @@ registrySeed = scriptsSeed . envRegistry
 holdsRegistryToken :: CheckpointEnv -> ByteString -> TxOut ConwayEra -> Bool
 holdsRegistryToken env = hasAsset (statePolicyId env)
 
--- | Whether the output holds the checkpoint of the AID: its active token.
+-- | Whether the output holds the active token of a registration's identifier, as signed (B, D or E).
+holdsRegistrationToken :: CheckpointEnv -> InceptionExport -> TxOut ConwayEra -> Bool
+holdsRegistrationToken env fixture =
+    holdsRegistryToken env (activeTokenName (registryIdentity env) (checkpointKey env fixture))
+
+{- | Whether the output holds the checkpoint of the AID: its active token. The name is the E-code
+spelling of the key state's digest: it is the signed identifier only of a self-addressing
+fixture; a registration is checked with 'holdsRegistrationToken'.
+-}
 holdsCheckpointToken :: CheckpointEnv -> KeyStateView -> TxOut ConwayEra -> Bool
 holdsCheckpointToken env view =
     holdsRegistryToken env (checkpointToken env view)
@@ -5431,7 +5336,7 @@ duplicateRegistrationJourney env (heldIn, heldOut) heldKey fixture = do
             "first fold"
             (buildFoldTx env (planFor firstBooking folderParty [heldKey] Nothing firstValidity))
     (deliveredIn, deliveredOut) <-
-        pollOutput (envProvider env) firstTxId [0] (holdsCheckpointToken env (inceptionDatum fixture))
+        pollOutput (envProvider env) firstTxId [0] (holdsRegistrationToken env fixture)
             >>= requireJust "the delivered checkpoint of the first fold did not settle"
     dbg ("registration fold transaction " <> show firstTxId <> " (new key)")
     unless (extractDatum deliveredOut == Just (V2 (registeredFacts env fixture (bookingValidity firstBooking)))) $
@@ -5530,7 +5435,7 @@ productionRegisterScenarioUsingReferences env references fixture = do
             (envProvider env)
             foldTxId
             [0]
-            (holdsCheckpointToken env (inceptionDatum fixture))
+            (holdsRegistrationToken env fixture)
             >>= requireJust "the delivered checkpoint did not settle"
     dbg ("registration fold transaction " <> show foldTxId)
     dbg ("fold validity " <> show validity)
@@ -6670,7 +6575,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
     foldId <- submitTwoPassBy folderParty env "registration fold" (buildFoldTx env plan)
     foldSubmitted <- nowMs
     (checkpointIn, checkpointOut) <-
-        pollOutput (envProvider env) foldId [0] (holdsCheckpointToken env (inceptionDatum fixture))
+        pollOutput (envProvider env) foldId [0] (holdsRegistrationToken env fixture)
             >>= requireJust "the fold did not settle"
     foldSettled <- nowMs
     snapshot <- withinSecs 30 "tip after the fold" (queryLedgerSnapshot (envProvider env))
@@ -6681,7 +6586,7 @@ registryDeployJourney timing startedAt socket lsq ltxs = do
         fail "the delivered checkpoint does not hold the committed deposit"
     unless (extractDatum checkpointOut == Just (V2 (registeredFacts env fixture bookValidity))) $
         fail "the delivered checkpoint does not carry the initial datum of the request"
-    unless (holdsCheckpointToken env (inceptionDatum fixture) checkpointOut) $
+    unless (holdsRegistrationToken env fixture checkpointOut) $
         fail "the delivered checkpoint does not hold the active token of its AID"
     (_, stateAfter) <- currentState env
     unless (rawInlineData stateAfter == Just (stateDatumData (snd (registryProof [] [] key)))) $
@@ -6940,7 +6845,7 @@ registryBookingJourney foldKey startMs socket lsq ltxs = do
     unless (delivered ^. addrTxOutL == roleAddress env0 Active) $ fail "the delivered checkpoint is not at the checkpoint validator's address"
     unless (unCoin (delivered ^. coinTxOutL) == requestDeposit firstBooking) $ fail "the delivered checkpoint does not hold the committed deposit"
     unless (rawInlineData delivered == Just (requestInitialDatum firstBooking)) $ fail "the delivered checkpoint does not carry the committed datum"
-    unless (holdsCheckpointToken env0 (inceptionDatum export) delivered) $ fail "the delivered checkpoint does not hold the active token"
+    unless (holdsRegistrationToken env0 export delivered) $ fail "the delivered checkpoint does not hold the active token"
     stateOutputs <- withinSecs 30 "query the registry state" (queryUTxOs provider (Tx.stateAddress (deploymentOf env0)))
     unless (any (\(_, out) -> rawInlineData out == Just (stateDatumData (registryRoot [key]))) stateOutputs) $
         fail "the registry's root is not the root of the one registered key"

@@ -69,6 +69,7 @@ import Cardano.KERI.AID.Checkpoint.Datum (
 import Cardano.KERI.AID.Checkpoint.Threshold (
     Threshold,
     evaluate,
+    spans,
  )
 import Control.Monad (
     unless,
@@ -397,10 +398,12 @@ advanceEqualities sc new witCut witAdd (RevealedSuccessorSigners controlled) = d
     let revealed = filter (`elem` cdCurKeys new) controlled
         revealedDigests = map (blake3Hash . qb64Verkey) revealed
     unless
-        ( evaluate
-            (scNextThreshold sc)
-            (length (scNextKeys sc))
-            (positionsIn (scNextKeys sc) revealedDigests)
+        ( not (null (scNextKeys sc))
+            && spans (scNextThreshold sc) (length (scNextKeys sc))
+            && evaluate
+                (scNextThreshold sc)
+                (length (scNextKeys sc))
+                (positionsIn (scNextKeys sc) revealedDigests)
         )
         (Left Eq6PriorNextQuorumUnsatisfied)
     -- eq7 (W3): the created datum's witnesses equal the derived incoming

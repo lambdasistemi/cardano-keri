@@ -35,6 +35,12 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
 
     -- * F18 well-formedness and evaluation
     wellFormed,
+    futureWellFormed,
+    fitsNextKeys,
+    parseThresholdSpelling,
+    futureThresholdFromData,
+    nextDeclarationWellFormed,
+    spans,
     evaluate,
 ) where
 
@@ -116,6 +122,8 @@ data ThresholdError
       WeightOutOfBound
     | -- | Rule 12: a clause's weights sum to @< 1@ (unsatisfiable).
       UnsatisfiableClause
+    | -- | A declaration of next commitments has more weights than commitments.
+      DeclarationWidth
     deriving stock (Show, Eq)
 
 {- | Frozen V1 upper bound on a 'Weight' denominator: @2^32 = 4294967296@
@@ -171,6 +179,113 @@ unBuiltin (BuiltinData d) = d
 -- F18 well-formedness (rules 1-13)
 -- ---------------------------------------------------------
 
+{- | The inception rule for the future (next) pair, as the model states it (draft #600,
+@fitsNextKeys@): the declared width is bounded by the signed commitments, every weight is at
+most one with a positive denominator, and every clause reaches one by the rational sum of its
+weights. Reduced form, the denominator bound and an exact cover of the commitments belong to
+F18, the rule of the signing threshold, and are not asked of the future. A numeric zero is valid
+with any number of commitments, none included. The commitments are distinct and 32 bytes wide.
+The positive current signing quorum is 'wellFormed', which this does not replace.
+-}
+futureWellFormed :: [ByteString] -> Threshold -> Either ThresholdError ()
+futureWellFormed keys th = do
+    unless (all ((== 32) . BS.length) keys) (Left KeyWidth)
+    when (length (nub keys) /= length keys) (Left DuplicateKey)
+    fitsNextKeys (length keys) th
+
+{- | A declaration of the future against the number of signed commitments: the rule of the
+model, on rational values.
+-}
+fitsNextKeys :: Int -> Threshold -> Either ThresholdError ()
+fitsNextKeys count = \case
+    Unweighted m
+        | m < 0 || m > fromIntegral count -> Left UnweightedRange
+        | otherwise -> Right ()
+    Weighted clauses -> do
+        when (null clauses || any null clauses) (Left EmptyClause)
+        mapM_ weightInUnit (concat clauses)
+        unless (sum (map length clauses) <= count) (Left PartitionMismatch)
+        mapM_ clauseTotal clauses
+  where
+    weightInUnit (Weight num den) = do
+        when (den <= 0) (Left NonPositiveDen)
+        when (num < 0) (Left NegativeNum)
+        when (num > den) (Left OverUnityWeight)
+    clauseTotal clause =
+        unless (sum [num % den | Weight num den <- clause] >= 1) (Left UnsatisfiableClause)
+
+{- | A future (next) threshold as the datum carries it: the weights keep the numerator and
+denominator they were signed with. A weight is a pair with a positive denominator and a numerator
+between zero and the denominator; lowest terms are not asked (a signed 2/4 is the pair (2,4)). The
+current signing threshold is read with the frozen codec, which asks for lowest terms.
+-}
+futureThresholdFromData :: BuiltinData -> Maybe Threshold
+futureThresholdFromData (BuiltinData d) = case d of
+    Constr 0 [I m] -> Just (Unweighted m)
+    Constr 1 [List clauses] -> Weighted <$> traverse clause clauses
+    _ -> Nothing
+  where
+    clause (List weights) = traverse weight weights
+    clause _ = Nothing
+    weight (Constr 0 [I num, I den])
+        | den > 0 && num >= 0 && num <= den = Just (Weight num den)
+    weight _ = Nothing
+
+{- | The threshold a signed spelling declares: bare hexadecimal digits, or a compact JSON array of
+fraction strings (one clause) or of arrays of them (several). The weights keep the spelling they
+were signed with, unreduced if so; nothing is decoded of an escape.
+-}
+parseThresholdSpelling :: ByteString -> Either String Threshold
+parseThresholdSpelling spelling = case BS.uncons spelling of
+    Just (0x5b, _) -> do
+        (items, rest) <- array (BS.drop 1 spelling)
+        unless (BS.null rest) (Left "trailing bytes after the threshold")
+        case items of
+            Left flat -> Weighted . (: []) <$> traverse weight flat
+            Right nested -> Weighted <$> traverse (traverse weight) nested
+    _ ->
+        case BS.unpack spelling of
+            [] -> Left "an empty threshold"
+            digits
+                | all hexDigit digits -> Right (Unweighted (foldl (\acc d -> acc * 16 + toInteger (hexValue d)) 0 digits))
+                | otherwise -> Left "a threshold is hexadecimal digits or an array"
+  where
+    hexDigit d = (d >= 0x30 && d <= 0x39) || (d >= 0x61 && d <= 0x66)
+    hexValue d = if d <= 0x39 then d - 0x30 else d - 0x61 + 10
+    weight text = case BS.split 0x2f text of
+        [n] -> Weight <$> decimal n <*> pure 1
+        [n, d] -> Weight <$> decimal n <*> decimal d
+        _ -> Left "a weight is n or n/d"
+    decimal t
+        | BS.null t || not (BS.all (\c -> c >= 0x30 && c <= 0x39) t) = Left "a weight part is decimal digits"
+        | otherwise = Right (BS.foldl' (\acc c -> acc * 10 + toInteger (c - 0x30)) 0 t)
+    -- one array: of strings, or of arrays of strings; returns the rest after its closing bracket
+    array bytes = case BS.uncons bytes of
+        Just (0x22, _) -> strings bytes [] >>= \(ss, rest) -> Right (Left ss, rest)
+        Just (0x5b, _) -> clauses bytes []
+        _ -> Left "an array of fraction strings or of arrays"
+    strings bytes acc = do
+        (text, afterString) <- quoted bytes
+        case BS.uncons afterString of
+            Just (0x2c, more) -> strings more (text : acc)
+            Just (0x5d, rest) -> Right (reverse (text : acc), rest)
+            _ -> Left "a fraction string is followed by a comma or the end of its array"
+    clauses bytes acc = case BS.uncons bytes of
+        Just (0x5b, inner) -> do
+            (ss, afterClause) <- strings inner []
+            case BS.uncons afterClause of
+                Just (0x2c, more) -> clauses more (ss : acc)
+                Just (0x5d, rest) -> Right (Right (reverse (ss : acc)), rest)
+                _ -> Left "a clause is followed by a comma or the end of the thresholds"
+        _ -> Left "a clause is an array"
+    quoted bytes = case BS.uncons bytes of
+        Just (0x22, afterQuote) ->
+            let (text, afterText) = BS.break (== 0x22) afterQuote
+             in if BS.null afterText || BS.elem 0x5c text
+                    then Left "a fraction string is closed and has no escape"
+                    else Right (text, BS.drop 1 afterText)
+        _ -> Left "a fraction string"
+
 {- | The F18 well-formedness predicate over a positional
 @(cur_keys, threshold)@ pair. Total and deterministic; each rejection maps to
 a specific 'ThresholdError'. Rule 13 (no nested weighted list) is enforced
@@ -196,23 +311,53 @@ wellFormed keys th = do
                 (sum (map length clauses) == length keys)
                 (Left PartitionMismatch)
             -- Rules 7-11: each weight is canonical and bounded.
-            mapM_ checkWeight (concat clauses)
+            mapM_ (checkWeight True) (concat clauses)
             -- Rule 12: each clause is satisfiable (sum of weights >= 1).
             mapM_ checkClauseSum clauses
   where
     n = fromIntegral (length keys) :: Integer
 
-    checkWeight (Weight num den) = do
-        when (den <= 0) (Left NonPositiveDen)
-        when (num < 0) (Left NegativeNum)
-        when (num > den) (Left OverUnityWeight)
-        unless (gcd num den == 1) (Left UnreducedWeight)
-        unless (den <= maxWeightDenom) (Left WeightOutOfBound)
+    checkWeight = checkWeightIn
 
-    checkClauseSum c =
-        unless
-            (sum [num % den | Weight num den <- c] >= 1)
-            (Left UnsatisfiableClause)
+    checkClauseSum = checkClauseSumIn
+
+checkWeightIn :: Bool -> Weight -> Either ThresholdError ()
+checkWeightIn reduced (Weight num den) = do
+    when (den <= 0) (Left NonPositiveDen)
+    when (num < 0) (Left NegativeNum)
+    when (num > den) (Left OverUnityWeight)
+    when (reduced && gcd num den /= 1) (Left UnreducedWeight)
+    unless (den <= maxWeightDenom) (Left WeightOutOfBound)
+
+checkClauseSumIn :: [Weight] -> Either ThresholdError ()
+checkClauseSumIn c =
+    unless
+        (sum [num % den | Weight num den <- c] >= 1)
+        (Left UnsatisfiableClause)
+
+{- | The declaration of next commitments an inception makes: the commitments are non-empty, 32 bytes each and distinct,
+and the threshold is a numeric one within them or weighted clauses that are each non-empty, whose weights number at
+most the commitments (the clauses need not partition them), whose individual weights have a positive denominator
+within the bound and lie between zero and one, in any spelling, and whose every clause totals at least one. Every
+other key state is checked by 'wellFormed'.
+-}
+nextDeclarationWellFormed :: [ByteString] -> Threshold -> Either ThresholdError ()
+nextDeclarationWellFormed keys th = case th of
+    Weighted clauses -> do
+        wellFormed keys (Unweighted 1)
+        when (null clauses || any null clauses) (Left EmptyClause)
+        when (sum (map length clauses) > length keys) (Left DeclarationWidth)
+        mapM_ (checkWeightIn False) (concat clauses)
+        mapM_ checkClauseSumIn clauses
+    _ -> wellFormed keys th
+
+{- | Whether a declared threshold can authorize over @n@ commitments: a numeric threshold always can, a weighted one
+only when its weights number exactly @n@ (the model's member width).
+-}
+spans :: Threshold -> Int -> Bool
+spans th n = case th of
+    Unweighted _ -> True
+    Weighted clauses -> sum (map length clauses) == n
 
 -- ---------------------------------------------------------
 -- Evaluation

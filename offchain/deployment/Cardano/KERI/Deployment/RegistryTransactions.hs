@@ -118,8 +118,9 @@ import Cardano.KERI.AID.Checkpoint.Datum (
     CheckpointDatum (..),
     CheckpointDatumV2 (..),
     KeyStateView (..),
-    liveOfKeyState,
+    liveOfInception,
  )
+import Cardano.KERI.AID.Checkpoint.EventDecoder (decodeSaidPreimage)
 import Cardano.KERI.AID.Checkpoint.Registration (
     RegistrationEvidence (..),
     proofTokenName,
@@ -129,6 +130,8 @@ import Cardano.KERI.AID.Checkpoint.Wire (
     bookingAttestationBurnData,
     bookingAttestationIssueData,
     bookingAttestationName,
+    hashProofBurnData,
+    hashProofMintData,
  )
 import Cardano.KERI.AID.E2E.Datum (mkInlineDatum, rawInlineData)
 import Cardano.KERI.AID.E2E.FoldGuard (FoldRefusal (..), foldRefusal)
@@ -219,7 +222,6 @@ import Control.Monad (forM_, unless, when)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.ByteString.Char8 qualified as B8
 import Data.ByteString.Short qualified as SBS
 import Data.Either (lefts, rights)
 import Data.Foldable (toList)
@@ -303,8 +305,8 @@ data RegistryTransactionError
       FeeRefused !String
     | -- | a fold the registry would refuse, found before anything is built
       FoldRefused !FoldRefusal
-    | -- | the inception does not hash to its own identifier at the offsets given
-      InceptionDoesNotBindItsIdentifier
+    | -- | the inception's signed bytes do not hash to its own SAID
+      InceptionDoesNotBindItsDigest
     | -- | the genesis was given a seed other than the one its registry is derived from
       SeedIsNotTheRegistrys
     | -- | the transaction, with the outputs that fund it, exceeds the largest size a transaction may have: its size and that limit
@@ -444,7 +446,11 @@ of the validity interval, refunding the given address.
 -}
 registeredFacts :: Addr -> InceptionExport -> ValidityPlan -> CheckpointDatumV2
 registeredFacts refund export validity =
-    liveOfKeyState (serialiseAddr refund) (upperPosixMs validity) (inceptionDatum export)
+    liveOfInception
+        (serialiseAddr refund)
+        (upperPosixMs validity)
+        (inceptionDatum export)
+        (inceptionQualified export)
 
 -- | The approval token name of a request.
 approval :: RegistrationData -> ByteString
@@ -815,8 +821,9 @@ burnAttestations parameters deployment references payer held budgets = do
         pure (built, purposeSet purposes)
 
 {- | The hash-proof mint of an inception, paid to a party: the evidence the fold
-burns, valid over the given interval. The inception must hash to its own identifier
-at the offsets it carries.
+burns, valid over the given interval. The signed bytes must hash, with the SAID
+value dressed as keripy dresses it for the prefix kind, to the event's own SAID.
+The redeemer is the exact bytes and the raw identifier; no position is supplied.
 -}
 mintHashProof ::
     PParams ConwayEra ->
@@ -826,9 +833,9 @@ mintHashProof ::
     ValidityPlan ->
     Either RegistryTransactionError ConwayTx
 mintHashProof parameters deployment payer export validity = do
-    if blake3Hash saidBlank == aid
+    if either (const False) ((== inceptionDigest export) . blake3Hash) (decodeSaidPreimage raw)
         then Right ()
-        else Left InceptionDoesNotBindItsIdentifier
+        else Left InceptionDoesNotBindItsDigest
     firstFunded Map.empty (fundings (payerRules payer) [] (payerFunds payer)) (const attempt)
   where
     artifact = hashProofArtifact deployment
@@ -843,17 +850,8 @@ mintHashProof parameters deployment payer export validity = do
     evidence = inceptionEvidence export
     raw = reEventBytes evidence
     aid = cdCesrAid (inceptionDatum export)
-    offI = reOffI evidence
-    offD = inceptionDigestOffset export
     proofName = AssetName (SBS.toShort (inceptionProofName export))
-    hashProofRedeemer =
-        Constr 0 [B raw, B aid, I (fromIntegral offI), I (fromIntegral offD)]
-    saidBlank =
-        BS.take offD raw
-            <> B8.replicate 44 '#'
-            <> BS.take (offI - offD - 44) (BS.drop (offD + 44) raw)
-            <> B8.replicate 44 '#'
-            <> BS.drop (offI + 44) raw
+    hashProofRedeemer = hashProofMintData raw aid
     attempt funding =
         balancedTx
             <$> first
@@ -1164,7 +1162,7 @@ hashProofBurnExUnits :: ExUnits
 hashProofBurnExUnits = ExUnits 500_000 500_000_000
 
 hashProofBurnRedeemer :: PLC.Data
-hashProofBurnRedeemer = Constr 0 [B "", B "", I 0, I 0]
+hashProofBurnRedeemer = hashProofBurnData
 
 -- | The redeemers of a set of purposes, each with its budget or the fallback.
 redeemerMap ::

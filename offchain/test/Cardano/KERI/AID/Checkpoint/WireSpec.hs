@@ -45,15 +45,6 @@ evidence :: RegistrationEvidence
 evidence =
     RegistrationEvidence
         { reEventBytes = "icp"
-        , reOffT = 1
-        , reOffI = 2
-        , reOffS = 3
-        , reOffK = [4]
-        , reOffKt = 5
-        , reOffN = [6]
-        , reOffNt = 7
-        , reOffB = [8]
-        , reOffBt = 9
         , reCtrlSigs = [(0, BS.replicate 64 0xa1)]
         , reWitReceipts = [(1, BS.replicate 64 0xb1)]
         }
@@ -63,15 +54,6 @@ otherEvidence :: RegistrationEvidence
 otherEvidence =
     RegistrationEvidence
         { reEventBytes = "icq"
-        , reOffT = 11
-        , reOffI = 12
-        , reOffS = 13
-        , reOffK = [14, 15]
-        , reOffKt = 16
-        , reOffN = [17]
-        , reOffNt = 18
-        , reOffB = []
-        , reOffBt = 19
         , reCtrlSigs = [(1, BS.replicate 64 0xa2), (2, BS.replicate 64 0xb2)]
         , reWitReceipts = []
         }
@@ -80,16 +62,6 @@ advanceEvidence :: AdvanceEvidence
 advanceEvidence =
     AdvanceEvidence
         { aeEventBytes = "rot"
-        , aeOffT = 1
-        , aeOffI = 2
-        , aeOffS = 3
-        , aeOffK = [4]
-        , aeOffKt = 5
-        , aeOffN = [6]
-        , aeOffNt = 7
-        , aeOffBr = [8]
-        , aeOffBa = [9]
-        , aeOffBt = 10
         , aeWitCut = ["cut"]
         , aeWitAdd = ["add"]
         , aeCtrlSigs = [(0, BS.replicate 64 0xc1)]
@@ -166,20 +138,11 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "icp"
-                , I 1
-                , I 2
-                , I 3
-                , List [I 4]
-                , I 5
-                , List [I 6]
-                , I 7
-                , List [I 8]
-                , I 9
                 , List [List [I 0, B (BS.replicate 64 0xa1)]]
                 , List [List [I 1, B (BS.replicate 64 0xb1)]]
                 ]
 
-    it "nests the exact claim and 12-field evidence shape consumed live" $
+    it "nests the exact claim and three-field evidence shape the validators read" $
         registerObserverRedeemerData (BS.replicate 28 0xc0) evidence
             `shouldBe` Constr
                 0
@@ -210,7 +173,7 @@ spec = describe "#136 Register observer wire" $ do
     it "encodes Burn as constructor one with no field" $
         bookingAttestationBurnData `shouldBe` Constr 1 []
 
-    it "writes, for two booked requests with distinct evidence, the bytes the validators' own types write for the same redeemer" $
+    it "writes, for two booked requests with distinct evidence, the three-field bytes (the nine offsets of the earlier layout removed from both records, every other byte unchanged)" $
         let BuiltinByteString bytes =
                 serialiseData
                     ( BuiltinData
@@ -220,7 +183,7 @@ spec = describe "#136 Register observer wire" $ do
                         )
                     )
          in convertToBase Base16 bytes
-                `shouldBe` ("d8799f581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c09fd8799f03d8799f436963700102039f04ff059f06ff079f08ff099f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffd8799f05d8799f436963710b0c0d9f0e0fff109f11ff1280139f9f015840a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2ff9f025840b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2ffff80ffffffff" :: BS.ByteString)
+                `shouldBe` ("d8799f581cc0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c09fd8799f03d8799f436963709f9f005840a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1ffff9f9f015840b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1ffffffffd8799f05d8799f436963719f9f015840a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2ff9f025840b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2ffff80ffffffff" :: BS.ByteString)
 
     it "writes the claim of a booking and the name that digests it as the validators do" $ do
         let claim =
@@ -283,16 +246,6 @@ spec = describe "#136 Register observer wire" $ do
             `shouldBe` Constr
                 0
                 [ B "rot"
-                , I 1
-                , I 2
-                , I 3
-                , List [I 4]
-                , I 5
-                , List [I 6]
-                , I 7
-                , List [I 8]
-                , List [I 9]
-                , I 10
                 , List [B "cut"]
                 , List [B "add"]
                 , List [List [I 0, B (BS.replicate 64 0xc1)]]

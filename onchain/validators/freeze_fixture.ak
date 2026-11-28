@@ -32,6 +32,7 @@ use cardano_keri/checkpoint/observer.{
   FreezeEvidence, ObserverClaim, ObserverEnvelope,
 }
 use cardano_keri/checkpoint/retired_layout.{retired_layout}
+use cardano_keri/checkpoint/spelling_fixture.{qualified_keys}
 use cardano_keri/checkpoint/threshold.{Unweighted}
 use registry_fixture.{representative}
 
@@ -120,7 +121,7 @@ pub fn spent_ref() -> OutputReference {
 
 pub fn keys_of(d: KeyStateView) -> KeyMaterial {
   KeyMaterial {
-    cur_keys: d.cur_keys,
+    cur_keys: qualified_keys(d.cur_keys),
     cur_threshold: d.cur_threshold,
     next_keys: d.next_keys,
     next_threshold: d.next_threshold,
@@ -130,12 +131,16 @@ pub fn keys_of(d: KeyStateView) -> KeyMaterial {
 }
 
 /// The key state the spent checkpoint declares: the rotation's predecessor.
+/// The spent checkpoint's current keys as raw verification keys.
+pub const spent_cur_raw: List<ByteArray> =
+  [
+    #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
+    #"95d507a9923dc62701d5619c117a3cbb8ae91cfe3f99e96cc0ae986cb52b586d",
+  ]
+
 pub fn spent_keys() -> KeyMaterial {
   KeyMaterial {
-    cur_keys: [
-      #"bf1145e4449d74e9f09bd6aaffcbcd295f2a82e9fcbb5689c5346b3c274bccbb",
-      #"95d507a9923dc62701d5619c117a3cbb8ae91cfe3f99e96cc0ae986cb52b586d",
-    ],
+    cur_keys: qualified_keys(spent_cur_raw),
     cur_threshold: Unweighted(2),
     next_keys: spent.next_keys,
     next_threshold: spent.next_threshold,
@@ -232,7 +237,7 @@ pub fn v1_data() -> Data {
   retired_layout(
     KeyStateView {
       cesr_aid: spent.cesr_aid,
-      cur_keys: spent_keys().cur_keys,
+      cur_keys: spent_cur_raw,
       cur_threshold: spent_keys().cur_threshold,
       next_keys: spent.next_keys,
       next_threshold: spent.next_threshold,

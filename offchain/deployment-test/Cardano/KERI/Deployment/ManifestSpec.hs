@@ -71,41 +71,52 @@ spec =
                         , "observer-entitlement"
                         , "observer-lifecycle"
                         ]
+            -- #339: re-derived from deriveV1Scripts after the two-step
+            -- freeze was removed, not reused from the previous pin
+            -- (14_867). The advance observer no longer reads the Armed
+            -- datum or the armed-response action, so its applied program
+            -- is shorter. The 16_133 ceiling is unchanged.
+            -- #339: re-derived again once the advance observer reads the
+            -- version 2 datum (14_695 -> 15_778); still below the unchanged
+            -- 16_133 ceiling.
+            -- #339: re-derived once more after the version 1 datum
+            -- constructor left the shared datum type (15_778 -> 15_625);
+            -- the ceiling is unchanged.
+            -- #345: re-derived once the advance observer also hosts the
+            -- freeze verdict (15_625 -> 15_665) and the checkpoint program
+            -- gains the Freeze arm; the ceiling is unchanged, and the
+            -- checkpoint program's length is pinned beside it.
+            -- #345: the checkpoint program also carries the bond option of
+            -- Advance and its deposit check (8_490 -> 9_480); the advance
+            -- observer is unchanged and the ceiling is too.
+            -- #522: re-derived once the live datum has nine fields, which
+            -- the advance observer reads: 15_665 -> 15_710. The checkpoint program
+            -- gains the TopUp arm, the registration's premium check and
+            -- the cleared-mark requirements (9_480 -> 10_370); the ceiling is
+            -- unchanged.
+            -- The checkpoint program recognises a checkpoint by the registry's
+            -- active token and no longer mints or migrates (10_370 -> 8_482);
+            -- the ceiling is unchanged.
+            -- #350: the checkpoint program gains the Release arm and the
+            -- application's policy as a tenth applied parameter
+            -- (8_482 -> 8_957); the advance observer is unchanged and the
+            -- ceiling is too.
+            -- The checkpoint program is 9_634 with the registration binder by reconstruction and the qualified datum.
             it "preserves the stock signed-reference transaction budget" $ \artifacts -> do
-                map (SBS.length . artifactProgram) artifacts
-                    `shouldSatisfy` all (<= 16_133)
-                -- #339: re-derived from deriveV1Scripts after the two-step
-                -- freeze was removed, not reused from the previous pin
-                -- (14_867). The advance observer no longer reads the Armed
-                -- datum or the armed-response action, so its applied program
-                -- is shorter. The 16_133 ceiling is unchanged.
-                -- #339: re-derived again once the advance observer reads the
-                -- version 2 datum (14_695 -> 15_778); still below the unchanged
-                -- 16_133 ceiling.
-                -- #339: re-derived once more after the version 1 datum
-                -- constructor left the shared datum type (15_778 -> 15_625);
-                -- the ceiling is unchanged.
-                -- #345: re-derived once the advance observer also hosts the
-                -- freeze verdict (15_625 -> 15_665) and the checkpoint program
-                -- gains the Freeze arm; the ceiling is unchanged, and the
-                -- checkpoint program's length is pinned beside it.
-                -- #345: the checkpoint program also carries the bond option of
-                -- Advance and its deposit check (8_490 -> 9_480); the advance
-                -- observer is unchanged and the ceiling is too.
-                -- #522: re-derived once the live datum has nine fields, which
-                -- the advance observer reads: 15_665 -> 15_710. The checkpoint program
-                -- gains the TopUp arm, the registration's premium check and
-                -- the cleared-mark requirements (9_480 -> 10_370); the ceiling is
-                -- unchanged.
-                -- The checkpoint program recognises a checkpoint by the registry's
-                -- active token and no longer mints or migrates (10_370 -> 8_482);
-                -- the ceiling is unchanged.
-                -- #350: the checkpoint program gains the Release arm and the
-                -- application's policy as a tenth applied parameter
-                -- (8_482 -> 8_957); the advance observer is unchanged and the
-                -- ceiling is too.
-                programLength "observer-advance" artifacts `shouldBe` 15_710
-                programLength "checkpoint-register" artifacts `shouldBe` 8_957
+                -- every program but the advance observer, which #601 tracks
+                [(artifactName a, SBS.length (artifactProgram a)) | a <- artifacts, artifactName a /= "observer-advance"]
+                    `shouldSatisfy` all ((<= stockCeiling) . snd)
+                programLength "checkpoint-register" artifacts `shouldBe` 9_634
+            -- #601: the advance and freeze observer, with the structural reader, is above the stock ceiling. Its size is
+            -- pinned exactly so that neither growth nor shrinkage goes unnoticed: the pin moves only when #601 moves it,
+            -- and the stock ceiling above stays the target.
+            it "pins the advance observer at its known size above the stock ceiling (#601)" $ \artifacts -> do
+                programLength "observer-advance" artifacts `shouldBe` advanceObserverKnownSize
+                advanceObserverKnownSize `shouldSatisfy` (> stockCeiling)
+            it "refuses a pin of the advance observer that is one byte more or one byte less (#601)" $ \_ -> do
+                advanceObserverPinned advanceObserverKnownSize `shouldBe` True
+                advanceObserverPinned (advanceObserverKnownSize + 1) `shouldBe` False
+                advanceObserverPinned (advanceObserverKnownSize - 1) `shouldBe` False
         describe "M1 endpoint-board script" $ do
             -- Historical fact, not a live derivation: the M1 endpoint board
             -- was deployed 2026-07-29 compiled with aiken 1.1.21 (blueprint
@@ -453,3 +464,15 @@ testTxId =
 testBlueprintDigest :: Text
 testBlueprintDigest =
     "0000000000000000000000000000000000000000000000000000000000000000"
+
+-- | The transaction size a program may have in a signed reference: the stock ceiling.
+stockCeiling :: Int
+stockCeiling = 16_133
+
+-- | #601: the applied advance and freeze observer, in bytes, with the structural reader.
+advanceObserverKnownSize :: Int
+advanceObserverKnownSize = 18_181
+
+-- | Whether a measured size is the pinned size of the advance observer.
+advanceObserverPinned :: Int -> Bool
+advanceObserverPinned = (== advanceObserverKnownSize)

@@ -25,6 +25,8 @@ build-type:    Simple
 -- wildcard.
 data-files:
   deployment-test/fixtures/*.cesr
+  deployment-test/fixtures/compiled/*.cesr
+  deployment-test/fixtures/compiled/SHA256SUMS
   deployment-test/fixtures/koios/*.cbor
   deployment-test/fixtures/koios/*.json
   deployment-test/fixtures/koios-recorded/*.json
@@ -79,9 +81,13 @@ library
     Cardano.KERI.AID.Checkpoint.Deposit
     Cardano.KERI.AID.Checkpoint.Enforcement
     Cardano.KERI.AID.Checkpoint.Entitlement
+    Cardano.KERI.AID.Checkpoint.EventDecoder
+    Cardano.KERI.AID.Checkpoint.EventScan
     Cardano.KERI.AID.Checkpoint.Freeze
     Cardano.KERI.AID.Checkpoint.FreezeBond
+    Cardano.KERI.AID.Checkpoint.InceptionPrefix
     Cardano.KERI.AID.Checkpoint.Message
+    Cardano.KERI.AID.Checkpoint.Qualified
     Cardano.KERI.AID.Checkpoint.Registration
     Cardano.KERI.AID.Checkpoint.Threshold
     Cardano.KERI.AID.Checkpoint.TopUp
@@ -229,6 +235,7 @@ library deployment-koios
     , cardano-keri
     , cardano-keri:deployment
     , cardano-ledger-allegra
+    , cardano-ledger-alonzo
     , cardano-ledger-api
     , cardano-ledger-conway
     , cardano-ledger-core
@@ -253,6 +260,7 @@ library deployment-koios
     Cardano.KERI.Deployment.KoiosSubmission
     Cardano.KERI.Deployment.RegistryApplication
     Cardano.KERI.Deployment.RegistryFoldNamed
+    Cardano.KERI.Deployment.RegistryReadback
     Cardano.KERI.Deployment.RegistryReplay
     Cardano.KERI.Deployment.RegistryWindow
     Cardano.KERI.Deployment.SingularFunding
@@ -536,6 +544,7 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.AttestationBoundarySpec
     Cardano.KERI.Deployment.BountyEntitlementSpec
     Cardano.KERI.Deployment.ChainIndexSpec
+    Cardano.KERI.Deployment.CompiledEntryPointsSpec
     Cardano.KERI.Deployment.EndpointBoardSpec
     Cardano.KERI.Deployment.EndpointBoardTransactionSpec
     Cardano.KERI.Deployment.FreezePackageSpec
@@ -548,6 +557,8 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.ManifestSpec
     Cardano.KERI.Deployment.ParityOracle.Capture
     Cardano.KERI.Deployment.RecordedHistory
+    Cardano.KERI.Deployment.ReferenceInception
+    Cardano.KERI.Deployment.RegistrationEvidenceSpec
     Cardano.KERI.Deployment.RegistrationSpec
     Cardano.KERI.Deployment.RegistryApplicationSpec
     Cardano.KERI.Deployment.RegistryAttemptSpec
@@ -564,12 +575,15 @@ test-suite deployment-tests
     Cardano.KERI.Deployment.RegistryFoldHandoffSpec
     Cardano.KERI.Deployment.RegistryFoldSpec
     Cardano.KERI.Deployment.RegistryFoldV3Spec
+    Cardano.KERI.Deployment.RegistryFutureDatumSpec
     Cardano.KERI.Deployment.RegistryKoiosCommandSpec
     Cardano.KERI.Deployment.RegistryKoiosRecordedSpec
     Cardano.KERI.Deployment.RegistryKoiosValidityEndSpec
     Cardano.KERI.Deployment.RegistryLegacyRecordCommandSpec
     Cardano.KERI.Deployment.RegistryOneOutputSpec
     Cardano.KERI.Deployment.RegistryProviderSpec
+    Cardano.KERI.Deployment.RegistryReadbackCommandSpec
+    Cardano.KERI.Deployment.RegistryReadbackSpec
     Cardano.KERI.Deployment.RegistryRegisterSpec
     Cardano.KERI.Deployment.RegistryRegisterStagesSpec
     Cardano.KERI.Deployment.RegistryReplaySpec
@@ -601,6 +615,7 @@ test-suite deployment-tests
     , cardano-keri
     , cardano-keri:chain-query
     , cardano-keri:chain-query-koios
+    , cardano-keri:cli
     , cardano-keri:deployment
     , cardano-keri:deployment-koios
     , cardano-keri:registry-commands
@@ -631,6 +646,7 @@ test-suite deployment-tests
     , microlens
     , mtl
     , network
+    , opt-env-conf                                 >=0.13   && <0.16
     , ouroboros-consensus
     , ouroboros-network:protocols
     , plutus-core
@@ -1142,6 +1158,14 @@ test-suite unit-tests
     Cardano.KERI.AID.Checkpoint.FreezeBondSpec
     Cardano.KERI.AID.Checkpoint.FreezeCorpus
     Cardano.KERI.AID.Checkpoint.FreezeSpec
+    Cardano.KERI.AID.Checkpoint.FutureDeclarationSpec
+    Cardano.KERI.AID.Checkpoint.InceptionPrefixSpec
+    Cardano.KERI.AID.Checkpoint.InvBindAdversarialSpec
+    Cardano.KERI.AID.Checkpoint.InvBindFrozenGrammarSpec
+    Cardano.KERI.AID.Checkpoint.InvBindGrammarSpec
+    Cardano.KERI.AID.Checkpoint.InvBindPrefixSpec
+    Cardano.KERI.AID.Checkpoint.InvBindSpec
+    Cardano.KERI.AID.Checkpoint.InvBindTopStringsSpec
     Cardano.KERI.AID.Checkpoint.Keri68OracleSpec
     Cardano.KERI.AID.Checkpoint.MessageSpec
     Cardano.KERI.AID.Checkpoint.NineFieldDatumSpec

@@ -32,10 +32,43 @@ The decoded writer datum carries the current writer, its established witnesses
 and one previous commitment set. A rotation copies the current next keys,
 threshold and witnesses into the successor. An inception carries no previous
 set. The proof history may grow while this datum retains only one predecessor.
-Comparing complete event content requires an authenticated opening of the event
-that wrote the spent checkpoint, including seals and witness changes. The
-binding of that opening to the spent input and the concrete representation of
-the additional datum fields belong to the datum and validator correspondence.
+The checkpoint carries the current writer’s own KERI event digest (`d`).
+A rotation’s signed prior link (`p`) identifies the previous event.
+The conflict comparison uses the installed digest and the rival’s digest.
+
+The controller’s registration booking and the submitter’s keep or deposit
+advance must bind the installed SAID to the exact signed inception or rotation
+bytes, including seals. At conviction the enforcement policy must check the
+convictor’s hash proof of the rival’s signed bytes and read the writer digest
+from the spent checkpoint. KERI SAID derivation uses its prescribed digest-field
+substitution and serialization. `opened_digest_conflict_iff_signed_bytes_differ`
+names both openings and the collision-resistance premise for these two bodies.
+The old content comparison also needs a single decoder of the signed bytes
+for all twelve fields, including the extension. For otherwise eligible rivals,
+`accepts_iff_old_conflict_or_collapsed_bodies` preserves every old conflict and
+characterizes the extra case when different signed bodies decode alike.
+`digest_conflict_iff_faithful_old_conflict` gives exact agreement when that old
+opening distinguishes the two byte strings. Verified signatures and receipts
+must refer to the actual signed body of the event being graded. Lean checks decoded transitions under these premises. Production authentication
+of the complete writer opening at registration and advance remains open.
+
+For an ordinary rotation the relayer or convictor presents the signed next
+threshold. Its width must fit the number of next digests, every weighted clause
+must total at least one, and each nested member list must independently total
+at least one. A numeric next threshold of zero permits abandonment. Cuts must
+belong to the previous witness list and additions must be new to it. The
+result requires a positive receipt threshold exactly when witnesses remain.
+Both the writer and the rival use this rotation judgment. [keripy rotation construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L857-L907)
+and [weighted threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/coring.py#L4026-L4062).
+
+Ordinary inception has no signed prior link, cuts or adds. The controller's
+booking decoder must detect even an empty forbidden field before projecting it
+to the empty decoded value. For registration, advance and rival grading,
+keripy’s event profile requires positive denominators and individual weights
+at most one in both threshold fields. This ceiling extends to group outer and
+member weights and is stricter than KERI 1.1 line 1419. Preserve signed
+fraction spellings. The model checks the decoded bounds. Production raw event
+parsing and complete wire equivalence with keripy remain separate obligations.
 
 The decoded conviction tip uses the complete KERI threshold type for the
 current keys and next commitments, including nested weighted groups. It can
@@ -44,10 +77,10 @@ verification-key and commitment encoders must round trip through their
 respective reads. The existing V2 datum codec covers counts and flat weights.
 The writer must be available in public chain data to the convictor. An inline
 opening can include it directly. A digest requires public event bytes and an
-authenticated injective opening, including seals. The convictor binds this
+binding to those exact signed bytes, including seals, with collision resistance on the compared pair. The convictor binds this
 opening to the spent input in the conviction transaction. A faithful production
-wire representation remains open. `MeasureCheckpointWriter.lean` measures an
-illustrative inline layout with the model's Plutus Data serializer. The
+wire representation remains open. `MeasureCheckpointWriter.lean` measures a
+previous illustrative inline layout, which omitted the writer’s own digest, with the model's Plutus Data serializer. The
 one-key live examples occupy 220 bytes at inception and 313 after either of
 two rotations. The grouped example with 64 seal bytes occupies 412. List
 lengths are variable. Transaction size and validator budgets remain unmeasured.

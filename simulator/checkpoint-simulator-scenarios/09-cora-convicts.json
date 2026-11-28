@@ -360,7 +360,8 @@
                 "cuts": [],
                 "adds": [],
                 "witnessThreshold": 0,
-                "extension": []
+                "extension": [],
+                "eventDigest": "sibling/0/1"
               },
               "structureVerified": true,
               "signatures": [
@@ -390,7 +391,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "verified": true
                 }
@@ -537,7 +539,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -567,7 +570,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/1"
                       },
                       "verified": true
                     }
@@ -729,7 +733,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/0"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -759,7 +764,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/0"
                       },
                       "verified": true
                     }
@@ -845,7 +851,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -875,7 +882,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/1"
                       },
                       "verified": true
                     }
@@ -961,7 +969,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -991,7 +1000,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/1"
                       },
                       "verified": true
                     }
@@ -1119,7 +1129,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -1149,7 +1160,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/1"
                       },
                       "verified": true
                     }
@@ -1431,7 +1443,8 @@
                     "cuts": [],
                     "adds": [],
                     "witnessThreshold": 0,
-                    "extension": []
+                    "extension": [],
+                    "eventDigest": "sibling/0/1"
                   },
                   "structureVerified": true,
                   "signatures": [
@@ -1461,7 +1474,8 @@
                         "cuts": [],
                         "adds": [],
                         "witnessThreshold": 0,
-                        "extension": []
+                        "extension": [],
+                        "eventDigest": "sibling/0/1"
                       },
                       "verified": true
                     }

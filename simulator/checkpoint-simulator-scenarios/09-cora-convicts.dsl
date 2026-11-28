@@ -206,8 +206,9 @@ step:
             adds: []
             witnessThreshold: 0
             extension: []
+            eventDigest: "sibling/0/1"
           structureVerified: true
-          signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+          signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
           receipts: []
         payee: 3
         openedAt: 11
@@ -294,8 +295,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/1"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -379,8 +381,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/0"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":0,"kind":"inception","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":0,"kind":"inception","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/0"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 0
@@ -430,8 +433,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/1"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -481,8 +485,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/1"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 12
@@ -543,8 +548,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/1"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11
@@ -693,8 +699,9 @@ fork:
               adds: []
               witnessThreshold: 0
               extension: []
+              eventDigest: "sibling/0/1"
             structureVerified: true
-            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[]},"verified":true}]
+            signatures: [{"signer":0,"event":{"aid":0,"sn":1,"kind":"rotation","priorDigest":0,"keys":[0],"threshold":{"count":{"required":1}},"nextKeys":[1],"nextThreshold":{"count":{"required":1}},"cuts":[],"adds":[],"witnessThreshold":0,"extension":[],"eventDigest":"sibling/0/1"},"verified":true}]
             receipts: []
           payee: 3
           openedAt: 11

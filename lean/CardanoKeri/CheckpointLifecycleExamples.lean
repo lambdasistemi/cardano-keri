@@ -483,10 +483,10 @@ private def threshold : Duplicity.Threshold := .weighted [[.group ⟨1, 1⟩ [�
 
 private def writer (aid sn : Nat) : Duplicity.SignedEvent :=
   let content := { (Duplicity.writerFixture aid sn .rotation).event with
-    threshold := threshold, nextThreshold := threshold }
+    eventDigest := s!"nested-writer/{aid}/{sn}", threshold := threshold, nextThreshold := threshold }
   Duplicity.signed content [aid] []
 
-private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1] } [11] []
+private def sibling := Duplicity.signed { (writer 11 1).event with extension := [1], eventDigest := "lifecycle-sibling" } [11] []
 private def history := EventHistory.rotation origin.inception (writer 11 1)
 private def comparison : CheckpointConviction.Comparison :=
   ⟨history.datum.tip KeyEncoding.symbolic 1, sibling⟩

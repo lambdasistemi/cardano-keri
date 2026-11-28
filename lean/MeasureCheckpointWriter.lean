@@ -3,7 +3,7 @@ import CardanoKeri.CheckpointLifecycleExamples
 
 /-! Size study for an inline writer opening. These Plutus Data terms are
 measurement fixtures. Selecting a production wire layout and measuring a
-validator transaction are separate tasks. Each small identity in the fixtures
+validator transaction are separate tasks. This historical layout omits the current writer’s SAID. Each small identity in the fixtures
 is represented by a distinct 32-byte value, the AID by 44 bytes and the refund
 address by 28. The variable extension contains the bytes of example seals. -/
 open CardanoKeri Checkpoint CheckpointDatum
@@ -31,7 +31,7 @@ private def prior : Option Duplicity.Predecessor → Data
   | some p => .constr 1 [identifier 44 p.aid, .int p.sn, boolData p.delegated,
     identities p.nextKeys, threshold p.nextThreshold, identities p.witnesses]
 
--- Each field of the live state and writer needed at use is present. The pool
+-- The historical size study predates the signed-identity field. The pool
 -- lives in the value. Current key fields shared with the opening occur once.
 private def datum (l : Live) (d : WriterDatum) : Data :=
   .constr 0 [.int l.sn, .int l.epoch, boolData l.poisoned, boolData l.frozen,

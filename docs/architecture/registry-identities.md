@@ -67,7 +67,7 @@ blueprint of the other generation is refused when they are read back.
 <!-- identities:begin -->
 | What | Value |
 |---|---|
-| Lean model revision | `817b272ef97bfeb94010bf3611cbac343b67e0fa` |
+| Lean model revision | `ea14d7d145b2dff495f25d2bc5e1891e3f6d8b61` |
 | Public Singular commit | `d69ab005c3b710aeebf033d3c5cd08c56feb5643` |
 | Aiken compiler | `1.1.23` |
 | Network discriminator | `0` |

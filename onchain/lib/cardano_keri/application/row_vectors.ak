@@ -23,10 +23,9 @@ use cardano_keri/application/held.{RegistrationData}
 use cardano_keri/checkpoint/datum.{KeyMaterial, Live, TerminationPending}
 use singular_state/preimage.{RegistryIdentity}
 
-/// The policy standing for the booking attestation (a parameter of the
-/// validator; the Lean model has no such input).
+/// The booking attestation policy of Application.Vectors.env.
 pub const attestation_hash: ByteArray =
-  #"9a9fa4a9aeb3b8bdc2c7ccd1d6dbe0e5eaeff4f9fe03080d12171c21"
+  #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e"
 
 /// What a fold's holding must hold: the registry's minimum ADA, the checkpoint
 /// deposit, the freeze bond and one premium (Lean Mc + D + B + P). The pool is

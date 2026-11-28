@@ -140,9 +140,9 @@ spec = describe "the registry of the attested generation" $ do
             scripts = attestedScripts new
         -- the two policies depend on the version and on each other only: the identifiers do not move with the registry
         (hashOf (attestationFact policies), hashOf (attestationChange policies))
-            `shouldBe` ("8820ee6877973be5ee1be2de32af53bdea3fb4afd253965678ecdf29", "ef4ba7197ec361366be4c93c900d89adc40875020449d2c39ebcd7e6")
+            `shouldBe` ("8820ee6877973be5ee1be2de32af53bdea3fb4afd253965678ecdf29", "c51fb1d0b78e838a68d65b1e1c5ad852e0996b92ec23498b7af1c38a")
         (size (attestationFact policies), size (attestationChange policies), size (scriptsCheckpoint scripts))
-            `shouldBe` (10_661, 12_404, 8_911)
+            `shouldBe` (10_661, 12_903, 8_911)
         size (scriptsCheckpoint old) `shouldBe` 8_957
         hashOf (scriptsCheckpoint scripts) `shouldBe` "b4d42977c768e4c1678c6bbce128a956e19c63eb376bf8def3e64bec"
         hashOf (scriptsApplication scripts) `shouldBe` "ef613f113b7d89aaa0fc62b172f1c5569d7bd3d38bf735a36403a941"

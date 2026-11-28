@@ -300,7 +300,8 @@ fn byte_or_none(raw: ByteArray, pos: Int) -> Int {
 }
 
 // The position after the string whose content starts at `pos`: a control character, an escape that is not one of
-// `" \ / b f n r t` or `u` and four hexadecimal digits, and an unterminated string are outside the profile.
+// `" \ / b f n r t` or `u` and four hexadecimal digits, a byte sequence that is not well-formed UTF-8, and an
+// unterminated string are outside the profile.
 fn json_string_end(raw: ByteArray, pos: Int) -> Option<Int> {
   let byte = byte_or_none(raw, pos)
   if byte == 34 {
@@ -320,8 +321,73 @@ fn json_string_end(raw: ByteArray, pos: Int) -> Option<Int> {
     }
   } else if byte < 32 {
     None
+  } else if byte >= 128 {
+    let length = utf8_length(raw, pos)
+    if length == 0 {
+      None
+    } else {
+      json_string_end(raw, pos + length)
+    }
   } else {
     json_string_end(raw, pos + 1)
+  }
+}
+
+// Is `byte` a UTF-8 continuation byte?
+fn continuation(byte: Int) -> Bool {
+  byte >= 128 && byte <= 191
+}
+
+// The length of the well-formed UTF-8 sequence that starts at `pos` with a byte of 128 or more, and 0 when there is none:
+// a continuation byte or a byte that cannot lead (192, 193 and 245 or more), a sequence cut short, an overlong form, a
+// surrogate (U+D800 to U+DFFF) and a code point above U+10FFFF are not well-formed (RFC 3629).
+fn utf8_length(raw: ByteArray, pos: Int) -> Int {
+  let lead = byte_or_none(raw, pos)
+  let second = byte_or_none(raw, pos + 1)
+  if lead >= 194 && lead <= 223 {
+    if continuation(second) {
+      2
+    } else {
+      0
+    }
+  } else if lead >= 224 && lead <= 239 {
+    let low = if lead == 224 {
+      160
+    } else {
+      128
+    }
+    let high = if lead == 237 {
+      159
+    } else {
+      191
+    }
+    if second >= low && second <= high && continuation(
+      byte_or_none(raw, pos + 2),
+    ) {
+      3
+    } else {
+      0
+    }
+  } else if lead >= 240 && lead <= 244 {
+    let low = if lead == 240 {
+      144
+    } else {
+      128
+    }
+    let high = if lead == 244 {
+      143
+    } else {
+      191
+    }
+    if second >= low && second <= high && continuation(
+      byte_or_none(raw, pos + 2),
+    ) && continuation(byte_or_none(raw, pos + 3)) {
+      4
+    } else {
+      0
+    }
+  } else {
+    0
   }
 }
 
@@ -454,8 +520,8 @@ fn literal(raw: ByteArray, pos: Int, text: ByteArray) -> Option<Int> {
   }
 }
 
-// The position of the closing quote of the string whose content starts at `pos`; a backslash or a control
-// character is outside the profile.
+// The position of the closing quote of the string whose content starts at `pos`; a backslash, a control character
+// and a byte sequence that is not well-formed UTF-8 are outside the profile.
 fn string_close(raw: ByteArray, pos: Int) -> Option<Int> {
   if pos >= bytearray.length(raw) {
     None
@@ -465,6 +531,13 @@ fn string_close(raw: ByteArray, pos: Int) -> Option<Int> {
       Some(pos)
     } else if byte == 92 || byte < 32 {
       None
+    } else if byte >= 128 {
+      let length = utf8_length(raw, pos)
+      if length == 0 {
+        None
+      } else {
+        string_close(raw, pos + length)
+      }
     } else {
       string_close(raw, pos + 1)
     }

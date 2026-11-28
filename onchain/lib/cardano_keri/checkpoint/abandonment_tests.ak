@@ -9,6 +9,7 @@
 //// requires `!prior.nextKeys.isEmpty`, so a later rotation from empty commitments stays refused, and the
 //// refusal is shown against the same event judged against a spent state whose commitments are intact.
 
+use aiken/collection/list
 use cardano_keri/checkpoint/advance.{
   AE6NextKeysMismatch, AE7NextThresholdMismatch, AdvEventBinding,
   AdvMessageInvalid, AdvanceEventInvalid, AdvanceEventValid, AdvanceEvidence,
@@ -549,5 +550,65 @@ test a_body_with_a_malformed_final_value_is_not_a_valid_transition() {
     spent,
     new,
     AdvanceEvidence { ..e, event_bytes: expected.minus_only_body },
+  )
+}
+
+// ---- the text of the body is UTF-8: raw multibyte text is read, a malformed encoding is not, wherever a string stands
+
+test valid_multibyte_text_in_the_last_member_is_framed() {
+  read_rotation_body(expected.valid_text_body) == Some(r01_projection())
+}
+
+test valid_multibyte_member_names_and_values_are_framed() {
+  read_rotation_body(expected.valid_text_names_body) == Some(r01_projection())
+}
+
+test every_length_and_boundary_of_well_formed_text_is_framed() {
+  read_rotation_body(expected.valid_text_boundaries_body) == Some(
+    r01_projection(),
+  )
+}
+
+test a_malformed_encoding_in_the_last_member_has_no_read() {
+  list.all(
+    expected.malformed_text_bodies,
+    fn(body) { read_rotation_body(body) == None },
+  )
+}
+
+test a_malformed_encoding_in_a_string_before_the_last_member_has_no_read() {
+  list.all(
+    expected.prefix_malformed_text_bodies,
+    fn(body) { read_rotation_body(body) == None },
+  )
+}
+
+test valid_multibyte_text_in_a_string_before_the_last_member_has_a_read() {
+  read_rotation_body(expected.prefix_valid_text_body) != None
+}
+
+test a_body_with_a_malformed_encoding_is_not_bound_by_the_binder() {
+  let (_, new, e) = r01_rotation()
+  list.all(
+    expected.malformed_text_bodies,
+    fn(body) {
+      event_binding(new, AdvanceEvidence { ..e, event_bytes: body }) == AdvanceEventInvalid(
+        AE6NextKeysMismatch,
+      )
+    },
+  )
+}
+
+test a_body_with_a_malformed_encoding_is_not_a_valid_transition() {
+  let (spent, new, e) = r01_rotation()
+  transition_ok(
+    spent,
+    new,
+    AdvanceEvidence { ..e, event_bytes: expected.valid_text_boundaries_body },
+  ) && list.all(
+    expected.malformed_text_bodies,
+    fn(body) {
+      !transition_ok(spent, new, AdvanceEvidence { ..e, event_bytes: body })
+    },
   )
 }

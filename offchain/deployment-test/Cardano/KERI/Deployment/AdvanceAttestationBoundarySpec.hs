@@ -608,7 +608,7 @@ spec = describe "the two-policy advance, as the ledger evaluates it" $ do
         it "applies to programs of the measured sizes" $ do
             w <- world
             let size = SBS.length . artifactProgram
-            (size (worldFact w), size (worldChange w), size (worldCheckpoint w)) `shouldBe` (10_661, 12_404, 8_911)
+            (size (worldFact w), size (worldChange w), size (worldCheckpoint w)) `shouldBe` (10_661, 12_903, 8_911)
     describe "the names and the redeemers" $ do
         it "name a signed fact of exactly the nine-field record and no other shape" $ do
             v <- loadVector

@@ -206,7 +206,67 @@ const scalars = (() => {
   };
 })();
 
+// Text controls of the compact JSON profile: raw UTF-8 in the final value (its strings, member names and nested values) and in the
+// strings that precede it. The bodies are built from bytes: a malformed encoding cannot be spelled as a JavaScript string.
+const encodings = (() => {
+  const base = readFileSync(join(dir, 'R01/rotation.json'), 'utf8');
+  const marker = '"a":[]}';
+  const at = base.indexOf(marker);
+  if (at < 0) throw new Error('text control was not placed');
+  const bytes = (...parts) => Buffer.concat(parts.map((x) => (typeof x === 'string' ? Buffer.from(x, 'utf8') : Buffer.from(x))));
+  const last = (...value) => bytes(base.slice(0, at) + '"a":', ...value, '}');
+  const inFirstDigest = (...inserted) => {
+    const open = '"n":["';
+    const where = base.indexOf(open);
+    if (where < 0) throw new Error('prefix text control was not placed');
+    const start = where + open.length + 4;
+    return bytes(base.slice(0, start), ...inserted, base.slice(start));
+  };
+  // every length and boundary of well-formed UTF-8, as one string
+  const wellFormed = [[0xc2, 0x80], [0xdf, 0xbf], [0xe0, 0xa0, 0x80], [0xed, 0x9f, 0xbf], [0xee, 0x80, 0x80], [0xef, 0xbf, 0xbf], [0xf0, 0x90, 0x80, 0x80], [0xf4, 0x8f, 0xbf, 0xbf]];
+  const malformed = {
+    isolatedContinuation: [0x80],
+    isolatedLastContinuation: [0xbf],
+    overlongTwo: [0xc0, 0x80],
+    overlongTwoLast: [0xc1, 0xbf],
+    truncatedTwo: [0xc3],
+    truncatedThree: [0xe2, 0x82],
+    overlongThree: [0xe0, 0x80, 0x80],
+    surrogate: [0xed, 0xa0, 0x80],
+    overlongFour: [0xf0, 0x80, 0x80, 0x80],
+    abovePlane: [0xf4, 0x90, 0x80, 0x80],
+    leadFive: [0xf5, 0x80, 0x80, 0x80],
+    leadFe: [0xfe],
+    leadFf: [0xff],
+    badContinuation: [0xc3, 0x28],
+  };
+  const last_ = (value) => last(value);
+  return {
+    valid: last('["', 'é€😀', '"]'),
+    validNames: last('[{"', 'é€😀', '":"', 'é', '"}]'),
+    validBoundaries: last('[{"k":"', ...wellFormed.map((b) => Buffer.from(b)), '"}]'),
+    malformedValues: Object.values(malformed).map((b) => last('["a', Buffer.from(b), 'b"]')),
+    malformedName: last('[{"a', Buffer.from(malformed.isolatedContinuation), '":1}]'),
+    malformedSurrogateName: last('[{"', Buffer.from(malformed.surrogate), '":1}]'),
+    malformedNested: last('[["a', Buffer.from(malformed.isolatedContinuation), '"]]'),
+    prefixValid: inFirstDigest('é'),
+    prefixMalformed: Object.values(malformed).map((b) => inFirstDigest(Buffer.from(b))),
+  };
+})();
+
+// Independent control: a strict UTF-8 decoder accepts every valid body and refuses every malformed one, so the controls are what they
+// claim to be before any validator reads them.
+{
+  const strict = new TextDecoder('utf-8', {fatal: true});
+  const decodes = (buf) => { try { strict.decode(buf); return true; } catch { return false; } };
+  const valid = [encodings.valid, encodings.validNames, encodings.validBoundaries, encodings.prefixValid];
+  const malformed = [...encodings.malformedValues, encodings.malformedName, encodings.malformedSurrogateName, encodings.malformedNested, ...encodings.prefixMalformed];
+  if (!valid.every(decodes)) throw new Error('a valid text control is not valid UTF-8');
+  if (malformed.some(decodes)) throw new Error('a malformed text control is valid UTF-8');
+}
+
 const out = {
+  text_pair: { valid: hexOf(encodings.validBoundaries), malformed: hexOf(encodings.malformedValues[0]) },
   scalar_pair: { valid: Buffer.from(scalars.validNumbers, 'utf8').toString('hex'), malformed: Buffer.from(scalars.minusOnly, 'utf8').toString('hex') },
   trailing_pair: { body: Buffer.from(framing.trailingPair, 'utf8').toString('hex') },
   nested_seal: { body: Buffer.from(crafted.body, 'utf8').toString('hex'), offNt: crafted.offNt, offBt: crafted.offBt },
@@ -283,6 +343,18 @@ const expectedText = [
   constant('short_unicode_escape_body', 'ByteArray', '#"' + Buffer.from(scalars.shortUnicodeEscape, 'utf8').toString('hex') + '"'),
   '',
   constant('raw_control_body', 'ByteArray', '#"' + Buffer.from(scalars.rawControl, 'utf8').toString('hex') + '"'),
+  '',
+  constant('valid_text_body', 'ByteArray', '#"' + hexOf(encodings.valid) + '"'),
+  '',
+  constant('valid_text_names_body', 'ByteArray', '#"' + hexOf(encodings.validNames) + '"'),
+  '',
+  constant('valid_text_boundaries_body', 'ByteArray', '#"' + hexOf(encodings.validBoundaries) + '"'),
+  '',
+  constant('malformed_text_bodies', 'List<ByteArray>', [...encodings.malformedValues, encodings.malformedName, encodings.malformedSurrogateName, encodings.malformedNested].map((b) => '#"' + hexOf(b) + '"')),
+  '',
+  constant('prefix_valid_text_body', 'ByteArray', '#"' + hexOf(encodings.prefixValid) + '"'),
+  '',
+  constant('prefix_malformed_text_bodies', 'List<ByteArray>', encodings.prefixMalformed.map((b) => '#"' + hexOf(b) + '"')),
   '',
   constant('repeated_nt_body', 'ByteArray', '#"' + Buffer.from(outsideProfile.repeated, 'utf8').toString('hex') + '"'),
   '',

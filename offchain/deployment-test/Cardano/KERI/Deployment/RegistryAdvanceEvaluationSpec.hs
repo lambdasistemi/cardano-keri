@@ -45,6 +45,7 @@ import Cardano.KERI.Deployment.AdvanceVectors (
     loadNestedSeal,
     loadScalarPair,
     loadSeeds,
+    loadTextPair,
     loadTrailingPair,
     loadVectorNamed,
     signedBy,
@@ -503,6 +504,18 @@ spec = describe "#576 the checkpoint's moves of the attested generation, evaluat
         it "R01: a final value whose number is malformed is refused at the change policy, the one whose numbers are valid accepted there (the other purposes are not what this pair isolates)" $ do
             v <- loadJanuaryVector "r01"
             (valid, malformed) <- loadScalarPair
+            w <- worldWith v terms
+            let honest = rotationMove w
+                withBody body = honest{movePayload = atField 0 (const (PLC.B body)) (movePayload honest)}
+                accepted = withBody valid
+                refused = withBody malformed
+            validTx <- buildAdvance w accepted Keep
+            Evaluation.acceptedAt validTx (answers w accepted validTx) (Minting (changePolicy w)) `shouldBe` True
+            tx <- buildAdvance w refused Keep
+            Evaluation.refusedAt tx (answers w refused tx) (Minting (changePolicy w)) `shouldBe` True
+        it "R01: a final value whose text is not well-formed UTF-8 is refused at the change policy, the one with every length of well-formed text accepted there (the other purposes are not what this pair isolates)" $ do
+            v <- loadJanuaryVector "r01"
+            (valid, malformed) <- loadTextPair
             w <- worldWith v terms
             let honest = rotationMove w
                 withBody body = honest{movePayload = atField 0 (const (PLC.B body)) (movePayload honest)}

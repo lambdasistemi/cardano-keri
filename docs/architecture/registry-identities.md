@@ -93,9 +93,9 @@ blueprint of the other generation is refused when they are read back.
 | Attested registry application, state script and name | `the same` |
 | Attested fact policy hash | `8820ee6877973be5ee1be2de32af53bdea3fb4afd253965678ecdf29` |
 | Attested fact policy program bytes | `10661` |
-| Attested change policy hash | `ef4ba7197ec361366be4c93c900d89adc40875020449d2c39ebcd7e6` |
-| Attested change policy program bytes | `12404` |
-| Attested checkpoint validator script hash | `b1482d132e56d43376ebe0569a593b94d7251ec5160fde637d79606f` |
+| Attested change policy hash | `c51fb1d0b78e838a68d65b1e1c5ad852e0996b92ec23498b7af1c38a` |
+| Attested change policy program bytes | `12903` |
+| Attested checkpoint validator script hash | `ac65d3b2761dec3a2a1cde1807aa85ec9793a47c46fb4b7eefd04a43` |
 | Attested checkpoint validator program bytes | `8911` |
 <!-- identities:end -->
 

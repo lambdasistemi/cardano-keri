@@ -22,6 +22,7 @@ module Cardano.KERI.Deployment.AdvanceVectors (
     loadNestedSeal,
     loadTrailingPair,
     loadScalarPair,
+    loadTextPair,
     loadVector,
     Seeds (..),
     loadSeeds,
@@ -172,6 +173,19 @@ loadScalarPair = do
     top <- eitherDecodeFileStrict path >>= either fail pure
     either fail pure $ do
         pair <- field "scalar_pair" top
+        valid <- field "valid" pair >>= asText >>= hexBytes
+        malformed <- field "malformed" pair >>= asText >>= hexBytes
+        Right (valid, malformed)
+
+{- | Two bodies of R01 that differ in the text of their last member: every length and boundary of well-formed UTF-8, and an
+isolated continuation byte.
+-}
+loadTextPair :: IO (ByteString, ByteString)
+loadTextPair = do
+    path <- getDataFileName "test/keri-fixtures/fixtures/january-591-cases.json"
+    top <- eitherDecodeFileStrict path >>= either fail pure
+    either fail pure $ do
+        pair <- field "text_pair" top
         valid <- field "valid" pair >>= asText >>= hexBytes
         malformed <- field "malformed" pair >>= asText >>= hexBytes
         Right (valid, malformed)

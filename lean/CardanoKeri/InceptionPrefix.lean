@@ -145,7 +145,7 @@ theorem admitted_opening_fields {i env rp cp release reads emptyName o index out
   cases ht : reads.openTip data.initialDatum bytes <;>
     simp [verify, opened, kind, source, decodedBody, ht, OpeningReads.accepts] at verified
   obtain ⟨⟨written, bound⟩, _⟩ := verified
-  simp [inceptionWrites] at written
+  simp [inceptionWrites, Threshold.fitsNextKeys] at written
   exact ⟨bound, by grind, by grind⟩
 
 /-- Given an admitted booking, when the registration reader opens the same

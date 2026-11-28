@@ -504,7 +504,7 @@
 </main>
 <pre id="selftest-out" hidden></pre>
 <script>
-/* Source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"52c4a5fbe5b784612b915b17179dc9a7c7169dc626cd9f09d166f27d1d38c4d0","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","registry-fixtures.mjs":"c1ce632387ad5332852be8f49e009fef0e741cfdf42c73e42616545374e7f26f","registry-offers.mjs":"2fbce583fc56f4d79d60b848c3f90a228806c9b23bcfd6c3ede9b7aebacf502a","registry-properties.mjs":"c58970d9d7187a7a33ddb05402a258b438f96b06e13decc181c634b7331e5b37","registry-simulator-backend.mjs":"efc7fba348331392a0f5bb62d60fdaa4e61cd3e00c614cd08c07941c4046bf10","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"06d18eecdf95ec79e2d6f81c76d2ae8fa87bc5ebcd24ff1488dc3594bb3dd719","registry-page-template.html":"ee28020afc2b66437de9db42f3e8c9d60049b22e91bea940ed2a24c4d05abae5"} */
+/* Source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"ccfd761b0bb64abd1af75db717c727ef9b3ac2832f5fbf1c8f60bfb22ef77aaa","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","registry-fixtures.mjs":"c1ce632387ad5332852be8f49e009fef0e741cfdf42c73e42616545374e7f26f","registry-offers.mjs":"2fbce583fc56f4d79d60b848c3f90a228806c9b23bcfd6c3ede9b7aebacf502a","registry-properties.mjs":"c58970d9d7187a7a33ddb05402a258b438f96b06e13decc181c634b7331e5b37","registry-simulator-backend.mjs":"efc7fba348331392a0f5bb62d60fdaa4e61cd3e00c614cd08c07941c4046bf10","scenario-dsl.mjs":"f99480d4eb074ac42c308d8c2d61fbaac782ceac1037971689ae45ac5a607922","registry-page.mjs":"06d18eecdf95ec79e2d6f81c76d2ae8fa87bc5ebcd24ff1488dc3594bb3dd719","registry-page-template.html":"ee28020afc2b66437de9db42f3e8c9d60049b22e91bea940ed2a24c4d05abae5"} */
 'use strict';
 /* @@MODULE:E@@ sha256=1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9 */
 const E = (() => {
@@ -806,7 +806,7 @@ return { bookingAttested, convictionAttested, sampleBooking, sampleConviction };
 })();
 /* @@MODULE:A:END@@ */
 
-/* @@MODULE:Judgment@@ sha256=52c4a5fbe5b784612b915b17179dc9a7c7169dc626cd9f09d166f27d1d38c4d0 */
+/* @@MODULE:Judgment@@ sha256=ccfd761b0bb64abd1af75db717c727ef9b3ac2832f5fbf1c8f60bfb22ef77aaa */
 const Judgment = (() => {
 // The decoded rotation judgment is shared by conviction and the two-event reader.
 const { equal, toInternal, toWire } = E;
@@ -818,7 +818,7 @@ const fraction = w => [BigInt(w.numerator), BigInt(w.denominator)];
 const atLeastOne = w => w[1] > 0n && w[0] >= w[1];
 function thresholdSatisfied(threshold, keys, signers) {
   const signed = keys.map(k => signers.includes(k));
-  if (threshold.count) return threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
+  if (threshold.count) return threshold.count.required > 0 && threshold.count.required <= keys.length && threshold.count.required <= signed.filter(Boolean).length;
   const clauses = threshold.weighted.clauses;
   let offset = 0;
   const valid = clauses.length > 0 && clauses.every(clause => {
@@ -861,7 +861,11 @@ function signingValid(prior, signed) {
 }
 function receiptsValid(prior, signed) {
   const event = signed.event, witnesses = derivedWitnesses(prior, event), receipts = verifiedSigners(event, signed.receipts);
-  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) && event.witnessThreshold <= witnesses.length &&
+  return distinct(prior.witnesses) && distinct(event.cuts) && distinct(event.adds) &&
+    event.cuts.every(w => prior.witnesses.includes(w)) &&
+    event.adds.every(w => !prior.witnesses.includes(w)) &&
+    (witnesses.length === 0 || event.witnessThreshold > 0) &&
+    event.witnessThreshold <= witnesses.length &&
     event.witnessThreshold <= witnesses.filter(w => receipts.includes(w)).length;
 }
 // The keripy event profile applies to both declared rules. A next rule is
@@ -872,9 +876,28 @@ function admittedWeights(threshold) {
   return threshold.weighted.clauses.every(clause => clause.every(term =>
     term.key ? admitted(term.key.weight) : admitted(term.group.weight) && term.group.members.every(admitted)));
 }
+function nextRuleFits(threshold, keyCount) {
+  if (threshold.count) return threshold.count.required <= keyCount;
+  const clauses = threshold.weighted.clauses;
+  const reachesOne = weights => atLeastOne(weights.map(fraction).reduce(fractionAdd, [0n, 1n]));
+  let width = 0;
+  return clauses.length > 0 && clauses.every(clause => {
+    const top = [];
+    for (const term of clause) {
+      top.push((term.key ?? term.group).weight);
+      if (term.key) width++;
+      else {
+        width += term.group.members.length;
+        if (!reachesOne(term.group.members)) return false;
+      }
+    }
+    return reachesOne(top);
+  }) && width <= keyCount;
+}
 function rotationValid(prior, signed) {
   return !prior.delegated && signed.event.kind === 'rotation' && signed.structureVerified &&
     admittedWeights(prior.nextThreshold) && admittedWeights(signed.event.threshold) && admittedWeights(signed.event.nextThreshold) &&
+    nextRuleFits(signed.event.nextThreshold, signed.event.nextKeys.length) &&
     signed.event.aid === prior.aid && prior.sn < signed.event.sn && signingValid(prior, signed) && receiptsValid(prior, signed);
 }
 

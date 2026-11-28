@@ -79,6 +79,15 @@ const positions = {
   outer: weight => ({group: {weight, members: [one]}}),
   member: weight => ({group: {weight: one, members: [weight]}}),
 };
+// The signed D inceptions in the keripy reference differ only in the declared next rule.
+const commitments = [21, 22];
+for (const [label, weight, allowed] of [
+  ['D next below one', ratio(1, 3), false],
+  ['D next unreduced', ratio(2, 4), true],
+]) {
+  const term = positions.flat(weight);
+  checkRegistration({nextKeys: commitments, nextThreshold: {weighted: {clauses: [[term, term]]}}}, allowed, label);
+}
 for (const [position, term] of Object.entries(positions)) {
   for (const [name, fraction, allowed] of [
     ['unreduced', ratio(2, 2), true], ['above-one', ratio(2, 1), false],

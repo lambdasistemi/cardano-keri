@@ -224,8 +224,10 @@ For a basic prefix it checks the sole qualified key and the numeric threshold
 one. A non-transferable basic prefix also requires empty next commitments,
 witnesses and seals. A transferable basic prefix permits empty next commitments.
 The numeric signing threshold must be positive. The next threshold's width
-must fit the signed list of next digests. Zero is permitted for the next
-declaration. [keripy 1.3.5 threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L694-L716)
+must fit the signed list of next digests. A weighted declaration must have at
+least one clause. Each clause and each nested group of members must reach
+one. For example, two `1/3` weights in a single clause fail, and two signed
+`2/4` weights satisfy it. A numeric zero is permitted for the next declaration. [keripy 1.3.5 threshold construction](https://github.com/WebOfTrust/keripy/blob/95c1ba6ccb7abe07428494a7843224daddb1af6a/src/keri/core/eventing.py#L694-L716)
 
 System registration reads the booking evidence indexed by the identifier and
 initial datum through `Env.inceptionBytes`. Its issuer and system readers both

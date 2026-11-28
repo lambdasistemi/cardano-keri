@@ -45,7 +45,7 @@ def inceptionWrites (aid : Nat) (event : SignedEvent) (witnesses : List Nat) : B
   let e := event.event
   let receipts := verifiedSigners e event.receipts
   let inceptionFields := e.priorDigest == 0 && e.cuts.isEmpty && e.adds.isEmpty &&
-    decide (e.nextThreshold.width ≤ e.nextKeys.length)
+    e.nextThreshold.fitsNextKeys e.nextKeys.length
   e.aid == aid && e.sn == 0 && e.kind == .inception &&
     (event.structureVerified && inceptionFields && e.weightsAtMostOne && e.nextThreshold.positiveDenominators) &&
     distinct e.keys && !e.keys.isEmpty && distinct witnesses &&

@@ -147,6 +147,11 @@ private def witnessed : InceptionPrefix.Evidence :=
 /-- The same indexed booking verdicts checked by the pinned keripy reference. -/
 def inceptionReferenceCases : List (String × Bool) :=
   let booking := fun code body => prefixBooking (readsFor code (evidence body))
+  let future := fun (next : List Nat) (clauses : List (List Weight)) =>
+    booking "D" {prefixEvent next with nextThreshold := .weighted clauses}
+  let half := Weight.key ⟨1, 2⟩
+  let third := Weight.key ⟨1, 3⟩
+  let one := Weight.key ⟨1, 1⟩
   [("B empty", booking "B" (prefixEvent [])),
    ("D empty", booking "D" (prefixEvent [])),
    ("B next", booking "B" (prefixEvent [22])),
@@ -161,7 +166,16 @@ def inceptionReferenceCases : List (String × Bool) :=
    ("D oversized next", booking "D" {prefixEvent [22] with nextThreshold := .count 2}),
    ("B missing next", booking "B" {prefixEvent [] with nextThreshold := .count 1}),
    ("E zero signing", prefixBooking (readsFor "E" (evidence {prefixEvent [] with threshold := .count 0}) (some 11))),
-   ("D zero next with digest", booking "D" {prefixEvent [22] with nextThreshold := .count 0})]
+   ("D zero next with digest", booking "D" {prefixEvent [22] with nextThreshold := .count 0}),
+   ("D next below one", future [21,22] [[third, third]]),
+   ("D next unreduced", future [21,22] [[.key ⟨2,4⟩, .key ⟨2,4⟩]]),
+   ("D next partial coverage", future [21,22,23] [[one], [one]]),
+   ("D weighted next without commitments", future [] [[one]]),
+   ("D next exact one", future [21,22] [[half, half]]),
+   ("D next second clause below one", future [21,22] [[one], [third]]),
+   ("D next inner below one", future [21,22,23] [[one, .group ⟨1,2⟩ [⟨1,3⟩, ⟨1,3⟩]]]),
+   ("D next nested exact one", future [21,22,23] [[half, .group ⟨1,2⟩ [⟨1,2⟩, ⟨1,2⟩]]]),
+   ("D next no clauses", future [] [])]
 
 -- Reopen the indexed evidence using the actual registration history reader.
 private def installed (reads : InceptionPrefix.Reads) :=
@@ -182,6 +196,12 @@ private def installed (reads : InceptionPrefix.Reads) :=
 #guard !prefixBooking {readsFor "B" basic with
     openTip := fun _ _ => some ((WriterDatum.inception (prefixEvent [22]) []).tip KeyEncoding.symbolic 0)}
 #guard !prefixBooking (readsFor "B" basic) {regObs with assets.mint := [(approval, 1)]}
+#guard !prefixBooking {readsFor "D" basic with
+    bytesAt := fun _ index => if index == 1 then some [1] else none}
+#guard !prefixBooking {readsFor "D" basic with bytesAt := fun _ _ => some [2]}
+#guard !prefixBooking (readsFor "D" (evidence {prefixEvent [] with kind := .delegatedInception}))
+#guard !prefixBooking (readsFor "D" (evidence
+    {prefixEvent [22] with nextThreshold := .weighted [[.key ⟨3, 2⟩]]}))
 end PrefixAdmission
 
 example : Attestation.NetMintField regObs.assets := by unfold Attestation.NetMintField; decide

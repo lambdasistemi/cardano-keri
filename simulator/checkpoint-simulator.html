@@ -507,7 +507,7 @@
 
 <script>
 /* @@EVIDENCE@@ */
-/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"9e258edf0412cefd1f28ffbc98ce7d3eda4cf259c8b7ef227801290b4b78383f","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
+/* Evidence source bindings: {"registry-economic-core.mjs":"1c7a0ef57ab060795b5862dc429082d3312d07b197972d84f910b962dca6c5c9","attestation.mjs":"6d1103d2deee6600f439fd32cb97c9df3672d431d816022b8bf25baff7a57876","checkpoint-conviction.mjs":"ccfd761b0bb64abd1af75db717c727ef9b3ac2832f5fbf1c8f60bfb22ef77aaa","registry-wire.mjs":"c6aa4d5a380a826ad27788df4ad0436d30a0c8325285ce5679243000066a7ba7"} */
 const [checkpointEconomics, checkpointAttestation, checkpointEvidence, checkpointWire] = (() => {
 const E=(()=>{
 /* Executable transcription of the pinned Singular economic judgments used by
@@ -917,7 +917,7 @@ function convictionFixture(identifier, epoch, sequence) {
       rival: {event, structureVerified: true, signatures: [{signer: aid, event, verified: true}], receipts: []}}});
 }
 
-return {thresholdSatisfied,verifiedSigners,derivedWitnesses,signingValid,receiptsValid,admittedWeights,rotationValid,acceptsComparison,convictionFixture};})();
+return {thresholdSatisfied,verifiedSigners,derivedWitnesses,signingValid,receiptsValid,admittedWeights,nextRuleFits,rotationValid,acceptsComparison,convictionFixture};})();
 const W=(()=>{
 /* Version 3 interchange validation. This is the simulator's input boundary,
  * separate from the model's semantic refusals. Nat/Int are exact and complete
@@ -4258,7 +4258,7 @@ wire();
 render();
 if (/[?&]selftest=1/.test(location.search)) runSelftest();
 /* @@SYSTEM@@ */
-/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"5e22be5ce31ec3fb34cc4344e27aa61f7dc67650ecc4084ed41db4d599f4b7ca","checkpoint-system-properties.mjs":"bc438e3e5cd26b948e2640c25ee900420fd4ecf93b0d86623a43763f8ccaf2fd","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
+/* System source bindings: {"checkpoint-simulator-core.mjs":"235717dd8d38f9c42608eeb2cc637790790299b15ee5d4136ebcc534de3fbe80","registry-simulator-core.mjs":"0657884628e78dd38ad6e8f91cd08f639b16d219c761125be053dedce5e9d00a","checkpoint-system-core.mjs":"6a01ae5418fe53b521ccee483812ce331976d0688f99accddd4e42f405da5999","checkpoint-system-properties.mjs":"bc438e3e5cd26b948e2640c25ee900420fd4ecf93b0d86623a43763f8ccaf2fd","consumer-core.mjs":"bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b","consumer-properties.mjs":"2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b","checkpoint-system-corpus.json":"20149da94ebef5e100021b9ade58e49c63282acd0dc34b88ba8d2435ab45f078","checkpoint-system-page.mjs":"9bd23878f12f171394892d03792da1baa9dc418e8e465fa803cf1ec39ea84c91","consumer-corpus.json":"ba0f2346f8d802a9abcd3e72a2cc70c7ce8b780a47cc4a06fd2a508e17e63825","consumer-page.mjs":"3046edbb705dc58c5c0dc32875b520259afec38c5bb914ef44a86e8b567a46b4"} */
 (()=>{
 const C={
   hasOutput, representativeHeld,
@@ -4507,6 +4507,7 @@ const S=(()=>{
  * Local Checkpoint integers retain that simulator's explicit safe-Number bound.
  * Registry values use exact wire integers. Schema errors are not model refusals. */
 
+const { nextRuleFits }=Judgment;
 
 
 
@@ -4690,9 +4691,7 @@ function inceptionWriter(writers, aid, datum) {
     const digest = writers.prefixes.digests.find(([body]) => body.eventDigest === e.eventDigest && E.equal(body, e));
     bound = digest !== undefined && E.equal(digest[1], aid);
   }
-  const nextWidth = e.nextThreshold.count?.required ?? e.nextThreshold.weighted.clauses
-    .flat().reduce((width, term) => width + (term.key ? 1 : term.group.members.length), 0);
-  require(bound && nextWidth <= e.nextKeys.length &&
+  require(bound && nextRuleFits(e.nextThreshold, e.nextKeys.length) &&
     E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
     e.priorDigest === 0 && e.cuts.length === 0 && e.adds.length === 0 &&
     C.admittedWeights(e.threshold) && C.admittedWeights(e.nextThreshold) &&

@@ -5,6 +5,7 @@
  * Local Checkpoint integers retain that simulator's explicit safe-Number bound.
  * Registry values use exact wire integers. Schema errors are not model refusals. */
 import * as C from './checkpoint-simulator-core.mjs';
+import { nextRuleFits } from './checkpoint-conviction.mjs';
 import * as R from './registry-simulator-core.mjs';
 import * as W from './registry-wire.mjs';
 import * as E from './registry-economic-core.mjs';
@@ -188,9 +189,7 @@ function inceptionWriter(writers, aid, datum) {
     const digest = writers.prefixes.digests.find(([body]) => body.eventDigest === e.eventDigest && E.equal(body, e));
     bound = digest !== undefined && E.equal(digest[1], aid);
   }
-  const nextWidth = e.nextThreshold.count?.required ?? e.nextThreshold.weighted.clauses
-    .flat().reduce((width, term) => width + (term.key ? 1 : term.group.members.length), 0);
-  require(bound && nextWidth <= e.nextKeys.length &&
+  require(bound && nextRuleFits(e.nextThreshold, e.nextKeys.length) &&
     E.equal(e.aid, aid) && e.sn === 0 && e.kind === 'inception' && signed.structureVerified &&
     e.priorDigest === 0 && e.cuts.length === 0 && e.adds.length === 0 &&
     C.admittedWeights(e.threshold) && C.admittedWeights(e.nextThreshold) &&

@@ -5,7 +5,7 @@
   "sources": {
     "lean/CardanoKeri/AbandonmentExamples.lean": "72eab457ec9bd5c40829bc7c95d29ad20acdd528204e3903f8d406b7553f954d",
     "lean/CardanoKeri/Application.lean": "b06c63ba8d5c09e5a30156b73ca1820471138970932b96a5011495634e3d986a",
-    "lean/CardanoKeri/ApplicationCustodyExample.lean": "c911e6339043a66145adbc94f2fc8f06d8dfec25c8576d86b69f6aa690e73ab9",
+    "lean/CardanoKeri/ApplicationCustodyExample.lean": "3eb781dd5648d66491ff7c66fee661046a867067fd4396de628b2b592eecc607",
     "lean/CardanoKeri/ApplicationCustodyHistory.lean": "e76a75285f359a8b35b6468bae0e07a8442ac867aae59ff9641ed37ca5dac380",
     "lean/CardanoKeri/ApplicationGoals.lean": "59928305430b39bdf592b3efe288743e62d63594739cf303b139c462ddb1b154",
     "lean/CardanoKeri/ApplicationVectors.lean": "97b8d91eb54bd08eb30447459b15e8cc08ef65bb71ede38a57276cfe5cceb1ce",
@@ -24,7 +24,7 @@
     "lean/CardanoKeri/CheckpointDeposit.lean": "6ce03d0e88ee7cc55de194df185f067995e9b8d943f2478282934e691db13a68",
     "lean/CardanoKeri/CheckpointDepositGoals.lean": "c6ddf3b2434e365b59bdccfd2bc074b60208d63b3358141f147d8ac0fcf1055f",
     "lean/CardanoKeri/CheckpointDepositVectors.lean": "f6c96b69a42efd73a3365715213fb0a13a0138bce7c39dba4cd67a5713ba5140",
-    "lean/CardanoKeri/CheckpointEventHistory.lean": "aeb2fa909963cbd42de1390675c7db24874e43ac33a17397d6dc7b21996f6e50",
+    "lean/CardanoKeri/CheckpointEventHistory.lean": "4edcbd860839f57f21371ed117724391c50340b6a064e2cc6f58c00c46263898",
     "lean/CardanoKeri/CheckpointGoals.lean": "9465d7e242adfa5f59e75e9602fb995ac739e2c023be69c5b8c3c0d538282b5b",
     "lean/CardanoKeri/CheckpointLifecycleExamples.lean": "37474bd76b814540e755c3558e301642bc49d4a5038c2cf75eac51fca85be6bb",
     "lean/CardanoKeri/CheckpointReceiptCheck.lean": "b8e503afc6b39c864d5670b5b746ada934e519beb2c45b291be66d811e1085d8",
@@ -46,7 +46,7 @@
     "lean/CardanoKeri/ConsumerIdentity.lean": "2c1fe9311f7a3c460dfcbd90d915ea17a9aae83199ab842247e6ef991a7e9f26",
     "lean/CardanoKeri/ConsumerJourney.lean": "6f7e38fc91b3292e2fada5091c1ca3ec686977918b84bf7b5b283f8ffde9be15",
     "lean/CardanoKeri/ConsumerWire.lean": "82b7088d8ada127c6ecee9ca50ef483fcf240cf31e981489006e08ec51ede4d4",
-    "lean/CardanoKeri/InceptionPrefix.lean": "ea9ca44575bf9689666b06b7ab2f28b26d7cbb49bde912da3cd47e595954cf82",
+    "lean/CardanoKeri/InceptionPrefix.lean": "0015ba995de1bc35cc4debc961c2149d3faf0052bcdc41eab22111f584d0156a",
     "lean/CardanoKeri/InceptionPrefixOpening.lean": "5d88e3dda8148a030f14a11f82a2ede6ef972a4258a4038e4ef834fb87856d15",
     "lean/CardanoKeri/ReaderStatus.lean": "f0ef5697905f98527f328a99661cd603dbb3bc6ffb71f8ac1bbc3f485fb766a1",
     "lean/CardanoKeri/ReaderStatusGoals.lean": "085c2bb5b74130efcd28157ee87b0b4309a7a548b288e93e19df5a0215290b5e",
@@ -90,7 +90,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.genesisLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 255,
+      "line": 275,
       "statement": "private theorem genesisLedger : ValidLedger initWorld genesisWorld openObs",
       "statementSha256": "ab27eb99468e62c0c7787662117ec91c6622b08ae5c05b1cf2c006ca71b74c65",
       "sourceStory": "Given the seed and its value, when genesis creates the state and configuration, then the ledger accounts for both outputs.",
@@ -104,7 +104,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.regLedger",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 258,
+      "line": 278,
       "statement": "private theorem regLedger : ValidLedger genesisWorld requestWorld regObs",
       "statementSha256": "02ad70fe3d107888be2565a2b772695c2d54697e27299b33f92f4595a4875014",
       "sourceStory": "Given the funded controller, when registration is booked, then its input value and minted approval reach the request.",
@@ -118,7 +118,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.neutral",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 279,
+      "line": 299,
       "statement": "private theorem neutral {before after : CandidateWorld} (past : Reach before)\n    (tx : Transaction before after)\n    (mint : policyDelta tx.observation.assets release.statePolicy [] = true)\n    (untouched : ∀ r ∈ before.registries, r.state.reference ∉ tx.observation.assets.spent)\n    (registries : after.registries = before.registries) (domain : after.domain = before.domain) :\n    Reach after",
       "statementSha256": "28432e15eb664e6f05090fc21bc83b6208e8af30bca209db02b6ed5c1e7941df",
       "sourceStory": "Given a reachable public world, when a valid ledger step preserves the registry state and mints no state-policy asset, then the successor is reachable.",
@@ -132,7 +132,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.publicHistory",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 288,
+      "line": 308,
       "statement": "private theorem publicHistory : Reach convictionWorld",
       "statementSha256": "c0724c16c9cd594ff6c9804302bae09ff63535fa55da86955c0ca44723f9d448",
       "sourceStory": "Given the funded initial world, when genesis, booking, fold and checkpoint spends run, then the pre-booking world is reachable under the public registry model.",
@@ -146,7 +146,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.history",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 302,
+      "line": 322,
       "statement": "private theorem history : HistoryPremises i.hash i.code commit release convictionWorld registry1 11",
       "statementSha256": "9e4428817c336354733dee4393192fe93794e52ceac74a2f1955b0da074be27e",
       "sourceStory": "Given that execution and its finite naming table, when identifier 11 is queried, then the registry has the required history and unambiguous names.",
@@ -160,7 +160,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.namedApproval",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 314,
+      "line": 334,
       "statement": "private theorem namedApproval (preimage : Preimage)\n    (same : i.hash (i.code preimage) = i.hash (i.code target)) : preimage = target",
       "statementSha256": "5318287fdaa2084a568c4b9db87308914a562db0486be9a1284f606d38beb76e",
       "sourceStory": "Given the example naming table, when a preimage has the name of the termination approval, then it is the exact termination preimage.",
@@ -174,7 +174,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.registeredPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 328,
+      "line": 348,
       "statement": "private theorem registeredPath : CarrierHistory p env i active 11 startEdges registered foldWorld carrier",
       "statementSha256": "b73e83db3a97df3119675c71f339ae39019cd4cc3fd9b8c896ef2a166f75d960",
       "sourceStory": "Given the accepted registration, when its fold delivers the new holding, then the carrier history starts at that indexed output.",
@@ -188,7 +188,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotatedPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 337,
+      "line": 357,
       "statement": "private theorem rotatedPath : CarrierHistory p env i active 11 rotationEdges rotated advancedWorld advanced",
       "statementSha256": "77b6437fcc6b04083a63dbcd5591577323b6136f292045e2453dc2bce34e8d06",
       "sourceStory": "Given the registered holding, when the signed advance is paid, then its successor output is the next carrier in the history.",
@@ -202,7 +202,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.pendingPath",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 344,
+      "line": 364,
       "statement": "private theorem pendingPath : CarrierHistory p env i active 11 convictionEdges pending convictionWorld convicted",
       "statementSha256": "94023c8baf493ae62db1c617ecb3b9c50dc2776b538ba27b0c4f02bea60868a7",
       "sourceStory": "Given the rotated holding, when the commitment opens and its conviction spends the holding, then the carrier history ends at the pending output.",
@@ -216,7 +216,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_termination_booking",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 354,
+      "line": 374,
       "statement": "theorem witnessed_termination_booking :\n    namedInput bookObs convicted.reference = some convicted ∧\n    checkpointDatum i convicted = some ⟨11, .terminationPending rotatedLive.hash⟩ ∧\n    (committed, pending, convicted) ∈ convictionEdges ∧\n    ConvictionEdge p env 11 rotatedLive.hash committed pending",
       "statementSha256": "e7cf776cc12120d979644101c0cd4033d4b07f3c0217f7349419299043cc3d2c",
       "sourceStory": "Given the public genesis, registration, rotation, commitment and conviction\nabove, when the application mints the termination approval, then it spends\nthe output created by that conviction at the rotated position.",
@@ -230,7 +230,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.economic_booking_reads_rotated_position",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 388,
+      "line": 408,
       "statement": "theorem economic_booking_reads_rotated_position :\n    Registry.bookTermination rp registryPending 11 7 bookingTx.fee termination =\n      .ok ({ premium := some (7, 1), intoRequest := 3, bookingFee := 1 }, registryBooked) ∧\n    bookingTx.bookingSpend i release rp rid termination convicted.reference = some nativeReceipt ∧\n    ∃ request before after, bookingTx.creates request ∧ request.reference = termination.request.reference ∧\n      namedInput bookObs nativeReceipt.reference = some convicted ∧\n      nativeReceipt.reference = convicted.reference ∧ nativeReceipt.aid = termination.request.key ∧\n      checkpointDatum i convicted = some ⟨nativeReceipt.aid, .terminationPending nativeReceipt.position⟩ ∧\n      (before, after, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env nativeReceipt.aid nativeReceipt.position before after ∧\n      ∃ writer, before.writers nativeReceipt.aid = some writer ∧ writer.authenticated nativeReceipt.aid = true ∧\n        writer.epoch = nativeReceipt.position.epoch ∧ writer.writer.event.sn = nativeReceipt.position.sn",
       "statementSha256": "fc1c6494f151b5587ab1b4c4f66f47a6a1bb60aa787cb1a1c19dac3207630e0a",
       "sourceStory": "Given the registered carrier has rotated and entered pending termination,\nwhen the booker pays the fee and places the economic request, then the\napplication receipt reads the rotated position from the spent output. Both\nthe economic booking and the mint succeed for this request reference.",
@@ -244,7 +244,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.economic_entry_for_rotated_checkpoint",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 418,
+      "line": 438,
       "statement": "theorem economic_entry_for_rotated_checkpoint :\n    bookingTx.economicBooking i release rp rid termination convicted.reference = some termination ∧\n    ∃ entry source target, Registry.pendingAt registryBooked termination.request.reference = some entry ∧\n      entry.booking = termination.toTerminationBooking ∧ entry.payload.spend.reference = convicted.reference ∧\n      entry.payload.spend.aid = 11 ∧\n      checkpointDatum i convicted = some ⟨entry.payload.spend.aid, .terminationPending entry.payload.spend.position⟩ ∧\n      (source, target, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env entry.payload.spend.aid entry.payload.spend.position source target",
       "statementSha256": "decd1ec96669e2612cc5345ec84dc72c5721cb55cf507e1dce49c30aa9a10d9b",
       "sourceStory": "Given the public registration, rotation and conviction, when the observed\nmint books the economic request, its stored receipt is for the pending output\nat 105#0 and the authenticated writer at epoch one and sequence one.",
@@ -258,7 +258,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotated_booking_compares_its_writer",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 434,
+      "line": 454,
       "statement": "theorem rotated_booking_compares_its_writer :\n    ∃ writer comparison, committed.writers 11 = some writer ∧ writer.authenticated 11 = true ∧\n      (env 11).comparison 1 1 = some comparison ∧\n      (env 11).keyReads.matches 11 writer comparison.tip = true ∧\n      comparison.tip.epoch = 1 ∧ comparison.tip.sn = 1 ∧\n      CheckpointConviction.accepts comparison.tip comparison.rival = true",
       "statementSha256": "6ebb75d36574d78155e62fd294d1d8c688a003d2524b2cd85a54df6339e5d620",
       "sourceStory": "Given the public history ending at the rotated checkpoint, when its\nconviction spends that state, then its accepted comparison uses the\nauthenticated writer and native position of the produced pending carrier.",
@@ -272,7 +272,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_shared_conviction",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 446,
+      "line": 466,
       "statement": "theorem witnessed_shared_conviction :\n    ∃ observed before after, (before, after, convicted) ∈ convictionEdges ∧\n      ConvictionEdge p env 11 association.keyState before after ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧ observed.output = convicted.reference ∧\n      association.entry.payload.spend = ⟨convicted.reference, 11, association.keyState⟩ ∧\n      Registry.ConvictionOrigin association.origin.parameters association.origin.environment\n        association.origin.configuration 11 association.entry.payload.token\n        (some association.entry.payload.spend) association.entry.payload.original",
       "statementSha256": "d8e0ff1e1da890f98643107068ef8bf278285abcf2024cf2cabd711867221581",
       "sourceStory": "Given the public carrier after rotation, when the termination request is\nbooked, the economic and checkpoint histories identify the same comparison\nand the same indexed pending output created by the earlier conviction.",
@@ -286,7 +286,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.witnessed_terminal_fold",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 460,
+      "line": 480,
       "statement": "theorem witnessed_terminal_fold :\n    Registry.pendingAt completionReceipt.before association.reference = some association.entry ∧\n    Singular.inputsContainReference completionReceipt.transaction.transaction.inputs association.reference = true ∧\n    Registry.pendingAt completionReceipt.after association.reference = none ∧\n    Singular.trieGet completionReceipt.after.trie 11 = .known .terminal ∧\n    ∃ observed source target, (source, target) ∈ [(pending, booked), (committed, pending),\n      (rotated, committed), (registered, rotated), (Sys.init deployment, registered)] ∧\n      ConvictionEdge p env 11 association.keyState source target ∧\n      (env 11).convictionSpend association.keyState.epoch association.keyState.sn = some observed ∧\n      association.origin.environment.conviction 11 = some observed ∧\n      association.entry.payload.spend = ⟨observed.output, 11, association.keyState⟩ ∧\n      CheckpointConviction.accepts observed.comparison.tip observed.comparison.rival = true",
       "statementSha256": "7fbe2fa4a159ec11ff3904a59f425f16003d1a6abc72f48be1d0138855e35ba8",
       "sourceStory": "Given the registered, rotated and convicted AID 11, when the fold consumes\nrequest 200#0, it records the terminal leaf and the consumed entry traces\nto the accepted comparison which produced pending output 105#0.",
@@ -300,7 +300,7 @@
     {
       "declaration": "CardanoKeri.Application.Custody.Examples.rotated_journey_establishes_duplicity",
       "path": "lean/CardanoKeri/ApplicationCustodyExample.lean",
-      "line": 492,
+      "line": 512,
       "statement": "theorem rotated_journey_establishes_duplicity :\n    ∃ previous writer, ∃ (observed : Registry.Conviction),\n      committed.writers 11 = some (.rotation previous writer) ∧\n      (env 11).presentedSpend 1 1 = some observed ∧ (env 11).attestationMinted observed = true ∧\n      observed.comparison.tip.previous = some previous.predecessor ∧\n      Duplicity.duplicityAt 1 1 ⟨previous.epoch + 1, previous.predecessor, writer⟩\n        observed.comparison.rival = true",
       "statementSha256": "c150092581b44aec5a1438ffefa0807c9479cb5b4a168b60e4e46c5332b7d59a",
       "sourceStory": "Registration, advance and commitment opening reach the checkpoint consumed\nby transaction 105. The mint field records both conviction attestations and the submitter receives them in change.",

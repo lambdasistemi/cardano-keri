@@ -37,7 +37,6 @@ module Cardano.KERI.AID.Checkpoint.Threshold (
     wellFormed,
     futureWellFormed,
     fitsNextKeys,
-    normaliseWeights,
     parseThresholdSpelling,
     futureThresholdFromData,
     evaluate,
@@ -210,16 +209,6 @@ fitsNextKeys count = \case
         when (num > den) (Left OverUnityWeight)
     clauseTotal clause =
         unless (sum [num % den | Weight num den <- clause] >= 1) (Left UnsatisfiableClause)
-
--- | Every weight in lowest terms: the same rational values, in the form the datum codec reads.
-normaliseWeights :: Threshold -> Threshold
-normaliseWeights = \case
-    Unweighted m -> Unweighted m
-    Weighted clauses -> Weighted (map (map reduce) clauses)
-  where
-    reduce w@(Weight num den)
-        | den > 0 && num >= 0 = let g = gcd num den in if g > 1 then Weight (num `div` g) (den `div` g) else w
-        | otherwise = w
 
 {- | A future (next) threshold as the datum carries it: the weights keep the numerator and
 denominator they were signed with. A weight is a pair with a positive denominator and a numerator

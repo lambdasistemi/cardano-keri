@@ -1,0 +1,181 @@
+[
+ {
+  "id": "T01",
+  "sith": "1",
+  "n": 1,
+  "keripy": "admits (count)",
+  "lean": "evaluates; all 2 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T02",
+  "sith": "2",
+  "n": 3,
+  "keripy": "admits (count)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T03",
+  "sith": "3",
+  "n": 3,
+  "keripy": "admits (count)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T06",
+  "sith": [
+   "1/2",
+   "1/2"
+  ],
+  "n": 2,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 4 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T07",
+  "sith": [
+   "1/2",
+   "1/2",
+   "1/2"
+  ],
+  "n": 3,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T08",
+  "sith": [
+   "1/3",
+   "1/3",
+   "1/3"
+  ],
+  "n": 3,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T09",
+  "sith": [
+   "1/3",
+   "1/3",
+   "1/3",
+   "1/3"
+  ],
+  "n": 4,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 16 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T10",
+  "sith": [
+   "1/2",
+   "1/4",
+   "1/4"
+  ],
+  "n": 3,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T14",
+  "sith": [
+   "1"
+  ],
+  "n": 1,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 2 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T18",
+  "sith": [
+   [
+    "1/2",
+    "1/2"
+   ],
+   [
+    "1/3",
+    "1/3",
+    "1/3"
+   ]
+  ],
+  "n": 5,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 32 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T19",
+  "sith": [
+   [
+    "1/2",
+    "1/2"
+   ],
+   [
+    "1"
+   ]
+  ],
+  "n": 3,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 8 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T26",
+  "sith": [
+   "1/4294967296",
+   "4294967295/4294967296"
+  ],
+  "n": 2,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 4 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T28",
+  "sith": [
+   "1/2",
+   "1/2",
+   "1/4",
+   "1/4",
+   "1/4",
+   "1/4"
+  ],
+  "n": 6,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 64 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ },
+ {
+  "id": "T30",
+  "sith": [
+   "1/1",
+   "1/1"
+  ],
+  "n": 2,
+  "keripy": "admits (weighted)",
+  "lean": "evaluates; all 4 subsets as keripy",
+  "aiken": "well formed; evaluate as keripy on all subsets",
+  "direction": "agree"
+ }
+]

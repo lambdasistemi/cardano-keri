@@ -15,6 +15,17 @@ fi
 mkdir -p "$receipt_dir" "$work/consumer"
 receipt_dir=$(realpath "$receipt_dir")
 exec > >(tee "$receipt_dir/check.log") 2>&1
+receipt_writer=$!
+finish() {
+  local result=$?
+  # Controls read the log as soon as this checker returns. Close both pipe
+  # writers and wait for tee before returning the checker's status.
+  exec >&- 2>&-
+  wait "$receipt_writer" || result=$?
+  rm -rf -- "$work"
+  exit "$result"
+}
+trap finish EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 binding_axioms_ok() {
   grep -Fxq "'CardanoKeri.singular_step_binding' depends on axioms: [propext, Quot.sound]" "$1"

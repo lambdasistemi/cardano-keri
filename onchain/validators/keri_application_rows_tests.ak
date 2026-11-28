@@ -14,6 +14,7 @@
 
 use aiken/collection/list
 use cardano/address.{Script}
+use cardano/assets.{Value}
 use cardano/transaction.{InlineDatum, OutputReference, Transaction}
 use cardano_keri/application/action.{
   Action, BookRegistration, BookTermination, FoldRegistration,
@@ -31,6 +32,37 @@ use keri_application_requests.{
 use singular_state/preimage.{
   RegistryIdentity, approval_name, initial_datum_hash, registration_preimage,
   termination_preimage,
+}
+
+/// Translate the abstract registry policy in registry-derived asset names.
+/// Attestation claims have identical bytes in both fixtures.
+fn row_mint(
+  data: RegistrationData,
+  items: List<(ByteArray, ByteArray, Int)>,
+) -> Value {
+  let policy = if data.registry == requests.foreign_registry() {
+    #"50555a5f64696e73787d82878c91969ba0a5aaafb4b9bec3c8cdd2d7"
+  } else {
+    rows.lean_state_policy
+  }
+  let registry = RegistryIdentity { ..data.registry, policy }
+  let lean_data = RegistrationData { ..data, registry }
+  requests.mint_of(
+    list.map(
+      items,
+      fn((p, name, q)) {
+        if p == requests.application() && name == requests.approval_of(
+          lean_data,
+        ) {
+          (p, requests.approval_of(data), q)
+        } else if p == policy && name == requests.active_of(lean_data) {
+          (data.registry.policy, requests.active_of(data), q)
+        } else {
+          (p, name, q)
+        }
+      },
+    ),
+  )
 }
 
 fn accepts(tx: Transaction) -> Bool {
@@ -103,406 +135,1040 @@ fn lean_request(lean: rows.LeanApproval) -> RegistrationData {
 
 /// Lean row `booking`: a request holding exactly deposit 15, registration cost 2 and tip 1, reading the configuration record: accepted.
 test row_booking() {
-  accepts(requests.booking_tx(requests.booking())) == True
+  let fixture = requests.booking()
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `booking-foreign-registry`: the same request naming a registry whose state policy is not state(A_keri): refused.
 test row_booking_foreign_registry() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9002) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9002) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"a89fd69294d64a503cbe3cc2c47ea4c6e16704071886edce731e5fee01b99a38",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-short-deposit`: a deposit of 13, one below the minimum ADA 4 plus the deposit 10: refused.
 test row_booking_short_deposit() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        data: rows.request_data(9003),
-        lovelace: 16,
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    data: rows.request_data(9003),
+    lovelace: 16,
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"625103c5e72491e845679c9ffe6ecfbed980bd1aef463a208b44303de574324e",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"0300ab50abdf1619b7794ab5de0fcab6377335b9330714dd1245163b92dcc072",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-one-lovelace-more`: the request holds 19, one more than its exact contents: refused.
 test row_booking_one_lovelace_more() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), lovelace: 19 })) == False
+  let fixture = Booking { ..requests.booking(), lovelace: 19 }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-one-lovelace-less`: the request holds 17, one less than its exact contents: refused.
 test row_booking_one_lovelace_less() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), lovelace: 17 })) == False
+  let fixture = Booking { ..requests.booking(), lovelace: 17 }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-other-holding-address`: the approval commits a holding address other than the checkpoint validator's: refused.
 test row_booking_other_holding_address() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9004) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9004) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"bca8adb0ed8646d7184cd50fba85f51987e8c1b9a0762fbd2ee49dcf3a74ab14",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-application-holding`: the approval commits the application address as the holding address: refused.
 test row_booking_application_holding() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9006) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9006) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"e91c3032dc6440fd5012de46cbc1baa929db7594c7b8f103b6afa3168ab6eca3",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-checkpoint-is-application`: the configuration record names the application address as the checkpoint validator and the approval commits it: refused.
 test row_booking_checkpoint_is_application() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        data: rows.request_data(9006),
-        checkpoint: Script(requests.application()),
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    data: rows.request_data(9006),
+    checkpoint: Script(requests.application()),
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"e91c3032dc6440fd5012de46cbc1baa929db7594c7b8f103b6afa3168ab6eca3",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-wrong-deadline`: the request records a deadline one after the booking bound plus the processing time: refused.
 test row_booking_wrong_deadline() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9005) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9005) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-without-configuration`: the configuration record is not a reference input: refused.
 test row_booking_without_configuration() {
-  accepts(
-    requests.booking_tx(Booking { ..requests.booking(), references: False }),
-  ) == False
+  let fixture = Booking { ..requests.booking(), references: False }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-two-approvals`: two approvals of the payload minted for one booking: refused.
 test row_booking_two_approvals() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), mint: 2 })) == False
+  let fixture = Booking { ..requests.booking(), mint: 2 }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        2,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-one-payload-twice`: two request outputs of one payload, both booked, two approvals minted: refused.
 test row_booking_one_payload_twice() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        mint: 2,
-        copies: 2,
-        actions: [
-          BookRegistration { output_index: 0 },
-          BookRegistration { output_index: 1 },
-        ],
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    mint: 2,
+    copies: 2,
+    actions: [
+      BookRegistration { output_index: 0 },
+      BookRegistration { output_index: 1 },
+    ],
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        2,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"a433911303ffdb95c97bcf5c83f7893454b16011eafa27d1ec29f1c4ff71ae91",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-twice`: the same output booked twice, one approval minted: refused.
 test row_booking_twice() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        actions: [
-          BookRegistration { output_index: 0 },
-          BookRegistration { output_index: 0 },
-        ],
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    actions: [
+      BookRegistration { output_index: 0 },
+      BookRegistration { output_index: 0 },
+    ],
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `approval-without-booking`: an approval minted onto a request output with no booking: refused.
 test row_approval_without_booking() {
-  accepts(requests.booking_tx(Booking { ..requests.booking(), actions: [] })) == False
+  let fixture = Booking { ..requests.booking(), actions: [] }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
-/// Lean row `booking-without-inception-evidence`: the booking of a key that has no inception evidence: refused.
+/// Lean row `booking-without-inception-evidence`: the booking omits its inception attestation from the mint and is refused.
 test row_booking_without_inception_evidence() {
-  accepts(
-    requests.booking_tx(Booking { ..requests.booking(), attested: False }),
-  ) == False
+  let fixture = requests.booking()
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-advanced-sequence`: the request commits a checkpoint datum at sequence number 7: refused.
 test row_booking_advanced_sequence() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9011) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9011) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"c70462b37651e24b9229d37ba49dcbb09ae63b59105eccaa3325433d64aecc0c",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"4d7f74487bf5a5e0352031386b9048ea3bb479d028136eca683a7470a9a788ef",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-advanced-epoch`: the committed datum is at epoch 3: refused.
 test row_booking_advanced_epoch() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9012) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9012) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"43d17f523ad91dc77d7e6542a63fd80460648cd8fde27943daf62d8d92691766",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"42c2c87f5dce4021cf83cd3f71a8af1e782487d055e58a0c08826ef08a690d1f",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-poisoned`: the committed datum is poisoned: refused.
 test row_booking_poisoned() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9013) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9013) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"6a462f3ff10e1da88e5ce1eba112bf3662da2bfed4a1deeda44da82267d92b8f",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"46ed7ed61b5095c05caa8c7c12c01fc36c6517d69eef97aea983f0cf580bd158",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-frozen`: the committed datum is frozen: refused.
 test row_booking_frozen() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9014) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9014) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"af76d60732fbd2bb8129d28809d1b3fbc0b8688983950d35c1b54fc2e8c882b9",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"3fcfd4db7eb1f7af208a8ceeae5febffca7239ab98b1987359b3ca610b1870c5",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-topped-up`: the committed datum is topped up: refused.
 test row_booking_topped_up() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9015) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9015) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"96d55ba583cd2520cde291fbf8be7bbeec66ead001ff25820337f587b385d971",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"4955b42282e52e457bd3a5ae345ca511ec5f45817fdd2da15fcae2bdc4220ea4",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-born-later`: the committed datum is born one slot after the booking bound: refused.
 test row_booking_born_later() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9016) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9016) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"e1aef59feeab6ff80fd3b315b93dd4dfc1ac15de2cefa326a259996b59e4c415",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"14677d131be5c2859330e650df288698e5c6c1924e3d5c5786e47192ce79d898",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-other-refund`: the committed datum refunds to another address than the request names: refused.
 test row_booking_other_refund() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9017) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9017) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"2969d4cd2ea5a399ba31b62d906f3b00535a365a139db6e9e12f836e4110826b",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"4ef46df61eb4036220290bcd3fb4907b8ec6b6006a57f1af331a797c09b7e126",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-pending-termination`: the committed datum is a pending termination: refused.
 test row_booking_pending_termination() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9018) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9018) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"69bcf9a113fb4561b18233d7d7f3f925bd1fbc77bd0ffb00034610d6aa98582a",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"522cd0e96ed2bbc59241fc4a1eeda57d22b7ea11db3a638f39d12b58d11459c3",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-other-aid`: the committed datum is the initial datum of another AID: refused.
 test row_booking_other_aid() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9019) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9019) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"35d1294d4d4932cd1c316e6121f0fc259a42d4b426946838d659955f42de392c",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"323615adcae2da8d814d2c95257bf9b05c6ac3cb3490bf7377bbee157ed3d0fc",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-pool-below-premium`: a request of deposit 14, the minimum ADA 4, the deposit 6 and the freeze bond 4, leaving a pool below one premium: refused.
 test row_booking_pool_below_premium() {
-  accepts(
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        data: rows.request_data(9007),
-        lovelace: 17,
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    data: rows.request_data(9007),
+    lovelace: 17,
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"c5785eb02358e713a8999531e06f6717ce057b298ff660ca624b65144445a01d",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"0d7b27da6bdd893f045e3b52662d96f561a5120feb295d68f56dfb0c831efa9e",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-unrecorded-refund`: a request whose refund address is not an address a checkpoint datum can record: refused.
 test row_booking_unrecorded_refund() {
-  accepts(
-    requests.booking_tx(
-      Booking { ..requests.booking(), data: rows.request_data(9008) },
-    ),
-  ) == False
+  let fixture = Booking { ..requests.booking(), data: rows.request_data(9008) }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"22ee850bd19f9d8ecd8f364a7a56dc35206a43769a0292708a3469fb2c1d16cd",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `booking-below-registry-floor`: the same deposit of 13 under checkpoint parameters whose own floor it covers (deposit 4, freeze bond 4, one premium): one below the registry's minimum ADA 4 plus deposit 10, refused.
 test row_booking_below_registry_floor() {
-  accepts_at(
-    rows.initial_floor - 2,
-    requests.booking_tx(
-      Booking {
-        ..requests.booking(),
-        data: rows.request_data(9003),
-        lovelace: 16,
-      },
-    ),
-  ) == False
+  let fixture = Booking {
+    ..requests.booking(),
+    data: rows.request_data(9003),
+    lovelace: 16,
+  }
+  let tx = requests.booking_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"625103c5e72491e845679c9ffe6ecfbed980bd1aef463a208b44303de574324e",
+        1,
+      ),
+      (
+        #"e7ecf1f6fb00050a0f14191e23282d32373c41464b50555a5f64696e",
+        #"0300ab50abdf1619b7794ab5de0fcab6377335b9330714dd1245163b92dcc072",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor - 2, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-at-deadline`: a fold ending at the deadline, delivering exactly the deposit 15 in the initial state, a pool of one premium, donating the registration cost: accepted.
 test row_fold_at_deadline() {
-  accepts(requests.fold_tx(requests.fold())) == True
+  let fixture = requests.fold()
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `fold-donating-more`: the same fold donating 3: accepted.
 test row_fold_donating_more() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), donation: 3 })) == True
+  let fixture = Fold { ..requests.fold(), donation: 3 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `fold-after-deadline`: a fold whose validity interval ends one slot after the deadline: refused.
 test row_fold_after_deadline() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), upper: 16 })) == False
+  let fixture = Fold { ..requests.fold(), upper: 16 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-holding-one-more`: the holding holds the deposit plus one lovelace: refused.
 test row_fold_holding_one_more() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), holding_lovelace: 16 })) == False
+  let fixture = Fold { ..requests.fold(), holding_lovelace: 16 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-holding-one-less`: the holding holds the deposit less one lovelace: refused.
 test row_fold_holding_one_less() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), holding_lovelace: 14 })) == False
+  let fixture = Fold { ..requests.fold(), holding_lovelace: 14 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-donation-short`: the treasury donation is one less than the registration cost: refused.
 test row_fold_donation_short() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), donation: 1 })) == False
+  let fixture = Fold { ..requests.fold(), donation: 1 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-other-datum`: the holding carries the initial state of the AID with other key material than the committed datum: refused.
 test row_fold_other_datum() {
-  accepts(
-    requests.fold_tx(Fold { ..requests.fold(), holding_datum: rows.variant(9) }),
-  ) == False
+  let fixture = Fold { ..requests.fold(), holding_datum: rows.variant(9) }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-approval-kept`: the approval is not burned: refused.
 test row_fold_approval_kept() {
-  accepts(requests.fold_tx(Fold { ..requests.fold(), burn: 0 })) == False
+  let fixture = Fold { ..requests.fold(), burn: 0 }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        0,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-one-payload-twice`: two requests of one payload folded into one holding, both approvals burned: refused.
 test row_fold_one_payload_twice() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        second: Some(
-          (rows.request_data(9001), Some(FoldRegistration { holding_index: 0 })),
-        ),
-        donation: 4,
-      },
+  let fixture = Fold {
+    ..requests.fold(),
+    second: Some(
+      (rows.request_data(9001), Some(FoldRegistration { holding_index: 0 })),
     ),
-  ) == False
+    donation: 4,
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -2,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-at-application-address`: the holding is delivered to the application address instead of the checkpoint validator: refused.
 test row_fold_at_application_address() {
-  accepts(
-    requests.fold_tx(
-      Fold { ..requests.fold(), holding_address: requests.app_address() },
-    ),
-  ) == False
+  let fixture = Fold {
+    ..requests.fold(),
+    holding_address: requests.app_address(),
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-at-committed-other-address`: a request committing another address than the checkpoint validator's, which no booking mints, folded to that address: the spend compares the holding with the committed address only, accepted.
 test row_fold_at_committed_other_address() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9004),
-        holding_address: rows.other_address,
-      },
-    ),
-  ) == True
+  let fixture = Fold {
+    ..requests.fold(),
+    data: rows.request_data(9004),
+    holding_address: rows.other_address,
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"bca8adb0ed8646d7184cd50fba85f51987e8c1b9a0762fbd2ee49dcf3a74ab14",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `fold-other-commitment-to-checkpoint`: a request committing another address than the checkpoint validator's, folded to the checkpoint validator: refused.
 test row_fold_other_commitment_to_checkpoint() {
-  accepts(
-    requests.fold_tx(Fold { ..requests.fold(), data: rows.request_data(9004) }),
-  ) == False
+  let fixture = Fold { ..requests.fold(), data: rows.request_data(9004) }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"bca8adb0ed8646d7184cd50fba85f51987e8c1b9a0762fbd2ee49dcf3a74ab14",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-committed-datum-not-initial`: a request committing a checkpoint datum at sequence number 7, which no booking mints, folded delivering that datum: the spend validates no datum, accepted.
 test row_fold_committed_datum_not_initial() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        data: rows.request_data(9011),
-        holding_datum: rows.variant(1),
-      },
-    ),
-  ) == True
+  let fixture = Fold {
+    ..requests.fold(),
+    data: rows.request_data(9011),
+    holding_datum: rows.variant(1),
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"c70462b37651e24b9229d37ba49dcbb09ae63b59105eccaa3325433d64aecc0c",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
-/// Lean row `fold-without-inception-evidence`: the fold at the deadline when the key has no inception evidence: a fold reads none, accepted.
+/// Lean row `fold-without-inception-evidence`: the fold at the deadline carries no fresh booking attestation and accepts.
 test row_fold_without_inception_evidence() {
-  accepts(requests.fold_tx(requests.fold())) == True
+  let fixture = requests.fold()
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `fold-built-by-singular-client`: the fold the Singular client builds from the public registry and the booked request alone, with the configuration record read by reference and the registration cost donated out of the folder's own output: accepted.
 test row_fold_built_by_singular_client() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        redeemer: FoldRegistration { holding_index: 1 },
-        inputs_before: [requests.state_input(91)],
-        before: [requests.state_successor()],
-        after: [requests.pay(rows.spender_address, 5)],
-        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
-      },
-    ),
-  ) == True
+  let fixture = Fold {
+    ..requests.fold(),
+    redeemer: FoldRegistration { holding_index: 1 },
+    inputs_before: [requests.state_input(91)],
+    before: [requests.state_successor()],
+    after: [requests.pay(rows.spender_address, 5)],
+    extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `fold-built-by-singular-client-no-donation`: the same fold donating nothing, as the client builds it: refused.
 test row_fold_built_by_singular_client_no_donation() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        redeemer: FoldRegistration { holding_index: 1 },
-        inputs_before: [requests.state_input(91)],
-        before: [requests.state_successor()],
-        after: [requests.pay(rows.spender_address, 7)],
-        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
-        donation: 0,
-      },
-    ),
-  ) == False
+  let fixture = Fold {
+    ..requests.fold(),
+    redeemer: FoldRegistration { holding_index: 1 },
+    inputs_before: [requests.state_input(91)],
+    before: [requests.state_successor()],
+    after: [requests.pay(rows.spender_address, 7)],
+    extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+    donation: 0,
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `fold-built-by-singular-client-no-record`: the same fold without the configuration record as a reference input, as the client builds it: refused.
 test row_fold_built_by_singular_client_no_record() {
-  accepts(
-    requests.fold_tx(
-      Fold {
-        ..requests.fold(),
-        redeemer: FoldRegistration { holding_index: 1 },
-        inputs_before: [requests.state_input(91)],
-        before: [requests.state_successor()],
-        after: [requests.pay(rows.spender_address, 5)],
-        extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
-        references: False,
-      },
-    ),
-  ) == False
+  let fixture = Fold {
+    ..requests.fold(),
+    redeemer: FoldRegistration { holding_index: 1 },
+    inputs_before: [requests.state_input(91)],
+    before: [requests.state_successor()],
+    after: [requests.pay(rows.spender_address, 5)],
+    extra_inputs: [requests.plain_input(92, rows.spender_address, 5)],
+    references: False,
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `checkpoint-spent-at-checkpoint-validator`: the delivered checkpoint spent by its own lifecycle at the checkpoint validator, no application action: the application does not refuse it.
@@ -517,41 +1183,93 @@ test row_checkpoint_spent_at_application_address() {
 
 /// Lean row `return-at-deadline`: a return starting at the deadline paying the refund address 17, the request less the tip: accepted.
 test row_return_at_deadline() {
-  accepts(requests.return_tx(requests.returned())) == True
+  let fixture = requests.returned()
+  let tx = requests.return_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
-/// Lean row `return-without-inception-evidence`: the same return when the key has no inception evidence: a return reads none, accepted.
+/// Lean row `return-without-inception-evidence`: the return carries no fresh booking attestation and accepts.
 test row_return_without_inception_evidence() {
-  accepts(requests.return_tx(requests.returned())) == True
+  let fixture = requests.returned()
+  let tx = requests.return_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == True
 }
 
 /// Lean row `return-straddling-deadline`: a return whose validity interval starts one slot before the deadline: refused.
 test row_return_straddling_deadline() {
-  accepts(requests.return_tx(Return { ..requests.returned(), lower: 14 })) == False
+  let fixture = Return { ..requests.returned(), lower: 14 }
+  let tx = requests.return_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `return-refund-reduced`: the refund address is paid one lovelace less than the request less the tip: refused.
 test row_return_refund_reduced() {
-  accepts(
-    requests.return_tx(
-      Return {
-        ..requests.returned(),
-        pays: [(rows.refund_address, 16), (rows.spender_address, 2)],
-      },
-    ),
-  ) == False
+  let fixture = Return {
+    ..requests.returned(),
+    pays: [(rows.refund_address, 16), (rows.spender_address, 2)],
+  }
+  let tx = requests.return_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `return-refund-redirected`: the refund is paid to another address: refused.
 test row_return_refund_redirected() {
-  accepts(
-    requests.return_tx(
-      Return {
-        ..requests.returned(),
-        pays: [(rows.other_address, 17), (rows.spender_address, 1)],
-      },
-    ),
-  ) == False
+  let fixture = Return {
+    ..requests.returned(),
+    pays: [(rows.other_address, 17), (rows.spender_address, 1)],
+  }
+  let tx = requests.return_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `termination-fold`: a termination request spent by its terminating fold, reading the configuration record, burning its approval and active token, donating 2 (the request less the tip): accepted.
@@ -593,11 +1311,27 @@ test row_termination_fold_active_kept() {
 
 /// Lean row `fold-with-unnamed-request`: a fold that also spends a second booked request no action names: refused.
 test row_fold_with_unnamed_request() {
-  accepts(
-    requests.fold_tx(
-      Fold { ..requests.fold(), second: Some((rows.request_data(9001), None)) },
-    ),
-  ) == False
+  let fixture = Fold {
+    ..requests.fold(),
+    second: Some((rows.request_data(9001), None)),
+  }
+  let tx = requests.fold_tx(fixture)
+  let mint = row_mint(
+    fixture.data,
+    [
+      (
+        #"282d32373c41464b50555a5f64696e73787d82878c91969ba0a5aaaf",
+        #"16df829c60f09d10b2ca9e94790ec5123c2d45a17c69e9a66800544620334784",
+        -1,
+      ),
+      (
+        #"70757a7f84898e93989da2a7acb1b6bbc0c5cacfd4d9dee3e8edf2f7",
+        #"866d8e0d3205af393ae4f5e03038e60e6206b1efbfd88ab34d13b6c9cb9cfde8",
+        1,
+      ),
+    ],
+  )
+  accepts_at(rows.initial_floor, Transaction { ..tx, mint }) == False
 }
 
 /// Lean row `termination-return`: a return naming a pending termination: refused.

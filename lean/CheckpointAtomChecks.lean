@@ -1,3 +1,4 @@
+import CardanoKeri.AttestationFixtures
 import CardanoKeri.Checkpoint
 import CardanoKeri.DuplicityExamples
 
@@ -12,10 +13,10 @@ def p : Params := ⟨3, 2, 1, 5, by decide, by decide⟩
 def l : Live := ⟨1, 1, false, false, 3, 42, 4, false⟩
 def short : Live := { l with pool := 0 }
 def env : Env := {
-  rotationTo := fun e sn next => decide (e = 1 ∧ sn = 1 ∧ next = 2)
+  advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun e sn next => decide (e = 1 ∧ sn = 1 ∧ next = 2))
   depositAuthorized := fun e => decide (e = 2)
   quorum := fun _ => true
-  attestationMinted := fun _ => true,
+  convictionReads := CardanoKeri.Attestation.Fixtures.convictionReads ⟨105, 0⟩,
   presentedSpend := fun e sn => some ⟨⟨105, 0⟩, CardanoKeri.CheckpointConviction.Fixtures.comparison 11 e sn⟩,
   convictionContext := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).1
   convictionRival := fun e sn => some (CardanoKeri.Duplicity.fixture e sn).2 }
@@ -60,7 +61,7 @@ def observations (target : Option String) : Except String Unit := do
   check "CP-13" (decide (run noDeposit (.present l) (.rotate 2 .keep 7) =
     some ({ hunter := some { addr := 7, pool := 1 } }, .present { l with sn := 2, epoch := 2, pool := 3 })))
   check "CP-14" (!noDeposit.bondOpOk 2 .deposit)
-  let noRotation := { env with rotationTo := fun _ _ _ => false }
+  let noRotation := { env with advanceReads := CardanoKeri.Attestation.Fixtures.advances (fun _ _ _ => false) }
   check "CP-30" (decide ((l.rotated p 2).bornAt = 3))
   check "CP-31" ((p.premium short 7).isNone)
   check "CP-32" (decide ((State.terminationPending ⟨1, 1⟩).leaf = .active))

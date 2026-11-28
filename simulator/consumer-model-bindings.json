@@ -2,13 +2,13 @@
   "version": 1,
   "singular": "d69ab005c3b710aeebf033d3c5cd08c56feb5643",
   "sources": {
-    "lean/CardanoKeri/Checkpoint.lean": "f7618cc29d8427b975f0e1862ce330e87527930a5c29586201797fcf7a09f0cf",
+    "lean/CardanoKeri/Checkpoint.lean": "77d38feeddf952bd92c192d874ea0a0f9b25415485b862eeedf36ff58c650800",
     "lean/CardanoKeri/CheckpointSystemEvidence.lean": "537d2183603c1f5ffab2178d743b03652647a3ca22cae5cb4e38c8780bccf7da",
     "lean/CardanoKeri/ConsumerBytes.lean": "9d7f752d59e32acb6c77bda9e5f6e9a146f09e9de7983ea10456c7225739d712",
     "lean/CardanoKeri/ConsumerBytesGoals.lean": "4822023b95c0a3ed0f99b5ee09784e5beb3700582611a80f867defc35cbcdae4",
     "lean/CardanoKeri/ConsumerBytesVectors.lean": "843c264cb8e6c3ca1cbde6644654a4750a7f008bc73300b56ad1dd5d4a0af5b1",
     "lean/CardanoKeri/ConsumerControls.lean": "e879fbf8bc912b2e7d61c82ebc189edc67279418f96fb0983e473307362c1284",
-    "lean/CardanoKeri/ConsumerFixtures.lean": "6335686f99c059f57fbbfc553fa83cc06943ce80bed30ec44aa0354151822dbe",
+    "lean/CardanoKeri/ConsumerFixtures.lean": "1a9935ee702e8384f24ab3a715799710d8e9b476b98fefadd383b3e3be80781b",
     "lean/CardanoKeri/ConsumerGoals.lean": "6ce115569b597c55056671633aad903151a8349479c47a4d08f9fd0b82227788",
     "lean/CardanoKeri/ConsumerIdentity.lean": "2c1fe9311f7a3c460dfcbd90d915ea17a9aae83199ab842247e6ef991a7e9f26",
     "lean/CardanoKeri/ConsumerJourney.lean": "6f7e38fc91b3292e2fada5091c1ca3ec686977918b84bf7b5b283f8ffde9be15",
@@ -18,7 +18,7 @@
     "lean/lakefile.lean": "554ac681b2b23be1a781753b370caed924d9a8936be527b3c1fc0712fb1f753a",
     "simulator/consumer-cli.mjs": "d679c03ad4cdba6eb7ba798831c65a0b7874e35a95d578eafbf895e1fe25fb36",
     "simulator/consumer-core.mjs": "bccce2d993e2ff81237773ab82184eeb17858946c386b8104bcb00ef6277b21b",
-    "simulator/consumer-corpus.json": "92590d15942353c2be582e1fd4ae7ad4b1501982688389dfef458282a1c0cf38",
+    "simulator/consumer-corpus.json": "dd67138f2d5e0705400622263aa05fdfc1041b6d8418557ce135d7c9f1888eec",
     "simulator/consumer-properties.mjs": "2e74b39206dba2784b6660cc1b816ad8ac0695d5f872b40b71bdf8d16fa96d7b"
   },
   "properties": [

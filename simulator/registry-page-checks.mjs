@@ -35,15 +35,17 @@ export function checkPage(html, exhaustive=true) {
   $('btn-reset').click();assert.equal(RS.app.nodes.length,1);
   const ev=(actor,kind)=>{const btn=d.querySelector(`#next-moves .ev-quick[data-actor="${actor}"][data-ev="${kind}"]`);assert(btn,`evidence ${actor}/${kind}`);btn.click();};
   const move=(actor,kind)=>{const btn=d.querySelector(`#next-moves .act[data-actor="${actor}"][data-kind="${kind}"]`);assert(btn,`move ${actor}/${kind}`);btn.click();assert(!$('act-submit').disabled,'disabled submit');$('act-submit').click();assert(RS.node(RS.app.cursor).record?.result.ok,`refused ${kind}`);};
-  ev('alice','inception');move('alice','bookRegistration');move('hal','fold');
+  ev('alice','bookings');move('alice','bookRegistration');move('hal','fold');
   assert.equal(RS.cur().state.carriers[0].pendingSpend,null);
   const live=canonical(RS.cur().state);$('slot-plusw').click();$('slot-plus1').click();assert.equal(canonical(RS.cur().state),live,'proposal clock changed state');
   assert(/Only a convicted carrier/.test($('refused-list').textContent),'live booking refusal explained');
-  ev('cora','convictions');move('cora','convictCkpt');move('sam','bookTermination');
+  ev('cora','convictions');ev('cora','convictionTransactions');move('cora','convictCkpt');move('sam','bookTermination');
   assert.equal(RS.cur().state.terminations.length,1);move('hal','fold');assert.equal(RS.cur().state.trie[0][1].known.s,'terminal');
   assert.equal(RS.cur().state.carriers.length,0);assert.equal(RS.cur().state.terminations.length,0);
   pick('c:sweep');assert(! $('challenge').hidden);assert(!RS.app.challenge.won());assert(/convicted/.test($('challenge').textContent));
   const cb=d.querySelector('input[data-ev="convictions"][data-aid="11"]');assert(cb);cb.checked=true;cb.dispatchEvent(new w.Event('change'));
+  const mint=d.querySelector('input[data-ev="convictionTransactions"][data-aid="11"]');
+  if (!mint.checked) {mint.checked=true;mint.dispatchEvent(new w.Event('change'));}
   move('cora','convictCkpt');move('sam','bookTermination');assert(RS.app.challenge.won(),'conviction premise challenge');
   $('hist-first').click();assert.equal(RS.app.cursor,0);$('hist-last').click();$('hist-prev').click();$('hist-next').click();
   $('scrub').value='0';$('scrub').dispatchEvent(new w.Event('input'));assert.equal(RS.app.cursor,0);

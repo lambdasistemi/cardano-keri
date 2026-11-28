@@ -29,6 +29,19 @@ def Carries (i : Interpretation) (token : TokenId) (aid : AID) (out : ObservedOu
     (state : State) : Prop :=
   quantity out token = 1 ∧ checkpointDatum i out = some ⟨aid, state.datumFacts⟩
 
+/-- Advance and freeze reads project the same transaction that consumes the old
+checkpoint. Deposit uses the advance claim and retains its own signature check. -/
+def AdvanceCorrespondence (env : Checkpoint.Env) (a : Checkpoint.Action) (source : State)
+    (old : ObservedOutput) (o : Observation) : Prop :=
+  let actual := fun kind (l : Live) target =>
+    env.advanceReads.script = old.credential ∧
+    ∃ read, env.advanceReads.spend kind l.epoch l.sn target = some read ∧
+      read.input = old.reference ∧ read.transaction.mint = o.assets.mint
+  match a, source with
+  | .rotate target _ _, .present l => actual .advance l target
+  | .freeze target _, .present l => actual .freeze l target
+  | _, _ => True
+
 /-- An observation of the life of one active token. Its registration starts at
 the exact public fold output. A checkpoint spend names the previous output
 and installs its indexed successor. An intervening system step keeps that
@@ -48,8 +61,9 @@ inductive CarrierHistory (p : Checkpoint.Params) (env : SystemEnv) (i : Interpre
   | spend {edges before after w w' old out action now flow state}
       (past : CarrierHistory p env i token aid edges before w old)
       (tx : Transaction w w') (input : namedInput tx.observation old.reference = some old)
-      (created : tx.creates out ∧ ∀ key, state = .terminationPending key →
-        ((env aid).convictionSpend key.epoch key.sn).map Registry.Conviction.output = some out.reference)
+      (created : tx.creates out ∧ AdvanceCorrespondence (env aid) action (before.states aid) old tx.observation ∧ ∀ key, state = .terminationPending key →
+        ((env aid).convictionSpend key.epoch key.sn).map Registry.Conviction.output = some out.reference ∧
+        (env aid).convictionReads.corresponds old.reference out.reference old.credential tx.observation.assets)
       (datum : Carries i token aid out state)
       (ordinary : ∀ refund pool, action ≠ .register refund pool)
       (executed : Step p (env aid) action now (before.states aid) flow state)
@@ -124,7 +138,37 @@ theorem pending_output_observation {p env i token aid edges s w out key}
     obtain ⟨live, payee, c, wasLive, rfl, _, _, atKey⟩ := pending_only_by_conviction _ _ executed
     rw [wasLive] at executed
     exact ⟨_, _, List.mem_cons_self, ⟨live, now, payee, c, flow, wasLive, atKey, executed,
-      ⟨opened, by simpa [Sys.localWriter] using writer⟩, by simp [State.producingSpend]⟩, created.2 _ rfl⟩
+      ⟨opened, by simpa [Sys.localWriter] using writer⟩, by simp [State.producingSpend]⟩, (created.2.2 _ rfl).1⟩
+  | retain _ _ _ _ _ ih => exact ih pending
+
+/-- Given a reachable pending carrier, when its actual producer is recovered,
+then the same ledger transaction spends the named checkpoint and mints both
+attestations for its script and spent reference. -/
+theorem pending_output_has_both_mints {p env i token aid edges s w out key}
+    (path : CarrierHistory p env i token aid edges s w out)
+    (pending : checkpointDatum i out = some ⟨aid, .terminationPending key⟩) :
+    ∃ (before after : CandidateWorld) (tx : Transaction before after) (old : ObservedOutput),
+      tx.creates out ∧ namedInput tx.observation old.reference = some old ∧
+      let policies := (env aid).convictionReads.policies
+      let claim := Attestation.Claim.spend .convict old.credential old.reference
+      Assets.mintQty tx.observation.assets (policies.enforcement.asset claim) = 1 ∧
+      Assets.mintQty tx.observation.assets (policies.entitlement.asset claim) = 1 := by
+  induction path with
+  | register _ _ _ _ _ _ _ _ datum =>
+    rw [datum.2] at pending
+    simp [State.datumFacts] at pending
+  | @spend _ _ _ _ _ old out _ _ _ state _ tx input created datum _ _ _ _ _ _ =>
+    rw [datum.2] at pending
+    have target : state = .terminationPending key := by cases state <;> simp_all [State.datumFacts]
+    obtain ⟨selected, actual⟩ := created.2.2 key target
+    cases h : (env aid).convictionSpend key.epoch key.sn with
+    | none => simp [h] at selected
+    | some c =>
+      have same : c.output = out.reference := by simpa [h] using selected
+      have minted := (Env.convictionSpend_attested h).2
+      change (env aid).convictionReads.attested c.output = true at minted
+      rw [same] at minted
+      exact ⟨_, _, tx, old, created.1, input, Attestation.conviction_mints_at_use actual minted⟩
   | retain _ _ _ _ _ ih => exact ih pending
 
 /-- Given the decoded pending output of a carrier history, its exact producer is a conviction. -/

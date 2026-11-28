@@ -9,7 +9,7 @@ import {createHash} from 'node:crypto';
 const root=path.resolve(import.meta.dirname,'../..');
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const dir=path.join(root,'lean/CardanoKeri');
-const files=fs.readdirSync(dir).filter(f=>/^(Application|Checkpoint|Registry|Consumer|Reader|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
+const files=fs.readdirSync(dir).filter(f=>/^(Attestation|Application|Checkpoint|Registry|Consumer|Reader|ConcreteConvictionGoals|Samaritan).*\.lean$/.test(f)).sort();
 function separator(text, wanted) {
   let depth = 0;
   let letBinding = false;
